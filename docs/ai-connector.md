@@ -31,3 +31,13 @@ Repo: https://github.com/connorrago8/life-ascension
 - Removed the unsafe English word-regex; confirmed_complete must be explicitly true. This is an AI-provided assertion, not independent proof. Never set it for negated, partial, future or ambiguous actions.
 - list_quests defaults to today's instances with a 500-row cap; include_history can request older instances.
 - Hashed personal API keys and durable progress notes remain unimplemented. Existing Supabase user JWTs still expire. Do not merge as production-ready.
+
+## Additional independent review (October 23)
+- Chicago-local day boundaries are required for all daily quest logic. The API now uses America/Chicago; the dashboard and database RPC CURRENT_DATE semantics still require review.
+- Creation now validates supported dates before writing, and attempts a compensating delete if instance creation fails. This is not a transaction; database-level atomic creation is preferred.
+- Remove the restrictive 30-day-past/tomorrow window by designing persistent future scheduling and due dates, including timezone and recurring behavior. Do not simply loosen a privileged RPC without reviewing abuse and uniqueness.
+- Dashboard: replace unbounded instance/ledger queries with date-scoped instances and server-aggregated XP.
+- Provide edit/archive/delete actions; do not leave completed one-time quests indefinitely active.
+- Evaluate disabling open signups for the single-player pilot, with an account recovery plan.
+- Offer email OTP for cross-browser sign-in; review delivery limits and sender options.
+- Hashed revocable personal API keys and OAuth remain incomplete. Do not claim either connector is operational.
