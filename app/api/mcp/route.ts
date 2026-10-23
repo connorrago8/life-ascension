@@ -30,7 +30,7 @@ export async function POST(req:NextRequest){
  const name=body.params?.name,args=body.params?.arguments||{};
  const bad=(msg:string)=>fail(id,-32602,msg);
  const iso=(v:unknown)=>{if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const d=new Date(v+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v;};
- const today=new Date().toISOString().slice(0,10);
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  let result:unknown;
  if(name==='create_quest'){
   const title=typeof args.title==='string'?args.title.trim():'';
@@ -43,7 +43,10 @@ export async function POST(req:NextRequest){
   if(r.error)return fail(id,-32000,r.error.message);
   const date=args.due_date||today;
   const ensured=await db.rpc('ensure_quest_instance',{p_quest_id:r.data.id,p_date:date});
-  if(ensured.error)return fail(id,-32000,'Quest created, but instance scheduling failed: '+ensured.error.message);
+  if(ensured.error){
+   const rollback=await db.from('quests').delete().eq('id',r.data.id).eq('owner_id',user.id);
+   return fail(id,-32000,rollback.error?'Quest created but scheduling failed; cleanup also failed. Quest ID: '+r.data.id:'Quest was not saved: '+ensured.error.message);
+  }
   result={...r.data,instance_id:ensured.data,due_date:date};
  }else if(name==='update_progress'){
   if(typeof args.quest_id!=='string'||typeof args.note!=='string'||!args.note.trim()||args.note.length>500)return bad('Quest ID and short progress note required');
