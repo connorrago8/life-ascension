@@ -29,7 +29,7 @@ export async function POST(req:NextRequest){
  if(body.method!=='tools/call')return fail(id,-32601,'Method not found');
  const name=body.params?.name,args=body.params?.arguments||{};
  const bad=(msg:string)=>fail(id,-32602,msg);
- const iso=(v:unknown)=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T00:00:00Z'));
+ const iso=(v:unknown)=>{if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const d=new Date(v+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v;};
  const today=new Date().toISOString().slice(0,10);
  let result:unknown;
  if(name==='create_quest'){
@@ -39,6 +39,8 @@ export async function POST(req:NextRequest){
   const r=await db.from('quests').insert({owner_id:user.id,title,domain:args.domain,cadence:args.cadence}).select('id,title,domain,cadence').single();
   if(r.error)return fail(id,-32000,r.error.message);
   const date=args.due_date||today;
+  const dateOffset=Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);
+  if(dateOffset>1||dateOffset< -30)return fail(id,-32002,'Quest saved, but the current scheduling backend only supports up to tomorrow and 30 days ago. Instance was not created.');
   const ensured=await db.rpc('ensure_quest_instance',{p_quest_id:r.data.id,p_date:date});
   if(ensured.error)return fail(id,-32000,'Quest created, but instance scheduling failed: '+ensured.error.message);
   result={...r.data,instance_id:ensured.data,due_date:date};
@@ -52,6 +54,8 @@ export async function POST(req:NextRequest){
   if(typeof args.quest_id!=='string'||args.confirmed_complete!==true)return bad('Quest ID and explicit confirmed_complete=true required');
   const date=args.due_date||today;
   if(!iso(date))return bad('Invalid due date');
+  const offset=Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);
+  if(offset>1||offset< -30)return bad('Completion date is outside allowed instance window');
   const quest=await db.from('quests').select('id').eq('id',args.quest_id).eq('owner_id',user.id).eq('active',true).single();
   if(quest.error)return bad('Quest not found');
   const ensured=await db.rpc('ensure_quest_instance',{p_quest_id:args.quest_id,p_date:date});
