@@ -24,3 +24,10 @@ The endpoint authenticates the bearer user token with Supabase Auth and uses use
 
 Live site: https://life-ascension.vercel.app
 Repo: https://github.com/connorrago8/life-ascension
+
+## Review feedback applied to route
+- create_quest accepts an optional due_date and asks the existing ensure_quest_instance RPC to create the dated instance. **Limitation:** current database RPC accepts only dates from 30 days ago through tomorrow. A future Thursday outside that window is not yet supported. A durable scheduling migration is still required.
+- submit_completion now takes quest_id and ensures an instance exists before calling the existing idempotent completion RPC.
+- Removed the unsafe English word-regex; confirmed_complete must be explicitly true. This is an AI-provided assertion, not independent proof. Never set it for negated, partial, future or ambiguous actions.
+- list_quests defaults to today's instances with a 500-row cap; include_history can request older instances.
+- Hashed personal API keys and durable progress notes remain unimplemented. Existing Supabase user JWTs still expire. Do not merge as production-ready.
