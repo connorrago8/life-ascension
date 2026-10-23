@@ -4,10 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 const domains = ['hygiene','home','mental_health','personal_growth','finance','career','relationships','physical_health'];
 const tools = [
- {name:'create_quest',description:'Create a quest for a planned future action. Never use this to mark something completed.',inputSchema:{type:'object',properties:{title:{type:'string'},domain:{type:'string',enum:domains},cadence:{type:'string',enum:['once','daily']}},required:['title','domain','cadence']}},
+ {name:'create_quest',description:'Create a quest for a planned future action. Never use this to mark something completed.',inputSchema:{type:'object',properties:{title:{type:'string'},domain:{type:'string',enum:domains},cadence:{type:'string',enum:['once','daily']},due_date:{type:'string',description:'Optional ISO date YYYY-MM-DD'}},required:['title','domain','cadence']}},
  {name:'update_progress',description:'Record a task in progress; does not award XP.',inputSchema:{type:'object',properties:{quest_id:{type:'string'},note:{type:'string'}},required:['quest_id','note']}},
- {name:'submit_completion',description:'Submit an explicit completed-action report. Server validates and awards XP at most once.',inputSchema:{type:'object',properties:{instance_id:{type:'string'},confirmation:{type:'string'}},required:['instance_id','confirmation']}},
- {name:'list_quests',description:'Read the current user\'s quests and instances.',inputSchema:{type:'object',properties:{}}},
+ {name:'submit_completion',description:'Submit an explicit completed-action report. Server validates and awards XP at most once.',inputSchema:{type:'object',properties:{quest_id:{type:'string'},due_date:{type:'string',description:'Optional ISO date YYYY-MM-DD; defaults to today'},confirmed_complete:{type:'boolean',description:'Explicit affirmative completion assertion; do not set for partial, negated or planned actions'}},required:['quest_id','confirmed_complete']}},
+ {name:'list_quests',description:'Read the current user\'s quests and instances.',inputSchema:{type:'object',properties:{due_date:{type:'string',description:'Optional ISO date; defaults to today'},include_history:{type:'boolean',description:'Set true to include historical instances'}}}},
  {name:'get_character_progress',description:'Read lifetime XP and completed quest count.',inputSchema:{type:'object',properties:{}}}
 ];
 const fail=(id:unknown,code:number,message:string)=>NextResponse.json({jsonrpc:'2.0',id,error:{code,message}});
@@ -29,12 +29,19 @@ export async function POST(req:NextRequest){
  if(body.method!=='tools/call')return fail(id,-32601,'Method not found');
  const name=body.params?.name,args=body.params?.arguments||{};
  const bad=(msg:string)=>fail(id,-32602,msg);
+ const iso=(v:unknown)=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T00:00:00Z'));
+ const today=new Date().toISOString().slice(0,10);
  let result:unknown;
  if(name==='create_quest'){
   const title=typeof args.title==='string'?args.title.trim():'';
   if(!title||title.length>120||!domains.includes(String(args.domain))||!['once','daily'].includes(String(args.cadence)))return bad('Invalid quest fields');
+  if(args.due_date!==undefined&&!iso(args.due_date))return bad('Invalid due date');
   const r=await db.from('quests').insert({owner_id:user.id,title,domain:args.domain,cadence:args.cadence}).select('id,title,domain,cadence').single();
-  if(r.error)return fail(id,-32000,r.error.message);result=r.data;
+  if(r.error)return fail(id,-32000,r.error.message);
+  const date=args.due_date||today;
+  const ensured=await db.rpc('ensure_quest_instance',{p_quest_id:r.data.id,p_date:date});
+  if(ensured.error)return fail(id,-32000,'Quest created, but instance scheduling failed: '+ensured.error.message);
+  result={...r.data,instance_id:ensured.data,due_date:date};
  }else if(name==='update_progress'){
   if(typeof args.quest_id!=='string'||typeof args.note!=='string'||!args.note.trim()||args.note.length>500)return bad('Quest ID and short progress note required');
   const q=await db.from('quests').select('id').eq('id',args.quest_id).eq('owner_id',user.id).single();
@@ -42,14 +49,22 @@ export async function POST(req:NextRequest){
   // No schema for partial progress yet. Do not misrepresent a note as persisted.
   return fail(id,-32001,'Progress notes require a migration before they can be saved');
  }else if(name==='submit_completion'){
-  if(typeof args.instance_id!=='string'||typeof args.confirmation!=='string'||!/(done|finished|completed|did|have done|have finished)/i.test(args.confirmation))return bad('Explicit completed-action confirmation required');
-  const instance=await db.from('quest_instances').select('id,status').eq('id',args.instance_id).eq('owner_id',user.id).single();
-  if(instance.error)return bad('Instance not found');
-  const r=await db.rpc('set_quest_instance_status',{p_instance_id:args.instance_id,p_action:'complete'});
+  if(typeof args.quest_id!=='string'||args.confirmed_complete!==true)return bad('Quest ID and explicit confirmed_complete=true required');
+  const date=args.due_date||today;
+  if(!iso(date))return bad('Invalid due date');
+  const quest=await db.from('quests').select('id').eq('id',args.quest_id).eq('owner_id',user.id).eq('active',true).single();
+  if(quest.error)return bad('Quest not found');
+  const ensured=await db.rpc('ensure_quest_instance',{p_quest_id:args.quest_id,p_date:date});
+  if(ensured.error)return fail(id,-32000,ensured.error.message);
+  const r=await db.rpc('set_quest_instance_status',{p_instance_id:ensured.data,p_action:'complete'});
   if(r.error)return fail(id,-32000,r.error.message);
-  result={instance_id:args.instance_id,recorded:true,previous_status:instance.data.status,server_result:r.data};
+  result={quest_id:args.quest_id,instance_id:ensured.data,recorded:r.data==='completed',server_result:r.data};
  }else if(name==='list_quests'){
-  const [q,i]=await Promise.all([db.from('quests').select('id,title,domain,cadence,active').eq('owner_id',user.id),db.from('quest_instances').select('id,quest_id,due_date,status').eq('owner_id',user.id)]);
+  const date=args.due_date||today;
+  if(!iso(date))return bad('Invalid due date');
+  let instancesQuery=db.from('quest_instances').select('id,quest_id,due_date,status').eq('owner_id',user.id);
+  if(args.include_history!==true)instancesQuery=instancesQuery.eq('due_date',date);
+  const [q,i]=await Promise.all([db.from('quests').select('id,title,domain,cadence,active').eq('owner_id',user.id),instancesQuery.limit(500)]);
   if(q.error||i.error)return fail(id,-32000,q.error?.message||i.error?.message||'Query failed');
   result={quests:q.data,instances:i.data};
  }else if(name==='get_character_progress'){
