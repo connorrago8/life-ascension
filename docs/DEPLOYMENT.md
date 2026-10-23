@@ -6,6 +6,7 @@ This repository is public. **Never commit secret API keys, passwords, private he
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase **publishable** key (not service_role or secret)
+- `SUPABASE_SERVICE_ROLE_KEY`: server-only key for hashed personal API keys. Never prefix it with `NEXT_PUBLIC_`. See `docs/ai-auth.md`.
 
 The `NEXT_PUBLIC_` values are intentionally visible to browser users; row-level security must enforce privacy.
 
