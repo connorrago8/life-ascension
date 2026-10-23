@@ -36,11 +36,12 @@ export async function POST(req:NextRequest){
   const title=typeof args.title==='string'?args.title.trim():'';
   if(!title||title.length>120||!domains.includes(String(args.domain))||!['once','daily'].includes(String(args.cadence)))return bad('Invalid quest fields');
   if(args.due_date!==undefined&&!iso(args.due_date))return bad('Invalid due date');
+  const proposedDate=String(args.due_date||today);
+  const proposedOffset=Math.round((Date.parse(proposedDate+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);
+  if(proposedOffset>1||proposedOffset< -30)return bad('Scheduling beyond tomorrow is not yet supported. No quest was created.');
   const r=await db.from('quests').insert({owner_id:user.id,title,domain:args.domain,cadence:args.cadence}).select('id,title,domain,cadence').single();
   if(r.error)return fail(id,-32000,r.error.message);
   const date=args.due_date||today;
-  const dateOffset=Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);
-  if(dateOffset>1||dateOffset< -30)return fail(id,-32002,'Quest saved, but the current scheduling backend only supports up to tomorrow and 30 days ago. Instance was not created.');
   const ensured=await db.rpc('ensure_quest_instance',{p_quest_id:r.data.id,p_date:date});
   if(ensured.error)return fail(id,-32000,'Quest created, but instance scheduling failed: '+ensured.error.message);
   result={...r.data,instance_id:ensured.data,due_date:date};
