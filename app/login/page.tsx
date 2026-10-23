@@ -1,0 +1,4 @@
+'use client';
+import {useState} from 'react';
+import {supabase} from '../../lib/supabase';
+export default function Login(){const[email,setEmail]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);const {error}=await supabase().auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+'/auth/callback'}});setMessage(error?.message||'Check your email for your sign-in link.');setBusy(false)}return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Sign in to your adventure</h1><form className="panel" onSubmit={submit}><label htmlFor="email">Email</label><input id="email" className="field" type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/><button className="btn" disabled={busy}>Email me a sign-in link</button><p role="status">{message}</p></form></main>}
