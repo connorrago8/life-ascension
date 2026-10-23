@@ -1,7 +1,9 @@
 -- Scheduled one-time quests: atomic creation with its dated instance.
 -- Run only after review; not applied to the production database.
 alter table public.quests add column if not exists scheduled_for date;
-create or replace function public.create_scheduled_quest(p_title text,p_domain text,p_cadence text,p_date date)
+alter table public.quests add column if not exists quest_type text not null default 'scheduled' check (quest_type in ('scheduled','goal'));
+
+create or replace function public.create_scheduled_quest(p_title text,p_domain text,p_cadence text,p_date date,p_quest_type text default 'scheduled')
 returns uuid language plpgsql security definer set search_path = ''
 as $$
 declare v_id uuid; v_today date;
@@ -11,15 +13,16 @@ begin
  if p_title is null or length(trim(p_title)) not between 1 and 120 then raise exception 'Invalid title'; end if;
  if p_domain not in ('hygiene','home','mental_health','personal_growth','finance','career','relationships','physical_health') then raise exception 'Invalid domain'; end if;
  if p_cadence not in ('once','daily') then raise exception 'Invalid cadence'; end if;
+ if p_quest_type not in ('scheduled','goal') or (p_quest_type='goal' and p_cadence<>'once') then raise exception 'Invalid quest type'; end if;
  if p_date is null or p_date < v_today - 30 or p_date > v_today + 366 then raise exception 'Date out of range'; end if;
- insert into public.quests(owner_id,title,domain,cadence,scheduled_for)
- values(auth.uid(),trim(p_title),p_domain,p_cadence,p_date) returning id into v_id;
+ insert into public.quests(owner_id,title,domain,cadence,scheduled_for,quest_type)
+ values(auth.uid(),trim(p_title),p_domain,p_cadence,p_date,p_quest_type) returning id into v_id;
  insert into public.quest_instances(owner_id,quest_id,due_date)
  values(auth.uid(),v_id,p_date);
  return v_id;
 end $$;
-revoke all on function public.create_scheduled_quest(text,text,text,date) from public,anon;
-grant execute on function public.create_scheduled_quest(text,text,text,date) to authenticated;
+revoke all on function public.create_scheduled_quest(text,text,text,date,text) from public,anon;
+grant execute on function public.create_scheduled_quest(text,text,text,date,text) to authenticated;
 
 -- Existing daily instance creation must not activate a scheduled quest prematurely.
 create or replace function public.ensure_quest_instance(p_quest_id uuid,p_date date default ((now() at time zone 'America/Chicago')::date))
@@ -63,7 +66,7 @@ begin
  if inst.status='completed' then return 'completed'; end if;
  if p_action='complete' then
    if q.cadence='daily' and inst.due_date>v_today then raise exception 'Future daily quests cannot be completed'; end if;
-   if q.cadence='once' and inst.due_date>v_today then raise exception 'Future scheduled quest cannot be completed yet'; end if;
+   if q.cadence='once' and q.quest_type<>'goal' and inst.due_date>v_today then raise exception 'Future scheduled quest cannot be completed yet'; end if;
    update public.quest_instances set status='completed',completed_at=now() where id=inst.id;
    insert into public.xp_ledger(owner_id,instance_id,amount) values(auth.uid(),inst.id,1) on conflict(instance_id) do nothing;
    insert into public.quest_events(owner_id,instance_id,event_type) values(auth.uid(),inst.id,'completed');
