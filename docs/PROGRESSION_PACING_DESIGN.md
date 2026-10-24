@@ -1,6 +1,6 @@
 # LIFE ASCENSION — Phase 2 Progression Pacing (docs-only proposal)
 
-**Status:** Proposed for review, not approved for implementation. This branch starts at `main`; implementation must target the approved PR #1 schema after launch and a compatibility review. No changes to launch +1 XP, existing ledger, production, or migrations.
+**Status:** Approved with one correction incorporated (docs only); not approved for implementation. This branch starts at `main`; implementation must target the approved PR #1 schema after launch and a compatibility review. No changes to launch +1 XP, existing ledger, production, or migrations.
 
 ## Already settled — do not reopen
 
@@ -13,7 +13,7 @@ Phase 2 XP tiers: **1 / 2 / 5 / 10 / 25**; server assigns and locks a quest's ti
 - **Roughly quarterly:** larger character milestone tied to verified cumulative progress. No automatic quarterly gifts.
 - Missed or low-activity weeks never punish the player or erase progress.
 
-## Candidate overall level curve (NOT approved)
+## Leading candidate overall level curve (final calibration pending)
 
 At overall level L (starting at 1), XP needed for next level = `20 + 5 × (L - 1)`. Cumulative XP to reach level N = `20 × (N-1) + 5 × (N-1) × (N-2) / 2`.
 
@@ -26,7 +26,7 @@ At overall level L (starting at 1), XP needed for next level = `20 + 5 × (L - 1
 | 6 | 150 |
 | 10 | 360 |
 
-**Compatibility warning:** Launch already has a level curve (prior launch level 50 threshold: 1,396 XP). This candidate would substantially change displayed levels. Do **not** implement or relabel existing levels without explicit approval and migration-free historical compatibility analysis. A safer alternative may retain the launch overall curve and tune *cosmetic/ability milestone thresholds separately*. Benchmark actual post-launch XP/week before selecting a curve.
+**Launch reality:** PR #1 `app/page.tsx:47` hardcodes `LEVEL 1 · UNCLASSED ADVENTURER` and displays lifetime XP. There is **no implemented level calculation or launch level curve** in the app or migrations `0001`–`0007`. Phase 2 would introduce the first real level curve, derived from the immutable lifetime XP ledger. This changes a static display into a calculated one; it does **not** relabel previously calculated levels, because none exist. Keep `20 + 5 × (L - 1)` as the leading candidate and calibrate against real post-launch XP per week before implementation. No ledger rewrite or retroactive award is needed.
 
 ## Worked examples: three consecutive weeks
 
@@ -73,8 +73,8 @@ Five distinct eligible 1-XP trivial tasks = **5 XP**, subject to repeat caps. On
 
 ## Unlock pacing options
 
-A. **Preferred to test first:** preserve launch overall level curve; use independent Phase 2 milestone gates for a small monthly unlock and larger quarterly visual upgrade, calibrated against observed real-world weekly XP. Does not promise a reward in a week without threshold crossing.
-B. Candidate new overall curve above; higher compatibility risk, requires explicit separate approval.
+A. **Leading candidate:** introduce the first computed overall level curve at `20 + 5 × (L - 1)` XP per next level, calibrated against observed post-launch XP/week. Independently tune monthly and quarterly unlock thresholds; neither unlock is guaranteed by the calendar.
+B. **Alternative after measurement:** adjust the initial level curve's coefficients or unlock thresholds if real activity shows progression is too fast or slow. No historical ledger edits, and any final curve still requires implementation approval.
 
 Quarterly milestones can be multi-domain and cumulative (e.g., documented milestones reached in several domains), but should not require all eight domains or punish low-activity periods. Final criteria TBD; don't pretend a stat change occurred if a milestone isn't earned.
 
@@ -95,10 +95,10 @@ Default **last completed Sunday–Saturday America/Chicago week** with **this we
 9. Unlock occurs only after verified threshold crossing; monthly/quarterly timing is aspirational, not calendar-triggered.
 10. Recap reads only owner-scoped records and creates no XP, completion, achievement, or stat writes.
 11. Historical and current week boundaries follow Chicago local Sunday–Saturday, including DST.
-12. Compatibility analysis verifies launch level curve and existing user level before any change is authorized.
+12. Verify launch displays static `LEVEL 1` with lifetime XP and has no level computation; when Phase 2 is authorized, derive the new level from immutable ledger totals without altering any historical XP entries. Check representative post-launch weekly XP before finalizing thresholds.
 
 ## Decision and pause
 
-**Recommendation:** defer choosing a replacement overall level curve until actual post-launch usage exists. Prefer tuning unlock thresholds around the existing level system, with domain skills in Phase 2. This document concludes the design exploration; pause new design work until launch.
+**Recommendation:** retain `20 + 5 × (L - 1)` as the leading candidate for the **first** real level curve, then calibrate against observed post-launch weekly XP. Pair it with independently tuned domain skills and unlock milestones. This approved docs-only design concludes exploration; **pause new design work until launch**.
 
 **Next real step:** Supabase backup/restore dry run into a separate test project when the user is home, followed by explicit production deployment approval. No code, migrations, PR #1, or production changes authorized.
