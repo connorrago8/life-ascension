@@ -56,7 +56,7 @@ Illustrative, not user activity. Assume new character level 1, 0 cumulative XP, 
 - Hygiene routine ×2 @1 = 2 (hygiene)
 - End: 71 cumulative XP, level 3 (threshold 45), 26/30 toward level 4 (threshold 75). A 25 XP goal does not imply an automatic stat or equipment unlock.
 
-Across three weeks: 71 ledger XP, 31 completed instances (9 + 15 + 7), assuming each activity above is a distinct eligible completed instance. Weekly reveal must compute counts from real records, not from these illustrative totals.
+Across three weeks: 71 ledger XP, 30 completed instances (9 + 15 + 6), assuming each activity above is a distinct eligible completed instance. Weekly reveal must compute counts from real records, not from these illustrative totals.
 
 ## Overall level versus domain skills
 
