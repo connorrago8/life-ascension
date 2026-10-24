@@ -1,6 +1,6 @@
 # LIFE ASCENSION — Weekly Growth Reveal & Progress Dashboard (design only)
 
-**Status:** Proposed, docs-only; not approved for implementation. Branch `feature/weekly-growth-recap-design` based on `main`. This is a post-launch design, not a launch blocker. Phone-board and achievements designs are approved with minor notes. Next launch operation remains the Supabase backup/restore dry run in a separate test project, with explicit deployment approval later.
+**Status:** **Approved with notes (design only); implementation not approved.** Branch `feature/weekly-growth-recap-design` based on `main`. This is a post-launch design, not a launch blocker. Phone-board and achievements designs are approved with minor notes. Next launch operation remains the Supabase backup/restore dry run in a separate test project, with explicit deployment approval later.
 
 ## Product goal and staged scope
 
@@ -12,9 +12,9 @@
 
 ## Data contract — read only
 
-Use authenticated owner-scoped records, and verify against the deployed schema before implementation:
+**Schema target:** draft launch PR #1 migrations `0001`–`0007`, not the older `main` branch schema. Verify deployment state before implementation. Use authenticated owner-scoped records:
 - `quest_instances`: `id`, `owner_id`, `quest_id`, `status`, `completed_at`. Count **distinct** completed instances with valid completion timestamps. An archived/inactive parent quest must not erase legitimate history.
-- `quests`: `id`, `owner_id`, `domain` for domain breakdown; never trust a client-provided domain.
+- `quests`: `id`, `owner_id`, `domain` for domain breakdown; never trust a client-provided domain. The eight allowed domain values are exactly `hygiene`, `home`, `mental_health`, `personal_growth`, `finance`, `career`, `relationships`, and `physical_health` (PR #1 migrations `0001`, `0003`, `0007`). Hygiene and Career are both real domains.
 - `xp_ledger`: `owner_id`, `instance_id`, `amount`, `awarded_at`. Sum actual server-awarded amounts by award timestamp; do not calculate XP as a guessed multiple of completions. Deduplicate by the unique ledger instance. Reconcile counts without claiming they must match in every time window.
 - **Achievements:** optional read-only earned badges if supported by the approved achievements design and authoritative eligibility rules; if no reliable earned timestamp exists, do **not** assert “earned this week.” The achievements system must not be changed by viewing the recap.
 
@@ -24,14 +24,14 @@ The recap must not write any of these tables, create quest completions, trigger 
 
 - Weekly boundary: **Sunday 00:00:00 through next Sunday 00:00:00**, end-exclusive, in **`America/Chicago`**. UI labels show Sunday–Saturday.
 - Completion attribution: actual `quest_instances.completed_at` instant converted to Chicago time, **not scheduled date**. Late completion of an older quest counts in the week actually completed.
-- XP attribution: actual `xp_ledger.awarded_at` instant converted to Chicago time. An XP award across a week boundary may legitimately fall in a different week than its associated completion; label the metrics independently.
+- XP attribution: actual `xp_ledger.awarded_at` instant converted to Chicago time. In PR #1 migration `0007`, completion and ledger insertion occur in one transaction with `now()` timestamps, so `completed_at` and `awarded_at` are identical for current awarded completions. Keep metrics separate for integrity and future schema changes, not because cross-week attribution is possible today.
 - DST transitions: compute local calendar boundaries first and convert to instants, rather than adding a fixed 168 hours. Weeks can be 167 or 169 hours.
 - Compare like-for-like complete weeks; a current partial week must be clearly marked **“so far”**, not compared as a full seven days without qualification.
-- Do not count duplicate, unconfirmed, undone, or absent-status completions as verified accomplishments. Exact status/ledger reconciliation behavior requires validation against deployed schema and event semantics.
+- Count only `status='completed'` instances with a valid `completed_at`. The current allowed statuses are `available`, `completed`, and `deferred`; completion is terminal, with no undo/reversal in v1. Duplicate joins or idempotent retries must not inflate counts. A completed instance missing its expected ledger row is a **data-integrity alert**, not a normal expected case.
 
 ## Weekly reveal layout
 
-1. **Header:** “Your Week of Progress,” Chicago-local Sunday–Saturday date range, and partial-week label if relevant.
+1. **Header:** default to **last completed week** (Chicago Sunday–Saturday) as the primary reveal; show **“This week so far”** in a separate secondary section with its own partial-week label.
 2. **Verified activity:** count distinct qualifying completed instances; domain breakdown from trusted parent quests; optional list of real completed quests.
 3. **XP earned:** actual ledger sum for the week, clearly distinguished from quest count; lifetime XP only if an authoritative read supports it.
 4. **Before vs. after:** prior-week comparison of matching metrics, with neutral language and explicit dates. In Phase 2, show stat/skill changes only when reconstructable from server-authoritative data.
@@ -53,9 +53,9 @@ The recap must not write any of these tables, create quest completions, trigger 
 1. A qualifying completion Saturday 23:59:59 Chicago belongs to that week; Sunday 00:00:00 belongs to the next.
 2. Spring/fall DST week boundaries remain correct with local Sunday–Saturday windows.
 3. Completing an older scheduled quest on Tuesday is counted Tuesday's actual completion week, not the old due week.
-4. A completed instance with no corresponding XP award does not fabricate +1 XP; ledger award counts independently by `awarded_at`.
-5. An XP award near a boundary is counted in the award week even when completion occurred in the prior week.
-6. Repeated reads, idempotent completion retries, and duplicate join paths never inflate completion counts or XP.
+4. If a completed instance lacks its expected ledger row, flag a **data-integrity alert** and do not fabricate +1 XP; this should not arise under the current same-transaction completion RPC.
+5. **Future safeguard only:** if a later schema allows completion and XP award timestamps to differ, attribute each metric to its own timestamp's Chicago week; this is **not possible with the current PR #1 completion transaction**.
+6. For each current ledger-backed completion, assert `completed_at = awarded_at` under PR #1 `0007` transaction semantics; any mismatch raises an integrity alert. Repeated reads, idempotent retries, and duplicate joins never inflate counts or XP.
 7. Archived/inactive quests remain visible in historical totals.
 8. Owner A cannot read any completion, ledger entry, domain, or achievement belonging to Owner B, including through joins.
 9. A week with five completions and zero stat level-ups celebrates five real completions and explicitly shows no stat gain.
@@ -63,15 +63,17 @@ The recap must not write any of these tables, create quest completions, trigger 
 11. V1 with no Phase 2 skill tables works and does not claim any stat or cosmetic unlocks.
 12. Badge “earned this week” is hidden unless authoritative earning-time evidence exists.
 13. Reading or refreshing the recap causes zero database writes, XP changes, badge changes, or quest status changes.
-14. A partial current week is labeled as partial; previous complete weeks are compared on equivalent boundaries.
+14. The default view prominently shows the **last completed week**, with **“This week so far”** below it; partial and complete weeks are clearly distinguished and not compared as equivalent periods.
 15. Reduced-motion and accessible text alternatives support future growth animations and charts.
 
 ## Open questions before any implementation
 
-- Confirm actual production schema and domain enum, including whether Hygiene is a separate domain; don't assume final Phase 2 skill names.
-- Define how reversals/late corrections affect completion metrics without rewriting immutable XP history.
+- **Resolved for PR #1:** all eight domain values are confirmed, including `hygiene` and `career`; Phase 2 display/skill names can still be designed later.
+- **Resolved for v1:** completion is terminal and there are no reversals; any future reversal/correction feature would require a new design review.
 - Decide if a weekly snapshot must be stored or can be reconstructed from authoritative event histories.
-- Decide whether to show current week so far, last completed week, or both by default.
+- **Resolved for v1:** last completed week is primary; this week so far appears below.
 - Establish privacy-safe wording for sensitive domains and optional hiding of domain-level summaries.
+
+**Cross-document note:** The current Endless Tower concept mapping already includes both **Hygiene → Recovery** and **Career → Mastery**; ensure all eight schema domains stay represented in any future skill mapping.
 
 **Hard constraints:** No changes to `main`, draft launch PR #1, code, migrations, production, current +1 XP rules, or ledger history. Design only; the backup/restore dry run remains the next real launch step.
