@@ -8,13 +8,15 @@
 
 **Qualifying day:** One completed, eligible instance of an active `daily` quest whose `due_date` equals that Chicago date. Count **one streak day per habit per date**, even if a request is repeated. Only count instances completed on that same Chicago day. An earlier quest scheduled start date does not retroactively award streak days.
 
-**When a streak breaks:** A daily habit that is due but has no confirmed completion by the end of its Chicago calendar day ends the consecutive run. A new completion starts at 1. Do not punish someone with negative XP. Streaks are per habit, not a single global streak. A future start date does not break a streak before it begins. Archived habits stop accumulating streaks and display their final historical best; they do not restart automatically.
+**When a streak breaks:** Evaluate **every Chicago calendar day** starting with the habit's original effective start date, whether or not a `quest_instances` row was generated. A missing instance counts as a missed day. A daily habit that is due but has no confirmed completion by the end of its Chicago calendar day ends the consecutive run. A deferred instance also counts as missed, not as a pause. A new completion starts at 1. Do not punish someone with negative XP. Streaks are per habit, not a single global streak. A future start date does not break a streak before it begins. Archived habits stop accumulating streaks and display their final historical best; they do not restart automatically.
 
-**Missed days, pauses, and edits:** No backfilling and no future claims. Rescheduling a daily habit's start date cannot turn previously missed days into successes. A user may intentionally archive a habit, but that ends the active streak. No retroactive "streak repair" by changing time zones or due dates. For fairness, a future version could add a prospective rest-day calendar, but not in the first release.
+**Missed days, pauses, and edits:** No backfilling and no future claims. Rescheduling an **already-active** daily habit's start into the future immediately ends its current streak; the new date starts a fresh streak opportunity, not a pause. Rescheduling cannot turn previously missed days into successes. A user may intentionally archive a habit, but that ends the active streak. No retroactive "streak repair" by changing time zones or due dates. For fairness, a future version could add a prospective rest-day calendar, but not in the first release.
 
 **Bonus XP:** **No bonus XP initially.** Keep the existing `xp_ledger` as the sole source of XP and the current +1 per eligible completion. Display current streak, personal best and milestone badges (3, 7, 14, 30 days) without extra XP. This prevents stacking rewards and makes the feature easy to audit. If bonuses are introduced later, they must use separate ledger entries with a unique milestone identity, one transaction and a hard uniqueness constraint; never calculate XP client-side.
 
 **Anti-gaming:** The server enforces quest ownership, active status, Chicago-local eligibility, no future completions, no past-date completions for streak purposes, and one completed instance per quest/date. The streak computation ignores retroactively completed historical instances. A replayed completion cannot increment a streak twice. The API must not trust a client-supplied timestamp or timezone.
+
+**Historical backfill policy:** Pending owner decision; do not implement or infer retroactive streak credit until the explicit backfill rule is approved.
 
 **Important compatibility note:** Current completion rules may allow completing a past daily instance within the 30-day window. This proposal **does not change existing XP eligibility**; it simply excludes those late completions from the streak. Enforcing a strict no-backfill policy for XP itself would require a separately reviewed change.
 
@@ -117,7 +119,7 @@ Example: 24 lifetime XP reaches level 5; level 6 starts at 32 XP, so progress is
 **`habit_streaks`**
 - `id` UUID primary key
 - `owner_id` UUID (references user)
-- `quest_id` UUID (references quest)
+- `quest_id` UUID (references quest); **composite foreign key** (`quest_id`, `owner_id`) → `quests(id, owner_id)` with `ON DELETE CASCADE`
 - `current_streak` integer, default 0
 - `longest_streak` integer, default 0
 - `last_qualified_date` date, nullable (Chicago date)
@@ -125,6 +127,9 @@ Example: 24 lifetime XP reaches level 5; level 6 starts at 32 XP, so progress is
 - `created_at` timestamptz
 - `updated_at` timestamptz
 - unique (`owner_id`, `quest_id`)
+- checks: `current_streak >= 0`, `longest_streak >= current_streak`; enforce **daily-quest-only** rows with a trusted server-side function/trigger checking the parent quest cadence (a cross-table condition cannot be a simple SQL CHECK constraint)
+- enable RLS with **owner-only SELECT**; revoke client INSERT/UPDATE/DELETE; only reviewed server-side definer functions may write, with explicit owner validation
+- `last_evaluated_date` is advanced by the authorized server-side streak evaluator when processing each Chicago calendar day, including missed days, and is also reconciled on dashboard reads after inactivity; never trust a client-supplied evaluation date
 
 **Source of truth:** `quest_instances` completion timestamps and `xp_ledger` for XP. `habit_streaks` is a rebuildable derived cache, not a source of XP. Enforce RLS owner checks, server-controlled updates, and transaction-safe recalculation if implemented.
 
@@ -132,7 +137,8 @@ Example: 24 lifetime XP reaches level 5; level 6 starts at 32 XP, so progress is
 
 - Chicago daylight-saving transitions count calendar dates correctly.
 - Completing the same daily habit twice on one day yields one streak day and at most one XP.
-- Missing a due day breaks the current streak without removing XP.
+- Missing a due day **even when no instance was created** breaks the current streak without removing XP.
+- A deferred day counts as missed; moving an active habit's start into the future ends the streak rather than freezing it.
 - Late completion of yesterday's daily instance may earn XP under existing rules but does **not** repair yesterday's streak.
 - Future-dated habits and archived quests never advance streaks.
 - Rescheduling does not retroactively create streak days.
