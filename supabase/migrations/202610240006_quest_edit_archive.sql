@@ -1,5 +1,6 @@
 -- Depends on 0003 (quests.scheduled_for, quest_type).
 -- Review and apply after the earlier migrations; no production writes in this branch.
+-- AI personal API keys do not yet have rename/reschedule/archive wrappers; these RPCs are browser/JWT-only.
 create or replace function public.rename_quest(p_quest_id uuid,p_title text)
 returns void language plpgsql security definer set search_path=''
 as $$
@@ -34,7 +35,9 @@ begin
   return;
  end if;
  -- For a one-time quest, moving its pending instance preserves the same ID and XP history.
- if q.quest_type <> 'goal' and p_date < greatest(v_today,coalesce(q.scheduled_for,v_today)) then
+ if q.quest_type <> 'goal' and q.scheduled_for is null then
+  raise exception 'Legacy scheduled chore requires scheduled date backfill'; end if;
+ if q.quest_type <> 'goal' and p_date < greatest(v_today,q.scheduled_for) then
   raise exception 'Scheduled chores cannot be moved earlier'; end if;
  if exists(select 1 from public.quest_instances where quest_id=q.id and due_date=p_date) then
   raise exception 'An instance already exists on this date'; end if;
@@ -73,10 +76,11 @@ begin
  select * into inst from public.quest_instances where id=p_instance_id and owner_id=auth.uid() for update;
  if not found then raise exception 'Instance not found'; end if;
  select * into q from public.quests where id=inst.quest_id and owner_id=auth.uid();
- if not found or not q.active then raise exception 'Active quest not found'; end if;
+ if not found then raise exception 'Quest not found'; end if;
  if inst.status='completed' then return 'completed'; end if;
+ if not q.active then raise exception 'Active quest not found'; end if;
  if p_action='complete' then
-   if q.cadence='daily' and (inst.due_date>v_today or inst.due_date<q.scheduled_for) then raise exception 'Daily quest not eligible'; end if;
+   if q.cadence='daily' and (inst.due_date>v_today or inst.due_date<q.scheduled_for) then raise exception 'Future daily quests cannot be completed'; end if;
    if q.cadence='once' and q.quest_type<>'goal' and inst.due_date>v_today then raise exception 'Future scheduled quest cannot be completed yet'; end if;
    update public.quest_instances set status='completed',completed_at=now() where id=inst.id;
    insert into public.xp_ledger(owner_id,instance_id,amount) values(auth.uid(),inst.id,1) on conflict(instance_id) do nothing;
