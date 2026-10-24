@@ -13,3 +13,10 @@ This app is initially single-user. The login call sets `shouldCreateUser:false`;
 If a user is directed to `/login?next=%2F%3Fquest%3DFold%2520laundry%26domain%3Dhome%26cadence%3Donce`, the page returns them to the same-origin `/?quest=...` after verification. The `next` value must be a same-origin relative path. A future integration should ensure unauthenticated quest proposal links are redirected to `/login?next=...` rather than discarding the proposal.
 
 No production settings have been changed. Test sign-in, resend, expired/wrong codes, already-signed-in redirect, and the proposed quest return path before deployment.
+
+## Additional setup and security
+- In Supabase Authentication settings, turn **off** "Allow new users to sign up" for this single-user pilot, after verifying the existing owner account can log in. `shouldCreateUser:false` applies only to this login call, not all signup routes.
+- In the Magic Link email template include **both** `{{ .Token }}` (6-digit email code) and `{{ .ConfirmationURL }}` (optional link fallback).
+- This UI expects a **6-digit** token. Confirm the configured email OTP length is six before launch.
+- Both the login page and callback validate `next` as same-origin, relative and free of ASCII control characters. Test encoded tab/newline, protocol-relative URLs and external absolute URLs.
+- The login screen uses generic failure messages so it does not reveal whether an email address belongs to an account.
