@@ -1,6 +1,6 @@
 # Phone-first Today's Board — design proposal
 
-**Status:** Design only; pending Grok review. **Branch:** `feature/phone-board-design` from `main`. No implementation, migrations, production changes, or new XP pathways.
+**Status:** Design only; revised after Grok review. **Branch:** `feature/phone-board-design` from `main`. No implementation, migrations, production changes, or new XP pathways.
 
 ## Goals and constraints
 
@@ -8,7 +8,7 @@
 - Preserve server authority: only explicit confirmed completion invokes the existing completion RPC, which can award **exactly +1 XP per quest instance, once**. Progress, templates, deferral, and UI animation award **0 XP**.
 - Daily completion is limited to the Chicago calendar date of today or the previous two dates. No older/future daily XP, even when a quest was created or rescheduled earlier. One-time overdue chores and early-completable goals keep their existing rules.
 - Do not create a client-side XP ledger, offline completion queue, new privileged route, or alternate completion mechanism.
-- **Implementation dependency:** This proposal uses RPCs from draft PR #1, not yet on `main`. The current `main` board inserts directly into `quests`; migration 0003 revokes that insertion, so the new board must switch to the approved creation RPC when the combined release is integrated. Login branch remains separately under integration review.
+- **Implementation dependency:** This proposal uses RPCs from draft PR #1, not yet on `main`. The current `main` board inserts directly into `quests`; migration 0003 revokes that insertion, so the new board must switch to the approved creation RPC when the combined release is integrated. Login integration is reviewed in draft PR #1; this design remains post-launch.
 
 ## Screens
 
@@ -28,11 +28,10 @@
 
 - Pressing **Complete** opens a bottom sheet naming the quest and **specific Chicago due date**.
 - Copy: “Did you actually finish [quest] for [date]?” Actions: **Yes, completed** / **Not yet**.
-- Explicit Yes starts a **10-second pending-cancel interval**. Show a countdown and prominent **Cancel**. The client does **not** call the completion RPC during this interval and does **not** add XP.
-- At expiry, if still mounted, online, authenticated, and the action was not canceled, submit exactly one `set_quest_instance_status(instance_id, 'complete')` call. Disable repeated submits; show “Saving…” until the server responds.
-- On success, refresh server-derived status and lifetime XP; show a small +1 XP acknowledgment. On error or uncertain network result, re-read server state before allowing retry; rely on server idempotency, not a local assumption.
-- **Important:** Closing the app, switching tabs, background throttling, navigating away, or losing network **must not silently commit** the pending action. Cancel the local pending timer on unmount/visibility loss; the user can retry explicitly later. No background timer, service worker completion, or durable queued submission.
-- If the due date becomes ineligible at Chicago midnight during the countdown, server rejection is authoritative; show the error without XP. Never redate to today automatically.
+- Explicit **Yes, completed** immediately submits one `set_quest_instance_status` RPC; no countdown, pending-cancel state, delayed job, undo, or offline queue. Disable repeat taps and show “Saving…” until the server responds.
+- On success, re-read instance status and `get_lifetime_xp`. Show **+1 XP** animation only if server-reported lifetime XP increased by exactly one from the pre-submit baseline. An idempotent already-completed response shows “Already completed” without a new XP animation. If the baseline is unknown, show “Completion recorded” without claiming new XP.
+- On error, timeout, or uncertain network result, re-read server state before retry; never optimistically mark completed or award XP. Server idempotency remains authoritative.
+- If Chicago midnight passes before the RPC is accepted, server date eligibility governs. Never silently redate a quest.
 - A completed instance stays completed even after archive; the server returns idempotent status with no additional XP.
 
 ### 3. Templates catalog and review sheet
@@ -52,13 +51,13 @@
 
 ## Tap flows
 
-**Complete:** Today → Complete → “Did you actually finish?” → Yes → 10-second pending / Cancel → one server RPC → server confirmation → refresh XP. **Not yet** and **Cancel** make zero writes.
+**Complete:** Today → Complete → “Did you actually finish?” → Yes → immediate single server RPC → server confirmation → refresh XP. **Not yet** and **Cancel** make zero writes.
 
 **Defer/resume:** Today → Defer/Resume → existing `set_quest_instance_status` action; no XP.
 
 **Create from template:** Templates → select → review fields/date → Add quest → `create_scheduled_quest` → return to board and refresh. No XP.
 
-**Late daily completion:** Previous 2 days → select the exact eligible date/instance → confirm → pending-cancel → existing status RPC. For an absent eligible instance, first use `ensure_quest_instance` (subject to active quest, start date, and server date validation). A pending canceled completion may leave an ensured instance but must never award XP.
+**Late daily completion:** Previous 2 days → select the exact eligible date/instance → confirm → immediate existing status RPC. For an absent eligible instance, first use `ensure_quest_instance` (subject to active quest, start date, and server date validation). Ensuring an instance never awards XP; only the separately confirmed completion can do so.
 
 ## Initial template list
 
@@ -100,7 +99,7 @@ Suggested cadence is editable. Avoid claiming weekly recurrence, reminders, auto
 | Show lifetime XP | `get_lifetime_xp` JWT RPC; `get_character_progress` for AI | Read only |
 | Create a quest from template | `create_scheduled_quest(title,domain,cadence,date,quest_type)` JWT RPC | 0 |
 | Open eligible daily instance | `ensure_quest_instance(quest_id,date)` JWT RPC | 0 |
-| Confirm completion after pending window | `set_quest_instance_status(instance_id,'complete')` JWT RPC | Server grants at most +1 |
+| Confirm completion immediately after explicit Yes | `set_quest_instance_status(instance_id,'complete')` JWT RPC | Server grants at most +1 |
 | Defer / resume | `set_quest_instance_status(instance_id,'defer'/'resume')` | 0 |
 | Progress note | `add_quest_progress` | 0 |
 | Rename / reschedule / archive | `rename_quest`, `reschedule_quest`, `archive_quest` JWT RPCs | 0 |
@@ -112,7 +111,7 @@ Service-role and `*_as_user` wrappers are for the existing API-key/MCP path only
 - Static templates and an installable shell have negligible recurring infrastructure cost.
 - Use existing Supabase RPCs and database constraints, avoid polling and paid push providers; refresh on navigation/focus and after confirmed actions.
 - Counts should be derived from authoritative rows; a large quest history may need pagination later. Avoid assuming that all history fits in a single default Supabase response.
-- Keep the 10-second timer in UI memory only; no database job or queue required.
+- No completion timers, delayed jobs, background queues, or localStorage resubmission.
 
 ## Phase 3 — Grok's morning summary
 
@@ -122,9 +121,9 @@ Grok can deliver a scheduled morning message using its existing scheduled routin
 
 1. Home-screen shortcut opens today's board after sign-in; no secret in URL.
 2. Big touch targets, keyboard/screen-reader support, clear date and status.
-3. First tap never writes completion; second explicit confirmation starts the pending countdown, still no write.
-4. Cancel within 10 seconds, background, navigation, or lost connection yields no completion RPC and no XP.
-5. Expiry triggers one RPC; rapid taps, retries, and concurrent devices cannot award more than one XP per instance.
+3. First tap opens confirmation only; explicit Yes immediately makes one RPC and disables repeated taps.
+4. App backgrounding, navigation, or network loss never creates a queued completion; uncertain responses trigger a server refresh.
+5. Rapid taps, retries, and concurrent devices cannot award more than one XP per instance. Show +1 animation only after server lifetime XP increases by one.
 6. Midnight rollover and DST use server Chicago date; daily today-3/future rejected even when UI stale.
 7. Templates create quests and initial instances without XP; scheduled chores/goals behave according to existing rules.
 8. Archived quests cannot earn new XP; already-completed archived instances remain idempotent.
@@ -133,8 +132,29 @@ Grok can deliver a scheduled morning message using its existing scheduled routin
 
 ## Open design questions for review
 
-- Is a **10-second delay after explicit Yes** acceptable for every completion, or should the timer be optional? Default proposal: always enabled.
 - Should the board show all eligible daily instances from the previous two days, or only on demand? Default: on demand.
 - Should overdue one-time chores appear above or below today's daily habits? Default: below today's actionable items, but with an obvious overdue count.
+
+## Precise browser RPC parameter names
+
+- `create_scheduled_quest`: `p_title`, `p_domain`, `p_cadence`, `p_date`, `p_quest_type`.
+- `ensure_quest_instance`: `p_quest_id`, `p_date`.
+- `set_quest_instance_status`: `p_instance_id`, `p_action` (values `complete`, `defer`, `resume`).
+- `get_lifetime_xp`: no arguments.
+- Management RPC parameter names must be checked against the final migration before UI implementation; never infer signatures from prose.
+
+## iPhone OTP and session continuity
+
+- Use six-digit OTP entry **inside the standalone home-screen app**. Email magic links may open Safari instead of returning to the installed app; keep links as fallback, not the primary PWA sign-in path.
+- Evaluate `@supabase/ssr` middleware/server-side refresh for session continuity before release; current browser `createBrowserClient` alone is not evidence of eight-day persistence. Test an installed iPhone PWA for **8+ days** across foreground/background, browser restarts, and expired access tokens. WebKit seven-day expiration is a risk to investigate, not an established outcome.
+- Label every due date and date picker **Chicago date (America/Chicago)**; test around 12–1 AM Eastern and DST boundaries.
+
+## Accessibility and UX refinements
+
+- Keyboard focus must return predictably after modal close; provide visible focus indicators, accessible names and live status announcements. Maintain at least 4.5:1 contrast for normal text, support 200% zoom and reduced motion.
+- Respect iPhone safe-area insets and thumb reach; use at least 8px spacing between adjacent actions. Put **Defer** visually away from **Complete**; deferred instances may count as missed for streak display, but streaks **never modify XP**.
+- For a goal template, default to a future deadline and require user review; never silently create an already-due goal.
+- Use `app/manifest.ts`, 192px and 512px icons including maskable where supported, and 180px Apple touch icon; verify actual standalone installation and navigation.
+- Morning summaries need overdue/upcoming coverage beyond a single-day `list_quests` call; design and test that query before claiming a complete digest.
 
 **No implementation is authorized by this document.** Merge only after review, and separately from Grok's ongoing draft PR #1 login integration.
