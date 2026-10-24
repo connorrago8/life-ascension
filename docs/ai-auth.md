@@ -72,7 +72,7 @@ Those functions live in `supabase/migrations/202610240005_api_key_user_context.s
 
 ## Manual steps for Connor
 
-This pull request does not run SQL against Supabase and does not change Vercel settings. Leave `feature/login-otp` unmerged.
+This pull request does not run SQL against Supabase and does not change Vercel settings.
 
 1. In the Supabase SQL editor, confirm `supabase/migrations/202610230001_core.sql` is already applied.
 2. Paste and run these files in order. Stop if any file errors.
@@ -82,7 +82,7 @@ This pull request does not run SQL against Supabase and does not change Vercel s
    4. `supabase/migrations/202610240005_api_key_user_context.sql` — service-role `*_as_user` wrappers required by `/api/mcp` when the caller uses an API key.
    5. `supabase/migrations/202610240006_quest_edit_archive.sql` — browser/JWT `rename_quest`, `reschedule_quest`, and `archive_quest`. No API-key wrappers for those three. This file also replaces `set_quest_instance_status`.
    6. `supabase/migrations/202610240007_daily_late_window.sql` — run this last. Daily habits earn XP only for today and the previous 2 Chicago days. A daily start can still be up to 30 days ago; the instance created with it is dated no earlier than today minus 2 days. One-time chores stay completable while overdue. Deadline goals stay completable early. This is the final `set_quest_instance_status`: it keeps `0006`'s completed-first return and inactive-quest rejection, plus the 2-day window.
-3. Leave `feature/login-otp` unmerged. Do not run `0006` after `0007`. If that happens, run `0007` again.
+3. Do not run `0006` after `0007`. If that happens, run `0007` again.
 4. If the API does not see the new objects, reload the schema under Project Settings → API. The migrations already run `NOTIFY pgrst, 'reload schema';`.
 5. In Supabase → Project Settings → API, copy the `service_role` secret.
 6. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production, and for Preview if you test a preview URL. Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value. The name is listed in `.env.example` and `docs/.env.example`.
@@ -99,8 +99,20 @@ tests/sql/run-local.sh
 
 That script loads `0001` through `0007` in order and runs the API-key, scheduling, two-user, archive, and daily-window smokes. The handler checks in `tests/mcpToolIsolation.test.mjs` cover the same split for `list_quests`: A does not see B's rows or A's inactive instances. An API-key `submit_completion` for a daily date three days ago fails and does not change XP.
 
+## Email OTP sign-in
+
+The login page sends a six-digit email code with `signInWithOtp` and checks it with `verifyOtp({ type: 'email' })`. `shouldCreateUser` is false. A missing account and a bad code use generic messages, so the screen does not say whether the email is registered. A user who is already signed in is sent to the safe `next` path, or `/` when that path is absent.
+
+Set these in Supabase before relying on the deployed login. This pull request does not change them.
+
+- Authentication → URL Configuration → Redirect URLs: `https://life-ascension.vercel.app/auth/callback`. The allow-list entry can be `https://life-ascension.vercel.app/auth/callback**` so a `next` query is accepted. Add a preview callback only for the preview URL you are testing.
+- Authentication → Email Templates → Magic Link: include `{{ .Token }}` so the message contains the 6-digit code. `{{ .ConfirmationURL }}` can stay as a link fallback.
+- Email OTP length: **6**.
+- After Connor's account can sign in, turn **off** "Allow new users to sign up".
+
+`/login?next=` and `/auth/callback` both pass the return path through `safeNext`. The quest board, quest notes, quest manage, and API keys sign-in links include that `next` value. Details are also in `docs/login-otp-setup.md`.
+
 ## Out of scope here
 
 - OAuth, PKCE, refresh tokens, and dynamic client registration
-- `feature/login-otp`
-- Applying the migrations or setting the Vercel secret from this repository
+- Applying the migrations, Auth settings, or the Vercel secret from this repository

@@ -109,7 +109,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
         <div className="eyebrow">LIFE ASCENSION</div>
         <h1>Quest notes</h1>
         <p className="muted">Sign in to record progress.</p>
-        <a className="btn" href="/login">Sign in</a>
+        <a className="btn" href={'/login?next=' + encodeURIComponent('/quests/' + questId)}>Sign in</a>
       </main>
     );
   }

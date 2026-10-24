@@ -113,7 +113,7 @@ export default function ApiKeysPage() {
         <div className="eyebrow">LIFE ASCENSION</div>
         <h1>API keys</h1>
         <p className="muted">Sign in to create a personal key for AI tools.</p>
-        <a className="btn" href="/login">Sign in</a>
+        <a className="btn" href="/login?next=%2Fsettings%2Fapi-keys">Sign in</a>
       </main>
     );
   }

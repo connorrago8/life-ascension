@@ -10,7 +10,7 @@ This app is initially single-user. The login call sets `shouldCreateUser:false`;
 
 ## Preserve proposed quest after login
 
-If a user is directed to `/login?next=%2F%3Fquest%3DFold%2520laundry%26domain%3Dhome%26cadence%3Donce`, the page returns them to the same-origin `/?quest=...` after verification. The `next` value must be a same-origin relative path. A future integration should ensure unauthenticated quest proposal links are redirected to `/login?next=...` rather than discarding the proposal.
+If a user is directed to `/login?next=%2F%3Fquest%3DFold%2520laundry%26domain%3Dhome%26cadence%3Donce`, the page returns them to the same-origin `/?quest=...` after verification. The `next` value must be a same-origin relative path. An unsigned quest board keeps that proposal in its sign-in link as `/login?next=...`. Quest notes, quest manage, and API keys do the same for their own paths.
 
 No production settings have been changed. Test sign-in, resend, expired/wrong codes, already-signed-in redirect, and the proposed quest return path before deployment.
 

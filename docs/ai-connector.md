@@ -2,7 +2,7 @@
 
 This branch wires `/api/mcp` to the scheduling, XP, and API-key migrations. It is review code. Nothing here has been applied to production, and this pull request should stay a draft until Connor finishes the manual steps below.
 
-`feature/login-otp` is not part of this integration. Rename, reschedule, and archive from `0006` are. Those three RPCs are browser/JWT-only. API keys do not have wrappers for them.
+Email sign-in is the six-digit OTP flow. Rename, reschedule, and archive from `0006` are browser/JWT-only. API keys do not have wrappers for them.
 
 Live site: https://life-ascension.vercel.app
 
@@ -43,7 +43,7 @@ Do these yourself. This pull request does not run SQL against Supabase and does 
    4. `supabase/migrations/202610240005_api_key_user_context.sql`
    5. `supabase/migrations/202610240006_quest_edit_archive.sql` — `rename_quest`, `reschedule_quest`, and `archive_quest` for a signed-in browser session. It also replaces `set_quest_instance_status`. There are no API-key wrappers for rename, reschedule, or archive.
    6. `supabase/migrations/202610240007_daily_late_window.sql` — daily habit XP window. Run this last. It replaces `create_scheduled_quest`, `ensure_quest_instance`, and `set_quest_instance_status` again, so it is the final definition. It keeps `0006`'s completed-instance return and inactive-quest rejection, and adds the 2-day daily window. The `*_as_user` wrappers from `0005` call those functions by name.
-3. `0005` is required for API-key tool calls. It does not replace the functions from `0003` or `0004`. It adds service-role wrappers that pin the authenticated user for one transaction. Leave `feature/login-otp` unmerged. Do not run `0006` after `0007`. If that happens, run `0007` again so the daily window stays in `set_quest_instance_status`.
+3. `0005` is required for API-key tool calls. It does not replace the functions from `0003` or `0004`. It adds service-role wrappers that pin the authenticated user for one transaction. Do not run `0006` after `0007`. If that happens, run `0007` again so the daily window stays in `set_quest_instance_status`. The login page does not add a migration. Supabase Auth settings for the OTP code are in `docs/ai-auth.md`.
 4. If the API does not see the new functions, reload the schema (Project Settings → API) or run `NOTIFY pgrst, 'reload schema';`. The new migrations already send that notify.
 5. In Supabase → Project Settings → API, copy the `service_role` secret.
 6. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production, and for Preview if you exercise the preview URL. Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value.

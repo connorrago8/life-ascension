@@ -5,10 +5,15 @@ import { safeNext } from '../../../lib/safeNext';
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
+function loginAgain(url: URL) {
+  const destination = safeNext(url.searchParams.get('next'), url.origin);
+  return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(destination)}`, url.origin));
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  if (!code) return NextResponse.redirect(new URL('/login', url.origin));
+  if (!code) return loginAgain(url);
 
   const destination = safeNext(url.searchParams.get('next'), url.origin);
   const response = NextResponse.redirect(new URL(destination, url.origin));
@@ -30,6 +35,6 @@ export async function GET(request: NextRequest) {
   );
 
   const { error } = await client.auth.exchangeCodeForSession(code);
-  if (error) return NextResponse.redirect(new URL('/login', url.origin));
+  if (error) return loginAgain(url);
   return response;
 }

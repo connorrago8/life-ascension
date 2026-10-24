@@ -71,7 +71,7 @@ Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql`, `tests/sql
 
 Rename, reschedule, and archive are granted to `authenticated` only. There is no `*_as_user` wrapper, so an API key cannot call them. `/api/mcp` `submit_completion` for a daily date three days ago returns the tool error the route publishes as a JSON-RPC error, and XP stays unchanged.
 
-`feature/login-otp` is not merged and was not part of this check.
+Email OTP sign-in is on this branch. `tests/safeNext.test.mjs` checks 42 redirect payloads stay on the same origin, and the documented dot-segment and control-character cases collapse to `/`. `tests/loginOtp.test.mjs` checks the six-digit `verifyOtp` flow, the generic account message, the signed-in redirect off `/login`, and that `/api/mcp` and `/api/whoami` still return 401 with `WWW-Authenticate`.
 
 ## API keys and progress notes
 - Apply `supabase/migrations/202610230002_api_keys_progress.sql` on a development database before these checks. The integration database also applies `0003`, `0004`, `0005`, `0006`, and `0007` after it.

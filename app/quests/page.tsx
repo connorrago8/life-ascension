@@ -65,7 +65,7 @@ export default function QuestNotesIndex() {
         <div className="eyebrow">LIFE ASCENSION</div>
         <h1>Quest notes</h1>
         <p className="muted">Sign in to record progress on your quests.</p>
-        <a className="btn" href="/login">Sign in</a>
+        <a className="btn" href="/login?next=%2Fquests">Sign in</a>
       </main>
     );
   }
