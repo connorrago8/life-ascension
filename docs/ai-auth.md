@@ -1,8 +1,8 @@
 # AI auth: hashed API keys and quest progress notes
 
-This branch adds personal API keys and a journal of quest progress notes. It does not add `/api/mcp`. After review, wire `authenticateRequest` into the `/api/mcp` route on PR #1 (`feature/shared-ai-quest-mcp`).
+Personal API keys and quest progress notes are integrated on `feature/shared-ai-quest-mcp` (PR #1). `/api/mcp` accepts an API key or a Supabase user JWT.
 
-Nothing in this branch is applied to production. The migration is a file only.
+Nothing in this pull request is applied to production. The migrations are files until Connor runs them.
 
 ## How API keys work
 
@@ -58,85 +58,46 @@ Expect `HTTP/1.1 401` and a `WWW-Authenticate: Bearer` header. Do not paste a re
 
 Signed-in users insert only through `add_quest_progress(...)`. The function checks `auth.uid()` owns the quest (and the instance, when one is sent) and inserts a row. It does not write `xp_ledger`, quest events, or instance status. XP stays on the existing completion path: confirm completion on the quest board, which calls `set_quest_instance_status`.
 
-Open **Quest notes** from the quest board footer, then open a quest to add a note. The quest board layout, XP total, and scheduling behavior are unchanged.
+Open **Quest notes** from the quest board footer, then open a quest to add a note. The quest board also links to **API keys**. Scheduling, overdue items, and the Upcoming list stay on the board.
 
 Direct inserts and updates on `quest_progress` are not granted to browser roles. Users can read their own rows.
 
+`/api/mcp` `update_progress` calls the same `add_quest_progress` function. See `docs/ai-connector.md` for the tool list.
+
+## How API-key tool calls get a user
+
+`auth.uid()` is null on a service-role connection. `/api/mcp` does not mint a user JWT. For an API key it calls `create_scheduled_quest_as_user`, `ensure_quest_instance_as_user`, `set_quest_instance_status_as_user`, `add_quest_progress_as_user`, and `get_lifetime_xp_as_user`.
+
+Those functions live in `supabase/migrations/202610240005_api_key_user_context.sql`. They are granted only to `service_role`. Each wrapper checks that the JWT role claim is `service_role`, pins `request.jwt.claim.sub` to the key's user for the current transaction, and calls the existing function. A user JWT still calls the original functions with the anon client. The route always passes the user id from `authenticateRequest`, never a user id supplied by the model.
+
 ## Manual steps for Connor
 
-This pull request does not run SQL against Supabase and does not change Vercel settings.
+This pull request does not run SQL against Supabase and does not change Vercel settings. Leave `feature/login-otp` and `feature/quest-edit-archive` unmerged.
 
-1. Review the draft. Leave `feature/scheduling-xp-dashboard` and PR #1 untouched. This migration stays `supabase/migrations/202610230002_api_keys_progress.sql` so later scheduling migrations can use `202610230003_*` and `202610230004_*`.
-2. In the Supabase SQL editor, confirm `202610230001_core.sql` is already applied.
-3. Paste and run `supabase/migrations/202610230002_api_keys_progress.sql`. That creates `api_keys`, `api_keys_safe`, `quest_progress`, `authenticate_api_key`, `revoke_api_key`, and `add_quest_progress`. It does not replace scheduling or XP functions.
-4. If the API does not see the new objects, reload the schema: Dashboard → Project Settings → API, or run `NOTIFY pgrst, 'reload schema';` (the migration already sends that notify).
-5. In Supabase → Project Settings → API, copy the `service_role` secret.
-6. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production (and Preview, if you test the preview URL). Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value. Names only live in `.env.example` and `docs/.env.example`.
-7. Redeploy so the server can read the variable.
-8. Sign in, create a key at `/settings/api-keys`, and run the `/api/whoami` curl above. Revoke the key and run curl again. Expect 401.
+1. In the Supabase SQL editor, confirm `supabase/migrations/202610230001_core.sql` is already applied.
+2. Paste and run these files in order. Stop if any file errors.
+   1. `supabase/migrations/202610230002_api_keys_progress.sql` — `api_keys`, `api_keys_safe`, `quest_progress`, `authenticate_api_key`, `revoke_api_key`, `add_quest_progress`.
+   2. `supabase/migrations/202610230003_future_quest_scheduling.sql` — `scheduled_for`, `quest_type`, `create_scheduled_quest`, and the updated instance and completion functions. This revokes direct `INSERT` on `quests` for `anon` and `authenticated`.
+   3. `supabase/migrations/202610230004_lifetime_xp.sql` — `get_lifetime_xp()`.
+   4. `supabase/migrations/202610240005_api_key_user_context.sql` — service-role `*_as_user` wrappers required by `/api/mcp` when the caller uses an API key.
+3. If the API does not see the new objects, reload the schema under Project Settings → API. The migrations already run `NOTIFY pgrst, 'reload schema';`.
+4. In Supabase → Project Settings → API, copy the `service_role` secret.
+5. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production, and for Preview if you test a preview URL. Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value. The name is listed in `.env.example` and `docs/.env.example`.
+6. Redeploy so the server can read the variable.
+7. Sign in, create a key at `/settings/api-keys`, and run the `/api/whoami` curl above. Revoke the key and run curl again. Expect 401 and `WWW-Authenticate: Bearer`.
+8. Repeat the `/api/mcp` curls in `docs/ai-connector.md` with the same key, then again after revoke. Expect 401 after revoke.
 9. Save a quest note and confirm the quest board XP and completion status stay the same until you explicitly complete the quest.
 
-Optional local schema check (requires PostgreSQL, not CI):
+Optional local schema check (PostgreSQL 16, not CI, not production):
 
 ```bash
 tests/sql/run-local.sh
 ```
 
-## Wire `authenticateRequest` into `/api/mcp` on PR #1
-
-Do this on the integration branch after this review. Do not copy a second `/api/mcp` implementation onto this branch.
-
-`lib/apiKeyAuth.ts` exports:
-
-- `authenticateRequest(req)` → `{ ok: true, userId, method, scopes }` or `{ ok: false, status, error }`
-- `authenticationErrorResponse(result)` → the 401/503 response. 401 includes `WWW-Authenticate: Bearer`.
-- `hasScope(auth, scope)` for later scope checks
-
-Replace the JWT-only block at the start of `POST` in `app/api/mcp/route.ts` with:
-
-```ts
-import { authenticateRequest, authenticationErrorResponse } from '../../../lib/apiKeyAuth';
-import { createClient } from '@supabase/supabase-js';
-
-const auth = await authenticateRequest(req);
-if (!auth.ok) return authenticationErrorResponse(auth);
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-if (!url || !anonKey) {
-  return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
-}
-
-let db;
-if (auth.method === 'supabase_jwt') {
-  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  db = createClient(url, anonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-} else {
-  // API key: auth.userId is the owner. A service-role client has no auth.uid(),
-  // so add_quest_progress and set_quest_instance_status would reject the call.
-  // Keep using a user-scoped client, or add a follow-up that acts as auth.userId
-  // without granting the service role to the model.
-  return authenticationErrorResponse({
-    ok: false,
-    status: 401,
-    error: 'API key tools are not wired yet',
-  });
-}
-```
-
-Then use `db` and `auth.userId` in the existing tools:
-
-- `update_progress` should call `add_quest_progress` with the user-scoped client (`p_source` `chatgpt` or `grok`). The note is a journal entry. Completion and XP stay on `submit_completion` → `set_quest_instance_status` with an explicit confirmation.
-- Keep filtering every read by the authenticated user. Do not point tool queries at the service-role client.
-
-`GET /api/mcp` on PR #1 can keep returning 401. Add the same `WWW-Authenticate: Bearer` header there when you touch that route.
+That script loads `0001` through `0005` into a throwaway database and runs `tests/sql/api_keys_progress_smoke.sql` and `tests/sql/scheduling_auth_smoke.sql`.
 
 ## Out of scope here
 
 - OAuth, PKCE, refresh tokens, and dynamic client registration
-- Replacing `ensure_quest_instance`, `set_quest_instance_status`, `create_scheduled_quest`, or `get_lifetime_xp`
-- Dashboard XP aggregation and Chicago-local scheduling
-- Applying the migration or setting the Vercel secret from this repository
+- `feature/login-otp` and `feature/quest-edit-archive`
+- Applying the migrations or setting the Vercel secret from this repository

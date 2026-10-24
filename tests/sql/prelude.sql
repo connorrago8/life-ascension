@@ -30,3 +30,8 @@ $$;
 grant anon to current_user;
 grant authenticated to current_user;
 grant service_role to current_user;
+
+-- Supabase grants these so security-invoker functions can call auth.uid().
+-- auth.users stays unreadable by anon and authenticated.
+grant usage on schema auth to anon, authenticated, service_role;
+grant execute on function auth.uid() to anon, authenticated, service_role;

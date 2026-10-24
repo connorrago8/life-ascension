@@ -46,9 +46,10 @@ type KeyLookupRow = {
  * key is never stored or logged. User JWTs are checked with the anon client and the
  * caller's token so `auth.uid()` keeps working on existing RPCs.
  *
- * API-key success does not create a user JWT. RPCs that call `auth.uid()`
- * (`add_quest_progress`, and the existing quest status RPCs) still need a user-scoped
- * client. See docs/ai-auth.md before wiring this into /api/mcp.
+ * API-key success does not create a user JWT. `/api/mcp` calls the `*_as_user`
+ * wrappers from `202610240005_api_key_user_context.sql` with this `userId`.
+ * Those wrappers are service-role only and pin `auth.uid()` for one transaction.
+ * See docs/ai-auth.md.
  */
 export async function authenticateRequest(req: Request): Promise<AuthResult> {
   if (typeof window !== 'undefined') {

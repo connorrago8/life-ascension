@@ -13,7 +13,7 @@ The `NEXT_PUBLIC_` values are intentionally visible to browser users; row-level 
 ## Deployment steps
 
 1. Import `connorrago8/life-ascension` as a Next.js project in Vercel.
-2. Set the two environment variables in Vercel project settings.
+2. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY` in Vercel project settings. See `docs/ai-auth.md` before using API keys or `/api/mcp`.
 3. Deploy and record the resulting `https://...vercel.app` URL.
 4. In Supabase Authentication URL Configuration, set Site URL to the deployed URL and add `https://YOUR-DOMAIN/auth/callback` to redirect allowlist.
 5. Test email sign-in and sign-out on an actual phone.
