@@ -1,6 +1,6 @@
 # LIFE ASCENSION — Go-live checklist (owner walkthrough)
 
-**Do not start until Grok and ChatGPT approve PR #1, the login branch, and migration 0006.** The steps below are production changes. Supabase Free has **no automatic database backups or point-in-time recovery**. Make and verify your own off-site dump before changing SQL; otherwise you have **no reliable restore**. Do not paste secrets into chat, screenshots, issues, or logs.
+**Do not start until Grok and ChatGPT approve PR #1, the login branch, migration 0006 **and migration 0007**.** The steps below are production changes. Supabase Free has **no automatic database backups or point-in-time recovery**. Make and verify your own off-site dump before changing SQL; otherwise you have **no reliable restore**. Do not paste secrets into chat, screenshots, issues, or logs.
 
 ## 1. Confirm the starting point
 1. Open [Supabase](https://supabase.com/dashboard) and select the LIFE ASCENSION project.
@@ -18,7 +18,7 @@
      and proname in ('ensure_quest_instance','set_quest_instance_status');
    ```
    Confirm RLS is enabled on the protected tables and the two functions exist. These checks do **not** prove all 0001 statements ran. Compare the actual schema with 0001; **SQL Editor execution does not automatically populate Supabase CLI migration history**. If switching to CLI-managed migrations, reconcile with `supabase migration repair --status applied <version>` **only after** verifying the exact version is already applied. Otherwise use SQL Editor consistently and track each completed file yourself. Do **not** rerun 0001 blindly.
-3. Confirm the approved commits are in the intended PRs, and that migration 0006 follows 0005. Check the Vercel deployment currently serving the site and save its URL/commit for rollback.
+3. Confirm the approved commits are in the intended PRs, and that migration 0006 follows 0005 and **0007 follows 0006** in the actual deployment sequence. Check the Vercel deployment currently serving the site and save its URL/commit for rollback.
 4. **Required manual backup on Supabase Free:** install Supabase CLI and PostgreSQL client tools on a trusted computer. Start Docker Desktop (the Supabase CLI database dump uses Docker), verify it is running, authenticate the CLI and link the project, then export **schema and data separately** using the project's authorized database connection. Example commands (review your CLI version and connection method first):
    ```bash
    supabase db dump --linked -f backup-schema.sql
@@ -35,6 +35,7 @@ Free Supabase projects may pause after a period of inactivity; confirm the proje
 3. `supabase/migrations/202610230004_lifetime_xp.sql`
 4. `supabase/migrations/202610240005_api_key_user_context.sql`
 5. `supabase/migrations/202610240006_quest_edit_archive.sql` **only after its review and merge are complete**.
+6. `supabase/migrations/202610240007_daily_late_window.sql` **after 0006, never before it in the approved go-live sequence**. Both 0006 and 0007 replace `set_quest_instance_status`; applying 0006 last would overwrite 0007's two-day daily-habit XP limit. Stop and obtain a reviewed recovery plan if the order is wrong; do not blindly rerun production SQL.
 
 After each query, confirm SQL Editor reports success. For a read-only sanity check at the end:
 ```sql
@@ -47,7 +48,7 @@ select proname from pg_proc where pronamespace='public'::regnamespace
  'add_quest_progress_as_user','get_lifetime_xp_as_user','rename_quest','reschedule_quest','archive_quest')
  order by proname;
 ```
-Expected after 0002–0005: both tables and the scheduling, XP and API-key wrapper functions; **rename/reschedule/archive exist only after 0006**. Also check `_bind_service_role_user` and `create_scheduled_quest_as_user`, `ensure_quest_instance_as_user`, `set_quest_instance_status_as_user`, `add_quest_progress_as_user`, `get_lifetime_xp_as_user` against the approved 0005 definitions. Do not create test quests using privileged SQL; use the app after deployment. If a migration fails, **stop**, capture the non-secret error, and use the rollback section. Never skip a failed migration.
+Expected after 0002–0005: both tables and the scheduling, XP and API-key wrapper functions; **rename/reschedule/archive exist only after 0006**. After 0007, confirm the final `set_quest_instance_status` definition includes both 0006's completed-first idempotency and archived-quest active check **and** 0007's Chicago daily XP window. Confirm `create_scheduled_quest` and `ensure_quest_instance` are the 0007 definitions. Also check `_bind_service_role_user` and `create_scheduled_quest_as_user`, `ensure_quest_instance_as_user`, `set_quest_instance_status_as_user`, `add_quest_progress_as_user`, `get_lifetime_xp_as_user` against the approved 0005 definitions. Do not create test quests using privileged SQL; use the app after deployment. If a migration fails, **stop**, capture the non-secret error, and use the rollback section. Never skip a failed migration.
 
 ## 3. Configure the server-only Vercel secret
 1. Open [Vercel](https://vercel.com/dashboard) → LIFE ASCENSION project → **Settings → Environment Variables**.
@@ -64,7 +65,7 @@ Expected after 0002–0005: both tables and the scheduling, XP and API-key wrapp
 6. Email delivery: Supabase's default sender is rate-limited. For reliable production delivery, configure custom SMTP and verify the sending domain before depending on login. See a separate email-sender setup guide if available.
 
 ## 5. Merge and deploy only after approval
-1. Ask both reviewers to approve PR #1 and the login branch. Merge/rebase the 0006 branch **after** PR #1, because 0006 depends on 0003; include it only if compatibility tests passed.
+1. Ask both reviewers to approve PR #1 and the login branch. Integrate/rebase 0006 with PR #1 only after compatibility review. Since PR #1 now contains 0007, **the final migration application order must still be 0005 → 0006 → 0007**, regardless of Git merge order. Confirm the final deployment includes both migration files and tested definitions; never deploy 0007 and then apply 0006 without an approved corrective plan.
 2. Merge the approved changes into `main` in the agreed order. Do **not** merge a draft automatically.
 3. In Vercel → **Deployments**, wait for the `main` production deployment to show **Ready**. Redeploy after changing environment variables if necessary.
 4. Visit `https://life-ascension.vercel.app/login` in a private browser window. Request a code, read the email, enter it, and verify the board opens. Check that visiting `/login` while signed in returns home.
