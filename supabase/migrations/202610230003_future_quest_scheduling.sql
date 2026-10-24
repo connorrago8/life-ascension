@@ -3,6 +3,7 @@
 alter table public.quests add column if not exists scheduled_for date;
 alter table public.quests add column if not exists quest_type text not null default 'scheduled' check (quest_type in ('scheduled','goal'));
 
+drop function if exists public.create_scheduled_quest(text,text,text,date);
 create or replace function public.create_scheduled_quest(p_title text,p_domain text,p_cadence text,p_date date,p_quest_type text default 'scheduled')
 returns uuid language plpgsql security definer set search_path = ''
 as $$
@@ -84,3 +85,6 @@ begin
 end $$;
 revoke all on function public.set_quest_instance_status(uuid,text) from public,anon;
 grant execute on function public.set_quest_instance_status(uuid,text) to authenticated;
+
+-- All quest creation must use the validated, atomic RPC.
+revoke insert on public.quests from anon,authenticated;
