@@ -35,7 +35,7 @@ Free Supabase projects may pause after a period of inactivity; confirm the proje
 3. `supabase/migrations/202610230004_lifetime_xp.sql`
 4. `supabase/migrations/202610240005_api_key_user_context.sql`
 5. `supabase/migrations/202610240006_quest_edit_archive.sql` **only after its review and merge are complete**.
-6. `supabase/migrations/202610240007_daily_late_window.sql` **after 0006, never before it in the approved go-live sequence**. Both 0006 and 0007 replace `set_quest_instance_status`; applying 0006 last would overwrite 0007's two-day daily-habit XP limit. Stop and obtain a reviewed recovery plan if the order is wrong; do not blindly rerun production SQL.
+6. `supabase/migrations/202610240007_daily_late_window.sql` **after 0006, never before it in the approved go-live sequence**. Both 0006 and 0007 replace `set_quest_instance_status`; applying 0006 last would overwrite 0007's two-day daily-habit XP limit. If 0006 was applied after 0007, rerun 0007 immediately (safe to rerun), then run the function-definition checks below.
 
 After each query, confirm SQL Editor reports success. For a read-only sanity check at the end:
 ```sql
@@ -48,7 +48,15 @@ select proname from pg_proc where pronamespace='public'::regnamespace
  'add_quest_progress_as_user','get_lifetime_xp_as_user','rename_quest','reschedule_quest','archive_quest')
  order by proname;
 ```
-Expected after 0002–0005: both tables and the scheduling, XP and API-key wrapper functions; **rename/reschedule/archive exist only after 0006**. After 0007, confirm the final `set_quest_instance_status` definition includes both 0006's completed-first idempotency and archived-quest active check **and** 0007's Chicago daily XP window. Confirm `create_scheduled_quest` and `ensure_quest_instance` are the 0007 definitions. Also check `_bind_service_role_user` and `create_scheduled_quest_as_user`, `ensure_quest_instance_as_user`, `set_quest_instance_status_as_user`, `add_quest_progress_as_user`, `get_lifetime_xp_as_user` against the approved 0005 definitions. Do not create test quests using privileged SQL; use the app after deployment. If a migration fails, **stop**, capture the non-secret error, and use the rollback section. Never skip a failed migration.
+Expected after 0002–0005: both tables and the scheduling, XP and API-key wrapper functions; **rename/reschedule/archive exist only after 0006**. After 0007, confirm the final `set_quest_instance_status` definition includes both 0006's completed-first idempotency and archived-quest active check **and** 0007's Chicago daily XP window. Confirm `create_scheduled_quest` and `ensure_quest_instance` are the 0007 definitions. Run this **read-only, copy-paste verification** after applying 0007; all four values must be `true`:
+```sql
+select
+  pg_get_functiondef('public.set_quest_instance_status(uuid,text)'::regprocedure) like '%previous 2 days%' as has_window,
+  pg_get_functiondef('public.set_quest_instance_status(uuid,text)'::regprocedure) like '%Active quest not found%' as has_archive_check,
+  pg_get_functiondef('public.ensure_quest_instance(uuid,date)'::regprocedure) like '%last 2 days%' as has_instance_window,
+  pg_get_functiondef('public.create_scheduled_quest(text,text,text,date,text)'::regprocedure) like '%v_due%' as has_backdated_clamp;
+```
+If any value is `false`, **stop deployment** and inspect the applied migrations. If 0006 overwrote 0007, rerun 0007 and repeat this check before proceeding. Also check `_bind_service_role_user` and `create_scheduled_quest_as_user`, `ensure_quest_instance_as_user`, `set_quest_instance_status_as_user`, `add_quest_progress_as_user`, `get_lifetime_xp_as_user` against the approved 0005 definitions. Do not create test quests using privileged SQL; use the app after deployment. If a migration fails, **stop**, capture the non-secret error, and use the rollback section. Never skip a failed migration.
 
 ## 3. Configure the server-only Vercel secret
 1. Open [Vercel](https://vercel.com/dashboard) → LIFE ASCENSION project → **Settings → Environment Variables**.
