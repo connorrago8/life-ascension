@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 # Manual smoke test against a deployed instance. No secrets are echoed.
-# Usage: export LIFE_ASCENSION_API_KEY='...' ; bash tests/smoke.sh
-set -euo pipefail
+# Usage: set LIFE_ASCENSION_API_KEY privately; CONFIRM_PROD=1 bash tests/smoke.sh
+# WARNING: Each run permanently creates two quests and awards +1 XP.
+set -Eeuo pipefail
+: "${CONFIRM_PROD:?Set CONFIRM_PROD=1 to accept permanent test quests and +1 XP}"
+[[ "$CONFIRM_PROD" == 1 ]] || { echo 'CONFIRM_PROD must equal 1'; exit 1; }
+trap 'echo "Smoke test failed at line $LINENO" >&2' ERR
 BASE_URL="${BASE_URL:-https://life-ascension.vercel.app}"
 : "${LIFE_ASCENSION_API_KEY:?Set LIFE_ASCENSION_API_KEY privately in your shell}"
 for cmd in curl python3; do command -v "$cmd" >/dev/null || { echo "Missing $cmd"; exit 1; }; done
 umask 077
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-AUTH="Authorization: Bearer ${LIFE_ASCENSION_API_KEY}"
+printf 'Authorization: Bearer %s\n' "$LIFE_ASCENSION_API_KEY" > "$tmp/auth-header"
+# curl reads this private 0600 file; the secret never appears in process arguments.
+unset LIFE_ASCENSION_API_KEY
 call(){
  local method="$1" payload="$2"
  curl -sS -o "$tmp/response" -w '%{http_code}' -X POST "$BASE_URL/api/mcp" \
-  -H "$AUTH" -H 'Content-Type: application/json' \
+  -H @"$tmp/auth-header" -H 'Content-Type: application/json' \
   --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"$method\",\"arguments\":$payload}}"
 }
 extract(){
@@ -77,7 +83,11 @@ PY
 status="$(call get_character_progress '{}')"; test "$status" = 200
 test "$(extract lifetime_xp)" = "$after" || { echo "XP changed for future chore"; exit 1; }
 echo "8. Revoke key in /settings/api-keys, then press Enter to test rejection"
-read -r _
+if [[ ! -r /dev/tty ]]; then echo "Interactive terminal required for revocation test" >&2; exit 1; fi
+read -r _ </dev/tty
 status="$(curl -sS -o "$tmp/revoked" -w '%{http_code}' -H "$AUTH" "$BASE_URL/api/whoami")"
 test "$status" = 401 || { echo "Expected 401 for revoked key, got $status"; exit 1; }
+grep -Eiq '^WWW-Authenticate:[[:space:]]*Bearer' "$tmp/revoked-headers" || { echo "Missing Bearer challenge"; exit 1; }
+status="$(curl -sS -o "$tmp/revoked-mcp" -w '%{http_code}' -X POST "$BASE_URL/api/mcp" -H @"$tmp/auth-header" -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","id":99,"method":"tools/list"}')"
+test "$status" = 401 || { echo "Expected 401 from MCP with revoked key; got $status"; exit 1; }
 echo "PASS. Test quests remain in your account; archive them in the app when supported."
