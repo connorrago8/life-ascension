@@ -1,5 +1,6 @@
--- Compatibility cases for origin/feature/quest-edit-archive migration 0006.
--- Apply 0001-0005, then that file, then this script. Not part of run-local.sh.
+-- Compatibility cases for migration 0006, after 0007 has replaced set_quest_instance_status.
+-- The final function returns completed before the active check, and a deferred daily
+-- whose start moved forward still raises the future-daily error.
 
 insert into auth.users (id) values ('00000000-0000-0000-0000-0000000000f1');
 
@@ -60,15 +61,9 @@ begin
      or (select active from public.quests where id = v_quest) then
     raise exception 'archive dropped the completion or XP';
   end if;
-  begin
-    perform public.set_quest_instance_status(v_inst, 'complete');
-    raise exception 'archived retry returned success';
-  exception
-    when others then
-      if sqlerrm <> 'Active quest not found' then
-        raise;
-      end if;
-  end;
+  if public.set_quest_instance_status(v_inst, 'complete') <> 'completed' then
+    raise exception 'archived completed quest lost idempotent return';
+  end if;
   if (select coalesce(sum(amount), 0) from public.xp_ledger where instance_id = v_inst) <> 1 then
     raise exception 'archived retry changed XP';
   end if;
@@ -113,7 +108,7 @@ begin
     raise exception 'deferred future-start daily completed';
   exception
     when others then
-      if sqlerrm <> 'Daily quest not eligible' then
+      if sqlerrm <> 'Future daily quests cannot be completed' then
         raise;
       end if;
   end;

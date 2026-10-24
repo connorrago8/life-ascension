@@ -29,7 +29,7 @@ Status: **NOT YET EXECUTED**. Do not invite players or upload sensitive evidence
 - Failed database requests show a useful error.
 
 ## Scheduling, XP, and the MCP user context
-Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql`, `tests/sql/two_user_mcp_auth.sql`, `tests/sql/daily_late_window_smoke.sql`, and `tests/mcpToolIsolation.test.mjs`. `tests/sql/run-local.sh` applies migrations `0001` through `0005`, then `0007`, and runs the SQL smokes. `tests/sql/run-late-window-with-0006.sh` applies `0006` from `origin/feature/quest-edit-archive` between `0005` and `0007`. They are not a production release gate. Deployed sign-in, a hosted two-user Supabase project, and mobile checks are still open.
+Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql`, `tests/sql/two_user_mcp_auth.sql`, `tests/sql/archive_compat_smoke.sql`, `tests/sql/daily_late_window_smoke.sql`, and `tests/mcpToolIsolation.test.mjs`. `tests/sql/run-local.sh` applies migrations `0001` through `0007` in order and runs the SQL smokes. They are not a production release gate. Deployed sign-in, a hosted two-user Supabase project, and mobile checks are still open.
 
 - `create_scheduled_quest` stores a one-time chore on the next Thursday (Chicago) after today, with a matching instance.
 - That future chore cannot be completed yet.
@@ -64,17 +64,17 @@ Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql`, `tests/sql
 - One-time chores are not clamped and can be completed while overdue. Goals can be completed early.
 - Apply `0007` after `0006` when both are used. `0006` also replaces `set_quest_instance_status`. Running `0006` later removes the window until `0007` is applied again. The `0007` function keeps `0006`'s return of `completed` before the inactive-quest check.
 
-## Quest edit/archive (not merged)
-`feature/quest-edit-archive` was rechecked at `2ad2635` by applying `0001`–`0005` and then `202610240006_quest_edit_archive.sql` from that branch on a throwaway database. It was not merged and was not pushed. That commit restores `Future daily quests cannot be completed`, returns `completed` for an already completed archived instance before the active check, and rejects a null `scheduled_for` on a one-time chore reschedule with `Legacy scheduled chore requires scheduled date backfill`.
+## Quest edit/archive
+`202610240006_quest_edit_archive.sql` is applied before `0007`. `0007` is the final `set_quest_instance_status`. It keeps the completed-instance return before the active check and the 2-day daily window.
 
-`0007` applied after that `0006` keeps those two completion rules. `tests/sql/daily_late_window_smoke.sql` checks the idempotent archived return and the `Active quest not found` rejection when `archive_quest` is installed.
+`tests/sql/archive_compat_smoke.sql` covers archive, rename, and reschedule. An archived open quest cannot be completed. An already completed archived quest returns `completed` and keeps its one XP row. Moving a daily start forward defers today's open instance and awards no XP for that instance. A scheduled chore cannot be moved earlier. A daily start moved into the past does not open or pay any instance older than today minus 2 days. A daily instance dated before `0007`, with its due date older than today minus 2, is rejected and awards no XP.
 
-Still open on that branch: `202610240006_quest_edit_archive.sql` grants rename, reschedule, and archive to `authenticated` only. There is no `*_as_user` wrapper, so an API key cannot call them. The migration comment says those RPCs are browser/JWT-only.
+Rename, reschedule, and archive are granted to `authenticated` only. There is no `*_as_user` wrapper, so an API key cannot call them. `/api/mcp` `submit_completion` for a daily date three days ago returns the tool error the route publishes as a JSON-RPC error, and XP stays unchanged.
 
 `feature/login-otp` is not merged and was not part of this check.
 
 ## API keys and progress notes
-- Apply `supabase/migrations/202610230002_api_keys_progress.sql` on a development database before these checks. The integration database also applies `0003`, `0004`, `0005`, and `0007` after it.
+- Apply `supabase/migrations/202610230002_api_keys_progress.sql` on a development database before these checks. The integration database also applies `0003`, `0004`, `0005`, `0006`, and `0007` after it.
 - A user can read `api_keys_safe` for their own keys and cannot select `api_keys.key_hash`.
 - A user cannot insert into `api_keys` or `quest_progress` directly.
 - `revoke_api_key` revokes only the caller's key. A second user gets `API key not found`.

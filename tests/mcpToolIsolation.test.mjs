@@ -6,6 +6,14 @@ const alice = '00000000-0000-0000-0000-0000000000e1';
 const bob = '00000000-0000-0000-0000-0000000000e2';
 const today = '2026-10-24';
 
+function shiftDate(iso, days) {
+  const date = new Date(`${iso}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+const earliestDaily = shiftDate(today, -2);
+
 function seed() {
   const tables = {
     quests: [
@@ -77,16 +85,24 @@ function memoryDb(tables, calls) {
         const instance = tables.quest_instances.find((row) => row.id === args.p_instance_id && row.owner_id === userId);
         if (!instance) return { data: null, error: { message: 'Instance not found' } };
         const quest = tables.quests.find((row) => row.id === instance.quest_id && row.owner_id === userId);
+        if (instance.status === 'completed') return { data: 'completed', error: null };
         if (!quest?.active) return { data: null, error: { message: 'Active quest not found' } };
-        if (instance.status !== 'completed') {
-          instance.status = 'completed';
-          tables.xp_ledger.push({ owner_id: userId, instance_id: instance.id, amount: 1 });
+        if (quest.cadence === 'daily' && (instance.due_date > today || (quest.scheduled_for && instance.due_date < quest.scheduled_for))) {
+          return { data: null, error: { message: 'Future daily quests cannot be completed' } };
         }
+        if (quest.cadence === 'daily' && instance.due_date < earliestDaily) {
+          return { data: null, error: { message: 'Daily quests can only be completed for today or the previous 2 days' } };
+        }
+        instance.status = 'completed';
+        tables.xp_ledger.push({ owner_id: userId, instance_id: instance.id, amount: 1 });
         return { data: 'completed', error: null };
       }
       if (fn === 'ensure_quest_instance_as_user') {
         const quest = tables.quests.find((row) => row.id === args.p_quest_id && row.owner_id === userId && row.active);
         if (!quest) return { data: null, error: { message: 'Quest not found' } };
+        if (quest.cadence === 'daily' && args.p_date < earliestDaily) {
+          return { data: null, error: { message: 'Daily instances cannot be opened before the last 2 days' } };
+        }
         const id = `ensured-${args.p_quest_id}`;
         tables.quest_instances.push({ id, quest_id: quest.id, owner_id: userId, due_date: args.p_date, status: 'available' });
         return { data: id, error: null };
@@ -219,4 +235,49 @@ test('Bob is isolated from Alice the same way', async () => {
   });
   assert.equal(complete.ok, false);
   assert.equal(tables.quest_instances.find((row) => row.id === 'ai-active').status, 'available');
+});
+
+test('API-key submit_completion of a daily three days ago is rejected with XP unchanged', async () => {
+  const { tables, db } = seed();
+  const staleDate = shiftDate(today, -3);
+  tables.quests.push({
+    id: 'aq-daily',
+    owner_id: alice,
+    title: 'Old habit',
+    domain: 'home',
+    cadence: 'daily',
+    quest_type: 'scheduled',
+    scheduled_for: '2026-09-24',
+    active: true,
+  });
+  tables.quest_instances.push({
+    id: 'ai-stale',
+    quest_id: 'aq-daily',
+    owner_id: alice,
+    due_date: staleDate,
+    status: 'available',
+  });
+  const xpBefore = tables.xp_ledger.filter((row) => row.owner_id === alice).reduce((sum, row) => sum + row.amount, 0);
+  const stale = await asAlice(db, 'submit_completion', {
+    quest_id: 'aq-daily',
+    due_date: staleDate,
+    confirmed_complete: true,
+  });
+  assert.equal(stale.ok, false);
+  assert.equal(stale.rpcCode, -32000);
+  assert.equal(stale.message, 'Daily quests can only be completed for today or the previous 2 days');
+  assert.equal(tables.quest_instances.find((row) => row.id === 'ai-stale').status, 'available');
+
+  const missing = await asAlice(db, 'submit_completion', {
+    quest_id: 'aq-daily',
+    due_date: shiftDate(today, -4),
+    confirmed_complete: true,
+  });
+  assert.equal(missing.ok, false);
+  assert.equal(missing.rpcCode, -32000);
+  assert.equal(missing.message, 'Daily instances cannot be opened before the last 2 days');
+  assert.equal(tables.quest_instances.some((row) => row.due_date === shiftDate(today, -4)), false);
+
+  const xpAfter = tables.xp_ledger.filter((row) => row.owner_id === alice).reduce((sum, row) => sum + row.amount, 0);
+  assert.equal(xpAfter, xpBefore);
 });

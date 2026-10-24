@@ -18,6 +18,8 @@ test('401 responses advertise Bearer and revoked keys use that response', () => 
 
 test('mcp tools use the scheduling and progress RPCs', () => {
   assert.match(route, /runMcpTool/);
+  assert.match(route, /const fail = \(id: unknown, code: number, message: string\) => NextResponse\.json\(\{ jsonrpc: '2\.0', id, error: \{ code, message \} \}\)/);
+  assert.match(route, /if \(!outcome\.ok\) return fail\(id, outcome\.rpcCode, outcome\.message\)/);
   assert.match(tools, /create_scheduled_quest_as_user/);
   assert.match(tools, /add_quest_progress_as_user/);
   assert.match(tools, /set_quest_instance_status_as_user/);

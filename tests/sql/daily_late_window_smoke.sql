@@ -76,6 +76,25 @@ values (
   (now() at time zone 'America/Chicago')::date - 3
 );
 
+-- Shape left by create_scheduled_quest before 0007: the instance date is the old start.
+insert into public.quests (id, owner_id, title, domain, cadence, scheduled_for, quest_type)
+values (
+  '00000000-0000-0000-0000-0000000000a9',
+  '00000000-0000-0000-0000-0000000000a7',
+  'Legacy stretch',
+  'physical_health',
+  'daily',
+  (now() at time zone 'America/Chicago')::date - 30,
+  'scheduled'
+);
+insert into public.quest_instances (id, owner_id, quest_id, due_date)
+values (
+  '00000000-0000-0000-0000-0000000000aa',
+  '00000000-0000-0000-0000-0000000000a7',
+  '00000000-0000-0000-0000-0000000000a9',
+  (now() at time zone 'America/Chicago')::date - 30
+);
+
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a7', false);
 set role authenticated;
 
@@ -100,6 +119,21 @@ begin
      or exists (select 1 from public.xp_ledger where instance_id = '00000000-0000-0000-0000-0000000000a8') then
     raise exception 'today-3 rejection changed status or awarded XP';
   end if;
+
+  begin
+    perform public.set_quest_instance_status('00000000-0000-0000-0000-0000000000aa', 'complete');
+    raise exception 'pre-0007 daily older than today-2 was completed';
+  exception
+    when others then
+      if sqlerrm <> 'Daily quests can only be completed for today or the previous 2 days' then
+        raise;
+      end if;
+  end;
+  if (select status from public.quest_instances where id = '00000000-0000-0000-0000-0000000000aa') <> 'available'
+     or exists (select 1 from public.xp_ledger where instance_id = '00000000-0000-0000-0000-0000000000aa') then
+    raise exception 'pre-0007 daily rejection changed status or awarded XP';
+  end if;
+  raise notice 'PASS daily rows that predate 0007 and are older than today-2 earn no XP';
 
   v_tomorrow := public.ensure_quest_instance(v_quest, v_today + 1);
   begin
@@ -248,6 +282,39 @@ begin
   if exists (select 1 from public.xp_ledger where instance_id = v_inst) then
     raise exception 'archived open daily awarded XP';
   end if;
+
+  v_quest := public.create_scheduled_quest('Backdated habit', 'physical_health', 'daily', v_today, 'scheduled');
+  perform public.reschedule_quest(v_quest, v_today - 30);
+  if (select scheduled_for from public.quests where id = v_quest) <> v_today - 30 then
+    raise exception 'daily start did not move into the past';
+  end if;
+  if exists (
+    select 1 from public.quest_instances
+     where quest_id = v_quest and due_date < v_today - 2
+  ) then
+    raise exception 'reschedule opened a daily instance older than today-2';
+  end if;
+  begin
+    perform public.ensure_quest_instance(v_quest, v_today - 3);
+    raise exception 'reschedule allowed a daily instance older than today-2';
+  exception
+    when others then
+      if sqlerrm <> 'Daily instances cannot be opened before the last 2 days' then
+        raise;
+      end if;
+  end;
+  v_inst := public.ensure_quest_instance(v_quest, v_today - 2);
+  if public.set_quest_instance_status(v_inst, 'complete') <> 'completed' then
+    raise exception 'today-2 after a past reschedule did not complete';
+  end if;
+  select coalesce(sum(l.amount), 0) into v_xp
+    from public.xp_ledger l
+    join public.quest_instances i on i.id = l.instance_id
+   where i.quest_id = v_quest;
+  if v_xp <> 1 then
+    raise exception 'past reschedule awarded XP outside the window (% )', v_xp;
+  end if;
   raise notice 'PASS 0006 idempotent return and active check survive 0007';
+  raise notice 'PASS reschedule into the past pays nothing older than today-2';
 end
 $$;
