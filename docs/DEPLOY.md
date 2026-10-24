@@ -17,7 +17,7 @@
    select proname from pg_proc where pronamespace='public'::regnamespace
      and proname in ('ensure_quest_instance','set_quest_instance_status');
    ```
-   Confirm RLS is enabled on the protected tables and the two functions exist. These checks do **not** prove all 0001 statements ran. Compare the actual schema with 0001; **SQL Editor execution does not automatically populate Supabase CLI migration history**. If switching to CLI-managed migrations, reconcile with `supabase migration repair` only after verifying actual schema state. Do **not** rerun 0001 blindly.
+   Confirm RLS is enabled on the protected tables and the two functions exist. These checks do **not** prove all 0001 statements ran. Compare the actual schema with 0001; **SQL Editor execution does not automatically populate Supabase CLI migration history**. If switching to CLI-managed migrations, reconcile with `supabase migration repair --status applied <version>` **only after** verifying the exact version is already applied. Otherwise use SQL Editor consistently and track each completed file yourself. Do **not** rerun 0001 blindly.
 3. Confirm the approved commits are in the intended PRs, and that migration 0006 follows 0005. Check the Vercel deployment currently serving the site and save its URL/commit for rollback.
 4. **Required manual backup on Supabase Free:** install Supabase CLI and PostgreSQL client tools on a trusted computer. Authenticate the CLI and link the project, then export **schema and data separately** using the project's authorized database connection. Example commands (review your CLI version and connection method first):
    ```bash
@@ -28,7 +28,7 @@
 
 ## 2. Apply database migrations in order — **same sitting as deployment**
 **Important downtime:** Migration 0003 revokes direct quest INSERT from the current live frontend. From the moment 0003 runs until the updated PR #1 code is deployed, **quest creation on the live website can fail**. Reserve an uninterrupted maintenance window, have the approved PR and Vercel access ready, tell yourself not to use the site during the window, and complete §§2–5 together. Do not start SQL if you cannot finish deployment immediately.
-In the approved GitHub branch, open each file, copy its **entire SQL**, paste it into a **new** Supabase SQL Editor query, and click **Run**. Read the result before moving on. **Do not execute the same migration twice just because a page was refreshed.**
+Free Supabase projects may pause after a period of inactivity; confirm the project is active and responding **before** the maintenance window. In the approved GitHub branch, open each file, copy its **entire SQL**, and run **one migration per SQL Editor query**. For migrations that do not already control their own transactions, wrap the whole file in `BEGIN;` and `COMMIT;` to make it atomic; **review each file first**, since nested or non-transactional statements may require another approach. Click **Run** and confirm success before the next file. Read the result before moving on. **Do not execute the same migration twice just because a page was refreshed.**
 
 1. `supabase/migrations/202610230002_api_keys_progress.sql`
 2. `supabase/migrations/202610230003_future_quest_scheduling.sql`
@@ -69,7 +69,7 @@ Expected after 0002–0005: both tables and the scheduling, XP and API-key wrapp
 3. In Vercel → **Deployments**, wait for the `main` production deployment to show **Ready**. Redeploy after changing environment variables if necessary.
 4. Visit `https://life-ascension.vercel.app/login` in a private browser window. Request a code, read the email, enter it, and verify the board opens. Check that visiting `/login` while signed in returns home.
 5. Visit `/settings/api-keys`; create a test key, store it privately in your local shell's secret environment variable. **Each smoke-test run permanently adds two quests and +1 lifetime XP to the account; archiving does not undo XP.** Run only if you accept this, with `CONFIRM_PROD=1 bash tests/smoke.sh`. Prefer a dedicated test account/project if available. **Never send the key in chat.**
-6. Confirm the board loads today's quests, Upcoming, XP, and that archived quests are not shown.
+6. Confirm the board loads today's quests, Upcoming, XP, and that archived quests are not shown. After migration 0006 is deployed, **archive the two smoke-test quests** using `/quests/manage`; this hides the quests but **does not remove the +1 XP**.
 
 ## 6. Rollback / stop plan
 - **SQL error before merging:** Stop. Record the migration filename and sanitized error. Do not run later migrations. Some SQL statements may already have committed; inspect the actual schema before deciding whether to retry. Ask for a reviewed forward-fix SQL or restore the database from a verified backup. **Do not assume re-running or deleting tables is safe.**
