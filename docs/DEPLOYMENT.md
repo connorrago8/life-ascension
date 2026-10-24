@@ -6,15 +6,16 @@ This repository is public. **Never commit secret API keys, passwords, private he
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase **publishable** key (not service_role or secret)
+- `SUPABASE_SERVICE_ROLE_KEY`: server-only key for hashed personal API keys. Never prefix it with `NEXT_PUBLIC_`. See `docs/ai-auth.md`.
 
 The `NEXT_PUBLIC_` values are intentionally visible to browser users; row-level security must enforce privacy.
 
 ## Deployment steps
 
 1. Import `connorrago8/life-ascension` as a Next.js project in Vercel.
-2. Set the two environment variables in Vercel project settings.
+2. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY` in Vercel project settings. See `docs/ai-auth.md` before using API keys or `/api/mcp`.
 3. Deploy and record the resulting `https://...vercel.app` URL.
-4. In Supabase Authentication URL Configuration, set Site URL to the deployed URL and add `https://YOUR-DOMAIN/auth/callback` to redirect allowlist.
+4. In Supabase Authentication URL Configuration, set Site URL to `https://life-ascension.vercel.app` and allow `https://life-ascension.vercel.app/auth/callback`. Put `{{ .Token }}` in the Magic Link template, keep the email OTP length at 6, and turn signups off after the owner account can sign in. See `docs/ai-auth.md`.
 5. Test email sign-in and sign-out on an actual phone.
 6. Run the two-user isolation and duplicate-XP tests in `tests/SECURITY_TEST_PLAN.md`.
 
