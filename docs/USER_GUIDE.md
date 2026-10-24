@@ -31,7 +31,7 @@ A scheduled chore becomes eligible on its due date. If laundry is scheduled for 
 
 A one-time chore you missed stays available after its due date. If you planned laundry for Monday and finish Tuesday, confirm it Tuesday and earn XP once. There is no automatic XP penalty for being late.
 
-Daily habits work differently: each eligible calendar day is tracked separately in **Chicago time**. You cannot earn future-day XP, and the proposed streak system will not count late backfilled completions as an unbroken streak.
+Daily habits work differently: each eligible calendar day is tracked separately in **Chicago time**. **You can log a missed daily habit up to 2 days late**—today and the previous two Chicago days can earn XP, but older or future days cannot. Logging late does **not** repair a broken streak. This new limit takes effect only after migration 0007 is deployed; until then, the current server rules apply.
 
 ## 5. If an AI connection or API key looks wrong
 
