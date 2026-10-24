@@ -4,12 +4,12 @@ import {useRouter} from 'next/navigation';
 import {supabase} from '../../lib/supabase';
 
 function returnPath(){
- const p=new URLSearchParams(window.location.search);
- const next=p.get('next');
- if(!next)return '/';
- // Only same-origin relative destinations; prevent open redirects.
- if(!next.startsWith('/')||next.startsWith('//')||next.includes('\\'))return '/';
- return next;
+ const next=new URLSearchParams(window.location.search).get('next');
+ if(!next||/[\x00-\x1f\x7f]/.test(next)||!next.startsWith('/')||next.startsWith('//')||next.includes('\\'))return '/';
+ try{
+  const u=new URL(next,window.location.origin);
+  return u.origin===window.location.origin?u.pathname+u.search+u.hash:'/';
+ }catch{return '/'}
 }
 export default function Login(){
  const router=useRouter();
@@ -26,14 +26,14 @@ export default function Login(){
  },[router]);
  async function requestCode(e:React.FormEvent){
   e.preventDefault();if(busy)return;setBusy(true);setMessage('');
-  const {error}=await supabase().auth.signInWithOtp({email:email.trim(),options:{shouldCreateUser:false}});
-  if(error)setMessage(error.message);else{setSent(true);setMessage('Enter the 6-digit code sent to your email.')}
+  const {error}=await supabase().auth.signInWithOtp({email:email.trim(),options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+'/auth/callback?next='+encodeURIComponent(returnPath())}});
+  if(error)setMessage('Unable to send a code right now. Check your email address or try again later.');else{setSent(true);setMessage('Enter the 6-digit code sent to your email.')}
   setBusy(false);
  }
  async function verify(e:React.FormEvent){
   e.preventDefault();if(busy||!/^\d{6}$/.test(code))return;setBusy(true);setMessage('');
   const {error}=await supabase().auth.verifyOtp({email:email.trim(),token:code,type:'email'});
-  if(error)setMessage(error.message);else router.replace(returnPath());
+  if(error)setMessage('That code is invalid or expired. Request a new code and try again.');else router.replace(returnPath());
   setBusy(false);
  }
  return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Sign in to your adventure</h1>
