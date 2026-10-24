@@ -16,14 +16,14 @@ export const dynamic = 'force-dynamic';
 const tools = [
   {
     name: 'create_quest',
-    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. "scheduled" chores and daily habits cannot be completed before their due date.',
+    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for today and the previous 2 Chicago days. If its start is older than that, the first instance opens on today minus 2 days.',
     inputSchema: {
       type: 'object',
       properties: {
         title: { type: 'string' },
         domain: { type: 'string', enum: mcpDomains },
         cadence: { type: 'string', enum: ['once', 'daily'] },
-        due_date: { type: 'string', description: 'Optional Chicago calendar date YYYY-MM-DD. Defaults to today. The server accepts 30 days ago through 366 days ahead.' },
+        due_date: { type: 'string', description: 'Optional Chicago calendar date YYYY-MM-DD. Defaults to today. The server accepts 30 days ago through 366 days ahead. A daily start older than 2 days still saves that start, and the opened instance is dated today minus 2 days.' },
         quest_type: { type: 'string', enum: ['scheduled', 'goal'], description: 'Default scheduled. goal requires cadence once.' },
       },
       required: ['title', 'domain', 'cadence'],
@@ -46,7 +46,7 @@ const tools = [
   },
   {
     name: 'submit_completion',
-    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once. Future daily habits and future scheduled chores are rejected. Deadline goals can be completed early.',
+    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once. A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
     inputSchema: {
       type: 'object',
       properties: {

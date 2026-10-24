@@ -23,13 +23,13 @@ OAuth, PKCE, refresh tokens, and dynamic client registration are still not imple
 
 ## Tools
 
-- `create_quest` calls `create_scheduled_quest` (`p_quest_type` `scheduled` or `goal`). It does not insert into `quests` and it does not delete a row if a later step fails. The database creates the quest and its instance together. `goal` requires cadence `once`.
+- `create_quest` calls `create_scheduled_quest` (`p_quest_type` `scheduled` or `goal`). It does not insert into `quests` and it does not delete a row if a later step fails. The database creates the quest and its instance together. `goal` requires cadence `once`. A daily habit may still start as far back as 30 Chicago days, and `scheduled_for` stores that date. The instance opened at creation is never older than today minus 2 days. One-time chores and goals are not clamped.
 - `update_progress` calls `add_quest_progress`. The note is a journal entry. It does not award XP and does not change instance status.
-- `submit_completion` requires `confirmed_complete` to be exactly `true`, then calls `set_quest_instance_status` with action `complete`. Future daily habits and future scheduled chores are rejected by that function. A deadline goal can be completed early. A second completion returns success and does not add XP.
+- `submit_completion` requires `confirmed_complete` to be exactly `true`, then calls `set_quest_instance_status` with action `complete`. A daily habit earns 1 XP only when its instance date is today or one of the previous 2 Chicago days (`today - 2` through today, from `(now() at time zone 'America/Chicago')::date`). An older day and a future day are rejected and award no XP. `ensure_quest_instance` also refuses to open a daily instance before that window. An overdue one-time chore can still be completed. A deadline goal can still be completed early. A second completion returns success and does not add XP.
 - `list_quests` returns the caller's **active** quests (`active = true`). Instances are loaded only for those quest ids, so an inactive quest's instance is not returned. `due_date` defaults to the Chicago calendar date. `include_history` skips the instance date filter and still omits inactive quests. The instance list is capped at 500 rows.
 - `get_character_progress` reads `get_lifetime_xp` and the caller's completed instance count. It returns those two numbers, not quest or instance rows. The count includes every completed instance that user owns, so it stays aligned with lifetime XP after a quest is marked inactive.
 
-Dates use `America/Chicago`. The database accepts a scheduled date from 30 days ago through 366 days ahead.
+Dates use `America/Chicago`. The database accepts a scheduled date from 30 days ago through 366 days ahead. Daily XP is limited to today and the previous 2 days. A daily created with an older start can earn at most 3 XP from the instances inside that window.
 
 ## Manual steps for Connor
 
@@ -41,7 +41,8 @@ Do these yourself. This pull request does not run SQL against Supabase and does 
    2. `supabase/migrations/202610230003_future_quest_scheduling.sql`
    3. `supabase/migrations/202610230004_lifetime_xp.sql`
    4. `supabase/migrations/202610240005_api_key_user_context.sql`
-3. `0005` is required for API-key tool calls. It does not replace the functions from `0003` or `0004`. It adds service-role wrappers that pin the authenticated user for one transaction. Skip `feature/login-otp` and `feature/quest-edit-archive`.
+   5. `supabase/migrations/202610240007_daily_late_window.sql` — daily habit XP window. Run this last. It replaces `create_scheduled_quest`, `ensure_quest_instance`, and `set_quest_instance_status`. The `*_as_user` wrappers from `0005` call those functions by name, so they pick up this definition.
+3. `0005` is required for API-key tool calls. It does not replace the functions from `0003` or `0004`. It adds service-role wrappers that pin the authenticated user for one transaction. `0007` does not require `feature/quest-edit-archive`. Leave that branch and `feature/login-otp` unmerged. If you later apply `202610240006_quest_edit_archive.sql`, run it before `0007`. Both files replace `set_quest_instance_status`. If `0006` is applied after `0007`, run `0007` again so the daily window stays in the function. The `0007` body keeps `0006`'s completed-instance return and its rejection of an inactive quest.
 4. If the API does not see the new functions, reload the schema (Project Settings → API) or run `NOTIFY pgrst, 'reload schema';`. The new migrations already send that notify.
 5. In Supabase → Project Settings → API, copy the `service_role` secret.
 6. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production, and for Preview if you exercise the preview URL. Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value.

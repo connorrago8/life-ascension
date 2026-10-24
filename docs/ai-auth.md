@@ -80,13 +80,15 @@ This pull request does not run SQL against Supabase and does not change Vercel s
    2. `supabase/migrations/202610230003_future_quest_scheduling.sql` — `scheduled_for`, `quest_type`, `create_scheduled_quest`, and the updated instance and completion functions. This revokes direct `INSERT` on `quests` for `anon` and `authenticated`.
    3. `supabase/migrations/202610230004_lifetime_xp.sql` — `get_lifetime_xp()`.
    4. `supabase/migrations/202610240005_api_key_user_context.sql` — service-role `*_as_user` wrappers required by `/api/mcp` when the caller uses an API key.
-3. If the API does not see the new objects, reload the schema under Project Settings → API. The migrations already run `NOTIFY pgrst, 'reload schema';`.
-4. In Supabase → Project Settings → API, copy the `service_role` secret.
-5. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production, and for Preview if you test a preview URL. Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value. The name is listed in `.env.example` and `docs/.env.example`.
-6. Redeploy so the server can read the variable.
-7. Sign in, create a key at `/settings/api-keys`, and run the `/api/whoami` curl above. Revoke the key and run curl again. Expect 401 and `WWW-Authenticate: Bearer`.
-8. Repeat the `/api/mcp` curls in `docs/ai-connector.md` with the same key, then again after revoke. Expect 401 after revoke.
-9. Save a quest note and confirm the quest board XP and completion status stay the same until you explicitly complete the quest.
+   5. `supabase/migrations/202610240007_daily_late_window.sql` — daily habits earn XP only for today and the previous 2 Chicago days. Run this last. A daily start can still be up to 30 days ago; the instance created with it is dated no earlier than today minus 2 days. One-time chores stay completable while overdue. Deadline goals stay completable early.
+3. `0007` does not require `feature/quest-edit-archive`. Leave that branch and `feature/login-otp` unmerged. If you apply `202610240006_quest_edit_archive.sql`, run it before `0007`. Both replace `set_quest_instance_status`. If `0006` lands after `0007`, run `0007` again. The later function keeps the archive migration's idempotent completed return and its inactive-quest rejection.
+4. If the API does not see the new objects, reload the schema under Project Settings → API. The migrations already run `NOTIFY pgrst, 'reload schema';`.
+5. In Supabase → Project Settings → API, copy the `service_role` secret.
+6. In Vercel → Project → Settings → Environment Variables, set `SUPABASE_SERVICE_ROLE_KEY` to that secret for Production, and for Preview if you test a preview URL. Do not use the `NEXT_PUBLIC_` prefix. Do not commit the value. The name is listed in `.env.example` and `docs/.env.example`.
+7. Redeploy so the server can read the variable.
+8. Sign in, create a key at `/settings/api-keys`, and run the `/api/whoami` curl above. Revoke the key and run curl again. Expect 401 and `WWW-Authenticate: Bearer`.
+9. Repeat the `/api/mcp` curls in `docs/ai-connector.md` with the same key, then again after revoke. Expect 401 after revoke.
+10. Save a quest note and confirm the quest board XP and completion status stay the same until you explicitly complete the quest.
 
 Optional local schema check (PostgreSQL 16, not CI, not production):
 
@@ -94,7 +96,7 @@ Optional local schema check (PostgreSQL 16, not CI, not production):
 tests/sql/run-local.sh
 ```
 
-That script loads `0001` through `0005` into a throwaway database and runs `tests/sql/api_keys_progress_smoke.sql`, `tests/sql/scheduling_auth_smoke.sql`, and `tests/sql/two_user_mcp_auth.sql`. The handler checks in `tests/mcpToolIsolation.test.mjs` cover the same split for `list_quests`: A does not see B's rows or A's inactive instances.
+That script loads `0001` through `0005`, then `0007`, into a throwaway database and runs `tests/sql/api_keys_progress_smoke.sql`, `tests/sql/scheduling_auth_smoke.sql`, `tests/sql/two_user_mcp_auth.sql`, and `tests/sql/daily_late_window_smoke.sql`. `tests/sql/run-late-window-with-0006.sh` repeats those smokes after `0006` from `origin/feature/quest-edit-archive`, read-only. The handler checks in `tests/mcpToolIsolation.test.mjs` cover the same split for `list_quests`: A does not see B's rows or A's inactive instances.
 
 ## Out of scope here
 
