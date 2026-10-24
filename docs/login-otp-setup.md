@@ -20,3 +20,19 @@ No production settings have been changed. Test sign-in, resend, expired/wrong co
 - This UI expects a **6-digit** token. Confirm the configured email OTP length is six before launch.
 - Both the login page and callback validate `next` as same-origin, relative and free of ASCII control characters. Test encoded tab/newline, protocol-relative URLs and external absolute URLs.
 - The login screen uses generic failure messages so it does not reveal whether an email address belongs to an account.
+
+## Supabase Redirect URL allow-list
+In Supabase Authentication → URL Configuration → Redirect URLs, add:
+`https://life-ascension.vercel.app/auth/callback**`
+For preview testing, allow only the specific preview callback URL being used.
+
+## Redirect regression cases
+Test that all these resolve to `/` rather than an external destination:
+- `/..//evil.com`
+- `/.//evil.com`
+- `/%2e%2e//evil.com`
+- `/a/..//evil.com`
+- `/%09/evil.com`
+- `//evil.com`
+- `/\\evil.com`
+The final normalized pathname must also be checked for a leading double slash or slash-backslash.
