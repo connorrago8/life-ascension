@@ -14,4 +14,5 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$db" -f "$root/supabase/migrations/
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$db" -f "$root/supabase/migrations/202610240005_api_key_user_context.sql"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$db" -f "$root/tests/sql/api_keys_progress_smoke.sql"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$db" -f "$root/tests/sql/scheduling_auth_smoke.sql"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$db" -f "$root/tests/sql/two_user_mcp_auth.sql"
 echo "sql smoke tests passed"

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const route = readFileSync(new URL('../app/api/mcp/route.ts', import.meta.url), 'utf8');
+const tools = readFileSync(new URL('../lib/mcpTools.ts', import.meta.url), 'utf8');
 const auth = readFileSync(new URL('../lib/apiKeyAuth.ts', import.meta.url), 'utf8');
 
 test('401 responses advertise Bearer and revoked keys use that response', () => {
@@ -16,12 +17,14 @@ test('401 responses advertise Bearer and revoked keys use that response', () => 
 });
 
 test('mcp tools use the scheduling and progress RPCs', () => {
-  assert.match(route, /create_scheduled_quest_as_user/);
-  assert.match(route, /add_quest_progress_as_user/);
-  assert.match(route, /set_quest_instance_status_as_user/);
-  assert.match(route, /confirmed_complete !== true/);
-  assert.match(route, /\.eq\('owner_id', auth\.userId\)\.eq\('active', true\)/);
-  assert.doesNotMatch(route, /migration required/i);
-  assert.doesNotMatch(route, /\.from\('quests'\)\.insert/);
+  assert.match(route, /runMcpTool/);
+  assert.match(tools, /create_scheduled_quest_as_user/);
+  assert.match(tools, /add_quest_progress_as_user/);
+  assert.match(tools, /set_quest_instance_status_as_user/);
+  assert.match(tools, /confirmed_complete !== true/);
+  assert.match(tools, /\.eq\('owner_id', userId\)\.eq\('active', true\)/);
+  assert.match(tools, /\.eq\('owner_id', userId\)\.in\('quest_id', activeIds\)/);
+  assert.doesNotMatch(tools, /migration required/i);
+  assert.doesNotMatch(tools, /\.from\('quests'\)\.insert/);
   assert.doesNotMatch(route, /from\('quests'\)\s*\.delete/);
 });

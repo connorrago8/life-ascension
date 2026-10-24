@@ -26,8 +26,8 @@ OAuth, PKCE, refresh tokens, and dynamic client registration are still not imple
 - `create_quest` calls `create_scheduled_quest` (`p_quest_type` `scheduled` or `goal`). It does not insert into `quests` and it does not delete a row if a later step fails. The database creates the quest and its instance together. `goal` requires cadence `once`.
 - `update_progress` calls `add_quest_progress`. The note is a journal entry. It does not award XP and does not change instance status.
 - `submit_completion` requires `confirmed_complete` to be exactly `true`, then calls `set_quest_instance_status` with action `complete`. Future daily habits and future scheduled chores are rejected by that function. A deadline goal can be completed early. A second completion returns success and does not add XP.
-- `list_quests` returns the caller's **active** quests (`active = true`) and their instances. `due_date` defaults to the Chicago calendar date. `include_history` skips the instance date filter. The instance list is capped at 500 rows.
-- `get_character_progress` reads `get_lifetime_xp` and the caller's completed instance count.
+- `list_quests` returns the caller's **active** quests (`active = true`). Instances are loaded only for those quest ids, so an inactive quest's instance is not returned. `due_date` defaults to the Chicago calendar date. `include_history` skips the instance date filter and still omits inactive quests. The instance list is capped at 500 rows.
+- `get_character_progress` reads `get_lifetime_xp` and the caller's completed instance count. It returns those two numbers, not quest or instance rows. The count includes every completed instance that user owns, so it stays aligned with lifetime XP after a quest is marked inactive.
 
 Dates use `America/Chicago`. The database accepts a scheduled date from 30 days ago through 366 days ahead.
 

@@ -29,7 +29,7 @@ Status: **NOT YET EXECUTED**. Do not invite players or upload sensitive evidence
 - Failed database requests show a useful error.
 
 ## Scheduling, XP, and the MCP user context
-Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql` and run from `tests/sql/run-local.sh` after migrations `0001` through `0005`. They are not a production release gate. On 2026-10-24 that script passed on local PostgreSQL 16, and `npx tsc --noEmit` plus `npm run build` passed. Deployed sign-in, a real two-user Supabase project, and mobile checks are still open.
+Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql`, `tests/sql/two_user_mcp_auth.sql`, and `tests/mcpToolIsolation.test.mjs`. `tests/sql/run-local.sh` applies migrations `0001` through `0005` and runs the SQL smokes. They are not a production release gate. On 2026-10-24 that script passed on local PostgreSQL 16, and `npx tsc --noEmit` plus `npm run build` passed. Deployed sign-in, a hosted two-user Supabase project, and mobile checks are still open.
 
 - `create_scheduled_quest` stores a one-time chore on the next Thursday (Chicago) after today, with a matching instance.
 - That future chore cannot be completed yet.
@@ -42,9 +42,28 @@ Local throwaway checks live in `tests/sql/scheduling_auth_smoke.sql` and run fro
 - `anon` and `authenticated` cannot execute the `*_as_user` wrappers, even if `request.jwt.claim.role` is set to `service_role`.
 - `service_role` without a `service_role` JWT claim is rejected. With the claim, the wrapper writes as `p_user_id` and the pin does not leak into the next statement.
 - One user's wrapper cannot complete another user's instance.
-- `list_quests` in `app/api/mcp/route.ts` filters `.eq('active', true)`.
+- `list_quests` loads the caller's active quests, then loads instances only for those quest ids. An inactive quest's instance is not returned. `get_character_progress` returns the caller's lifetime XP and completed-instance count, not instance rows. The count stays aligned with the ledger, including completions of quests that are later marked inactive.
 
-`feature/login-otp` and `feature/quest-edit-archive` are not merged into this branch and are not covered here.
+## Two API keys
+`tests/sql/two_user_mcp_auth.sql` and `tests/mcpToolIsolation.test.mjs` cover two users:
+
+- Each user has a key and quests. Through `*_as_user`, A cannot create a quest owned by B, add a note to B, ensure B's instance, or complete B. The reverse holds.
+- XP and `xp_ledger` stay one user's rows. A's note does not change that.
+- A signed-in JWT sees only that user's quests under RLS.
+- Revoking A's key makes `authenticate_api_key` return no row. B's key still authenticates. The route maps the empty row to HTTP 401.
+- `list_quests` for A omits B's rows and A's inactive instance, including when history is requested.
+
+## Quest edit/archive (not merged)
+`feature/quest-edit-archive` at `f5dccf1` was checked by applying `0001`–`0005` and then `supabase/migrations/202610240006_quest_edit_archive.sql` from that branch on a throwaway database (`tests/sql/run-archive-compat.sh`). It was not merged and was not pushed. Required cases in `tests/sql/archive_compat_smoke.sql` passed: an archived quest cannot be completed and earns no XP; archiving keeps the existing completion and XP; a daily habit can be rescheduled after an earlier completion; moving that habit's start into the future defers today's open instance and awards no XP; a scheduled chore cannot be moved earlier to today and then completed; rename stores the trimmed title. `set_quest_instance_status_as_user` still completes an active quest once and rejects an archived one.
+
+Should-fix before that branch is merged here:
+
+- `202610240006_quest_edit_archive.sql:79` changes the future-daily error from `Future daily quests cannot be completed` to `Daily quest not eligible`. `tests/sql/scheduling_auth_smoke.sql` then fails. The completion is still rejected.
+- `202610240006_quest_edit_archive.sql:76` rejects a second complete of an already completed archived quest with `Active quest not found` before the idempotent return on line 77. XP does not change.
+- `202610240006_quest_edit_archive.sql:37` treats a null `scheduled_for` as today. A one-time chore with a null start and a future instance can be moved to today and completed for 1 XP. `create_scheduled_quest` always sets `scheduled_for`. Rows from before `0003` can still be null. Authenticated users cannot insert those rows directly.
+- `202610240006_quest_edit_archive.sql:56-61` grants rename, reschedule, and archive to `authenticated` only. There is no `*_as_user` wrapper, so an API key cannot call them until that is added. Existing wrappers keep working.
+
+`feature/login-otp` is not merged and was not part of this check.
 
 ## API keys and progress notes
 - Apply `supabase/migrations/202610230002_api_keys_progress.sql` on a development database before these checks. The integration database also applies `0003`, `0004`, and `0005` after it.

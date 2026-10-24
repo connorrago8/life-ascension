@@ -94,7 +94,7 @@ Optional local schema check (PostgreSQL 16, not CI, not production):
 tests/sql/run-local.sh
 ```
 
-That script loads `0001` through `0005` into a throwaway database and runs `tests/sql/api_keys_progress_smoke.sql` and `tests/sql/scheduling_auth_smoke.sql`.
+That script loads `0001` through `0005` into a throwaway database and runs `tests/sql/api_keys_progress_smoke.sql`, `tests/sql/scheduling_auth_smoke.sql`, and `tests/sql/two_user_mcp_auth.sql`. The handler checks in `tests/mcpToolIsolation.test.mjs` cover the same split for `list_quests`: A does not see B's rows or A's inactive instances.
 
 ## Out of scope here
 
