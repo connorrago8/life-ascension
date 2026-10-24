@@ -1,8 +1,8 @@
 # LIFE ASCENSION — Pre-launch review packet
 
-**Status:** Read-only preparation; not a security approval or authorization to deploy. Prepared while Grok retests 0006 and implements 0007. No production changes or test executions in this packet.
+**Status:** Read-only preparation; not a security approval or authorization to deploy. Updated after Grok reported 0006 retest and pushed 0007 at `44bedd0`; PR #1 remains draft and not deployed. No production changes or test executions in this packet.
 
-**Baseline:** PR #1 `feature/shared-ai-quest-mcp` previously reviewed at `313f38b`; quest-edit/archive `feature/quest-edit-archive` latest documented fix `2ad2635`; approved deployment instructions in [DEPLOY.md](DEPLOY.md). Re-fetch final merged commits before sign-off; branch names and prior commits do not establish final contents.
+**Baseline:** PR #1 `feature/shared-ai-quest-mcp` now includes migration 0007 at `44bedd0` (earlier review at `313f38b`); quest-edit/archive `feature/quest-edit-archive` latest documented fix `2ad2635`; approved deployment instructions in [DEPLOY.md](DEPLOY.md). Re-fetch final merged commits before sign-off; branch names and prior commits do not establish final contents.
 
 ## A. Final security audit — reviewer worksheet
 
@@ -10,7 +10,7 @@ Record for each row: **PASS / FAIL / NOT TESTED**, exact commit or environment, 
 
 | Gate | Required evidence |
 | --- | --- |
-| Integration integrity | Review actual final diff of PR #1, login OTP, 0006, and 0007 in merge order; no unreviewed changes or accidental migrations. 0006 retest and 0007 tests must finish before final approval. |
+| Integration integrity | Review actual final diff of PR #1, login OTP, 0006, and 0007 in merge order; no unreviewed changes or accidental migrations. confirm Grok's reported 0006 and 0007 test results against the final integration before final approval. |
 | Authentication | Valid Supabase JWT accepted; invalid/expired tokens rejected; OTP login, redirect allowlist and safe-next protections verified; no open redirect or unauthenticated write. |
 | API keys | Keys hashed at rest, scoped `quests:read`/`quests:write`, revoked keys rejected on `/api/whoami` and `/api/mcp` with 401 and Bearer challenge, no plaintext secrets in logs or browser bundles. |
 | Two-user isolation | Repeat A/B tests for API-key and JWT paths: no cross-owner quest list, progress, completion, XP, archive/edit, or key management. Service-role-backed reads explicitly filter owner. |
@@ -18,12 +18,14 @@ Record for each row: **PASS / FAIL / NOT TESTED**, exact commit or environment, 
 | RLS and schema | RLS enabled for exposed tables; SELECT/INSERT/UPDATE policies and WITH CHECK constrain ownership; grants match intended API access; no unrestricted view or privileged function. Review SQL migrations in exact execution order. |
 | XP integrity | Partial progress yields zero XP; explicit confirmation required; same quest/day cannot award XP twice across concurrent/retried requests; ledger unique constraints enforce once-only behavior; read lifetime XP from ledger. |
 | Scheduling and archive | Future scheduled chores/daily dates blocked; early goals and overdue one-time chores work; archive excludes quests from AI listing, prevents new completion, and preserves idempotent historical completion; edit/reschedule cannot bypass eligibility. |
-| Migration 0007 | **Pending Grok's implementation.** Review separately after pushed, including date-boundary/ownership/duplicate behavior. **Do not add or execute 2-day-window tests in this branch.** |
+| Migration 0007 | **Pushed in draft PR #1 at `44bedd0`** as `202610240007_daily_late_window.sql`. Inspect daily completion window, backdated creation clamp, ensure-instance restriction, Chicago boundaries, ownership and duplicate behavior; Grok reports both test stacks pass. Review exact final code before sign-off. |
 | Runtime/secrets | `SUPABASE_SERVICE_ROLE_KEY` server-only in Vercel Sensitive env; no `NEXT_PUBLIC_` exposure; approved auth configuration and production domains; dependencies/lockfile reviewed. |
 | Operational recovery | Verified export and isolated restore before SQL deployment; rollback plan recognizes migration 0003 is incompatible with pre-PR #1 direct INSERT. |
 | Post-deploy | Live smoke test only with explicit owner opt-in, separate test key and acknowledgment of permanent +1 XP; verify revocation and archive test quests. |
 
 **Sign-off record (leave blank until tests complete):** Final reviewed commit(s): ____; 0006 result: ____; 0007 result: ____; RLS/privilege review: ____; backup restore result: ____; reviewer decision: ____.
+
+**Mandatory migration order:** `0002 → 0003 → 0004 → 0005 → 0006 → 0007` (0001 already applied). Both 0006 and 0007 replace `set_quest_instance_status`; **0007 must be applied last** to preserve the two-day daily XP rule and 0006 archive protections. Confirm final database function definition, not merely migration filenames.
 
 ## B. Backup dry-run verification (no rewrite of DEPLOY.md)
 
@@ -59,13 +61,28 @@ Do not run these against production without explicit consent. Prefer a dedicated
 | Time zone | Exercise Chicago midnight/DST boundary in isolated test environment | Date decisions use America/Chicago, not client clock |
 | Multi-user XP | Two accounts complete separate quests | XP and progress remain isolated |
 
-**Deferred on purpose:** All acceptance cases specific to migration **0007's two-day daily-habit XP window** (today/yesterday/day-before, older dates, backdated 30 days, and future-date boundaries). Add only after Grok pushes 0007 and its tests, then review those tests against the final implementation. Existing streak design review does not imply 0007 is implemented.
+**Migration 0007 acceptance scenarios (now specified; not executed here):**
+
+| Scenario | Action | Expected result |
+| --- | --- | --- |
+| Today daily | Confirm today's eligible daily habit | Exactly +1 XP |
+| Yesterday daily | Confirm yesterday's eligible daily habit | Exactly +1 XP, no streak repair |
+| Two days ago daily | Confirm eligible daily habit dated Chicago today minus 2 | Exactly +1 XP, no streak repair |
+| Three days ago daily | Attempt completion for Chicago today minus 3 | Rejected; no XP |
+| Future daily | Attempt tomorrow's daily completion | Rejected; no XP |
+| Backdated start | Create daily habit with start 30 days ago, request older instances | First opened instance clamped to today minus 2; older instances cannot be opened; at most 3 XP across eligible dates |
+| Duplicate daily | Repeat completion of each eligible day | At most 1 XP per habit/date |
+| Chicago boundary | Test near local midnight and DST transitions in isolated environment | Eligibility follows Chicago calendar date, not UTC or device date |
+| Preserve archive rules | Complete archived quest or retry a previously completed archived instance | No new XP for archived quest; historical completion stays idempotent |
+| Preserve chore/goal rules | Finish overdue one-time chore and early goal | Both remain eligible under prior rules |
+
+Grok reports migration 0007 tests passing on both stacks (`0001–0005+0007` and `0001–0005+0006+0007`), along with API key, scheduling, two-user, 11 Node tests, TypeScript and build. This packet records **reported** results only; it does not claim independent test execution.
 
 **Execution record (not yet run):** Environment ____; final commit ____; test account ____; each scenario result ____; failures/links ____; reviewer ____.
 
 ## D. Release boundaries
 
 - Documentation-only branch. No code, SQL, test script, environment variable, branch integration, production database, or Vercel deployment changes.
-- Grok owns PR #1 and 0007. Await 0006 retest and 0007 implementation/test results.
+- Grok owns PR #1 and 0007. Grok reports 0006 retest and 0007 test results passing; independently review final integration before sign-off.
 - Final sign-off requires inspection of final merged code, not just these checklists.
 - Backup dry run and isolated restore are the first **operational** go-live prerequisite after review and before production SQL changes.
