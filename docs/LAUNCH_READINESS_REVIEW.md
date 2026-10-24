@@ -25,6 +25,8 @@ Record for each row: **PASS / FAIL / NOT TESTED**, exact commit or environment, 
 
 **Sign-off record (leave blank until tests complete):** Final reviewed commit(s): ____; 0006 result: ____; 0007 result: ____; RLS/privilege review: ____; backup restore result: ____; reviewer decision: ____.
 
+**Recovery note:** If 0006 was applied after 0007, rerun 0007 immediately (safe to rerun) and execute the copy-paste function-definition checks in [DEPLOY.md](DEPLOY.md). Test this recovery in an isolated database; do not intentionally reverse migrations in production.
+
 **Mandatory migration order:** `0002 → 0003 → 0004 → 0005 → 0006 → 0007` (0001 already applied). Both 0006 and 0007 replace `set_quest_instance_status`; **0007 must be applied last** to preserve the two-day daily XP rule and 0006 archive protections. Confirm final database function definition, not merely migration filenames.
 
 ## B. Backup dry-run verification (no rewrite of DEPLOY.md)
@@ -66,14 +68,19 @@ Do not run these against production without explicit consent. Prefer a dedicated
 | Scenario | Action | Expected result |
 | --- | --- | --- |
 | Today daily | Confirm today's eligible daily habit | Exactly +1 XP |
-| Yesterday daily | Confirm yesterday's eligible daily habit | Exactly +1 XP, no streak repair |
-| Two days ago daily | Confirm eligible daily habit dated Chicago today minus 2 | Exactly +1 XP, no streak repair |
+| Yesterday daily | Confirm yesterday's eligible daily habit | Exactly +1 XP; streak impact N/A until streaks are built |
+| Two days ago daily | Confirm eligible daily habit dated Chicago today minus 2 | Exactly +1 XP; streak impact N/A until streaks are built |
 | Three days ago daily | Attempt completion for Chicago today minus 3 | Rejected; no XP |
 | Future daily | Attempt tomorrow's daily completion | Rejected; no XP |
 | Backdated start | Create daily habit with start 30 days ago, request older instances | First opened instance clamped to today minus 2; older instances cannot be opened; at most 3 XP across eligible dates |
 | Duplicate daily | Repeat completion of each eligible day | At most 1 XP per habit/date |
 | Chicago boundary | Test near local midnight and DST transitions in isolated environment | Eligibility follows Chicago calendar date, not UTC or device date |
-| Preserve archive rules | Complete archived quest or retry a previously completed archived instance | No new XP for archived quest; historical completion stays idempotent |
+| Archived completed instance | Retry completion of an already completed instance after archiving its quest | Returns completed idempotently; no additional XP |
+| Archived open instance | Attempt to complete an open instance after archiving its quest | Rejected; no XP |
+| Pre-0007 historical daily row | Attempt completion of an existing daily instance dated earlier than Chicago today minus 2 | Rejected; no XP |
+| MCP expired daily date | Use personal API key to call MCP `submit_completion` for an existing daily instance dated today minus 3 | JSON-RPC error; lifetime XP unchanged |
+| Daily start reschedule | Via 0006, reschedule a daily habit start into the past and attempt older completions | No XP for dates before today minus 2 |
+| Out-of-order migration recovery | In isolated test DB apply 0007 then 0006, run DEPLOY.md verification, rerun 0007 and recheck | Verification catches missing window; all checks pass after rerunning 0007 |
 | Preserve chore/goal rules | Finish overdue one-time chore and early goal | Both remain eligible under prior rules |
 
 Grok reports migration 0007 tests passing on both stacks (`0001–0005+0007` and `0001–0005+0006+0007`), along with API key, scheduling, two-user, 11 Node tests, TypeScript and build. This packet records **reported** results only; it does not claim independent test execution.
