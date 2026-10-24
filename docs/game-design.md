@@ -16,9 +16,9 @@
 
 **Anti-gaming:** The server enforces quest ownership, active status, Chicago-local eligibility, no future completions, no past-date completions for streak purposes, and one completed instance per quest/date. The streak computation ignores retroactively completed historical instances. A replayed completion cannot increment a streak twice. The API must not trust a client-supplied timestamp or timezone.
 
-**Historical backfill policy:** Pending owner decision; do not implement or infer retroactive streak credit until the explicit backfill rule is approved.
+**Daily-habit XP backfill (owner-approved; pending migration 0007):** You can log a missed daily habit up to **2 days late**, measured by `America/Chicago` calendar dates: today and the previous two Chicago dates only. No XP for older or future dates. Each habit/date can award at most 1 XP, so a habit backdated 30 days can earn at most 3 XP across the eligible dates. Late logging earns XP but **does not repair or extend a missed streak**. Overdue one-time chores and early goal completion are unchanged. Grok will implement and test this after migration 0006; this document does not make it live.
 
-**Important compatibility note:** Current completion rules may allow completing a past daily instance within the 30-day window. This proposal **does not change existing XP eligibility**; it simply excludes those late completions from the streak. Enforcing a strict no-backfill policy for XP itself would require a separately reviewed change.
+**Implementation dependency:** Until migration 0007 is merged, deployed, and tested, the existing daily completion window may still allow older entries. The proposed two-day XP limit must be enforced server-side, independently of streak calculation.
 
 ## 2. Daily AI check-in
 
@@ -139,7 +139,8 @@ Example: 24 lifetime XP reaches level 5; level 6 starts at 32 XP, so progress is
 - Completing the same daily habit twice on one day yields one streak day and at most one XP.
 - Missing a due day **even when no instance was created** breaks the current streak without removing XP.
 - A deferred day counts as missed; moving an active habit's start into the future ends the streak rather than freezing it.
-- Late completion of yesterday's daily instance may earn XP under existing rules but does **not** repair yesterday's streak.
+- Logging yesterday's or the day-before-yesterday's missed daily habit may earn XP after 0007, but **does not** repair the streak; logging three or more Chicago days late earns no XP.
+- A habit backdated 30 days can earn no more than 3 XP (today plus the previous two days), even if older dates have no instance rows.
 - Future-dated habits and archived quests never advance streaks.
 - Rescheduling does not retroactively create streak days.
 - AI partial-progress updates never award XP.
