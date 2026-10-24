@@ -2,15 +2,9 @@
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {supabase} from '../../lib/supabase';
+import {safeNext} from '../../lib/safeNext';
 
-function returnPath(){
- const next=new URLSearchParams(window.location.search).get('next');
- if(!next||/[\x00-\x1f\x7f]/.test(next)||!next.startsWith('/')||next.startsWith('//')||next.includes('\\'))return '/';
- try{
-  const u=new URL(next,window.location.origin);
-  return u.origin===window.location.origin?u.pathname+u.search+u.hash:'/';
- }catch{return '/'}
-}
+function returnPath(){return safeNext(new URLSearchParams(window.location.search).get('next'),window.location.origin)}
 export default function Login(){
  const router=useRouter();
  const [email,setEmail]=useState('');
@@ -27,7 +21,7 @@ export default function Login(){
  async function requestCode(e:React.FormEvent){
   e.preventDefault();if(busy)return;setBusy(true);setMessage('');
   const {error}=await supabase().auth.signInWithOtp({email:email.trim(),options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+'/auth/callback?next='+encodeURIComponent(returnPath())}});
-  if(error)setMessage('Unable to send a code right now. Check your email address or try again later.');else{setSent(true);setMessage('Enter the 6-digit code sent to your email.')}
+  if(error && (error.status===429 || /rate limit|too many requests/i.test(error.message)))setMessage('Too many requests, wait a minute.');else{setSent(true);setMessage('If an account exists for this email, a 6-digit code was sent.')}
   setBusy(false);
  }
  async function verify(e:React.FormEvent){
