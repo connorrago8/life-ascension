@@ -31,21 +31,21 @@ A scheduled chore becomes eligible on its due date. If laundry is scheduled for 
 
 A one-time chore you missed stays available after its due date. If you planned laundry for Monday and finish Tuesday, confirm it Tuesday and earn XP once. There is no automatic XP penalty for being late.
 
-Daily habits work differently: they have a separate instance for each eligible calendar day in **Chicago time**. You cannot earn future-day XP, and the proposed streak system will not count late backfilled completions as an unbroken streak.
+Daily habits work differently: each eligible calendar day is tracked separately in **Chicago time**. You cannot earn future-day XP, and the proposed streak system will not count late backfilled completions as an unbroken streak.
 
 ## 5. If an AI connection or API key looks wrong
 
 1. Open the LIFE ASCENSION website and sign in.
-2. Go to **Settings → API keys** (or open `/settings/api-keys`).
+2. Open **https://life-ascension.vercel.app/settings/api-keys** directly (the board has no Settings link).
 3. Find the key you gave to Grok or another client and select **Revoke**. Confirm the action.
-4. That key should stop working immediately. Create a new key only when you're ready to reconnect the trusted client.
+4. That key should stop working immediately. Create a new key only when you're ready to reconnect the trusted client. Name each key after its AI/client (for example, `Grok` or `ChatGPT`) so you can revoke them separately.
 5. If a quest or XP total looks wrong, stop using the connection and review the board before proceeding.
 
 **Keep API keys private.** Never paste one into an ordinary chat, screenshot, or shared document. Use only the client's secure connection setup. Revoking a key disconnects that client; it does **not** erase your quests or XP.
 
 ## 6. Your first real test after launch
 
-Ask the connected AI to **“Add do laundry today.”** Check the quest appears. Say **“I did half the laundry.”** XP should stay unchanged. Then say **“I finished the laundry.”** Confirm completion and check for **+1 XP**. Repeat the completion: the XP total must not rise again.
+Ask the connected AI to **“Add do laundry today.”** Check the quest appears. Say **“I did half the laundry.”** XP should stay unchanged. Then say **“I finished the laundry.”** Confirm completion and check for **+1 XP**. Repeat the completion: the XP total must not rise again. **This first test permanently adds one quest and +1 lifetime XP.** Once editing/archive is available, archive the test quest at **https://life-ascension.vercel.app/quests/manage**; archiving does not remove earned XP.
 
 If any step fails, stop and report the issue before relying on the AI connection.
 
