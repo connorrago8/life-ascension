@@ -40,7 +40,7 @@ print((d+datetime.timedelta(days=days)).isoformat())
 PY
 )"
 echo "1. Authentication check"
-status="$(curl -sS -o "$tmp/whoami" -w '%{http_code}' -H "$AUTH" "$BASE_URL/api/whoami")"
+status="$(curl -sS -o "$tmp/whoami" -w '%{http_code}' -H @"$tmp/auth-header" "$BASE_URL/api/whoami")"
 test "$status" = 200 || { echo "Expected 200 from whoami; got $status"; exit 1; }
 python3 - "$tmp/whoami" <<'PY'
 import json,sys
@@ -83,9 +83,9 @@ PY
 status="$(call get_character_progress '{}')"; test "$status" = 200
 test "$(extract lifetime_xp)" = "$after" || { echo "XP changed for future chore"; exit 1; }
 echo "8. Revoke key in /settings/api-keys, then press Enter to test rejection"
-if [[ ! -r /dev/tty ]]; then echo "Interactive terminal required for revocation test" >&2; exit 1; fi
+if ! { : </dev/tty; } 2>/dev/null; then echo "Interactive terminal required for revocation test" >&2; exit 1; fi
 read -r _ </dev/tty
-status="$(curl -sS -o "$tmp/revoked" -w '%{http_code}' -H "$AUTH" "$BASE_URL/api/whoami")"
+status="$(curl -sS -D "$tmp/revoked-headers" -o "$tmp/revoked" -w '%{http_code}' -H @"$tmp/auth-header" "$BASE_URL/api/whoami")"
 test "$status" = 401 || { echo "Expected 401 for revoked key, got $status"; exit 1; }
 grep -Eiq '^WWW-Authenticate:[[:space:]]*Bearer' "$tmp/revoked-headers" || { echo "Missing Bearer challenge"; exit 1; }
 status="$(curl -sS -o "$tmp/revoked-mcp" -w '%{http_code}' -X POST "$BASE_URL/api/mcp" -H @"$tmp/auth-header" -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","id":99,"method":"tools/list"}')"
