@@ -1,6 +1,8 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
-import {supabase} from '../lib/supabase';
+import {supabase} from '../../lib/supabase';
+import {ADVENTURER_CLASS} from '../../lib/character';
+import {coerceXp,levelFor} from '../../lib/level';
 type Quest={id:string;title:string;domain:string;cadence:'once'|'daily';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal'};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred'};
 const DOMAINS=[['hygiene','Hygiene & appearance'],['home','Home & environment'],['mental_health','Mental health & recovery'],['personal_growth','Growth & hobbies'],['finance','Financial health'],['career','Career & productivity'],['relationships','Relationships'],['physical_health','Physical health']];
@@ -18,7 +20,7 @@ const [{data:todayRows,error:te},{data:goals,error:ge},{data:openOnce,error:oe},
 ]);
 if(te||ge||oe||le){setMessage(te?.message||ge?.message||oe?.message||le?.message||'Unable to load');return}
 const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(goals||[]),...(openOnce||[])])rows.set(row.id,row);
-setInstances([...rows.values()]);setXp(typeof ledger==='number'?ledger:0)},[]);
+setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const next=window.location.pathname+window.location.search+window.location.hash;
@@ -41,10 +43,10 @@ setInstances([...rows.values()]);setXp(typeof ledger==='number'?ledger:0)},[]);
  async function logout(){await supabase().auth.signOut();setUser(null)}
  if(!ready)return <main className="wrap">Loading your character…</main>;
  if(!user)return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Your adventure awaits</h1><p className="muted">Real actions. Real progress. Your private quest journal.</p><a className="btn" href={loginHref}>Sign in</a></main>;
- const today=todayLocal();const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.instance!.status!=='completed'||x.instance!.due_date===today));const completed=visible.filter(x=>x.instance?.status==='completed').length;
+ const today=todayLocal();const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.instance!.status!=='completed'||x.instance!.due_date===today));const completed=visible.filter(x=>x.instance?.status==='completed').length;const lvl=levelFor(xp);
  return <main className="wrap"><header className="top"><div><div className="eyebrow">LIFE ASCENSION</div><h1>{mode==='daily'?'Today’s Quests':'The Adventurer’s Path'}</h1><p className="muted">{new Date(dateString()+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p></div><button className="btn ghost" onClick={logout}>Sign out</button></header>
  <nav className="tabs" aria-label="View mode"><button className={'btn '+(mode==='daily'?'':'ghost')} onClick={()=>setMode('daily')}>Daily Mode</button><button className={'btn '+(mode==='adventure'?'':'ghost')} onClick={()=>setMode('adventure')}>Adventure Mode</button></nav>
- <section className="panel"><div className="eyebrow">LEVEL 1 · UNCLASSED ADVENTURER</div><div className="xp">{xp} <small>lifetime XP</small></div><p className="muted">{completed} of {visible.length} quests completed · No XP penalty for missed days</p><div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={Math.max(visible.length,1)} aria-valuenow={completed}><span style={{width:(visible.length?completed/visible.length*100:0)+'%'}}/></div></section>
+ <section className="panel"><div className="eyebrow">LEVEL {lvl.level} · {ADVENTURER_CLASS.toUpperCase()}</div><div className="xp">{xp} <small>lifetime XP</small></div><p className="muted">{completed} of {visible.length} quests completed · No XP penalty for missed days</p><div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={Math.max(visible.length,1)} aria-valuenow={completed}><span style={{width:(visible.length?completed/visible.length*100:0)+'%'}}/></div></section>
  {mode==='adventure'&&<section className="panel"><div className="eyebrow">CHAPTER I</div><h2>The Awakening</h2><p className="muted">Your character grows through real actions. Fantasy encounters are future upgrades.</p></section>}
  <section className="panel"><h2>Quest Board</h2>{visible.length===0&&<p className="muted">Create your first quest below.</p>}{visible.map(({quest,instance})=><div className="quest" key={quest.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">Due {instance?.due_date}{instance&&instance.due_date<today&&instance.status!=='completed'?' · Overdue':''}</div><div className="muted">{DOMAINS.find(d=>d[0]===quest.domain)?.[1]} · {quest.cadence==='daily'?'Daily':'One-time'} · +1 XP</div></div><div className="actions">{instance?.status==='completed'?<span className="tag">✓ Done</span>:instance?.status==='deferred'?<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'resume')}>Resume</button>:<><button className="btn ghost" disabled={busy} onClick={()=>act(instance!.id,'defer')}>Defer</button><button className="btn" disabled={busy} onClick={()=>act(instance!.id,'complete')}>Complete</button></>}</div></div>)}</section>
  <section className="panel"><h2>Upcoming</h2><p className="muted">Scheduled quests and deadlines after today (Chicago time).</p>{quests.filter(q=>q.scheduled_for&&q.scheduled_for>today&&(q.cadence==='once'||q.quest_type==='goal')).sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||'')).slice(0,20).map(q=><div className="quest" key={q.id}><div className="quest-main"><div className="quest-title">{q.title}</div><div className="muted">{q.quest_type==='goal'?'Deadline':'Scheduled'} · {q.scheduled_for}</div></div></div>)}</section>

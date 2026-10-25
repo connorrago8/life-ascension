@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 type Quest = { id: string; title: string; domain: string; cadence: string; active: boolean };
 type Note = { id: string; quest_id: string; note: string; percent: number | null; created_at: string };
