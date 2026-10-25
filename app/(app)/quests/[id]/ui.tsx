@@ -163,7 +163,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
         ))}
       </section>
       <p className="message" role="status" aria-live="polite">{message}</p>
-      <p className="foot"><a href="/">Quest board</a> · <a href="/settings/api-keys">API keys</a></p>
+      <p className="foot"><a href="/">Quest board</a> · <a href="/settings/api-keys">API keys</a> · <a href="/settings/password">Set or change password</a></p>
     </main>
   );
 }

@@ -181,7 +181,7 @@ export default function ApiKeysPage() {
         ))}
       </section>
       <p className="message" role="status" aria-live="polite">{message}</p>
-      <p className="foot"><a href="/quests">Quest notes</a></p>
+      <p className="foot"><a href="/quests">Quest notes</a> · <a href="/settings/password">Set or change password</a></p>
     </main>
   );
 }

@@ -36,3 +36,39 @@ export function applyPendingCookies(response: NextResponse, pendingCookies: Pend
   }
   return response;
 }
+
+function isPrefetch(request: NextRequest): boolean {
+  if (request.headers.has('next-router-prefetch')) return true;
+  const purpose = `${request.headers.get('purpose') ?? ''} ${request.headers.get('sec-purpose') ?? ''}`.toLowerCase();
+  return purpose.includes('prefetch');
+}
+
+/** Refresh the cookie session on a real navigation. Prefetches are skipped so they cannot rotate the refresh token. */
+export async function refreshSession(request: NextRequest) {
+  let response = NextResponse.next({ request });
+  if (isPrefetch(request)) return response;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return response;
+
+  const client = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(items: PendingCookie[]) {
+        for (const { name, value } of items) request.cookies.set(name, value);
+        response = NextResponse.next({ request });
+        for (const { name, value, options } of items) response.cookies.set(name, value, options);
+      },
+    },
+  });
+
+  try {
+    await client.auth.getUser();
+  } catch {
+    return response;
+  }
+  return response;
+}
