@@ -3,21 +3,17 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { NAV_ITEMS, type NavItem } from '../../lib/nav';
 import { supabase } from '../../lib/supabase';
 
-const PRIMARY = [
-  { href: '/', label: 'Home', icon: 'home' },
-  { href: '/quests', label: 'Quests', icon: 'quests' },
-  { href: '/health', label: 'Health', icon: 'health' },
-  { href: '/character', label: 'Character', icon: 'character' },
-] as const;
+const LINKS = NAV_ITEMS.filter((item): item is NavItem & { href: string } => item.href !== null);
 
 const SECONDARY = [
   { href: '/quests/manage', label: 'Manage quests' },
   { href: '/settings/api-keys', label: 'API keys' },
 ] as const;
 
-type IconName = (typeof PRIMARY)[number]['icon'] | 'more';
+type IconName = 'home' | 'quests' | 'play' | 'character' | 'more';
 
 function isCurrent(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
@@ -38,7 +34,16 @@ function Icon({ name }: { name: IconName }) {
           <path d="M9.2 9.2h5.2M9.2 12.4h5.2M9.2 15.6h3.2" />
         </>
       )}
-      {name === 'health' && <path d="M12 19.2s-6.6-4.1-6.6-8.4a3.7 3.7 0 0 1 6.6-1.9 3.7 3.7 0 0 1 6.6 1.9c0 4.3-6.6 8.4-6.6 8.4z" />}
+      {name === 'play' && (
+        <>
+          <path d="M6.2 5.2 15.4 16.8" />
+          <path d="M17.8 5.2 8.6 16.8" />
+          <path d="M4.8 8.4 7.5 5.4" />
+          <path d="M19.2 8.4 16.5 5.4" />
+          <path d="M14.4 16.2 16.2 19.6" />
+          <path d="M9.6 16.2 7.8 19.6" />
+        </>
+      )}
       {name === 'character' && (
         <>
           <circle cx="12" cy="8.4" r="3.1" />
@@ -102,11 +107,21 @@ export function AppNav() {
       <nav className="app-nav" aria-label="Primary">
         <Link href="/" className="nav-brand">LIFE ASCENSION</Link>
         <div className="nav-links">
-          {PRIMARY.map((item) => {
+          {LINKS.map((item) => {
             const current = isCurrent(pathname, item.href);
+            const play = item.id === 'play';
             return (
-              <Link key={item.href} href={item.href} className="nav-link" aria-current={current ? 'page' : undefined}>
-                <Icon name={item.icon} />
+              <Link
+                key={item.href}
+                href={item.href}
+                className={play ? 'nav-link nav-play' : 'nav-link'}
+                aria-current={current ? 'page' : undefined}
+              >
+                {play ? (
+                  <span className="nav-play-orb"><Icon name="play" /></span>
+                ) : (
+                  <Icon name={item.id as IconName} />
+                )}
                 <span>{item.label}</span>
               </Link>
             );

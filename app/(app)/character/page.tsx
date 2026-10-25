@@ -1,19 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { ATTRIBUTES, ATTRIBUTE_PLACEHOLDER, adventurerName, attributeValue } from '../../../lib/attributes';
-import {
-  ADVENTURER_CLASS,
-  ADVENTURER_TAGLINE,
-  ATTRIBUTE_PREVIEW,
-  CLASS_PATH_COPY,
-  EQUIPMENT_PREVIEW,
-} from '../../../lib/character';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AdventurerSprite } from '../../../components/AdventurerSprite';
+import { CharacterViewer, type CharacterViewerHandle } from '../../../components/CharacterViewer';
+import { EquipSlot } from '../../../components/EquipSlot';
+import { attributeEntries, adventurerName } from '../../../lib/attributes';
+import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
+import { slotsWithItems, type OwnedItem } from '../../../lib/equipment';
 import { coerceXp, levelFor, levelProgress } from '../../../lib/level';
 import { supabase } from '../../../lib/supabase';
-import { EquipSlot, SLOTS } from '../../../components/EquipSlot';
-
-const LOCKS = ['Class unlocks', 'Equipment unlocks', 'Skill tree'];
+import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
 
 type LoadState =
   | { status: 'loading' }
@@ -27,6 +23,8 @@ function loginHref() {
 
 export default function CharacterPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const viewerRef = useRef<CharacterViewerHandle>(null);
 
   const load = useCallback(async () => {
     const preview = process.env.NODE_ENV === 'development'
@@ -93,83 +91,96 @@ export default function CharacterPage() {
 
   const progress = levelFor(state.xp);
   const fraction = levelProgress(state.xp);
-  const left = SLOTS.filter((slot) => slot.side === 'left');
-  const right = SLOTS.filter((slot) => slot.side === 'right');
+  const attributes = attributeEntries(state.profile);
+  const pendingAttributes = attributes.some((attribute) => attribute.pending);
+  const wellness = wellnessSnapshot(state.profile);
+  const owned: OwnedItem[] = [];
+  const slots = slotsWithItems(owned);
 
   return (
-    <main className="character-screen">
-      <section className="doll-stage" aria-label="Adventurer">
-        {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
-        <header className="doll-head">
-          <h1>YOUR ADVENTURER</h1>
-          <p>{ADVENTURER_TAGLINE}</p>
-        </header>
-        <div className="paper-doll">
-          <div className="slot-col">
-            {left.map((slot) => <EquipSlot key={slot.key} slot={slot} />)}
+    <main className="screen character-screen">
+      <p className="page-brand">LIFE ASCENSION</p>
+      {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
+      <section className="avatar-card" aria-label="Adventurer">
+        <button
+          ref={avatarRef}
+          type="button"
+          className="avatar-hit"
+          aria-haspopup="dialog"
+          aria-label={`${state.name}, level ${progress.level}. Expand character`}
+          onClick={() => viewerRef.current?.open()}
+        >
+          <span className="avatar-circle">
+            <AdventurerSprite />
+          </span>
+        </button>
+        <div className="avatar-meta">
+          <h1 className="char-name">{state.name}</h1>
+          <p className="char-level">Level {progress.level}</p>
+          <div
+            className="xp-track"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={progress.xpForNext}
+            aria-valuenow={progress.xpIntoLevel}
+            aria-label="Progress to next level"
+          >
+            <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
           </div>
-          <div className="sprite-well">
-            <img
-              className="adventurer-sprite pixelated"
-              src="/character/sprite.png"
-              alt={`${state.name}, level ${progress.level} ${ADVENTURER_CLASS}`}
-              width={96}
-              height={128}
-            />
-          </div>
-          <div className="slot-col">
-            {right.map((slot) => <EquipSlot key={slot.key} slot={slot} />)}
-          </div>
+          <p className="xp-fraction">{progress.xpIntoLevel} / {progress.xpForNext} XP</p>
         </div>
-        <p className="cosmetic-note">{EQUIPMENT_PREVIEW}</p>
       </section>
 
-      <aside className="character-card" aria-label="Level and attributes">
-        <p className="adventurer-name">{state.name}</p>
-        <h2 className="level-title">Level {progress.level}</h2>
-        <p className="class-name">{ADVENTURER_CLASS}</p>
-        <div
-          className="xp-track"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={progress.xpForNext}
-          aria-valuenow={progress.xpIntoLevel}
-          aria-label="Progress to next level"
-        >
-          <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
-        </div>
-        <p className="xp-fraction">{progress.xpIntoLevel} / {progress.xpForNext} XP</p>
-        <p className="muted lifetime">{state.xp} lifetime XP</p>
-        {/* Unlabeled room for two future resources. No names or values until they exist. */}
-        <div className="resource-reserve" aria-hidden="true">
-          <div className="resource-reserve-cell" />
-          <div className="resource-reserve-cell" />
-        </div>
-        <p className="class-copy">{CLASS_PATH_COPY}</p>
+      <ul className="equip-row" aria-label="Equipment">
+        {slots.map(({ slot, item }) => (
+          <li key={slot.key}>
+            <EquipSlot slot={slot} item={item} />
+          </li>
+        ))}
+      </ul>
 
-        <h3 className="section-label">Attributes</h3>
-        <div className="attributes">
-          {ATTRIBUTES.map((attribute) => {
-            const value = attributeValue(state.profile, attribute.key);
-            const recorded = value !== ATTRIBUTE_PLACEHOLDER;
-            return (
-              <div key={attribute.key} className="attribute">
-                <span className="attr-name">
-                  <span className="attr-full">{attribute.label}</span>
-                  <span className="attr-short">{attribute.short}</span>
-                </span>
-                <span className="attr-value" aria-label={recorded ? undefined : `${attribute.label}, not recorded`}>{value}</span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="muted attr-note">{ATTRIBUTE_PREVIEW}</p>
-        <ul className="locks">
-          {LOCKS.map((label) => (
-            <li key={label} className="lock-chip">Locked · {label}</li>
+      <section className="stat-block" aria-label="Attributes">
+        <div className="stat-grid">
+          {attributes.map((attribute) => (
+            <div key={attribute.key} className="stat">
+              <span className="stat-label">{attribute.short}</span>
+              <span className="stat-value" aria-label={attribute.pending ? `${attribute.label}, not recorded` : `${attribute.label} ${attribute.value}`}>
+                {attribute.value}
+              </span>
+            </div>
           ))}
-        </ul>
-      </aside>
+        </div>
+        {pendingAttributes && (
+          <p className="soon-note">
+            Coming soon
+            <span className="sr-only">. {ATTRIBUTE_PREVIEW}</span>
+          </p>
+        )}
+      </section>
+
+      <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
+        <h2 id="wellness-heading">Wellness</h2>
+        {wellness.connected ? (
+          <div className="wellness-readings">
+            {wellness.sleepHours != null && <p>Sleep {formatReading(wellness.sleepHours)} h</p>}
+            {wellness.steps != null && <p>Steps {formatReading(wellness.steps)}</p>}
+          </div>
+        ) : (
+          <p className="wellness-empty">{WELLNESS_EMPTY}</p>
+        )}
+      </section>
+
+      <CharacterViewer
+        ref={viewerRef}
+        name={state.name}
+        level={progress.level}
+        items={owned}
+        returnFocusRef={avatarRef}
+      />
     </main>
   );
+}
+
+function formatReading(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString('en-US') : String(value);
 }

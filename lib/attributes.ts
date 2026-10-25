@@ -19,6 +19,14 @@ export function attributeValue(row: Record<string, unknown> | null | undefined, 
   return ATTRIBUTE_PLACEHOLDER;
 }
 
+/** One display cell per attribute. Missing values stay the placeholder. */
+export function attributeEntries(row: Record<string, unknown> | null | undefined) {
+  return ATTRIBUTES.map((attribute) => {
+    const value = attributeValue(row, attribute.key);
+    return { ...attribute, value, pending: value === ATTRIBUTE_PLACEHOLDER };
+  });
+}
+
 /** Prefer profiles.display_name when it is set. Otherwise the email local part. */
 export function adventurerName(email: string | null | undefined, displayName: unknown): string {
   if (typeof displayName === 'string' && displayName.trim()) return displayName.trim();
