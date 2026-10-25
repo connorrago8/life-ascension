@@ -10,8 +10,8 @@ const mcp = readFileSync(new URL('../app/api/mcp/route.ts', import.meta.url), 'u
 const auth = readFileSync(new URL('../lib/apiKeyAuth.ts', import.meta.url), 'utf8');
 
 test('OTP verify flow is a six-digit email code and does not enumerate accounts', () => {
-  assert.match(login, /verifyOtp\(\{email:email\.trim\(\),token:code,type:'email'\}\)/);
-  assert.match(login, /shouldCreateUser:false/);
+  assert.match(login, /verifyOtp\(\{ email: email\.trim\(\), token: code, type: 'email' \}\)/);
+  assert.match(login, /shouldCreateUser: false/);
   assert.match(login, /If an account exists for this email, a 6-digit code was sent\./);
   assert.match(login, /That code is invalid or expired\. Request a new code and try again\./);
   assert.match(login, /Too many requests, wait a minute\./);
@@ -21,13 +21,16 @@ test('OTP verify flow is a six-digit email code and does not enumerate accounts'
 });
 
 test('an already signed-in user leaves /login for the safe return path', () => {
-  assert.match(login, /getUser\(\)\.then\(\(\{data:\{user\}\}\)=>\{if\(active&&user\)router\.replace\(returnPath\(\)\)\}/);
-  assert.match(login, /onAuthStateChange\(\(_event,session\)=>\{if\(active&&session\?\.user\)router\.replace\(returnPath\(\)\)\}/);
-  assert.match(login, /function returnPath\(\)\{return safeNext\(/);
+  assert.match(login, /if \(active && user\) router\.replace\(returnPath\(\)\)/);
+  assert.match(login, /if \(active && session\?\.user\) router\.replace\(returnPath\(\)\)/);
+  assert.match(login, /function returnPath\(\)/);
+  assert.match(login, /safeNext\(new URLSearchParams\(window\.location\.search\)\.get\('next'\), window\.location\.origin\)/);
 });
 
 test('callback and auth-gated links use safeNext or a fixed same-origin next', () => {
-  assert.match(callback, /safeNext\(url\.searchParams\.get\('next'\), url\.origin\)/);
+  assert.match(callback, /requestOrigin\(request\)/);
+  assert.match(callback, /safeNext\(url\.searchParams\.get\('next'\), origin\)/);
+  assert.match(callback, /safeNext\(next, origin\)/);
   assert.match(callback, /\/login\?next=\$\{encodeURIComponent\(destination\)\}/);
   assert.match(board, /href=\{loginHref\}/);
   assert.match(board, /setLoginHref\('\/login\?next='\+encodeURIComponent\(next\|\|'\/'\)\)/);
