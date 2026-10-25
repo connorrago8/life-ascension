@@ -281,3 +281,124 @@ test('API-key submit_completion of a daily three days ago is rejected with XP un
   const xpAfter = tables.xp_ledger.filter((row) => row.owner_id === alice).reduce((sum, row) => sum + row.amount, 0);
   assert.equal(xpAfter, xpBefore);
 });
+
+test('omitted daily dates use questDay and omitted one-time dates stay on the calendar date', async () => {
+  const { tables, calls, db } = seed();
+  const questDay = shiftDate(today, -1);
+  const createdDaily = await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'create_quest',
+    args: { title: 'Morning habit', domain: 'home', cadence: 'daily' },
+    today,
+    questDay,
+  });
+  assert.equal(createdDaily.ok, true);
+  assert.equal(createdDaily.result.due_date, questDay);
+  assert.equal(calls.find((call) => call.fn === 'create_scheduled_quest_as_user' && call.args.p_cadence === 'daily').args.p_date, questDay);
+
+  const createdOnce = await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'create_quest',
+    args: { title: 'One chore', domain: 'home', cadence: 'once' },
+    today,
+    questDay,
+  });
+  assert.equal(createdOnce.ok, true);
+  assert.equal(calls.find((call) => call.args?.p_title === 'One chore').args.p_date, today);
+
+  const explicit = await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'create_quest',
+    args: { title: 'Explicit habit', domain: 'home', cadence: 'daily', due_date: today },
+    today,
+    questDay,
+  });
+  assert.equal(explicit.ok, true);
+  assert.equal(explicit.result.due_date, today);
+
+  tables.quests.push({
+    id: 'aq-daily-open',
+    owner_id: alice,
+    title: 'Open habit',
+    domain: 'home',
+    cadence: 'daily',
+    quest_type: 'scheduled',
+    scheduled_for: '2026-01-01',
+    active: true,
+  });
+  tables.quest_instances.push(
+    { id: 'daily-prev', quest_id: 'aq-daily-open', owner_id: alice, due_date: questDay, status: 'available' },
+    { id: 'daily-today', quest_id: 'aq-daily-open', owner_id: alice, due_date: today, status: 'available' },
+  );
+  const completed = await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'submit_completion',
+    args: { quest_id: 'aq-daily-open', confirmed_complete: true },
+    today,
+    questDay,
+  });
+  assert.equal(completed.ok, true);
+  assert.equal(completed.result.instance_id, 'daily-prev');
+  assert.equal(tables.quest_instances.find((row) => row.id === 'daily-today').status, 'available');
+  assert.equal(calls.some((call) => call.fn === 'ensure_quest_instance_as_user' && call.args.p_quest_id === 'aq-daily-open'), false);
+
+  tables.quests.push({
+    id: 'aq-once-dated',
+    owner_id: alice,
+    title: 'Dated chore',
+    domain: 'home',
+    cadence: 'once',
+    quest_type: 'scheduled',
+    scheduled_for: '2026-10-29',
+    active: true,
+  });
+  await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'submit_completion',
+    args: { quest_id: 'aq-once-dated', confirmed_complete: true },
+    today,
+    questDay,
+  });
+  assert.equal(
+    calls.find((call) => call.fn === 'ensure_quest_instance_as_user' && call.args.p_quest_id === 'aq-once-dated').args.p_date,
+    '2026-10-29',
+  );
+
+  const listed = await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'list_quests',
+    args: {},
+    today,
+    questDay,
+  });
+  assert.equal(listed.ok, true);
+  const listedIds = listed.result.instances.map((instance) => instance.id);
+  assert.equal(listedIds.includes('ai-active'), true);
+  assert.equal(listedIds.includes('daily-prev'), true);
+  assert.equal(listedIds.includes('daily-today'), false);
+  const exact = await runMcpTool({
+    db,
+    userId: alice,
+    method: 'api_key',
+    name: 'list_quests',
+    args: { due_date: today },
+    today,
+    questDay,
+  });
+  const exactIds = exact.result.instances.map((instance) => instance.id);
+  assert.equal(exactIds.includes('ai-active'), true);
+  assert.equal(exactIds.includes('daily-today'), true);
+  assert.equal(exactIds.includes('daily-prev'), false);
+});

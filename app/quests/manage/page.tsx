@@ -1,10 +1,10 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
+import {questActionDate} from '../../../lib/questDay';
 import {supabase} from '../../../lib/supabase';
 
 type Quest={id:string;title:string;domain:string;cadence:string;scheduled_for:string|null;active:boolean};
-function chicagoToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 export default function ManageQuests(){
  const [quests,setQuests]=useState<Quest[]>([]);
  const [loading,setLoading]=useState(true);
@@ -30,7 +30,7 @@ export default function ManageQuests(){
   setMessage(error?'Could not rename quest.':'Quest renamed.');await load();setBusy(null);
  }
  async function reschedule(q:Quest){
-  const date=window.prompt(q.cadence==='daily'?'New start date (YYYY-MM-DD)':'New due date (YYYY-MM-DD)',q.scheduled_for||chicagoToday());
+  const date=window.prompt(q.cadence==='daily'?'New start date (YYYY-MM-DD)':'New due date (YYYY-MM-DD)',q.scheduled_for||questActionDate(q.cadence));
   if(date===null)return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){setMessage('Enter a date as YYYY-MM-DD.');return}
   setBusy(q.id);const {error}=await supabase().rpc('reschedule_quest',{p_quest_id:q.id,p_date:date});
