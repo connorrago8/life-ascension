@@ -16,7 +16,10 @@ type ToolInput = {
   method: 'api_key' | 'supabase_jwt';
   name: string;
   args: Record<string, unknown>;
+  /** America/Chicago calendar date. One-time quests and goals keep this midnight boundary. */
   today: string;
+  /** 5:00 AM quest day. Callers that omit it keep `today`, so older tests stay on one date. */
+  questDay?: string;
 };
 
 export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
@@ -31,7 +34,7 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
     if (questType !== 'scheduled' && questType !== 'goal') return bad('Invalid quest type');
     if (questType === 'goal' && args.cadence !== 'once') return bad('Goals are one-time');
     if (args.due_date !== undefined && !isoDate(args.due_date)) return bad('Invalid due date');
-    const date = typeof args.due_date === 'string' ? args.due_date : today;
+    const date = typeof args.due_date === 'string' ? args.due_date : args.cadence === 'daily' ? activeDailyDate(input) : today;
     const created = await userRpc(input, 'create_scheduled_quest', 'create_scheduled_quest_as_user', {
       p_title: title,
       p_domain: args.domain,
@@ -85,9 +88,11 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
     if (!questRow || questRow.active !== true || typeof questRow.id !== 'string') return bad('Quest not found');
     const date = typeof args.due_date === 'string'
       ? args.due_date
-      : questRow.cadence === 'once' && typeof questRow.scheduled_for === 'string'
-        ? questRow.scheduled_for
-        : today;
+      : questRow.cadence === 'daily'
+        ? activeDailyDate(input)
+        : questRow.cadence === 'once' && typeof questRow.scheduled_for === 'string'
+          ? questRow.scheduled_for
+          : today;
     const existing = await db.from('quest_instances').select('id').eq('owner_id', userId).eq('quest_id', questRow.id).eq('due_date', date).maybeSingle();
     if (existing.error) return crashed(existing.error.message);
     const existingRow = existing.data as { id?: unknown } | null;
@@ -112,20 +117,35 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
   }
 
   if (name === 'list_quests') {
-    const date = args.due_date === undefined ? today : args.due_date;
-    if (!isoDate(date)) return bad('Invalid due date');
+    const explicit = args.due_date !== undefined;
+    const dailyDay = activeDailyDate(input);
+    if (explicit) {
+      if (!isoDate(args.due_date)) return bad('Invalid due date');
+    } else if (!isoDate(today) || !isoDate(dailyDay)) return bad('Invalid due date');
     const questRows = await db.from('quests').select('id,title,domain,cadence,quest_type,scheduled_for,active').eq('owner_id', userId).eq('active', true);
     if (questRows.error) return crashed(questRows.error.message);
-    const activeIds = (Array.isArray(questRows.data) ? questRows.data : [])
+    const activeQuests = Array.isArray(questRows.data) ? questRows.data : [];
+    const activeIds = activeQuests
       .map((quest: { id?: unknown } | null) => (quest && typeof quest === 'object' ? quest.id : null))
       .filter((id: unknown): id is string => typeof id === 'string');
     let instanceData: unknown[] = [];
     if (activeIds.length > 0) {
       let instances = db.from('quest_instances').select('id,quest_id,due_date,status').eq('owner_id', userId).in('quest_id', activeIds);
-      if (args.include_history !== true) instances = instances.eq('due_date', date);
+      if (args.include_history !== true) {
+        if (explicit) instances = instances.eq('due_date', args.due_date);
+        else if (dailyDay === today) instances = instances.eq('due_date', today);
+        else instances = instances.in('due_date', [dailyDay, today]);
+      }
       const instanceRows = await instances.limit(500);
       if (instanceRows.error) return crashed(instanceRows.error.message);
       instanceData = Array.isArray(instanceRows.data) ? instanceRows.data : [];
+      if (!explicit && args.include_history !== true && dailyDay !== today) {
+        const cadenceById = new Map(activeQuests.map((quest: { id?: unknown; cadence?: unknown }) => [quest?.id, quest?.cadence]));
+        instanceData = instanceData.filter((row) => {
+          const record = row as { quest_id?: unknown; due_date?: unknown };
+          return cadenceById.get(record.quest_id) === 'daily' ? record.due_date === dailyDay : record.due_date === today;
+        });
+      }
     }
     return { ok: true, result: { quests: questRows.data ?? [], instances: instanceData } };
   }
@@ -147,6 +167,10 @@ async function userRpc(input: ToolInput, name: string, asUserName: string, args:
     ? input.db.rpc(asUserName, { ...args, p_user_id: input.userId })
     : input.db.rpc(name, args);
   return await query;
+}
+
+function activeDailyDate(input: ToolInput): string {
+  return input.questDay ?? input.today;
 }
 
 function isoDate(value: unknown): value is string {

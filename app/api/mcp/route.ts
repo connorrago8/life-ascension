@@ -8,6 +8,7 @@ import {
 } from '../../../lib/apiKeyAuth';
 import { readBearerToken } from '../../../lib/apiKey';
 import { mcpDomains, runMcpTool } from '../../../lib/mcpTools';
+import { calendarDate, questDay } from '../../../lib/questDay';
 import { createServiceRoleClient } from '../../../lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
@@ -16,14 +17,14 @@ export const dynamic = 'force-dynamic';
 const tools = [
   {
     name: 'create_quest',
-    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for today and the previous 2 Chicago days. If its start is older than that, the first instance opens on today minus 2 days.',
+    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for the America/Chicago calendar date and the previous 2 days, measured from midnight by the server. If its start is older than that, the first instance opens on that calendar date minus 2 days. When due_date is omitted, a daily habit uses the 5:00 AM America/Chicago quest day, and a one-time quest or goal uses the America/Chicago calendar date.',
     inputSchema: {
       type: 'object',
       properties: {
         title: { type: 'string' },
         domain: { type: 'string', enum: mcpDomains },
         cadence: { type: 'string', enum: ['once', 'daily'] },
-        due_date: { type: 'string', description: 'Optional Chicago calendar date YYYY-MM-DD. Defaults to today. The server accepts 30 days ago through 366 days ahead. A daily start older than 2 days still saves that start, and the opened instance is dated today minus 2 days.' },
+        due_date: { type: 'string', description: 'Optional YYYY-MM-DD. Omitted daily quests use the 5:00 AM America/Chicago quest day. Omitted one-time quests and goals use the America/Chicago calendar date. The server accepts 30 days ago through 366 days ahead, measured from midnight America/Chicago. A daily start older than 2 server days still saves that start, and the opened instance is dated server today minus 2 days.' },
         quest_type: { type: 'string', enum: ['scheduled', 'goal'], description: 'Default scheduled. goal requires cadence once.' },
       },
       required: ['title', 'domain', 'cadence'],
@@ -46,12 +47,12 @@ const tools = [
   },
   {
     name: 'submit_completion',
-    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once. A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
+    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once per instance. A daily habit earns XP only when its instance date is the America/Chicago calendar date or one of the previous 2 days. Older days and future days are rejected. Between midnight and 5:00 AM America/Chicago, an omitted daily due_date is the previous quest day, which that window accepts. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
     inputSchema: {
       type: 'object',
       properties: {
         quest_id: { type: 'string' },
-        due_date: { type: 'string', description: 'Optional YYYY-MM-DD. Defaults to today for daily quests, or the scheduled date for one-time quests.' },
+        due_date: { type: 'string', description: 'Optional YYYY-MM-DD. Defaults to the 5:00 AM America/Chicago quest day for daily quests, or the scheduled date for one-time quests. An explicit date is sent unchanged.' },
         confirmed_complete: { type: 'boolean', description: 'Must be true. Do not set this for partial, negated, planned, or ambiguous actions.' },
       },
       required: ['quest_id', 'confirmed_complete'],
@@ -63,7 +64,7 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        due_date: { type: 'string', description: 'Optional ISO date; defaults to today' },
+        due_date: { type: 'string', description: 'Optional YYYY-MM-DD. When omitted, daily instances use the 5:00 AM America/Chicago quest day and one-time instances use the America/Chicago calendar date. Pass a date to filter every cadence to that exact date.' },
         include_history: { type: 'boolean', description: 'Set true to include historical instances of active quests' },
       },
     },
@@ -113,13 +114,15 @@ export async function POST(req: NextRequest) {
     if (!hasScope(auth, 'quests:read')) return NextResponse.json({ error: 'Missing quests:read scope' }, { status: 403 });
   }
 
+  const now = new Date();
   const outcome = await runMcpTool({
     db: actor.db,
     userId: auth.userId,
     method: auth.method,
     name,
     args,
-    today: chicagoToday(),
+    today: calendarDate(now),
+    questDay: questDay(now),
   });
   if (!outcome.ok) return fail(id, outcome.rpcCode, outcome.message);
   return NextResponse.json({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(outcome.result) }] } });
@@ -140,8 +143,4 @@ function openActor(auth: AuthSuccess, token: string): { db: SupabaseClient } | {
   const admin = createServiceRoleClient();
   if (!admin) return { ok: false, status: 503, error: 'API key authentication is not configured' };
   return { db: admin };
-}
-
-function chicagoToday() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
