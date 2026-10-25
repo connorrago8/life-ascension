@@ -5,7 +5,9 @@ import { ATTRIBUTES, ATTRIBUTE_PLACEHOLDER, adventurerName, attributeValue } fro
 import {
   ADVENTURER_CLASS,
   ADVENTURER_TAGLINE,
+  ATTRIBUTE_PREVIEW,
   CLASS_PATH_COPY,
+  EQUIPMENT_PREVIEW,
 } from '../../../lib/character';
 import { coerceXp, levelFor, levelProgress } from '../../../lib/level';
 import { supabase } from '../../../lib/supabase';
@@ -119,7 +121,7 @@ export default function CharacterPage() {
             {right.map((slot) => <EquipSlot key={slot.key} slot={slot} />)}
           </div>
         </div>
-        <p className="cosmetic-note">Equipment is cosmetic and does not change your stats or XP.</p>
+        <p className="cosmetic-note">{EQUIPMENT_PREVIEW}</p>
       </section>
 
       <aside className="character-card" aria-label="Level and attributes">
@@ -161,7 +163,7 @@ export default function CharacterPage() {
             );
           })}
         </div>
-        <p className="muted attr-note">Shown when they are recorded. Nothing here changes your XP.</p>
+        <p className="muted attr-note">{ATTRIBUTE_PREVIEW}</p>
         <ul className="locks">
           {LOCKS.map((label) => (
             <li key={label} className="lock-chip">Locked · {label}</li>

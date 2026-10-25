@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { EMPTY_SLOT_COPY, EMPTY_SLOT_DETAIL } from '../lib/character';
+import { EQUIPMENT_PREVIEW } from '../lib/character';
 
 export const SLOTS = [
   { key: 'head', label: 'Head', icon: '/character/slot-head.png', side: 'left' },
@@ -25,13 +25,13 @@ export function EquipSlot({ slot }: { slot: EquipmentSlot }) {
   }
 
   return (
-    <div className="equip-slot-wrap">
+    <div className="equip-slot-wrap" data-slot={slot.key}>
       <button
         type="button"
         className="equip-slot"
         onClick={open}
         aria-haspopup="dialog"
-        aria-label={`${slot.label}, empty`}
+        aria-label={`${slot.label}. ${EQUIPMENT_PREVIEW}`}
       >
         <img src={slot.icon} alt="" width={48} height={48} className="equip-icon pixelated" />
         <span className="equip-label">{slot.label}</span>
@@ -44,10 +44,9 @@ export function EquipSlot({ slot }: { slot: EquipmentSlot }) {
           if (event.target === dialogRef.current) dialogRef.current?.close();
         }}
       >
-        <p className="eyebrow">Equipment</p>
+        <p className="eyebrow">Preview</p>
         <h2 id={titleId}>{slot.label}</h2>
-        <p>{EMPTY_SLOT_COPY}</p>
-        <p className="muted">{EMPTY_SLOT_DETAIL}</p>
+        <p>{EQUIPMENT_PREVIEW}</p>
         <button type="button" className="btn warm" onClick={() => dialogRef.current?.close()}>Close</button>
       </dialog>
     </div>

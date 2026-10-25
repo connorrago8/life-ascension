@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ATTRIBUTE_PLACEHOLDER, ATTRIBUTES, attributeValue, adventurerName } from '../lib/attributes.ts';
+import { ATTRIBUTE_PREVIEW, EQUIPMENT_PREVIEW } from '../lib/character.ts';
+
+test('preview copy does not offer allocation or equipping', () => {
+  assert.equal(ATTRIBUTE_PREVIEW, 'Preview: attribute points arrive in a future update.');
+  assert.equal(EQUIPMENT_PREVIEW, 'Preview: equipment coming soon.');
+});
 
 test('attributes are only STR, INT, VIT, and DIS', () => {
   assert.deepEqual(
