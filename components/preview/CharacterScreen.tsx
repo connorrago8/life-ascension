@@ -3,35 +3,74 @@
 import { useRef } from 'react';
 import { CharacterViewer, type CharacterViewerHandle } from '../CharacterViewer';
 import type { SlotKey } from '../../lib/equipment';
-import type { Appearance, AppearanceColors } from '../../lib/preview/appearance';
-import { adventureCharacterModel } from '../../lib/preview/characterRender';
-import { COLOR_CHOICES, HAIR_CHOICES, SKIN_CHOICES } from '../../lib/preview/creator';
+import type { Appearance, VisibleSlot } from '../../lib/preview/appearance';
+import { adventureCharacterModel, homeCharacterModel } from '../../lib/preview/characterRender';
 import { levelTitle, SAMPLE_PROGRESSION } from '../../lib/preview/progression';
-import { CharacterPair } from './CharacterPair';
+import { HomeCharacter } from './HomeCharacter';
 import { usePreviewAppearance } from './usePreviewAppearance';
+
+const LEFT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
+  { slot: 'head', label: 'Head' },
+  { slot: 'chest', label: 'Armor' },
+  { slot: 'legs', label: 'Legs' },
+];
+const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
+  { slot: 'main-hand', label: 'Weapon' },
+  { slot: 'off-hand', label: 'Off hand' },
+  { slot: 'feet', label: 'Boots' },
+];
 
 function ownedFrom(appearance: Appearance) {
   return appearance.equipment.map((item) => ({ slot: item.slot as SlotKey, name: item.name }));
 }
 
+function Slot({ appearance, slot, label }: { appearance: Appearance; slot: VisibleSlot; label: string }) {
+  const item = appearance.equipment.find((entry) => entry.slot === slot);
+  return (
+    <div className="character-gear-slot" aria-label={`${label}: ${item?.name ?? 'Empty'}`}>
+      <span className="character-slot-label">{label}</span>
+      <span className="character-slot-item">{item?.name ?? 'Empty'}</span>
+    </div>
+  );
+}
+
 export function CharacterScreen() {
-  const { appearance, applyColors } = usePreviewAppearance();
+  const { appearance } = usePreviewAppearance();
   const base = SAMPLE_PROGRESSION;
   const pixel = adventureCharacterModel(appearance);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewerRef = useRef<CharacterViewerHandle>(null);
 
   return (
-    <main className="preview-screen character-preview">
-      <h1 className="status-name">{appearance.name}</h1>
-      <p className="level-line">{levelTitle(base)}</p>
-      <p className="creator-note">STR {base.strength} · AGI {base.agility} · INT {base.intelligence} · END {base.endurance} · LCK {base.luck}</p>
-      <CharacterPair appearance={appearance} idPrefix="creator" compact />
-      <ChoiceRow label="Hair" choices={HAIR_CHOICES} current={appearance} onPick={applyColors} />
-      <ChoiceRow label="Skin" choices={SKIN_CHOICES} current={appearance} onPick={applyColors} />
-      <ChoiceRow label="Color" choices={COLOR_CHOICES} current={appearance} onPick={applyColors} />
+    <main className="preview-screen character-preview character-equipment-screen">
+      <header className="character-header">
+        <div>
+          <h1 className="status-name">{appearance.name}</h1>
+          <p className="level-line">{levelTitle(base)}</p>
+        </div>
+        <p className="character-header-note">EQUIPMENT</p>
+      </header>
+      <section className="character-loadout-stage" aria-label="Equipped character and gear">
+        <div className="character-slot-column">
+          {LEFT_SLOTS.map(({ slot, label }) => <Slot key={slot} appearance={appearance} slot={slot} label={label} />)}
+        </div>
+        <div className="character-avatar" aria-label="Full-body front-facing adventurer">
+          <HomeCharacter model={homeCharacterModel(appearance)} idPrefix="character" />
+        </div>
+        <div className="character-slot-column">
+          {RIGHT_SLOTS.map(({ slot, label }) => <Slot key={slot} appearance={appearance} slot={slot} label={label} />)}
+        </div>
+      </section>
+      <p className="character-gear-note">Outfit colors come from equipped gear and unlocked cosmetics. Change equipment in Inventory.</p>
+      <section className="character-stats" aria-label="Character attributes">
+        <span>STR <strong>{base.strength}</strong></span>
+        <span>AGI <strong>{base.agility}</strong></span>
+        <span>INT <strong>{base.intelligence}</strong></span>
+        <span>END <strong>{base.endurance}</strong></span>
+        <span>LCK <strong>{base.luck}</strong></span>
+      </section>
       <button ref={buttonRef} type="button" className="sheet-ghost examine" onClick={() => viewerRef.current?.open()}>
-        Pixel examine
+        Examine adventure sprite
       </button>
       <CharacterViewer
         ref={viewerRef}
@@ -44,49 +83,5 @@ export function CharacterScreen() {
         caption={pixel.itemNames.join(', ')}
       />
     </main>
-  );
-}
-
-function swatchColor(colors: Partial<AppearanceColors>): string {
-  return colors.hair ?? colors.skin ?? colors.tunic ?? colors.eye ?? '#888888';
-}
-
-function colorsMatch(colors: Partial<AppearanceColors>, current: Appearance): boolean {
-  return (Object.keys(colors) as (keyof AppearanceColors)[]).every(
-    (key) => current[key].toUpperCase() === String(colors[key]).toUpperCase(),
-  );
-}
-
-function ChoiceRow({
-  label,
-  choices,
-  current,
-  onPick,
-}: {
-  label: string;
-  choices: readonly { label: string; colors: Partial<AppearanceColors> }[];
-  current: Appearance;
-  onPick: (colors: Partial<AppearanceColors>) => void;
-}) {
-  return (
-    <fieldset className="choice-row">
-      <legend>{label}</legend>
-      <div className="swatches">
-        {choices.map((choice) => {
-          const pressed = colorsMatch(choice.colors, current);
-          return (
-            <button
-              key={choice.label}
-              type="button"
-              className={pressed ? 'swatch is-selected' : 'swatch'}
-              style={{ background: swatchColor(choice.colors) }}
-              aria-pressed={pressed}
-              aria-label={`${label}: ${choice.label}`}
-              onClick={() => onPick(choice.colors)}
-            />
-          );
-        })}
-      </div>
-    </fieldset>
   );
 }
