@@ -15,7 +15,8 @@ function Pixels({ rows }: { rows: string[] }) {
 
 /**
  * Layered adventurer. The body wears beginner clothes.
- * Each equipment slot is its own group so future gear can paint on top.
+ * The cloak group is painted first, behind the body. The companion group
+ * is painted last, beside the figure rather than on the legs or feet.
  */
 export function AdventurerSprite({
   label,

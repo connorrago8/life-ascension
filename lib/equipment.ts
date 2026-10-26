@@ -1,11 +1,11 @@
 /** Cosmetic equipment. Slots stay empty until the player actually owns an item. */
 export const EQUIPMENT_SLOTS = [
-  { key: 'head', label: 'Head' },
-  { key: 'chest', label: 'Chest' },
-  { key: 'main-hand', label: 'Main Hand' },
-  { key: 'off-hand', label: 'Off Hand' },
-  { key: 'feet', label: 'Feet' },
-  { key: 'legs', label: 'Legs' },
+  { key: 'headwear', label: 'Headwear' },
+  { key: 'armor', label: 'Armor' },
+  { key: 'shield', label: 'Shield' },
+  { key: 'weapon', label: 'Weapon' },
+  { key: 'cloak', label: 'Cloak' },
+  { key: 'companion', label: 'Companion' },
 ] as const;
 
 export type SlotKey = (typeof EQUIPMENT_SLOTS)[number]['key'];

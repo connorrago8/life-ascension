@@ -2,8 +2,12 @@
 
 export const SPRITE_WIDTH = 32;
 
-/** Base body, then one layer per equipment slot. Later gear paints into the slot layers. */
-export const SPRITE_LAYER_IDS = ['body', 'head', 'chest', 'main-hand', 'off-hand', 'legs', 'feet'] as const;
+/**
+ * Paint order is back to front. The cloak is behind the body so a cape
+ * shows around the edges. The companion is last, beside the figure.
+ * Beginner tunic, trousers, and boots stay on the body layer.
+ */
+export const SPRITE_LAYER_IDS = ['cloak', 'body', 'headwear', 'armor', 'shield', 'weapon', 'companion'] as const;
 
 export type SpriteLayerId = (typeof SPRITE_LAYER_IDS)[number];
 
@@ -41,18 +45,18 @@ const LAYER_OF: Record<string, SpriteLayerId> = {
   w: 'body',
   k: 'body',
   m: 'body',
-  T: 'chest',
-  t: 'chest',
-  u: 'chest',
-  c: 'chest',
-  B: 'chest',
-  b: 'chest',
-  P: 'legs',
-  p: 'legs',
-  q: 'legs',
-  F: 'feet',
-  f: 'feet',
-  o: 'feet',
+  T: 'body',
+  t: 'body',
+  u: 'body',
+  c: 'body',
+  B: 'body',
+  b: 'body',
+  P: 'body',
+  p: 'body',
+  q: 'body',
+  F: 'body',
+  f: 'body',
+  o: 'body',
 };
 
 function center(middle: string): string {
@@ -66,7 +70,7 @@ function center(middle: string): string {
 
 /**
  * Beginner clothes only: plain tunic, belt, trousers, boots.
- * No helmet, armor, or weapon. Head and hand layers stay empty until gear exists.
+ * No helmet, armor, or weapon. Equipment layers stay empty until gear exists.
  * The grid is centered. `.` is empty.
  */
 const ROWS = [
