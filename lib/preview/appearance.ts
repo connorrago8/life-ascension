@@ -108,6 +108,24 @@ export const WORN_BOOTS: VisibleItem = {
   accentLight: '#6A4A32',
 };
 
+/** Preview-only starter alternatives. These share the existing silhouette motifs. */
+export const ASHEN_HOOD: VisibleItem = {
+  id: 'ashen-hood', slot: 'head', name: 'Ashen Hood',
+  motif: 'hood', accent: '#555D72', accentLight: '#8D9BB5',
+};
+export const EMBER_COAT: VisibleItem = {
+  id: 'ember-coat', slot: 'chest', name: 'Ember Coat',
+  motif: 'coat', accent: '#713B3C', accentLight: '#B26A59',
+};
+export const DUSK_TROUSERS: VisibleItem = {
+  id: 'dusk-trousers', slot: 'legs', name: 'Dusk Trousers',
+  motif: 'trousers', accent: '#333D56', accentLight: '#68768F',
+};
+export const IRONBOUND_BOOTS: VisibleItem = {
+  id: 'ironbound-boots', slot: 'feet', name: 'Ironbound Boots',
+  motif: 'boots', accent: '#434952', accentLight: '#9299A3',
+};
+
 /** Sample adventurer. The same record feeds Home and Adventure. */
 export const SAMPLE_APPEARANCE: Appearance = {
   name: 'Rowan Hale',
@@ -175,6 +193,10 @@ export const SAMPLE_GEAR: readonly VisibleItem[] = [
   WAYFARER_LANTERN,
   TRAIL_TROUSERS,
   WORN_BOOTS,
+  ASHEN_HOOD,
+  EMBER_COAT,
+  DUSK_TROUSERS,
+  IRONBOUND_BOOTS,
 ];
 
 export function gearById(id: string): VisibleItem | null {
