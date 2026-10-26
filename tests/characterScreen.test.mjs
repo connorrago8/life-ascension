@@ -91,7 +91,7 @@ test('slot silhouettes share one 16 by 16 pixel grid', () => {
 test('character and play screens do not invent stats, wellness, or XP', () => {
   assert.match(characterSource, /Coming soon/);
   assert.match(characterSource, /WELLNESS_EMPTY|Not connected yet/);
-  assert.match(characterSource, /slotsWithItems\(owned\)/);
+  assert.match(characterSource, /<CharacterScreen displayName=\{state\.name\} hideSampleStats\s*\/>/);
   assert.doesNotMatch(characterSource, /7\.2|6,400|STR 4/);
   assert.match(viewerSource, /role="dialog"/);
   assert.match(viewerSource, /aria-modal="true"/);
