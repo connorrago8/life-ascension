@@ -13,6 +13,8 @@ const characterSource = readFileSync(new URL('../app/(app)/character/page.tsx', 
 const viewerSource = readFileSync(new URL('../components/CharacterViewer.tsx', import.meta.url), 'utf8');
 const spriteSource = readFileSync(new URL('../components/AdventurerSprite.tsx', import.meta.url), 'utf8');
 const playSource = readFileSync(new URL('../app/(app)/play/page.tsx', import.meta.url), 'utf8');
+const hubSource = readFileSync(new URL('../components/play/AdventureHub.tsx', import.meta.url), 'utf8');
+const cryptContentSource = readFileSync(new URL('../lib/crypt/content.ts', import.meta.url), 'utf8');
 
 test('primary nav is Home, Quests, Play, Character, and More', () => {
   assert.deepEqual(NAV_ITEMS.map((item) => item.label), ['Home', 'Quests', 'Play', 'Character', 'More']);
@@ -97,9 +99,14 @@ test('character and play screens do not invent stats, wellness, or XP', () => {
   assert.match(viewerSource, /aria-modal="true"/);
   assert.match(viewerSource, /aria-label="Close"/);
   assert.match(viewerSource, /returnFocusRef/);
-  assert.match(playSource, /Forgotten Crypt/);
-  assert.match(playSource, /Coming soon/);
-  assert.match(playSource, /Locked/);
-  assert.match(playSource, /Real-life quests earn XP/);
-  assert.doesNotMatch(playSource, /get_lifetime_xp|create_scheduled_quest/);
+  const playBundle = `${playSource}\n${hubSource}\n${cryptContentSource}`;
+  assert.match(playSource, /AdventureHub/);
+  assert.match(playBundle, /Forgotten Crypt/);
+  assert.match(playBundle, /Coming soon/);
+  assert.match(playBundle, /Locked/);
+  assert.match(playBundle, /Town/);
+  assert.match(playBundle, /Whispering Woods/);
+  assert.match(playBundle, /Preview — progress is not saved and earns no XP/);
+  assert.match(playBundle, /Real-life quests earn XP/);
+  assert.doesNotMatch(`${playSource}\n${hubSource}`, /get_lifetime_xp|create_scheduled_quest|\.rpc\s*\(/);
 });
