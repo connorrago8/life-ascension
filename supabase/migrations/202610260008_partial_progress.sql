@@ -58,6 +58,7 @@ declare
   v_old public.quest_progress_operations%rowtype;
   v_next integer;
   v_status text;
+  v_today date;
 begin
   if v_user is null then raise exception 'Authentication required'; end if;
   if p_instance_id is null or p_request_id is null or p_delta is null or p_delta = 0 then
@@ -83,10 +84,23 @@ begin
   if not found or not v_quest.active then raise exception 'Active quest not found'; end if;
   if v_quest.target_amount is null then raise exception 'Quest does not track partial progress'; end if;
   if v_inst.status <> 'available' then raise exception 'Instance is not available for progress'; end if;
+  -- Match the existing completion RPC's Chicago-time eligibility checks before accepting progress.
+  v_today := (now() at time zone 'America/Chicago')::date;
+  if v_quest.cadence = 'daily' and (v_inst.due_date > v_today or v_inst.due_date < v_today - 2
+      or (v_quest.scheduled_for is not null and v_inst.due_date < v_quest.scheduled_for)) then
+    raise exception 'Daily progress is outside the completion window';
+  end if;
+  if v_quest.cadence = 'once' and v_quest.quest_type <> 'goal' and v_inst.due_date > v_today then
+    raise exception 'Future scheduled quest cannot log progress yet';
+  end if;
   if p_delta < 0 and p_delta <> -v_quest.progress_increment then
     raise exception 'Undo must reverse one default increment';
   end if;
   if p_delta > v_quest.target_amount then raise exception 'Progress amount exceeds target'; end if;
+  if p_delta < 0 and not exists (
+      select 1 from public.quest_progress_operations
+      where instance_id=v_inst.id and owner_id=v_user and delta>0
+  ) then raise exception 'No progress operation to undo'; end if;
   v_next := v_inst.current_amount + p_delta;
   if v_next < 0 or v_next > v_quest.target_amount then
     raise exception 'Progress would exceed allowed range';
