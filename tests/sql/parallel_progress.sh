@@ -7,6 +7,10 @@ insert into public.quests(id,owner_id,title,domain,cadence,target_amount,progres
 values ('00000000-0000-0000-0000-0000000000f2','00000000-0000-0000-0000-0000000000f1','Parallel saves','home','daily',8,'units',1);
 insert into public.quest_instances(id,owner_id,quest_id,due_date)
 values ('00000000-0000-0000-0000-0000000000f3','00000000-0000-0000-0000-0000000000f1','00000000-0000-0000-0000-0000000000f2',(now() at time zone 'America/Chicago')::date);
+insert into public.quests(id,owner_id,title,domain,cadence,target_amount,progress_unit,progress_increment)
+values ('00000000-0000-0000-0000-0000000000f4','00000000-0000-0000-0000-0000000000f1','Config race','home','daily',8,'units',1);
+insert into public.quest_instances(id,owner_id,quest_id,due_date)
+values ('00000000-0000-0000-0000-0000000000f5','00000000-0000-0000-0000-0000000000f1','00000000-0000-0000-0000-0000000000f4',(now() at time zone 'America/Chicago')::date);
 SQL
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
