@@ -352,7 +352,8 @@ test('creator colors and inventory equip update both renders without appearance 
   assert.notEqual(adventureCharacterModel(base).overlaySignature, adventureCharacterModel(after).overlaySignature);
   assert.equal(gameplayBonuses(effectsForItems(lantern.equipmentIds)).luck, 2);
   assert.equal(gameplayBonuses(effectsForItems(itemIds(base))).strength, 1);
-  assert.match(read('components/preview/InventoryScreen.tsx'), /Equipment/);
+  assert.match(read('components/preview/InventoryScreen.tsx'), /All gear/);
+  assert.match(read('components/preview/InventoryScreen.tsx'), /Cosmetics/);
   assert.match(read('components/preview/InventoryScreen.tsx'), /Cosmetic/);
   assert.doesNotMatch(read('components/preview/CharacterScreen.tsx'), /<ChoiceRow|<CharacterPair/);
   assert.match(read('components/preview/CharacterScreen.tsx'), /character-loadout-stage/);
