@@ -211,7 +211,7 @@ test('home and adventure views are wired to the shared render models', () => {
   assert.match(adventureArtSource, /adventureAriaLabel\(model\)/);
   assert.match(read('components/preview/CompareScreen.tsx'), /homeCharacterModel/);
   assert.match(read('components/preview/CompareScreen.tsx'), /adventureCharacterModel/);
-  assert.match(read('components/preview/CharacterScreen.tsx'), /CharacterViewer/);
+  assert.doesNotMatch(read('components/preview/CharacterScreen.tsx'), /CharacterViewer|Examine adventure sprite/);
   assert.doesNotMatch(previewSource, /Daily Mode/i);
 });
 
@@ -366,4 +366,19 @@ test('preview navigation is quests, character, adventure, and inventory', () => 
   assert.match(navSource, /\/preview\/adventure/);
   assert.match(navSource, /beginTransition/);
   assert.doesNotMatch(navSource, /Daily Mode|\/play/);
+});
+
+test('character equipment slots open available gear choices', () => {
+  const character = read('components/preview/CharacterScreen.tsx');
+  assert.match(character, /setSelectedSlot/);
+  assert.match(character, /PREVIEW_CATALOG\.filter/);
+  assert.match(character, /equip\(item\.id\)/);
+  assert.match(character, /aria-expanded=\{selectedSlot === slot\}/);
+});
+
+test('inventory supports equipment-slot filters', () => {
+  const inventory = read('components/preview/InventoryScreen.tsx');
+  assert.match(inventory, /inventory-filters/);
+  assert.match(inventory, /GROUPS\.map/);
+  assert.match(inventory, /aria-pressed=\{filter === slot\}/);
 });
