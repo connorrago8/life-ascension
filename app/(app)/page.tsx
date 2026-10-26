@@ -51,7 +51,26 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
    : await supabase().rpc('create_scheduled_quest',payload);
  setMessage(error?.message||'Quest scheduled.');if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
  async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();setBusy(false)}
- async function logProgress(id:string,requestId:string,delta:number){if(layoutPreview||busy)return;setBusy(true);const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});setMessage(error?.message||'Progress saved.');await load();setBusy(false)}
+ async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
+  if(layoutPreview||busy)return 'retry';
+  setBusy(true);
+  try {
+   const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
+   if(error){
+    // Transport/server errors may have committed before the response was lost.
+    const ambiguous=!error.code || /^5|^08|^57P/.test(error.code) || /fetch|network|timeout|connection/i.test(error.message);
+    setMessage(ambiguous?'Save not confirmed. Retry the pending operation.':error.message);
+    if(!ambiguous)await load();
+    return ambiguous?'retry':'rejected';
+   }
+   setMessage('Progress saved.');
+   await load();
+   return 'saved';
+  } catch {
+   setMessage('Connection lost. Retry the pending operation; do not log again.');
+   return 'retry';
+  } finally {setBusy(false);}
+ }
  async function logout(){if(layoutPreview){window.location.assign('/login');return}await supabase().auth.signOut();setUser(null)}
  if(!ready)return <main className="wrap">Loading your character…</main>;
  if(!user)return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Your adventure awaits</h1><p className="muted">Real actions. Real progress. Your private quest journal.</p><a className="btn" href={loginHref}>Sign in</a></main>;
