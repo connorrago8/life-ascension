@@ -466,3 +466,7 @@ code { font-family: ui-monospace, monospace; }
 @keyframes reward-arrive{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes reward-pulse{from{opacity:.4;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.quest-reward-toast,.reward-spark{animation:none}}
+
+.quest-progress-track{height:9px;border-radius:999px;overflow:hidden;background:rgba(170,188,185,.16);margin:9px 0 12px;border:1px solid rgba(170,188,185,.12)}
+.quest-progress-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#78bba2,#d3dca5);transition:width .45s cubic-bezier(.22,1,.36,1)}
+@media(prefers-reduced-motion:reduce){.quest-progress-fill{transition:none}}
