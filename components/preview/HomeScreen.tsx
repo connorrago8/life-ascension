@@ -19,6 +19,9 @@ export function HomeScreen() {
   const [feedback, setFeedback] = useState<{ id: string; amount: number } | null>(null);
   const [celebration, setCelebration] = useState<LevelUpView | null>(null);
   const timers = useRef<number[]>([]);
+  // Refs guard against multiple clicks before React commits a render.
+  const completedIds = useRef(new Set<string>());
+  const currentXp = useRef(SAMPLE_PROGRESSION.xp);
   const open = SAMPLE_QUESTS.find((quest) => quest.id === openId) ?? null;
   const progression = progressionFromTotal(xp);
 
@@ -27,11 +30,14 @@ export function HomeScreen() {
   }, []);
 
   function completeQuest(quest: SampleQuest) {
-    if (done.includes(quest.id)) return;
+    if (completedIds.current.has(quest.id)) return;
+    completedIds.current.add(quest.id);
     const gain = displayedQuestXp(quest);
-    const nextXp = xp + gain;
-    const view = levelUpView(xp, nextXp);
-    setDone((current) => [...current, quest.id]);
+    const previousXp = currentXp.current;
+    const nextXp = previousXp + gain;
+    currentXp.current = nextXp;
+    const view = levelUpView(previousXp, nextXp);
+    setDone((current) => current.includes(quest.id) ? current : [...current, quest.id]);
     setOpenId(null);
     setXp(nextXp);
     setFeedback({ id: quest.id, amount: gain });
