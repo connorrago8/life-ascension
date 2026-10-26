@@ -50,7 +50,7 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migrations 0001–0008 and run six SQL smoke tests
+      - name: Apply migrations 0001–0009 and run six SQL smoke tests
         shell: bash
         run: |
           set -euo pipefail
@@ -65,7 +65,8 @@ jobs:
             supabase/migrations/202610240005_api_key_user_context.sql \
             supabase/migrations/202610240006_quest_edit_archive.sql \
             supabase/migrations/202610240007_daily_late_window.sql \
-            supabase/migrations/202610260008_partial_progress.sql; do
+            supabase/migrations/202610260008_partial_progress.sql \
+            supabase/migrations/202610260009_progress_configuration.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
