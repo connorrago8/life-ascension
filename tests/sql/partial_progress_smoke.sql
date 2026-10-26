@@ -1,4 +1,4 @@
--- Runs after migrations 0001-0008 on disposable Postgres only.
+-- Runs after migrations 0001-0012 on disposable Postgres only.
 insert into auth.users(id) values
  ('00000000-0000-0000-0000-0000000000b1'),
  ('00000000-0000-0000-0000-0000000000b2');
@@ -53,6 +53,16 @@ begin
  end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
  if r.current_amount <> 1 or r.status <> 'available' then raise exception 'First increment failed'; end if;
+ -- Configuration cannot shrink or otherwise change while an instance has progress.
+ begin
+   perform public.configure_quest_progress('00000000-0000-0000-0000-0000000000c1',3,'glasses',1);
+   raise exception 'Reconfiguration after progress accepted';
+ exception when others then
+   if sqlerrm <> 'Quest already has completion or progress history' then raise; end if;
+ end;
+ if (select target_amount from public.quests where id='00000000-0000-0000-0000-0000000000c1') <> 8 then
+   raise exception 'Target changed despite progress history';
+ end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
  if r.current_amount <> 1 or r.completed_now then raise exception 'Retry double-counted or replayed completion'; end if;
  begin
@@ -65,7 +75,7 @@ begin
    perform public.log_quest_progress('00000000-0000-0000-0000-0000000000d2','00000000-0000-0000-0000-0000000000e2',1);
    raise exception 'Cross-user progress accepted';
  exception when others then
-   if sqlerrm <> 'Instance not found' then raise; end if;
+   if sqlerrm <> 'Quest not found' then raise; end if;
  end;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e3',-1);
  if r.current_amount <> 0 then raise exception 'Undo failed'; end if;
@@ -101,6 +111,24 @@ begin
  exception when others then
    if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
  end;
+ -- API-key wrapper may log its authenticated owner's partial progress.
+ perform public.log_quest_progress_as_user(
+   '00000000-0000-0000-0000-0000000000b2',
+   '00000000-0000-0000-0000-0000000000d2',
+   '00000000-0000-0000-0000-0000000000e9',1);
+ perform public.log_quest_progress_as_user(
+   '00000000-0000-0000-0000-0000000000b2',
+   '00000000-0000-0000-0000-0000000000d2',
+   '00000000-0000-0000-0000-0000000000e9',1);
+ begin
+   perform public.log_quest_progress_as_user(
+     '00000000-0000-0000-0000-0000000000b1',
+     '00000000-0000-0000-0000-0000000000d2',
+     '00000000-0000-0000-0000-0000000000ea',1);
+   raise exception 'Cross-user API-key progress accepted';
+ exception when others then
+   if sqlerrm <> 'Quest not found' then raise; end if;
+ end;
  raise notice 'PASS service-role wrapper cannot bypass progress target';
 end $$;
 reset role;
@@ -109,6 +137,9 @@ reset role;
 reset role;
 do $$
 begin
+ if (select current_amount from public.quest_instances where id='00000000-0000-0000-0000-0000000000d2') <> 1 then
+   raise exception 'API-key retry duplicated progress';
+ end if;
  if exists(select 1 from public.xp_ledger where instance_id='00000000-0000-0000-0000-0000000000d2') then
    raise exception 'API-key wrapper awarded XP prematurely';
  end if;
