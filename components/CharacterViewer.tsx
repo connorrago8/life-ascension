@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type Keyb
 import { slotsWithItems, type OwnedItem } from '../lib/equipment';
 import { AdventurerSprite } from './AdventurerSprite';
 import { EquipSlot } from './EquipSlot';
+import type { SpriteLayerId } from './spriteArt';
 
 const LEFT = ['head', 'chest', 'main-hand'] as const;
 const RIGHT = ['off-hand', 'feet', 'legs'] as const;
@@ -15,10 +16,13 @@ type Props = {
   level: number;
   items: readonly OwnedItem[];
   returnFocusRef: RefObject<HTMLButtonElement | null>;
+  palette?: Record<string, string>;
+  overlays?: Partial<Record<SpriteLayerId, string[]>>;
+  caption?: string;
 };
 
 export const CharacterViewer = forwardRef<CharacterViewerHandle, Props>(function CharacterViewer(
-  { name, level, items, returnFocusRef },
+  { name, level, items, returnFocusRef, palette, overlays, caption },
   ref,
 ) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -102,9 +106,9 @@ export const CharacterViewer = forwardRef<CharacterViewerHandle, Props>(function
           <div className="viewer-col">{column(LEFT)}</div>
           <div className="viewer-hero">
             <div className="avatar-circle avatar-circle-lg">
-              <AdventurerSprite label={`${name} in beginner clothes`} />
+              <AdventurerSprite label={caption ? `${name}, ${caption}` : `${name} in beginner clothes`} palette={palette} overlays={overlays} />
             </div>
-            <p className="viewer-caption">Beginner clothes</p>
+            <p className="viewer-caption">{caption ?? 'Beginner clothes'}</p>
           </div>
           <div className="viewer-col">{column(RIGHT)}</div>
         </div>
