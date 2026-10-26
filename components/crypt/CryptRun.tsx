@@ -8,6 +8,7 @@ import {
   END_CARD,
   FLOOR,
   GATE,
+  GUARDIAN_ID,
   INTRO,
   NODES,
   PREVIEW_BANNER,
@@ -144,7 +145,7 @@ export function CryptRun() {
           <div className="floor-map">
             {NODES.map((node, index) => {
               const access = nodeAccess(run, node.id);
-              const sprite = node.kind === 'fight' ? SPRITES.skull : node.kind === 'event' ? SPRITES.scroll : SPRITES.chest;
+              const sprite = node.id === GUARDIAN_ID ? SPRITES.sentinel : node.kind === 'fight' ? SPRITES.skull : node.kind === 'event' ? SPRITES.scroll : SPRITES.chest;
               const stateLabel = access === 'done' ? FLOOR.done : access === 'ready' ? FLOOR.open : FLOOR.locked;
               return (
                 <div key={node.id} className="floor-step">
