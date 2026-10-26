@@ -4,12 +4,12 @@ export type DemoItem = OwnedItem & { kind: string };
 
 /** One hard-coded cosmetic for each slot. Kinds are the approved cosmetic set. */
 const SAMPLE: Record<SlotKey, { name: string; kind: string }> = {
-  head: { name: 'Wayfarer Hood', kind: 'Headwear' },
-  chest: { name: 'Quilted Armor', kind: 'Armor' },
-  'main-hand': { name: 'Ember Blade Skin', kind: 'Weapon skin' },
-  'off-hand': { name: 'Kite Shield', kind: 'Shield' },
-  legs: { name: 'Dusk Cloak', kind: 'Cloak / aura' },
-  feet: { name: 'Field Banner', kind: 'Banner / companion' },
+  headwear: { name: 'Wayfarer Hood', kind: 'Headwear' },
+  armor: { name: 'Quilted Armor', kind: 'Armor' },
+  shield: { name: 'Kite Shield', kind: 'Shield' },
+  weapon: { name: 'Ember Blade Skin', kind: 'Weapon skin' },
+  cloak: { name: 'Dusk Cloak', kind: 'Cloak' },
+  companion: { name: 'Moth Companion', kind: 'Companion' },
 };
 
 export const DEMO_ITEMS: readonly DemoItem[] = EQUIPMENT_SLOTS.map((slot) => ({
@@ -22,7 +22,7 @@ export const DEMO_BANNER = 'Demo items. Nothing is saved.';
 
 export const DEMO_COSMETIC_NOTE = 'Cosmetics only. They do not change stats, XP, or combat.';
 
-export const DEMO_SLOT_NOTE = 'One sample for each slot: headwear, armor, weapon skin, shield, cloak/aura, and banner/companion.';
+export const DEMO_SLOT_NOTE = 'One sample for each slot: headwear, armor, shield, weapon, cloak, and companion.';
 
 /** Display only. The demo does not read or grant lifetime XP. */
 export const DEMO_XP = 0;

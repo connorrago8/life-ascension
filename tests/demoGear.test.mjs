@@ -11,8 +11,8 @@ const APPROVED_KINDS = [
   'Armor',
   'Weapon skin',
   'Shield',
-  'Cloak / aura',
-  'Banner / companion',
+  'Cloak',
+  'Companion',
 ];
 
 test('the demo has one cosmetic per equipment slot and does not grant XP', async () => {
@@ -22,12 +22,12 @@ test('the demo has one cosmetic per equipment slot and does not grant XP', async
   assert.deepEqual(
     gear.DEMO_ITEMS.map((item) => [item.slot, item.kind]),
     [
-      ['head', 'Headwear'],
-      ['chest', 'Armor'],
-      ['main-hand', 'Weapon skin'],
-      ['off-hand', 'Shield'],
-      ['feet', 'Banner / companion'],
-      ['legs', 'Cloak / aura'],
+      ['headwear', 'Headwear'],
+      ['armor', 'Armor'],
+      ['shield', 'Shield'],
+      ['weapon', 'Weapon skin'],
+      ['cloak', 'Cloak'],
+      ['companion', 'Companion'],
     ],
   );
   assert.deepEqual(new Set(gear.DEMO_ITEMS.map((item) => item.kind)), new Set(APPROVED_KINDS));
@@ -50,30 +50,30 @@ test('equip and unequip stay in local slot state and do not mutate the previous 
   const start = initialEquippedSlots();
   const snapshot = [...start];
 
-  const withoutHead = toggleEquipped(start, 'head');
+  const withoutHead = toggleEquipped(start, 'headwear');
   assert.deepEqual(start, snapshot);
-  assert.equal(withoutHead.includes('head'), false);
-  assert.deepEqual(withoutHead, start.filter((slot) => slot !== 'head'));
+  assert.equal(withoutHead.includes('headwear'), false);
+  assert.deepEqual(withoutHead, start.filter((slot) => slot !== 'headwear'));
 
-  const withHeadAgain = toggleEquipped(withoutHead, 'head');
+  const withHeadAgain = toggleEquipped(withoutHead, 'headwear');
   assert.deepEqual(withHeadAgain, start);
-  assert.deepEqual(withoutHead.includes('head'), false);
+  assert.deepEqual(withoutHead.includes('headwear'), false);
 
-  const onlyFeet = toggleEquipped(toggleEquipped([], 'feet'), 'feet');
-  assert.deepEqual(onlyFeet, []);
-  const feetOn = toggleEquipped([], 'feet');
-  assert.deepEqual(feetOn, ['feet']);
-  assert.deepEqual(toggleEquipped(['feet', 'head'], 'chest'), ['head', 'chest', 'feet']);
+  const onlyCompanion = toggleEquipped(toggleEquipped([], 'companion'), 'companion');
+  assert.deepEqual(onlyCompanion, []);
+  const companionOn = toggleEquipped([], 'companion');
+  assert.deepEqual(companionOn, ['companion']);
+  assert.deepEqual(toggleEquipped(['companion', 'headwear'], 'armor'), ['headwear', 'armor', 'companion']);
 
   assert.deepEqual(itemsFromEquipped([]), []);
   assert.equal(itemsFromEquipped(start).length, EQUIPMENT_SLOTS.length);
   assert.deepEqual(itemsFromEquipped(withoutHead).map((item) => item.slot), withoutHead);
-  assert.equal(itemsFromEquipped(['chest'])[0].name, 'Quilted Armor');
+  assert.equal(itemsFromEquipped(['armor'])[0].name, 'Quilted Armor');
   assert.deepEqual(toggleEquipped(start, /** @type {import('../lib/equipment.ts').SlotKey} */ ('nope')), start);
 });
 
 test('each slot has cosmetic art that stays visible when every item is worn', async () => {
-  const { SPRITE_HEIGHT, SPRITE_WIDTH, PALETTE, cosmeticOverlays, gearOverlay, spriteRows } = await import('../components/spriteArt.ts');
+  const { SPRITE_HEIGHT, SPRITE_LAYER_IDS, SPRITE_WIDTH, PALETTE, cosmeticOverlays, gearOverlay, layerRows, spriteRows } = await import('../components/spriteArt.ts');
   const gearInks = new Set(['K', 'G', 'g', 'A', 'a', 'D', 'I', 'W', 'V', 'v', 'R', 'Y', 'N']);
   for (const row of spriteRows()) {
     for (const ink of row) assert.equal(gearInks.has(ink), false);
@@ -95,23 +95,53 @@ test('each slot has cosmetic art that stays visible when every item is worn', as
     assert.equal(ink >= 16, true, `${slot} should paint enough pixels to see`);
   }
 
+  const body = layerRows('body');
+  const paint = SPRITE_LAYER_IDS.map((id) => (id === 'body' ? body : layers.get(id)));
   for (const slot of order) {
-    const later = order.slice(order.indexOf(slot) + 1);
     const rows = layers.get(slot);
-    let visible = false;
+    const start = SPRITE_LAYER_IDS.indexOf(slot);
+    let visible = 0;
     for (let y = 0; y < rows.length; y += 1) {
       for (let x = 0; x < rows[y].length; x += 1) {
         if (rows[y][x] === '.') continue;
-        const covered = later.some((other) => layers.get(other)[y][x] !== '.');
-        if (!covered) visible = true;
+        const covered = paint.slice(start + 1).some((later) => later[y][x] !== '.');
+        if (!covered) visible += 1;
       }
     }
-    assert.equal(visible, true, `${slot} is covered by a later cosmetic`);
+    assert.equal(visible >= 8, true, `${slot} is covered by a later layer`);
   }
 
-  const worn = cosmeticOverlays([{ slot: 'head', name: 'Wayfarer Hood' }, { slot: 'chest', name: '   ' }]);
-  assert.deepEqual(Object.keys(worn), ['head']);
-  assert.equal(worn.head, gearOverlay('head'));
+  const cloak = layers.get('cloak');
+  let cloakAround = 0;
+  let cloakBehind = 0;
+  for (let y = 0; y < body.length; y += 1) {
+    for (let x = 0; x < body[y].length; x += 1) {
+      if (cloak[y][x] === '.') continue;
+      if (body[y][x] === '.') cloakAround += 1;
+      else cloakBehind += 1;
+    }
+  }
+  assert.equal(SPRITE_LAYER_IDS.indexOf('cloak') < SPRITE_LAYER_IDS.indexOf('body'), true);
+  assert.equal(cloakAround >= 16, true);
+  assert.equal(cloakBehind >= 16, true);
+
+  const companion = layers.get('companion');
+  let companionOnBody = 0;
+  let companionMax = -1;
+  for (let y = 0; y < companion.length; y += 1) {
+    for (let x = 0; x < companion[y].length; x += 1) {
+      if (companion[y][x] === '.') continue;
+      if (body[y][x] !== '.') companionOnBody += 1;
+      companionMax = Math.max(companionMax, x);
+    }
+  }
+  assert.equal(companionOnBody, 0);
+  assert.equal(companionMax < 7, true);
+  assert.equal(SPRITE_LAYER_IDS.at(-1), 'companion');
+
+  const worn = cosmeticOverlays([{ slot: 'headwear', name: 'Wayfarer Hood' }, { slot: 'armor', name: '   ' }]);
+  assert.deepEqual(Object.keys(worn), ['headwear']);
+  assert.equal(worn.headwear, gearOverlay('headwear'));
   assert.deepEqual(cosmeticOverlays([]), {});
   assert.deepEqual(cosmeticOverlays(null), {});
 });

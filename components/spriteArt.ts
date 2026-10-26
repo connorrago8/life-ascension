@@ -142,10 +142,11 @@ export function layerHasInk(id: SpriteLayerId): boolean {
 
 /**
  * Cosmetic overlays, one per equipment slot. They paint inside that slot's
- * sprite group, on top of beginner clothes, and never replace the body.
- * Slots: headwear, armor, weapon skin, shield, cloak/aura, banner/companion.
+ * sprite group and never replace the body. The cloak group is behind the
+ * body, so its center is covered and the cape shows around the edges.
+ * The companion stands beside the figure.
  */
-const GEAR_KEYS = ['head', 'chest', 'main-hand', 'off-hand', 'legs', 'feet'] as const;
+const GEAR_KEYS = ['headwear', 'armor', 'shield', 'weapon', 'cloak', 'companion'] as const;
 type GearKey = (typeof GEAR_KEYS)[number];
 
 function blankGrid(): string[][] {
@@ -241,58 +242,68 @@ function shieldArt(): string[] {
   return gridRows(grid);
 }
 
-/** Cloak / aura. A collar, side drapes, and a few sparks. */
+/**
+ * Cloak. Wider than the body and painted in the cloak group, which is
+ * behind the body, so the figure covers the middle and the cape shows
+ * around the shoulders, sides, and hem.
+ */
 function cloakArt(): string[] {
   const grid = blankGrid();
-  blit(grid, 11, 13, [
-    'VVVVVVVVVV',
-    'VvvvvvvvvV',
-    'VVVVGGVVVV',
-  ]);
-  for (let y = 16; y <= 32; y += 1) {
-    put(grid, 6, y, y % 2 === 0 ? 'V' : 'v');
-    put(grid, 25, y, y % 2 === 0 ? 'v' : 'V');
+  for (let y = 14; y <= 33; y += 1) {
+    let left = 5;
+    let right = 26;
+    if (y <= 15) {
+      left = 8;
+      right = 23;
+    } else if (y <= 17) {
+      left = 5;
+      right = 26;
+    } else if (y <= 25) {
+      left = 5;
+      right = 25;
+    } else if (y <= 29) {
+      left = 4;
+      right = 27;
+    } else {
+      left = 2;
+      right = 29;
+    }
+    for (let x = left; x <= right; x += 1) {
+      const rim = x === left || x === right || y === 14 || y === 33;
+      put(grid, x, y, rim ? 'V' : (x + y) % 4 === 0 ? 'v' : 'V');
+    }
   }
-  blit(grid, 4, 29, ['VVVV', 'VvvV', 'VVVV', 'VVVV']);
-  blit(grid, 24, 29, ['VVVV', 'VvvV', 'VVVV', 'VVVV']);
-  put(grid, 4, 10, 'G');
-  put(grid, 5, 12, 'v');
-  put(grid, 31, 8, 'G');
-  put(grid, 26, 11, 'v');
-  put(grid, 27, 27, 'G');
-  put(grid, 4, 27, 'v');
+  put(grid, 6, 11, 'G');
+  put(grid, 31, 10, 'G');
+  put(grid, 30, 27, 'v');
+  put(grid, 1, 28, 'G');
   return gridRows(grid);
 }
 
-/** Banner / companion. A pennant above the shield and a small moth at the feet. */
-function bannerArt(): string[] {
+/** Companion. A moth beside the figure, clear of the legs and boots. */
+function companionArt(): string[] {
   const grid = blankGrid();
-  for (let y = 0; y <= 13; y += 1) put(grid, 1, y, 'g');
-  put(grid, 1, 0, 'G');
-  blit(grid, 2, 1, [
-    'NNNN',
-    'NYYN',
-    'NYGN',
-    'NYYN',
-    'NNNN',
-    'NNN.',
-  ]);
-  blit(grid, 0, 30, [
-    '.Y.',
-    'YRY',
-    '.Y.',
-    'D.D',
+  blit(grid, 0, 25, [
+    '.Y.Y.',
+    'YYYYY',
+    'YYRYY',
+    'YYYYY',
+    '.YYY.',
+    '..D..',
+    '.D.D.',
+    '.D.D.',
+    '.D.D.',
   ]);
   return gridRows(grid);
 }
 
 const GEAR: Record<GearKey, string[]> = {
-  head: hoodArt(),
-  chest: armorArt(),
-  'main-hand': weaponArt(),
-  'off-hand': shieldArt(),
-  legs: cloakArt(),
-  feet: bannerArt(),
+  headwear: hoodArt(),
+  armor: armorArt(),
+  shield: shieldArt(),
+  weapon: weaponArt(),
+  cloak: cloakArt(),
+  companion: companionArt(),
 };
 
 export function gearOverlay(slot: string): string[] {

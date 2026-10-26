@@ -62,17 +62,17 @@ test('each slot renders in the row, the bag, and on the sprite', async () => {
 
 test('unequipping a slot clears that control, the sprite layer, and the equipped list', async () => {
   const { initialEquippedSlots, toggleEquipped } = await import('../lib/demoGear.ts');
-  const html = await render(toggleEquipped(initialEquippedSlots(), 'head'));
-  const head = buttonBlock(html, 'slot', 'head');
-  const chest = buttonBlock(html, 'slot', 'chest');
+  const html = await render(toggleEquipped(initialEquippedSlots(), 'headwear'));
+  const head = buttonBlock(html, 'slot', 'headwear');
+  const chest = buttonBlock(html, 'slot', 'armor');
   assert.match(head, /aria-pressed="false"/);
   assert.doesNotMatch(head, /class="equip-name"/);
   assert.match(chest, /aria-pressed="true"/);
   assert.match(chest, /Quilted Armor/);
-  assert.equal(layers(html, 'head').some((tag) => tag.includes('data-equipped="true"')), false);
-  assert.equal(layers(html, 'chest').every((tag) => tag.includes('data-equipped="true"')), true);
-  assert.match(buttonBlock(html, 'bag', 'head'), /In bag/);
-  assert.match(buttonBlock(html, 'bag', 'chest'), /Equipped/);
+  assert.equal(layers(html, 'headwear').some((tag) => tag.includes('data-equipped="true"')), false);
+  assert.equal(layers(html, 'armor').every((tag) => tag.includes('data-equipped="true"')), true);
+  assert.match(buttonBlock(html, 'bag', 'headwear'), /In bag/);
+  assert.match(buttonBlock(html, 'bag', 'armor'), /Equipped/);
   assert.doesNotMatch(html, /Wayfarer Hood<\/span><\/li>/);
 
   const empty = await render([]);
