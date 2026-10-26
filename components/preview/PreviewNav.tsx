@@ -60,13 +60,6 @@ function TabIcon({ name }: { name: (typeof ITEMS)[number]['icon'] }) {
           <path d="M5.5 10.5V20h13v-9.5M10 20v-6h4v6" />
         </>
       )}
-      {name === 'quests' && (
-        <>
-          <path d="M7 4.5h8.2A2.8 2.8 0 0 1 18 7.3V19H8.5" />
-          <path d="M7 4.5A2.5 2.5 0 0 0 4.5 7v11.2A2.3 2.3 0 0 1 6.8 20" />
-          <path d="M9.2 9.2h5.2M9.2 12.4h5.2M9.2 15.6h3.2" />
-        </>
-      )}
       {name === 'character' && (
         <>
           <circle cx="12" cy="8.2" r="3.1" />
