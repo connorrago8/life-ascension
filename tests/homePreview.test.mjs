@@ -76,6 +76,14 @@ const navSource = read('components/preview/PreviewNav.tsx');
 const frameSource = read('components/preview/PreviewFrame.tsx');
 const middleware = read('middleware.ts');
 
+test('meal quest tracks three distinct logs and awards completion only at 3/3', () => {
+  assert.match(homeSource, /mealLogLock\.current\.has\(meal\)/);
+  assert.match(homeSource, /next\.length === MEAL_KEYS\.length/);
+  assert.match(homeSource, /mealLogLock\.current\.size !== MEAL_KEYS\.length/);
+  assert.match(homeSource, /aria-pressed=\{loggedMeals\.includes\(meal\)\}/);
+  assert.match(read('lib/preview/sampleQuests.ts'), /'breakfast', 'lunch', 'dinner'/);
+});
+
 test('completed quests collapse below unfinished quests in Home preview', () => {
   assert.match(homeSource, /pendingQuests\.map/);
   assert.match(homeSource, /completedQuests\.map/);
