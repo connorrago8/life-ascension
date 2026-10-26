@@ -7,7 +7,7 @@ import { requestOrigin } from '../lib/requestOrigin.ts';
 const login = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const forgot = readFileSync(new URL('../app/login/forgot/page.tsx', import.meta.url), 'utf8');
 const password = readFileSync(new URL('../app/settings/password/page.tsx', import.meta.url), 'utf8');
-const board = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+const board = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
 const middleware = readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8');
 const server = readFileSync(new URL('../lib/supabaseServer.ts', import.meta.url), 'utf8');
 const browser = readFileSync(new URL('../lib/supabase.ts', import.meta.url), 'utf8');

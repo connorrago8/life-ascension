@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const login = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const callback = readFileSync(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8');
-const board = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+const board = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
 const whoami = readFileSync(new URL('../app/api/whoami/route.ts', import.meta.url), 'utf8');
 const mcp = readFileSync(new URL('../app/api/mcp/route.ts', import.meta.url), 'utf8');
 const auth = readFileSync(new URL('../lib/apiKeyAuth.ts', import.meta.url), 'utf8');

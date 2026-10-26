@@ -1,0 +1,186 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AdventurerSprite } from '../../../components/AdventurerSprite';
+import { CharacterViewer, type CharacterViewerHandle } from '../../../components/CharacterViewer';
+import { EquipSlot } from '../../../components/EquipSlot';
+import { attributeEntries, adventurerName } from '../../../lib/attributes';
+import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
+import { slotsWithItems, type OwnedItem } from '../../../lib/equipment';
+import { coerceXp, levelFor, levelProgress } from '../../../lib/level';
+import { supabase } from '../../../lib/supabase';
+import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
+
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'signed-out'; loginHref: string }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; preview: boolean };
+
+function loginHref() {
+  return '/login?next=%2Fcharacter';
+}
+
+export default function CharacterPage() {
+  const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const viewerRef = useRef<CharacterViewerHandle>(null);
+
+  const load = useCallback(async () => {
+    const preview = process.env.NODE_ENV === 'development'
+      && typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).get('preview') === '1';
+    if (preview) {
+      setState({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, preview: true });
+      return;
+    }
+    try {
+      const client = supabase();
+      const { data: authData, error: authError } = await client.auth.getUser();
+      const user = authError ? null : authData.user;
+      if (!user) {
+        setState({ status: 'signed-out', loginHref: loginHref() });
+        return;
+      }
+      const [xpResult, profileResult] = await Promise.all([
+        client.rpc('get_lifetime_xp'),
+        client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+      ]);
+      if (xpResult.error) {
+        setState({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
+        return;
+      }
+      const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
+      setState({
+        status: 'ready',
+        name: adventurerName(user.email, profile?.display_name),
+        xp: coerceXp(xpResult.data),
+        profile,
+        preview: false,
+      });
+    } catch {
+      setState({ status: 'signed-out', loginHref: loginHref() });
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (state.status === 'loading') return <main className="wrap">Loading your character…</main>;
+  if (state.status === 'signed-out') {
+    return (
+      <main className="wrap">
+        <div className="eyebrow">LIFE ASCENSION</div>
+        <h1>Your adventurer</h1>
+        <p className="muted">Sign in to see your level, lifetime XP, and equipment.</p>
+        <a className="btn" href={state.loginHref}>Sign in</a>
+      </main>
+    );
+  }
+  if (state.status === 'error') {
+    return (
+      <main className="wrap">
+        <div className="eyebrow">LIFE ASCENSION</div>
+        <h1>Your adventurer</h1>
+        <p className="message" role="status">{state.message}</p>
+        <button type="button" className="btn" onClick={() => { setState({ status: 'loading' }); void load(); }}>Try again</button>
+      </main>
+    );
+  }
+
+  const progress = levelFor(state.xp);
+  const fraction = levelProgress(state.xp);
+  const attributes = attributeEntries(state.profile);
+  const pendingAttributes = attributes.some((attribute) => attribute.pending);
+  const wellness = wellnessSnapshot(state.profile);
+  const owned: OwnedItem[] = [];
+  const slots = slotsWithItems(owned);
+
+  return (
+    <main className="screen character-screen">
+      <p className="page-brand">LIFE ASCENSION</p>
+      {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
+      <section className="avatar-card" aria-label="Adventurer">
+        <button
+          ref={avatarRef}
+          type="button"
+          className="avatar-hit"
+          aria-haspopup="dialog"
+          aria-label={`${state.name}, level ${progress.level}. Expand character`}
+          onClick={() => viewerRef.current?.open()}
+        >
+          <span className="avatar-circle">
+            <AdventurerSprite />
+          </span>
+        </button>
+        <div className="avatar-meta">
+          <h1 className="char-name">{state.name}</h1>
+          <p className="char-level">Level {progress.level}</p>
+          <div
+            className="xp-track"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={progress.xpForNext}
+            aria-valuenow={progress.xpIntoLevel}
+            aria-label="Progress to next level"
+          >
+            <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
+          </div>
+          <p className="xp-fraction">{progress.xpIntoLevel} / {progress.xpForNext} XP</p>
+        </div>
+      </section>
+
+      <ul className="equip-row" aria-label="Equipment">
+        {slots.map(({ slot, item }) => (
+          <li key={slot.key}>
+            <EquipSlot slot={slot} item={item} />
+          </li>
+        ))}
+      </ul>
+
+      <section className="stat-block" aria-label="Attributes">
+        <div className="stat-grid">
+          {attributes.map((attribute) => (
+            <div key={attribute.key} className="stat">
+              <span className="stat-label">{attribute.short}</span>
+              <span className="stat-value" aria-label={attribute.pending ? `${attribute.label}, not recorded` : `${attribute.label} ${attribute.value}`}>
+                {attribute.value}
+              </span>
+            </div>
+          ))}
+        </div>
+        {pendingAttributes && (
+          <p className="soon-note">
+            Coming soon
+            <span className="sr-only">. {ATTRIBUTE_PREVIEW}</span>
+          </p>
+        )}
+      </section>
+
+      <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
+        <h2 id="wellness-heading">Wellness</h2>
+        {wellness.connected ? (
+          <div className="wellness-readings">
+            {wellness.sleepHours != null && <p>Sleep {formatReading(wellness.sleepHours)} h</p>}
+            {wellness.steps != null && <p>Steps {formatReading(wellness.steps)}</p>}
+          </div>
+        ) : (
+          <p className="wellness-empty">{WELLNESS_EMPTY}</p>
+        )}
+      </section>
+
+      <CharacterViewer
+        ref={viewerRef}
+        name={state.name}
+        level={progress.level}
+        items={owned}
+        returnFocusRef={avatarRef}
+      />
+    </main>
+  );
+}
+
+function formatReading(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString('en-US') : String(value);
+}

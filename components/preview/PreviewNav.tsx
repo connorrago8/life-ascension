@@ -1,0 +1,83 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { usePreviewTransition } from './previewTransition';
+
+const ITEMS = [
+  { href: '/preview/home', label: 'Home', icon: 'home' },
+  { href: '/preview/character', label: 'Character', icon: 'character' },
+  { href: '/preview/adventure', label: 'Adventure', icon: 'adventure' },
+  { href: '/preview/inventory', label: 'Inventory', icon: 'inventory' },
+] as const;
+
+function current(pathname: string, href: string) {
+  if (href === '/preview/home') return pathname === '/preview/home' || pathname === '/preview/compare';
+  return pathname === href;
+}
+
+export function PreviewNav() {
+  const pathname = usePathname();
+  const beginTransition = usePreviewTransition();
+
+  return (
+    <nav className="preview-nav" aria-label="Preview">
+      {ITEMS.map((item) => {
+        const active = current(pathname, item.href);
+        if (item.href === '/preview/adventure') {
+          return (
+            <a
+              key={item.href}
+              href={item.href}
+              className="preview-tab"
+              aria-current={active ? 'page' : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                beginTransition(item.href);
+              }}
+            >
+              <TabIcon name={item.icon} />
+              <span>{item.label}</span>
+            </a>
+          );
+        }
+        return (
+          <a key={item.href} href={item.href} className="preview-tab" aria-current={active ? 'page' : undefined}>
+            <TabIcon name={item.icon} />
+            <span>{item.label}</span>
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+function TabIcon({ name }: { name: (typeof ITEMS)[number]['icon'] }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      {name === 'home' && (
+        <>
+          <path d="m3 11 9-7 9 7" />
+          <path d="M5.5 10.5V20h13v-9.5M10 20v-6h4v6" />
+        </>
+      )}
+      {name === 'character' && (
+        <>
+          <circle cx="12" cy="8.2" r="3.1" />
+          <path d="M5.6 19.2c1.1-2.8 3.4-4.2 6.4-4.2s5.3 1.4 6.4 4.2" />
+        </>
+      )}
+      {name === 'adventure' && (
+        <>
+          <path d="M4 16.5 12 4l8 12.5" />
+          <path d="M7.2 16.5h9.6L12 9.2z" />
+        </>
+      )}
+      {name === 'inventory' && (
+        <>
+          <rect x="4" y="7" width="16" height="12" rx="2" />
+          <path d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" />
+        </>
+      )}
+    </svg>
+  );
+}
