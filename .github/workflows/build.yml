@@ -68,7 +68,8 @@ jobs:
             supabase/migrations/202610260008_partial_progress.sql \
             supabase/migrations/202610260009_progress_configuration.sql \
             supabase/migrations/202610260010_progress_completion_guard.sql \
-            supabase/migrations/202610260011_atomic_tracked_creation.sql; do
+            supabase/migrations/202610260011_atomic_tracked_creation.sql \
+            supabase/migrations/202610260012_api_progress_wrapper.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
