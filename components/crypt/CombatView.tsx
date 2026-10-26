@@ -65,7 +65,7 @@ export function CombatView({
   const [showHistory, setShowHistory] = useState(false);
   const ready = availableActions(battle);
   const guardian = battle.enemy.id === SENTINEL.id;
-  const lines = battle.log.length > 0 ? battle.log.slice(-2) : [COMBAT.opening];
+  const lines = battle.log.length > 0 ? battle.log.slice(-2) : [guardian ? COMBAT.guardianOpening : COMBAT.opening];
   return (
     <div className="combat">
       <section className="fighter" aria-label={battle.enemy.name}>
