@@ -45,9 +45,11 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
   }
  },[user]);
  useEffect(()=>{void load();const {data:{subscription}}=supabase().auth.onAuthStateChange(()=>{void load()});return()=>subscription.unsubscribe()},[load]);
- async function add(e:React.FormEvent){e.preventDefault();if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}if(!title.trim()||busy||!user)return;setBusy(true);const {data:createdQuestId,error}=await supabase().rpc('create_scheduled_quest',{p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType});let configureError: string | undefined;
- if(!error&&trackProgress&&createdQuestId){const configured=await supabase().rpc('configure_quest_progress',{p_quest_id:createdQuestId,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)});configureError=configured.error?.message;}
- setMessage(error?.message||(configureError?'Quest created, but progress setup failed: '+configureError:'Quest scheduled.'));if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
+ async function add(e:React.FormEvent){e.preventDefault();if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}if(!title.trim()||busy||!user)return;setBusy(true);const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
+ const {error}=trackProgress
+   ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
+   : await supabase().rpc('create_scheduled_quest',payload);
+ setMessage(error?.message||'Quest scheduled.');if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
  async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();setBusy(false)}
  async function logProgress(id:string,requestId:string,delta:number){if(layoutPreview||busy)return;setBusy(true);const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});setMessage(error?.message||'Progress saved.');await load();setBusy(false)}
  async function logout(){if(layoutPreview){window.location.assign('/login');return}await supabase().auth.signOut();setUser(null)}
