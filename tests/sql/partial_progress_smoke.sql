@@ -21,6 +21,25 @@ begin
  exception when others then
    if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
  end;
+ -- Invalid atomic creation must not leave behind an untracked quest.
+ begin
+   perform public.create_tracked_quest('Atomic rollback probe','home','daily',
+     (now() at time zone 'America/Chicago')::date,'scheduled',8,'glasses',9);
+   raise exception 'Invalid atomic creation accepted';
+ exception when others then
+   if sqlerrm <> 'Invalid progress configuration' then raise; end if;
+ end;
+ if exists(select 1 from public.quests where title='Atomic rollback probe') then
+   raise exception 'Invalid tracked quest was partially created';
+ end if;
+ -- Valid tracked creation must persist target and increment together.
+ perform public.create_tracked_quest('Atomic creation probe','home','daily',
+   (now() at time zone 'America/Chicago')::date,'scheduled',8,'glasses',1);
+ if (select count(*) from public.quests where title='Atomic creation probe'
+      and owner_id='00000000-0000-0000-0000-0000000000b1'
+      and target_amount=8 and progress_increment=1) <> 1 then
+   raise exception 'Tracked quest was not atomically configured';
+ end if;
  -- A different user must not reconfigure this quest or inspect its operation journal.
  begin
    perform public.configure_quest_progress('00000000-0000-0000-0000-0000000000c2',8,'glasses',1);
