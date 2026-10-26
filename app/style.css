@@ -457,3 +457,12 @@ code { font-family: ui-monospace, monospace; }
   .nav-link { font-size: 9px; padding-left: 0; padding-right: 0; }
   .nav-play-orb { width: 52px; height: 52px; }
 }
+
+/* Reward feedback only appears after server-confirmed XP. */
+.quest-reward-toast{position:fixed;z-index:100;left:50%;top:calc(env(safe-area-inset-top,0px) + 22px);transform:translateX(-50%);width:min(90vw,380px);display:flex;align-items:center;gap:14px;padding:15px 18px;border:1px solid rgba(240,192,110,.45);border-radius:16px;background:#20272b;color:#f9edd5;box-shadow:0 12px 35px rgba(0,0,0,.38);pointer-events:none;animation:reward-arrive .35s ease-out both}
+.quest-reward-toast strong{font-size:.8rem;letter-spacing:.14em;color:#f5c775}
+.quest-reward-toast div div{font-size:.9rem;margin-top:4px}
+.reward-spark{font-size:1.65rem;color:#f5c775;animation:reward-pulse .7s ease-out both}
+@keyframes reward-arrive{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes reward-pulse{from{opacity:.4;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.quest-reward-toast,.reward-spark{animation:none}}
