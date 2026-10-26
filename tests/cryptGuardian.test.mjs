@@ -66,6 +66,14 @@ test('retreat restores pre-fight HP; retry replays the encounter', () => {
   const retry = reduceRun(lost, { type: 'retry-fight' });
   assert.equal(retry.hp, ready.hp);
   assert.deepEqual(retry.battle, initial);
+  assert.equal(retry.fightCleared, true, 'retrying the guardian must not reopen the rat');
+  assert.equal(retry.eventCleared, true);
+  assert.equal(retry.treasureCleared, true);
+  assert.equal(retry.guardianCleared, false);
+  assert.equal(retry.sigilCollected, false);
+  const retryRetreat = reduceRun(retry, { type: 'back' });
+  assert.equal(nodeAccess(retryRetreat, FIGHT_ID), 'done');
+  assert.equal(nodeAccess(retryRetreat, GUARDIAN_ID), 'ready');
 });
 
 test('victory grants a temporary sigil once; restart clears it', () => {
@@ -75,6 +83,7 @@ test('victory grants a temporary sigil once; restart clears it', () => {
   assert.equal(run.battle?.status, 'won');
   assert.equal(run.guardianCleared, true);
   assert.equal(run.sigilCollected, true);
+  assert.equal(run.fightCleared, true, 'guardian victory must retain the first encounter clear');
   assert.equal(SIGIL.name, 'Sentinel Sigil');
   assert.equal(reduceRun(run, { type: 'retry-fight' }), run);
   run = reduceRun(run, { type: 'continue' });
