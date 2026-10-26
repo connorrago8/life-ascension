@@ -661,3 +661,16 @@
   }
   .xp-float { opacity: 1; transform: none; }
 }
+
+/* Home-only mobile density: retain character prominence without burying quests. */
+.home-screen .home-stage { margin-top: 2px; }
+.home-screen .react-wrap { display: flex; justify-content: center; align-items: center; }
+.home-screen .home-figure { width: min(175px, 49vw); max-height: 280px; }
+.home-screen .stage-disc { width: min(210px, 62%); height: 80%; top: 2%; }
+.home-screen .quest-block { margin-top: 8px; }
+.home-screen .quest-list { gap: 5px; }
+.home-screen .quest-row { min-height: 44px; padding: 8px 10px; }
+.home-screen .quest-block h2 { margin-bottom: 6px; }
+@media (max-width: 379px) {
+  .home-screen .home-figure { width: min(158px, 48vw); }
+}
