@@ -172,7 +172,10 @@ test('swapping an equipped item updates both renders and bonuses come only from 
 test('home and adventure views are wired to the shared render models', () => {
   assert.match(homeSource, /homeCharacterModel\(appearance\)/);
   assert.match(homeSource, /HomeCharacter/);
-  assert.match(homeSource, /EquipSlot|Loadout/);
+  assert.doesNotMatch(homeSource, /<Loadout|<EquipSlot/);
+  assert.match(homeSource, /completedIds\.current\.has\(quest\.id\)/);
+  assert.match(homeSource, /completedIds\.current\.add\(quest\.id\)/);
+  assert.match(homeSource, /currentXp\.current = nextXp/);
   assert.match(homeArtSource, /homeAriaLabel\(model\)/);
   assert.match(homeArtSource, /model\.mainHand === 'lantern'/);
   assert.match(homeArtSource, /model\.hair/);
