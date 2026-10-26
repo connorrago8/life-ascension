@@ -24,7 +24,7 @@ begin
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
  if r.current_amount <> 1 or r.status <> 'available' then raise exception 'First increment failed'; end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
- if r.current_amount <> 1 then raise exception 'Retry double-counted'; end if;
+ if r.current_amount <> 1 or r.completed_now then raise exception 'Retry double-counted or replayed completion'; end if;
  begin
    perform public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',2);
    raise exception 'Changed payload accepted';
@@ -46,7 +46,7 @@ begin
  if r.current_amount <> 8 or r.status <> 'completed' then raise exception 'Target completion failed'; end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1',
      ('00000000-0000-0000-0000-' || lpad(to_hex(60008),12,'0'))::uuid,1);
- if r.current_amount <> 8 then raise exception 'Completion retry changed result'; end if;
+ if r.current_amount <> 8 or r.completed_now then raise exception 'Completion retry changed result or replayed animation'; end if;
  if (select count(*) from public.xp_ledger where instance_id='00000000-0000-0000-0000-0000000000d1') <> 1
     or (select sum(amount) from public.xp_ledger where instance_id='00000000-0000-0000-0000-0000000000d1') <> 1
  then raise exception 'XP was not awarded exactly once'; end if;
