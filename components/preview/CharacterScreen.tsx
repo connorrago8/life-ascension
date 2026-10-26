@@ -20,7 +20,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
 ];
 
 export function CharacterScreen({ displayName, hideSampleStats = false }: { displayName?: string; hideSampleStats?: boolean } = {}) {
-  const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
+  const { appearance, equipmentIds, cosmeticIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -84,6 +84,29 @@ export function CharacterScreen({ displayName, hideSampleStats = false }: { disp
           </button> : null}
         </section>
       ) : <p className="character-gear-note">Tap an equipment slot to see what you can equip. Gear changes update your character.</p>}
+      <section className="character-cosmetics-panel" aria-label="Cosmetic appearance preview">
+        <div className="character-picker-heading">
+          <div>
+            <span className="character-slot-label">APPEARANCE ONLY</span>
+            <h2>Cosmetics</h2>
+          </div>
+          <span className="character-slot-label">No stat bonuses</span>
+        </div>
+        <p className="character-gear-note">Try cosmetic colors on your character. These are visual-only sample items, not permanent unlocks.</p>
+        <ul className="inventory-list">
+          {PREVIEW_CATALOG.filter((item) => item.category === 'cosmetic').map((item) => {
+            const active = cosmeticIds.includes(item.id);
+            return <li key={item.id}>
+              <span>{item.name}{active ? <small className="inventory-equipped-label"> · Applied</small> : null}</span>
+              <button type="button" className="mini-action"
+                aria-pressed={active}
+                onClick={() => active ? unequip(item.id) : equip(item.id)}>
+                {active ? 'Remove' : 'Try on'}
+              </button>
+            </li>;
+          })}
+        </ul>
+      </section>
       {!hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
         <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>

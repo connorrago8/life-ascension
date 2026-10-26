@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { SPRITES } from '../../lib/crypt/art';
 import { COMBAT, RAT, turnLabel } from '../../lib/crypt/content';
@@ -59,6 +62,7 @@ export function CombatView({
   onContinue: () => void;
   onRetry: () => void;
 }) {
+  const [showHistory, setShowHistory] = useState(false);
   const ready = availableActions(battle);
   const lines = battle.log.length > 0 ? battle.log.slice(-2) : [COMBAT.opening];
   return (
@@ -89,6 +93,21 @@ export function CombatView({
       <div className="combat-log" role="status" aria-live="polite">
         {lines.map((line, index) => <p key={`${index}-${line}`}>{line}</p>)}
       </div>
+
+      {battle.log.length > 2 && (
+        <section className="combat-history" aria-label="Combat history">
+          <button type="button" className="btn ghost crypt-block"
+            aria-expanded={showHistory} aria-controls="crypt-combat-history"
+            onClick={() => setShowHistory((current) => !current)}>
+            {showHistory ? 'Hide' : 'Review'} combat history ({battle.log.length} events)
+          </button>
+          {showHistory && (
+            <ol id="crypt-combat-history" className="combat-history-list">
+              {battle.log.map((line, index) => <li key={index}>{line}</li>)}
+            </ol>
+          )}
+        </section>
+      )}
 
       {battle.status === 'won' && (
         <>

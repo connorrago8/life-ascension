@@ -26,6 +26,11 @@ export const PREVIEW_CATALOG: readonly CatalogItem[] = [
   { id: 'ember-coat', name: 'Ember Coat', category: 'equipment', slot: 'chest' },
   { id: 'dusk-trousers', name: 'Dusk Trousers', category: 'equipment', slot: 'legs' },
   { id: 'ironbound-boots', name: 'Ironbound Boots', category: 'equipment', slot: 'feet' },
+  { id: 'midnight-robe-dye', name: 'Midnight Robe Dye', category: 'cosmetic', colors: { tunic: '#29324F', tunicLight: '#596C96' } },
+  { id: 'forest-mantle-dye', name: 'Forest Mantle Dye', category: 'cosmetic', colors: { tunic: '#234C3E', tunicLight: '#5D9478' } },
+  { id: 'sunfire-cloak-dye', name: 'Sunfire Cloak Dye', category: 'cosmetic', colors: { tunic: '#8A4329', tunicLight: '#E2A45B' } },
+  { id: 'silver-hair-ribbon', name: 'Silver Hair Ribbon', category: 'cosmetic', colors: { hairHighlight: '#D1DCE8' } },
+  { id: 'copper-hair-ribbon', name: 'Copper Hair Ribbon', category: 'cosmetic', colors: { hairHighlight: '#E4A16D' } },
   {
     id: 'wine-cloak-dye',
     name: 'Wine Cloak Dye',
