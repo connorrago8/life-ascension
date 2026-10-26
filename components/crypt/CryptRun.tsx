@@ -46,6 +46,7 @@ function heading(phase: Phase): { title: string; subtitle?: string } {
 
 export function CryptRun() {
   const [run, setRun] = useState<RunState | null>(null);
+  const [endingChoice, setEndingChoice] = useState<'leave' | 'inspect' | null>(null);
 
   useEffect(() => {
     setRun(createRun(freshSeed()));
@@ -56,6 +57,7 @@ export function CryptRun() {
   }, [run?.phase]);
 
   function restart() {
+    setEndingChoice(null);
     setRun(createRun(freshSeed()));
   }
 
@@ -220,6 +222,22 @@ export function CryptRun() {
           {run.attackBonus > 0 ? <p>{charmNote(run.attackBonus)}</p> : null}
           {run.hint ? <p className="muted">{run.hint}</p> : null}
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
+          <section className="crypt-epilogue" aria-label="Sealed door choices">
+            <h3>What will the Wayfarer do?</h3>
+            {endingChoice === null ? (
+              <div className="choice-list">
+                <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice('inspect')}>Inspect the compass</button>
+                <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice('leave')}>Return to Brackenlight</button>
+              </div>
+            ) : endingChoice === 'inspect' ? (
+              <p role="status">Beneath the cracked glass, the needle points downward—not north. The sealed sanctuary waits below. The compass cannot open it yet.</p>
+            ) : (
+              <p role="status">You mark the entrance with a small cairn and return to Mira. The crypt will be here when your journey continues.</p>
+            )}
+            {endingChoice !== null ? (
+              <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice(null)}>Choose another ending</button>
+            ) : null}
+          </section>
           <button type="button" className="btn crypt-block" onClick={restart}>{END_CARD.restart}</button>
         </article>
       )}
