@@ -19,7 +19,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen() {
+export function CharacterScreen({ displayName }: { displayName?: string } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const base = SAMPLE_PROGRESSION;
@@ -42,9 +42,9 @@ export function CharacterScreen() {
   }
 
   return (
-    <main className="preview-screen character-preview character-equipment-screen">
+    <div className="preview-screen character-preview character-equipment-screen">
       <header className="character-header">
-        <div><h1 className="status-name">{appearance.name}</h1><p className="level-line">{levelTitle(base)}</p></div>
+        <div><h1 className="status-name">{displayName ?? appearance.name}</h1><p className="level-line">{levelTitle(base)}</p></div>
         <p className="character-header-note">EQUIPMENT</p>
       </header>
       <section className="character-loadout-stage" aria-label="Equipped character and gear">
@@ -83,6 +83,6 @@ export function CharacterScreen() {
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
         <span>LCK <strong>{base.luck}</strong></span>
       </section>
-    </main>
+    </div>
   );
 }
