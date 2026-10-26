@@ -37,7 +37,11 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   };
   const retryPending = () => {
     if (disabled || saving) return;
-    try { const raw = localStorage.getItem(storageKey); if(raw) { const p = JSON.parse(raw); setSaving(true); void onLog(instance.id,p.id,p.delta).then(outcome => { if(outcome !== 'retry'){localStorage.removeItem(storageKey);setRetrying(false);} }).finally(() => setSaving(false)); } } catch { /* show retry message */ }
+    try { const raw = localStorage.getItem(storageKey); if(raw) { const p = JSON.parse(raw); setSaving(true); void onLog(instance.id,p.id,p.delta).then(outcome => { if(outcome !== 'retry'){localStorage.removeItem(storageKey);setRetrying(false);} }).finally(() => setSaving(false)); } } catch {
+      // Malformed local storage must not permanently lock the quest.
+      try { localStorage.removeItem(storageKey); } catch {}
+      setRetrying(false);
+    }
   };
   return <div className="quest-progress-controls">
     <label className="muted" htmlFor={`progress-${instance.id}`}>{amount} / {target} {quest.progress_unit}</label>
