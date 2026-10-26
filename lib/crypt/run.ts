@@ -170,7 +170,7 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
   }
 
   if (command.type === 'retry-fight') {
-    if (state.phase !== 'fight' || state.battle?.status === 'won') return state;
+    if (state.phase !== 'fight' || state.battle?.status !== 'lost') return state;
     const hp = state.hpAtFightStart ?? state.maxHp;
     // A guardian retry must not undo the already-cleared rat encounter.
     // Only the active encounter is reset; prior nodes and run-only loot stay intact.
