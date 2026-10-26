@@ -19,6 +19,13 @@ for i in $(seq 1 20); do
   pids+=("$!")
 done
 for pid in "${pids[@]}"; do wait "$pid" || true; done
+# At least eight requests must have succeeded; failures beyond target are expected.
+successes=$(grep -l 'completed\|available' "$tmp"/*.log | wc -l)
+if [ "$successes" -lt 8 ]; then
+  echo "Only $successes progress requests succeeded" >&2
+  cat "$tmp"/*.log >&2
+  exit 1
+fi
 psql -v ON_ERROR_STOP=1 -d "$db" <<'SQL'
 do $$
 begin
