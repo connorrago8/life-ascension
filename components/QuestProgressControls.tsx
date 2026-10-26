@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export type ProgressQuest = { target_amount: number | null; progress_unit: string | null; progress_increment: number | null };
 export type ProgressInstance = { id: string; current_amount: number; status: 'available'|'completed'|'deferred' };
@@ -9,6 +9,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   const [custom, setCustom] = useState('');
   const [retrying, setRetrying] = useState(false);
   const storageKey = `life-progress-pending:${instance.id}`;
+  useEffect(() => { try { setRetrying(!!sessionStorage.getItem(storageKey)); } catch {} }, [storageKey]);
   if (!quest.target_amount || !quest.progress_increment || !quest.progress_unit || instance.status !== 'available') return null;
   const target = quest.target_amount;
   const amount = instance.current_amount;
