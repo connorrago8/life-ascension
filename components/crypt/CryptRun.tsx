@@ -134,7 +134,7 @@ export function CryptRun() {
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
               <p><strong>Inscription:</strong> {run.eventCleared ? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
               <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
-              <p><strong>Compass:</strong> Its broken needle points toward something beneath the crypt.</p>
+              <p><strong>Compass:</strong> {run.treasureCleared ? 'Its broken needle points toward something beneath the crypt.' : 'Not yet discovered. The sealed door may hold an answer.'}</p>
               <p className="muted">Field notes are temporary and reset when the preview restarts.</p>
             </aside>
           )}
