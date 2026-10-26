@@ -1,9 +1,9 @@
 name: Verify application build
 on:
   push:
-    branches: [main]
+    branches: [main, feature/crypt-sentinel-loot-preview]
   pull_request:
-    branches: [main]
+    branches: [main, feature/character-cosmetics-preview]
 permissions:
   contents: read
 jobs:
