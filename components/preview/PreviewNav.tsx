@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { usePreviewTransition } from './previewTransition';
 
 const ITEMS = [
-  { href: '/preview/home', label: 'Quests', icon: 'quests' },
+  { href: '/preview/home', label: 'Home', icon: 'home' },
   { href: '/preview/character', label: 'Character', icon: 'character' },
   { href: '/preview/adventure', label: 'Adventure', icon: 'adventure' },
   { href: '/preview/inventory', label: 'Inventory', icon: 'inventory' },
@@ -54,6 +54,12 @@ export function PreviewNav() {
 function TabIcon({ name }: { name: (typeof ITEMS)[number]['icon'] }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
+      {name === 'home' && (
+        <>
+          <path d="m3 11 9-7 9 7" />
+          <path d="M5.5 10.5V20h13v-9.5M10 20v-6h4v6" />
+        </>
+      )}
       {name === 'quests' && (
         <>
           <path d="M7 4.5h8.2A2.8 2.8 0 0 1 18 7.3V19H8.5" />
