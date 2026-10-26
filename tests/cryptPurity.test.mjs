@@ -73,3 +73,19 @@ test('field journal and epilogue remain UI-only and provide accessible choices',
   assert.match(screen, /setShowFieldNotes\(false\)/);
   assert.match(screen, /setEndingChoice\(null\)/);
 });
+
+
+test('Character cosmetic controls preserve six equipment slots and avoid gameplay writes', () => {
+  const screen = readFileSync(join(root, 'components/preview/CharacterScreen.tsx'), 'utf8');
+  const catalog = readFileSync(join(root, 'lib/preview/catalog.ts'), 'utf8');
+  for (const slot of ['head', 'chest', 'legs', 'main-hand', 'off-hand', 'feet']) {
+    assert.ok(screen.includes("slot: '" + slot + "'"), slot);
+  }
+  assert.match(screen, /aria-label="Cosmetic appearance preview"/);
+  assert.match(screen, /item.category === 'cosmetic'/);
+  assert.match(screen, /cosmeticIds.includes/);
+  assert.match(screen, /No stat bonuses/);
+  assert.match(screen, /Try on/);
+  assert.match(catalog, /colorsForCosmetics/);
+  assert.doesNotMatch(screen, /set_quest_instance_status|add_quest_progress|grantXp|supabase/);
+});
