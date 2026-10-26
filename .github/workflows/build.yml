@@ -50,7 +50,7 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migrations 0001–0009 and run six SQL smoke tests
+      - name: Apply migrations 0001–0012, six SQL suites and concurrency test
         shell: bash
         run: |
           set -euo pipefail
@@ -81,4 +81,5 @@ jobs:
             tests/sql/partial_progress_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
-          echo "All six SQL smoke tests passed"
+          bash tests/sql/parallel_progress.sh "$db"
+          echo "All six SQL smoke tests and concurrency test passed"
