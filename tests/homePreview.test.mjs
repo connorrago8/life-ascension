@@ -215,8 +215,9 @@ test('home and adventure views are wired to the shared render models', () => {
   assert.doesNotMatch(previewSource, /Daily Mode/i);
 });
 
-test("today's quests are the sample five and complete in place", () => {
+test("today's quests include the meal quest and complete in place", () => {
   assert.deepEqual(SAMPLE_QUESTS.map((quest) => quest.title), [
+    'Fuel the Adventurer',
     'Work out 30 min',
     'Drink 8 glasses of water',
     'Read 20 pages',
@@ -314,7 +315,7 @@ test('level-up plays only when XP crosses a level threshold', () => {
   assert.equal(view.stats.find((stat) => stat.label === 'STR').after, 5);
   assert.equal(view.unlocks.includes('+1 Strength'), true);
   assert.match(read('components/preview/LevelUpCelebration.tsx'), />Skip</);
-  assert.match(read('components/preview/HomeScreen.tsx'), /levelUpView\(xp, nextXp\)/);
+  assert.match(read('components/preview/HomeScreen.tsx'), /levelUpView\(previousXp, nextXp\)/);
   assert.match(read('app/preview/preview.css'), /xp-rise|cheer|level-in/);
 });
 
@@ -351,7 +352,7 @@ test('creator colors and inventory equip update both renders without appearance 
   assert.notEqual(adventureCharacterModel(base).overlaySignature, adventureCharacterModel(after).overlaySignature);
   assert.equal(gameplayBonuses(effectsForItems(lantern.equipmentIds)).luck, 2);
   assert.equal(gameplayBonuses(effectsForItems(itemIds(base))).strength, 1);
-  assert.match(read('components/preview/InventoryScreen.tsx'), /Equipment/);
+  assert.match(read('components/preview/InventoryScreen.tsx'), /item\.category === 'equipment'/);
   assert.match(read('components/preview/InventoryScreen.tsx'), /Cosmetic/);
   assert.doesNotMatch(read('components/preview/CharacterScreen.tsx'), /<ChoiceRow|<CharacterPair/);
   assert.match(read('components/preview/CharacterScreen.tsx'), /character-loadout-stage/);
