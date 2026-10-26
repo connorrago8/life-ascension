@@ -44,3 +44,45 @@ begin
  raise notice 'PASS 20 parallel saves, 8 applied, 1 XP';
 end $$;
 SQL
+
+# Reproduce M1: hold the quest lock after saving, while target reconfiguration waits.
+(
+psql -v ON_ERROR_STOP=1 -d "$db" > "$tmp/save-race.log" 2>&1 <<'SQL'
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000f1',false);
+set role authenticated;
+begin;
+select * from public.log_quest_progress('00000000-0000-0000-0000-0000000000f5','00000000-0000-0000-0000-0000000000f6',1);
+select pg_sleep(2);
+commit;
+SQL
+) &
+save_pid=$!
+# Wait for the progress operation to be committed only after the second session begins.
+sleep 0.5
+(
+psql -v ON_ERROR_STOP=1 -d "$db" > "$tmp/config-race.log" 2>&1 <<'SQL'
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000f1',false);
+set role authenticated;
+select public.configure_quest_progress('00000000-0000-0000-0000-0000000000f4',3,'units',1);
+SQL
+) &
+config_pid=$!
+wait "$save_pid"
+if wait "$config_pid"; then
+ echo "ERROR: target configuration raced past saved progress" >&2
+ exit 1
+fi
+if ! grep -q 'Quest already has completion or progress history' "$tmp/config-race.log"; then
+ cat "$tmp/config-race.log" >&2
+ exit 1
+fi
+psql -v ON_ERROR_STOP=1 -d "$db" <<'SQL'
+do $$
+begin
+ if (select current_amount from public.quest_instances where id='00000000-0000-0000-0000-0000000000f5')<>1
+   or (select target_amount from public.quests where id='00000000-0000-0000-0000-0000000000f4')<>8 then
+  raise exception 'Concurrent configuration corrupted target or progress';
+ end if;
+ raise notice 'PASS target reconfiguration cannot race with in-flight save';
+end $$;
+SQL
