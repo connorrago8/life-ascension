@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+db="${1:?database required}"
+psql -v ON_ERROR_STOP=1 -d "$db" <<'SQL'
+insert into auth.users(id) values ('00000000-0000-0000-0000-0000000000f1');
+insert into public.quests(id,owner_id,title,domain,cadence,target_amount,progress_unit,progress_increment)
+values ('00000000-0000-0000-0000-0000000000f2','00000000-0000-0000-0000-0000000000f1','Parallel saves','home','daily',8,'units',1);
+insert into public.quest_instances(id,owner_id,quest_id,due_date)
+values ('00000000-0000-0000-0000-0000000000f3','00000000-0000-0000-0000-0000000000f1','00000000-0000-0000-0000-0000000000f2',(now() at time zone 'America/Chicago')::date);
+SQL
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+pids=()
+for i in $(seq 1 20); do
+  (
+    printf "select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000f1',false);\nset role authenticated;\nselect * from public.log_quest_progress('00000000-0000-0000-0000-0000000000f3',('00000000-0000-0000-0000-' || lpad(to_hex(%s),12,'0'))::uuid,1);\n" "$((80000+i))" |
+      psql -d "$db" -v ON_ERROR_STOP=1 > "$tmp/$i.log" 2>&1
+  ) &
+  pids+=("$!")
+done
+for pid in "${pids[@]}"; do wait "$pid" || true; done
+psql -v ON_ERROR_STOP=1 -d "$db" <<'SQL'
+do $$
+begin
+ if (select current_amount from public.quest_instances where id='00000000-0000-0000-0000-0000000000f3')<>8 then
+  raise exception 'Parallel saves did not stop at target';
+ end if;
+ if (select count(*) from public.quest_progress_operations where instance_id='00000000-0000-0000-0000-0000000000f3')<>8 then
+  raise exception 'Parallel saves applied wrong number of operations';
+ end if;
+ if (select count(*) from public.xp_ledger where instance_id='00000000-0000-0000-0000-0000000000f3')<>1 then
+  raise exception 'Parallel saves awarded XP more or less than once';
+ end if;
+ if (select count(*) from public.quest_events where instance_id='00000000-0000-0000-0000-0000000000f3' and event_type='completed')<>1 then
+  raise exception 'Parallel saves duplicated completion event';
+ end if;
+ raise notice 'PASS 20 parallel saves, 8 applied, 1 XP';
+end $$;
+SQL
