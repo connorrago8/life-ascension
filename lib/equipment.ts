@@ -14,6 +14,8 @@ export type EquipmentSlot = (typeof EQUIPMENT_SLOTS)[number];
 export type OwnedItem = {
   slot: SlotKey;
   name: string;
+  /** Optional cosmetic category. Empty on a real owned item. */
+  kind?: string;
 };
 
 export function ownedItemFor(items: readonly OwnedItem[] | null | undefined, slot: SlotKey): OwnedItem | null {

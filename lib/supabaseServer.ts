@@ -47,6 +47,8 @@ function isPrefetch(request: NextRequest): boolean {
 export async function refreshSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   if (isPrefetch(request)) return response;
+  // The item demo is local React state. Skip the session client on that route.
+  if (request.nextUrl.pathname === '/character/demo') return response;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

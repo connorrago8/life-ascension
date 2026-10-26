@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdventurerSprite } from '../../../components/AdventurerSprite';
 import { CharacterViewer, type CharacterViewerHandle } from '../../../components/CharacterViewer';
 import { EquipSlot } from '../../../components/EquipSlot';
+import { cosmeticOverlays } from '../../../components/spriteArt';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
 import { slotsWithItems, type OwnedItem } from '../../../lib/equipment';
@@ -75,6 +76,7 @@ export default function CharacterPage() {
         <h1>Your adventurer</h1>
         <p className="muted">Sign in to see your level, lifetime XP, and equipment.</p>
         <a className="btn" href={state.loginHref}>Sign in</a>
+        <DemoEntry />
       </main>
     );
   }
@@ -85,6 +87,7 @@ export default function CharacterPage() {
         <h1>Your adventurer</h1>
         <p className="message" role="status">{state.message}</p>
         <button type="button" className="btn" onClick={() => { setState({ status: 'loading' }); void load(); }}>Try again</button>
+        <DemoEntry />
       </main>
     );
   }
@@ -111,7 +114,7 @@ export default function CharacterPage() {
           onClick={() => viewerRef.current?.open()}
         >
           <span className="avatar-circle">
-            <AdventurerSprite />
+            <AdventurerSprite overlays={cosmeticOverlays(owned)} />
           </span>
         </button>
         <div className="avatar-meta">
@@ -138,6 +141,7 @@ export default function CharacterPage() {
           </li>
         ))}
       </ul>
+      <DemoEntry />
 
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
@@ -183,4 +187,13 @@ export default function CharacterPage() {
 
 function formatReading(value: number): string {
   return Number.isInteger(value) ? value.toLocaleString('en-US') : String(value);
+}
+
+function DemoEntry() {
+  return (
+    <p className="demo-entry">
+      <a href="/character/demo">Preview items demo</a>
+      <span className="demo-pill">Demo</span>
+    </p>
+  );
 }

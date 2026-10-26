@@ -65,12 +65,17 @@ export function AppNav() {
   const pathname = usePathname() || '/';
   const [moreOpen, setMoreOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const itemDemo = pathname === '/character/demo';
 
   useEffect(() => {
     setMoreOpen(false);
   }, [pathname]);
 
   useEffect(() => {
+    if (itemDemo) {
+      setSignedIn(false);
+      return;
+    }
     let active = true;
     let unsubscribe = () => {};
     try {
@@ -89,7 +94,7 @@ export function AppNav() {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [itemDemo]);
 
   async function logout() {
     try {

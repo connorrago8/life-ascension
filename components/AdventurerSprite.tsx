@@ -36,7 +36,7 @@ export function AdventurerSprite({
       style={{ imageRendering: 'pixelated' }}
     >
       {SPRITE_LAYER_IDS.map((id) => (
-        <g key={id} data-layer={id}>
+        <g key={id} data-layer={id} data-equipped={overlays?.[id] ? 'true' : undefined}>
           <Pixels rows={layerRows(id)} />
           {overlays?.[id] ? <Pixels rows={overlays[id]} /> : null}
         </g>
