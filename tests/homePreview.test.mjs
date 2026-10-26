@@ -76,6 +76,13 @@ const navSource = read('components/preview/PreviewNav.tsx');
 const frameSource = read('components/preview/PreviewFrame.tsx');
 const middleware = read('middleware.ts');
 
+test('completed quests collapse below unfinished quests in Home preview', () => {
+  assert.match(homeSource, /pendingQuests\.map/);
+  assert.match(homeSource, /completedQuests\.map/);
+  assert.match(homeSource, /aria-expanded=\{showCompleted\}/);
+  assert.match(homeSource, /completed-quest-list/);
+});
+
 test('front-facing game avatar uses shared equipment palette and renders held gear', () => {
   assert.match(homeArtSource, /viewBox="0 0 240 380"/);
   assert.match(homeArtSource, /model\.tunic/);
