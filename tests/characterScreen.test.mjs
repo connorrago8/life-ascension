@@ -23,23 +23,37 @@ test('primary nav is Home, Quests, Play, Character, and More', () => {
   assert.doesNotMatch(navSource, /\/health/);
 });
 
+test('the six equipment slots are headwear, armor, shield, weapon, cloak, and companion', () => {
+  assert.deepEqual(
+    EQUIPMENT_SLOTS.map((slot) => slot.key),
+    ['headwear', 'armor', 'shield', 'weapon', 'cloak', 'companion'],
+  );
+  assert.deepEqual(
+    EQUIPMENT_SLOTS.map((slot) => slot.label),
+    ['Headwear', 'Armor', 'Shield', 'Weapon', 'Cloak', 'Companion'],
+  );
+  assert.doesNotMatch(JSON.stringify(EQUIPMENT_SLOTS), /legs|feet/i);
+  assert.doesNotMatch(JSON.stringify([...SPRITE_LAYER_IDS]), /legs|feet/i);
+  assert.doesNotMatch(viewerSource, /['"](?:legs|feet)['"]/);
+});
+
 test('equipment slots start empty unless the player owns that item', () => {
   assert.equal(EQUIPMENT_SLOTS.length, 6);
   const empty = slotsWithItems([]);
   assert.deepEqual(empty.map((entry) => entry.label), [
-    'Head: empty',
-    'Chest: empty',
-    'Main Hand: empty',
-    'Off Hand: empty',
-    'Feet: empty',
-    'Legs: empty',
+    'Headwear: empty',
+    'Armor: empty',
+    'Shield: empty',
+    'Weapon: empty',
+    'Cloak: empty',
+    'Companion: empty',
   ]);
   assert.equal(empty.every((entry) => entry.item === null), true);
-  const owned = slotsWithItems([{ slot: 'head', name: 'Cloth Hood' }]);
-  assert.equal(owned[0].label, 'Head: Cloth Hood');
+  const owned = slotsWithItems([{ slot: 'headwear', name: 'Cloth Hood' }]);
+  assert.equal(owned[0].label, 'Headwear: Cloth Hood');
   assert.equal(owned[0].item?.name, 'Cloth Hood');
   assert.equal(owned.slice(1).every((entry) => entry.item === null), true);
-  assert.equal(slotAccessibleLabel('Feet', null), 'Feet: empty');
+  assert.equal(slotAccessibleLabel('Companion', null), 'Companion: empty');
 });
 
 test('attribute cells stay a placeholder until the profile has real values', () => {
@@ -66,20 +80,22 @@ test('wellness stays disconnected unless real readings exist', () => {
 
 test('the adventurer is layered and beginner clothes are not weapons or armor', () => {
   for (const row of spriteRows()) assert.equal(row.length, SPRITE_WIDTH);
-  assert.deepEqual([...SPRITE_LAYER_IDS], ['body', 'head', 'chest', 'main-hand', 'off-hand', 'legs', 'feet']);
+  assert.deepEqual([...SPRITE_LAYER_IDS], ['cloak', 'body', 'headwear', 'armor', 'shield', 'weapon', 'companion']);
+  assert.equal(SPRITE_LAYER_IDS[0], 'cloak');
+  assert.equal(SPRITE_LAYER_IDS.at(-1), 'companion');
   assert.equal(layerHasInk('body'), true);
-  assert.equal(layerHasInk('chest'), true);
-  assert.equal(layerHasInk('legs'), true);
-  assert.equal(layerHasInk('feet'), true);
-  assert.equal(layerHasInk('head'), false);
-  assert.equal(layerHasInk('main-hand'), false);
-  assert.equal(layerHasInk('off-hand'), false);
+  assert.equal(layerHasInk('cloak'), false);
+  assert.equal(layerHasInk('headwear'), false);
+  assert.equal(layerHasInk('armor'), false);
+  assert.equal(layerHasInk('shield'), false);
+  assert.equal(layerHasInk('weapon'), false);
+  assert.equal(layerHasInk('companion'), false);
   for (const id of SPRITE_LAYER_IDS) assert.match(spriteSource, new RegExp(`data-layer=\\{id\\}|data-layer`));
   assert.match(spriteSource, /data-layer=\{id\}/);
 });
 
 test('slot silhouettes share one 16 by 16 pixel grid', () => {
-  assert.deepEqual(SLOT_ICON_SLOTS, ['head', 'chest', 'main-hand', 'off-hand', 'feet', 'legs']);
+  assert.deepEqual(SLOT_ICON_SLOTS, ['headwear', 'armor', 'shield', 'weapon', 'cloak', 'companion']);
   for (const slot of SLOT_ICON_SLOTS) {
     const rows = slotIconRows(slot);
     assert.equal(rows.length, 16);

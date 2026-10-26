@@ -1,12 +1,12 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { slotsWithItems, type OwnedItem } from '../lib/equipment';
+import { slotsWithItems, type OwnedItem, type SlotKey } from '../lib/equipment';
 import { AdventurerSprite } from './AdventurerSprite';
 import { EquipSlot } from './EquipSlot';
 
-const LEFT = ['head', 'chest', 'main-hand'] as const;
-const RIGHT = ['off-hand', 'feet', 'legs'] as const;
+const LEFT = ['headwear', 'armor', 'weapon'] as const satisfies readonly SlotKey[];
+const RIGHT = ['shield', 'cloak', 'companion'] as const satisfies readonly SlotKey[];
 
 export type CharacterViewerHandle = { open: () => void };
 
