@@ -15,6 +15,12 @@ set role authenticated;
 do $$
 declare r record; n integer;
 begin
+ begin
+   perform public.set_quest_instance_status('00000000-0000-0000-0000-0000000000d1','complete');
+   raise exception 'Direct completion bypass accepted';
+ exception when others then
+   if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
+ end;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
  if r.current_amount <> 1 or r.status <> 'available' then raise exception 'First increment failed'; end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
