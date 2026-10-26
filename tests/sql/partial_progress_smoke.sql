@@ -82,10 +82,16 @@ begin
  exception when others then
    if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
  end;
- if exists(select 1 from public.xp_ledger
-           where instance_id='00000000-0000-0000-0000-0000000000d2') then
-   raise exception 'API-key wrapper awarded XP prematurely';
- end if;
  raise notice 'PASS service-role wrapper cannot bypass progress target';
 end $$;
 reset role;
+
+-- Verify ledger as migration-test owner; service_role lacks explicit SELECT in the isolated harness.
+reset role;
+do $$
+begin
+ if exists(select 1 from public.xp_ledger where instance_id='00000000-0000-0000-0000-0000000000d2') then
+   raise exception 'API-key wrapper awarded XP prematurely';
+ end if;
+ raise notice 'PASS API-key rejection left XP ledger untouched';
+end $$;
