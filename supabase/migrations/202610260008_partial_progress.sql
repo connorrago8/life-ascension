@@ -41,7 +41,7 @@ revoke all on public.quest_progress_operations from public, anon, authenticated;
 grant select on public.quest_progress_operations to authenticated;
 
 -- One request ID identifies one immutable operation. A retry returns its original result.
--- Lock the instance before reading the request journal to serialize concurrent updates.
+-- Lock the parent quest, then instance, before reading the journal to serialize updates.
 -- The existing completion RPC remains the sole source of XP ledger writes.
 create or replace function public.log_quest_progress(
   p_instance_id uuid,
