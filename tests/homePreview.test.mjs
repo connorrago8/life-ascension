@@ -338,13 +338,13 @@ test('creator colors and inventory equip update both renders without appearance 
   assert.equal(gameplayBonuses(effectsForItems(itemIds(base))).strength, 1);
   assert.match(read('components/preview/InventoryScreen.tsx'), /Equipment/);
   assert.match(read('components/preview/InventoryScreen.tsx'), /Cosmetic/);
-  assert.match(read('components/preview/CharacterScreen.tsx'), /Hair/);
-  assert.match(read('components/preview/CharacterScreen.tsx'), /CharacterPair/);
+  assert.doesNotMatch(read('components/preview/CharacterScreen.tsx'), /<ChoiceRow|<CharacterPair/);
+  assert.match(read('components/preview/CharacterScreen.tsx'), /character-loadout-stage/);
   assert.equal(COLOR_CHOICES.some((choice) => choice.colors.tunic || choice.colors.eye), true);
 });
 
 test('preview navigation is quests, character, adventure, and inventory', () => {
-  assert.match(navSource, /label: 'Quests'/);
+  assert.match(navSource, /label: 'Home'/);
   assert.match(navSource, /label: 'Character'/);
   assert.match(navSource, /label: 'Adventure'/);
   assert.match(navSource, /label: 'Inventory'/);
