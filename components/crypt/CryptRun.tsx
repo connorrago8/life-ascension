@@ -47,6 +47,7 @@ function heading(phase: Phase): { title: string; subtitle?: string } {
 export function CryptRun() {
   const [run, setRun] = useState<RunState | null>(null);
   const [endingChoice, setEndingChoice] = useState<'leave' | 'inspect' | null>(null);
+  const [showFieldNotes, setShowFieldNotes] = useState(false);
 
   useEffect(() => {
     setRun(createRun(freshSeed()));
@@ -58,6 +59,7 @@ export function CryptRun() {
 
   function restart() {
     setEndingChoice(null);
+    setShowFieldNotes(false);
     setRun(createRun(freshSeed()));
   }
 
@@ -122,6 +124,20 @@ export function CryptRun() {
         <div className="floor-wrap">
           <p className="floor-kicker">{FLOOR.mapLabel}</p>
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
+          <button type="button" className="btn ghost crypt-block" aria-expanded={showFieldNotes}
+            onClick={() => setShowFieldNotes((value) => !value)}>
+            {showFieldNotes ? 'Hide' : 'Open'} Wayfarer field journal
+          </button>
+          {showFieldNotes && (
+            <aside className="crypt-journal" aria-label="Wayfarer field journal">
+              <h2>Field journal</h2>
+              <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
+              <p><strong>Inscription:</strong> {run.eventCleared ? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
+              <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
+              <p><strong>Compass:</strong> Its broken needle points toward something beneath the crypt.</p>
+              <p className="muted">Field notes are temporary and reset when the preview restarts.</p>
+            </aside>
+          )}
           <div className="floor-map">
             {NODES.map((node, index) => {
               const access = nodeAccess(run, node.id);
