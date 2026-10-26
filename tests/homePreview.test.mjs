@@ -382,3 +382,11 @@ test('inventory supports equipment-slot filters', () => {
   assert.match(inventory, /GROUPS\.map/);
   assert.match(inventory, /aria-pressed=\{filter === slot\}/);
 });
+
+test('visible outfit palette derives from equipped armor legs and feet', () => {
+  const appearance = read('lib/preview/appearance.ts');
+  assert.match(appearance, /chest\.accent/);
+  assert.match(appearance, /legs\.accent/);
+  assert.match(appearance, /feet\.accent/);
+  assert.match(appearance, /gearColors/);
+});
