@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
 import { levelUpView, progressionFromTotal, SAMPLE_PROGRESSION, type LevelUpView } from '../../lib/preview/progression';
-import { displayedQuestXp, SAMPLE_QUESTS, type SampleQuest } from '../../lib/preview/sampleQuests';
+import { displayedQuestXp, MEAL_KEYS, MEAL_QUEST_ID, SAMPLE_QUESTS, type MealKey, type SampleQuest } from '../../lib/preview/sampleQuests';
 import { HomeCharacter } from './HomeCharacter';
 import { LevelUpCelebration } from './LevelUpCelebration';
 import { QuestSheet } from './QuestSheet';
@@ -15,6 +15,8 @@ export function HomeScreen() {
   const model = homeCharacterModel(appearance);
   const [done, setDone] = useState<string[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [loggedMeals, setLoggedMeals] = useState<MealKey[]>([]);
+  const mealLogLock = useRef(new Set<MealKey>());
   const [openId, setOpenId] = useState<string | null>(null);
   const [xp, setXp] = useState(SAMPLE_PROGRESSION.xp);
   const [feedback, setFeedback] = useState<{ id: string; amount: number } | null>(null);
@@ -32,8 +34,20 @@ export function HomeScreen() {
     for (const id of timers.current) window.clearTimeout(id);
   }, []);
 
+  function logMeal(meal: MealKey) {
+    if (mealLogLock.current.has(meal) || completedIds.current.has(MEAL_QUEST_ID)) return;
+    mealLogLock.current.add(meal);
+    const next = MEAL_KEYS.filter((key) => mealLogLock.current.has(key));
+    setLoggedMeals([...next]);
+    if (next.length === MEAL_KEYS.length) {
+      const quest = SAMPLE_QUESTS.find((entry) => entry.id === MEAL_QUEST_ID);
+      if (quest) completeQuest(quest);
+    }
+  }
+
   function completeQuest(quest: SampleQuest) {
     if (completedIds.current.has(quest.id)) return;
+    if (quest.id === MEAL_QUEST_ID && mealLogLock.current.size !== MEAL_KEYS.length) return;
     completedIds.current.add(quest.id);
     const gain = displayedQuestXp(quest);
     const previousXp = currentXp.current;
@@ -85,12 +99,24 @@ export function HomeScreen() {
                 <button
                   type="button"
                   className={['quest-row', complete ? 'is-done' : '', popping ? 'is-pop' : ''].filter(Boolean).join(' ')}
-                  onClick={() => setOpenId(quest.id)}
+                  onClick={() => quest.id === MEAL_QUEST_ID ? undefined : setOpenId(quest.id)}
                   aria-label={complete ? `${quest.title}, completed` : quest.title}
                 >
                   <span className="quest-mark" aria-hidden="true">{complete ? '✓' : ''}</span>
-                  <span className="quest-label">{quest.title}</span>
+                  <span className="quest-label">{quest.title}{quest.id === MEAL_QUEST_ID ? ` — ${loggedMeals.length}/3` : ""}</span>
                 </button>
+                {quest.id === MEAL_QUEST_ID ? (
+                  <div className="meal-log-actions" role="group" aria-label="Log meals">
+                    {MEAL_KEYS.map((meal) => (
+                      <button key={meal} type="button" className="meal-log-button"
+                        aria-pressed={loggedMeals.includes(meal)}
+                        disabled={loggedMeals.includes(meal)}
+                        onClick={() => logMeal(meal)}>
+                        {loggedMeals.includes(meal) ? '✓ ' : '+ '}{meal[0].toUpperCase() + meal.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </li>
             );
           })}
