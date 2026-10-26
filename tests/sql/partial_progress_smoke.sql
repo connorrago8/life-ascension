@@ -66,3 +66,26 @@ begin
  raise notice 'PASS progress, idempotency, undo, cross-user isolation, single XP award';
 end $$;
 reset role;
+-- API-key service-role wrapper must also respect the target guard.
+select set_config('request.jwt.claim.role','service_role',false);
+select set_config('request.jwt.claim.sub','',false);
+set role service_role;
+do $$
+begin
+ begin
+   perform public.set_quest_instance_status_as_user(
+     '00000000-0000-0000-0000-0000000000b2',
+     '00000000-0000-0000-0000-0000000000d2',
+     'complete'
+   );
+   raise exception 'API-key completion bypass accepted';
+ exception when others then
+   if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
+ end;
+ if exists(select 1 from public.xp_ledger
+           where instance_id='00000000-0000-0000-0000-0000000000d2') then
+   raise exception 'API-key wrapper awarded XP prematurely';
+ end if;
+ raise notice 'PASS service-role wrapper cannot bypass progress target';
+end $$;
+reset role;
