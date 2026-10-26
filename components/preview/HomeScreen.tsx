@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { visibleItem } from '../../lib/preview/appearance';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
 import { levelUpView, progressionFromTotal, SAMPLE_PROGRESSION, type LevelUpView } from '../../lib/preview/progression';
 import { displayedQuestXp, SAMPLE_QUESTS, type SampleQuest } from '../../lib/preview/sampleQuests';
 import { HomeCharacter } from './HomeCharacter';
 import { LevelUpCelebration } from './LevelUpCelebration';
-import { Loadout } from './Loadout';
 import { QuestSheet } from './QuestSheet';
 import { StatusBlock } from './StatusBlock';
 import { usePreviewAppearance } from './usePreviewAppearance';
 
 export function HomeScreen() {
-  const { appearance, toggleMainHand } = usePreviewAppearance();
+  const { appearance } = usePreviewAppearance();
   const model = homeCharacterModel(appearance);
   const [done, setDone] = useState<string[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -22,7 +20,6 @@ export function HomeScreen() {
   const [celebration, setCelebration] = useState<LevelUpView | null>(null);
   const timers = useRef<number[]>([]);
   const open = SAMPLE_QUESTS.find((quest) => quest.id === openId) ?? null;
-  const held = visibleItem(appearance, 'main-hand');
   const progression = progressionFromTotal(xp);
 
   useEffect(() => () => {
@@ -63,11 +60,8 @@ export function HomeScreen() {
           }}
         />
         <div className={feedback ? 'react-wrap is-reacting' : 'react-wrap'} data-reacting={feedback ? 'true' : 'false'}>
-          <Loadout appearance={appearance} onSwapMain={toggleMainHand}>
-            <HomeCharacter model={model} />
-          </Loadout>
+          <HomeCharacter model={model} />
         </div>
-        <p className="held-caption">{held ? held.name : 'Empty hands'}</p>
       </section>
       <section className="quest-block" aria-labelledby="today-quests">
         <h2 id="today-quests" data-quest-count={`${done.length}/${SAMPLE_QUESTS.length}`}>
