@@ -721,3 +721,15 @@
   .home-figure-bob, .react-wrap.is-reacting .home-figure-bob { animation: none; }
   .preview-app .xp-fill { transition: none; }
 }
+
+/* Completed quests never displace unfinished daily tasks. */
+.completed-quests { margin-top: 8px; }
+.completed-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; min-height: 44px; padding: 9px 12px;
+  border: 1px solid rgba(126,217,184,.22); border-radius: 10px;
+  background: rgba(126,217,184,.06); color: #9fdfc6;
+  font: inherit; font-size: .81rem; font-weight: 650; cursor: pointer;
+}
+.completed-list { margin-top: 6px; }
+.completed-list .quest-row { opacity: .72; }
