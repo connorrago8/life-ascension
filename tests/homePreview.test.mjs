@@ -76,6 +76,16 @@ const navSource = read('components/preview/PreviewNav.tsx');
 const frameSource = read('components/preview/PreviewFrame.tsx');
 const middleware = read('middleware.ts');
 
+test('front-facing game avatar uses shared equipment palette and renders held gear', () => {
+  assert.match(homeArtSource, /viewBox="0 0 240 380"/);
+  assert.match(homeArtSource, /model\.tunic/);
+  assert.match(homeArtSource, /model\.trousers/);
+  assert.match(homeArtSource, /model\.boots/);
+  assert.match(homeArtSource, /model\.mainHand === 'lantern'/);
+  assert.match(homeArtSource, /data-prop="staff"/);
+  assert.match(homeArtSource, /data-prop="lantern"/);
+});
+
 test('changing appearance leaves progression and effects unchanged', () => {
   const progression = structuredClone(SAMPLE_PROGRESSION);
   const beforeIds = itemIds(SAMPLE_APPEARANCE);
