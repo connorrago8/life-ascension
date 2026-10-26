@@ -69,6 +69,13 @@ begin
   -- This prevents a concurrent unique-key collision from surfacing as an unhandled error.
   v_lock := pg_catalog.hashtextextended(v_user::text || ':' || p_request_id::text, 0);
   perform pg_catalog.pg_advisory_xact_lock(v_lock);
+  -- Lock quest BEFORE instance, matching configure_quest_progress lock order.
+  -- The first lookup is owner-scoped and only identifies the parent quest.
+  select * into v_quest from public.quests
+    where id = (select quest_id from public.quest_instances
+                where id=p_instance_id and owner_id=v_user)
+      and owner_id=v_user for update;
+  if not found then raise exception 'Quest not found'; end if;
   select * into v_inst from public.quest_instances
     where id = p_instance_id and owner_id = v_user for update;
   if not found then raise exception 'Instance not found'; end if;
@@ -83,11 +90,12 @@ begin
     return;
   end if;
 
-  select * into v_quest from public.quests
-    where id = v_inst.quest_id and owner_id = v_user;
-  if not found or not v_quest.active then raise exception 'Active quest not found'; end if;
+  if not v_quest.active then raise exception 'Active quest not found'; end if;
   if v_quest.target_amount is null then raise exception 'Quest does not track partial progress'; end if;
   if v_inst.status <> 'available' then raise exception 'Instance is not available for progress'; end if;
+  if v_inst.current_amount > v_quest.target_amount then
+    raise exception 'Stored progress exceeds target; configuration requires repair';
+  end if;
   -- Match the existing completion RPC's Chicago-time eligibility checks before accepting progress.
   v_today := (now() at time zone 'America/Chicago')::date;
   if v_quest.cadence = 'daily' and (v_inst.due_date > v_today or v_inst.due_date < v_today - 2
