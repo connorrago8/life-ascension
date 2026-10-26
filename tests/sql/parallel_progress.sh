@@ -2,7 +2,7 @@
 set -euo pipefail
 db="${1:?database required}"
 psql -v ON_ERROR_STOP=1 -d "$db" <<'SQL'
-insert into auth.users(id) values ('00000000-0000-0000-0000-0000000000f1');
+insert into auth.users(id) values ('00000000-0000-0000-0000-0000000000f1') on conflict(id) do nothing;
 insert into public.quests(id,owner_id,title,domain,cadence,target_amount,progress_unit,progress_increment)
 values ('00000000-0000-0000-0000-0000000000f2','00000000-0000-0000-0000-0000000000f1','Parallel saves','home','daily',8,'units',1);
 insert into public.quest_instances(id,owner_id,quest_id,due_date)
