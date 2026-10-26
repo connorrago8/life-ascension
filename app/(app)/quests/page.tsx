@@ -23,6 +23,7 @@ export default function QuestNotesIndex() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [message, setMessage] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -70,38 +71,25 @@ export default function QuestNotesIndex() {
     );
   }
 
+  const activeQuests = quests.filter((quest) => quest.active);
+  const inactiveQuests = quests.filter((quest) => !quest.active);
+  const renderQuest = (quest: Quest) => {
+    const latest = notes.find((note) => note.quest_id === quest.id);
+    return <div className="quest" key={quest.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : 'One-time'}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions"><a className="btn ghost" href={`/quests/${quest.id}`}>View progress</a></div></div>;
+  };
+
   return (
     <main className="wrap">
       <header className="top">
         <div>
           <div className="eyebrow">LIFE ASCENSION</div>
-          <h1>Quest notes</h1>
-          <p className="muted">A note records progress. XP is awarded only when you confirm completion on the quest board.</p>
+          <h1>Quest journal</h1>
+          <p className="muted">Track notes and progress here. Complete quests on Home to earn XP.</p>
         </div>
         <a className="btn ghost" href="/">Quest board</a>
       </header>
-      <section className="panel">
-        {quests.length === 0 && <p className="muted">Create a quest on the board first.</p>}
-        {quests.map((quest) => {
-          const latest = notes.find((note) => note.quest_id === quest.id);
-          return (
-            <div className="quest" key={quest.id}>
-              <div className="quest-main">
-                <div className="quest-title">{quest.title}</div>
-                <div className="muted">
-                  {DOMAINS[quest.domain] ?? quest.domain}
-                  {quest.cadence === 'daily' ? ' · Daily' : ' · One-time'}
-                  {quest.active ? '' : ' · Inactive'}
-                </div>
-                {latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}
-              </div>
-              <div className="actions">
-                <a className="btn ghost" href={`/quests/${quest.id}`}>Notes</a>
-              </div>
-            </div>
-          );
-        })}
-      </section>
+      <section className="panel" aria-label="Active quest journal"><h2>Active quests ({activeQuests.length})</h2>{activeQuests.length === 0 && <p className="muted">No active quests. Add one from Home.</p>}{activeQuests.map(renderQuest)}</section>
+      {inactiveQuests.length > 0 && <section className="panel"><button type="button" className="btn ghost" aria-expanded={showInactive} onClick={() => setShowInactive(value => !value)}>{showInactive ? '▾' : '▸'} Archived quests ({inactiveQuests.length})</button>{showInactive && inactiveQuests.map(renderQuest)}</section>}
       <p className="message" role="status" aria-live="polite">{message}</p>
     </main>
   );

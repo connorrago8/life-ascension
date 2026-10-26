@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { VisibleSlot } from '../../lib/preview/appearance';
 import { PREVIEW_CATALOG } from '../../lib/preview/catalog';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
@@ -19,9 +19,15 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen() {
+export function CharacterScreen({ displayName, hideSampleStats = false }: { displayName?: string; hideSampleStats?: boolean } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
+  const pickerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!selectedSlot) return;
+    const id = window.requestAnimationFrame(() => pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    return () => window.cancelAnimationFrame(id);
+  }, [selectedSlot]);
   const base = SAMPLE_PROGRESSION;
   const slotLabel = [...LEFT_SLOTS, ...RIGHT_SLOTS].find((entry) => entry.slot === selectedSlot)?.label;
   const alternatives = PREVIEW_CATALOG.filter((item) => item.category === 'equipment' && item.slot === selectedSlot);
@@ -42,9 +48,9 @@ export function CharacterScreen() {
   }
 
   return (
-    <main className="preview-screen character-preview character-equipment-screen">
+    <div className="preview-screen character-preview character-equipment-screen">
       <header className="character-header">
-        <div><h1 className="status-name">{appearance.name}</h1><p className="level-line">{levelTitle(base)}</p></div>
+        <div><h1 className="status-name">{displayName ?? appearance.name}</h1><p className="level-line">{levelTitle(base)}</p></div>
         <p className="character-header-note">EQUIPMENT</p>
       </header>
       <section className="character-loadout-stage" aria-label="Equipped character and gear">
@@ -55,7 +61,7 @@ export function CharacterScreen() {
         <div className="character-slot-column">{RIGHT_SLOTS.map(({ slot, label }) => slotButton(slot, label))}</div>
       </section>
       {selectedSlot ? (
-        <section className="character-slot-picker" aria-label={`${slotLabel} equipment choices`}>
+        <section ref={pickerRef} className="character-slot-picker" aria-label={`${slotLabel} equipment choices`}>
           <div className="character-picker-heading">
             <div><span className="character-slot-label">{slotLabel}</span><h2>Choose equipment</h2></div>
             <button type="button" className="character-picker-close" onClick={() => setSelectedSlot(null)} aria-label="Close equipment choices">×</button>
@@ -78,11 +84,11 @@ export function CharacterScreen() {
           </button> : null}
         </section>
       ) : <p className="character-gear-note">Tap an equipment slot to see what you can equip. Gear changes update your character.</p>}
-      <section className="character-stats" aria-label="Character attributes">
+      {!hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
         <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
         <span>LCK <strong>{base.luck}</strong></span>
-      </section>
-    </main>
+      </section>}
+    </div>
   );
 }

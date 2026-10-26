@@ -22,6 +22,10 @@ export const PREVIEW_CATALOG: readonly CatalogItem[] = [
   { id: 'wayfarer-lantern', name: 'Wayfarer Lantern', category: 'equipment', slot: 'main-hand' },
   { id: 'trail-trousers', name: 'Trail Trousers', category: 'equipment', slot: 'legs' },
   { id: 'worn-boots', name: 'Worn Boots', category: 'equipment', slot: 'feet' },
+  { id: 'ashen-hood', name: 'Ashen Hood', category: 'equipment', slot: 'head' },
+  { id: 'ember-coat', name: 'Ember Coat', category: 'equipment', slot: 'chest' },
+  { id: 'dusk-trousers', name: 'Dusk Trousers', category: 'equipment', slot: 'legs' },
+  { id: 'ironbound-boots', name: 'Ironbound Boots', category: 'equipment', slot: 'feet' },
   {
     id: 'wine-cloak-dye',
     name: 'Wine Cloak Dye',
