@@ -743,3 +743,22 @@
 }
 .meal-log-button[aria-pressed="true"] { border-color: rgba(126,217,184,.55); color: #9fdfc6; background: #19302b; }
 .meal-log-button:disabled { cursor: default; }
+
+/* Equipment interactions: visible tap targets and compact mobile selection. */
+.character-slot-button { font: inherit; color: inherit; cursor: pointer; width: 100%; }
+.character-slot-button[aria-expanded="true"] { border-color: #86cbb1; background: rgba(100,189,158,.1); }
+.character-slot-hint { display: block; font-size: .66rem; color: #91cbb7; margin-top: 5px; }
+.character-slot-picker { margin: 12px 0 18px; padding: 14px; border: 1px solid rgba(148,203,181,.35); border-radius: 14px; background: #1b2127; }
+.character-picker-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.character-picker-heading h2 { margin: 4px 0 12px; font-size: 1.1rem; }
+.character-picker-close { border: 1px solid #4b515a; border-radius: 8px; background: transparent; color: white; width: 42px; height: 42px; font-size: 1.5rem; cursor: pointer; }
+.character-unequip-action { margin-top: 12px; background: transparent; color: #c6cbd0; border: 1px solid #424950; border-radius: 8px; padding: 10px; font: inherit; }
+.inventory-equipped-label { color: #8dd6b8; font-size: .75rem; }
+.inventory-filters { display: flex; gap: 7px; overflow-x: auto; padding: 8px 0 16px; scrollbar-width: thin; }
+.inventory-filters button { flex: 0 0 auto; min-height: 42px; border: 1px solid #454d55; border-radius: 10px; background: #20262d; color: #d5d9dd; padding: 7px 13px; font: inherit; font-size: .82rem; cursor: pointer; }
+.inventory-filters button[aria-pressed="true"] { border-color: #8dd6b8; background: #234138; color: #c2f3de; }
+.inventory-group { margin: 0 0 18px; }
+.inventory-group h2 { font-size: .86rem; letter-spacing: .12em; text-transform: uppercase; color: #cfbfa6; }
+.inventory-empty { font-size: .83rem; color: #9299a2; }
+.inventory-item-row { gap: 10px; }
+@media (max-width: 390px) { .character-slot-hint { font-size: .6rem; } }
