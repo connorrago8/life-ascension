@@ -59,11 +59,16 @@ declare
   v_next integer;
   v_status text;
   v_today date;
+  v_lock bigint;
 begin
   if v_user is null then raise exception 'Authentication required'; end if;
   if p_instance_id is null or p_request_id is null or p_delta is null or p_delta = 0 then
     raise exception 'Invalid progress request';
   end if;
+  -- Serialize same request IDs even when different quest instances are targeted.
+  -- This prevents a concurrent unique-key collision from surfacing as an unhandled error.
+  v_lock := pg_catalog.hashtextextended(v_user::text || ':' || p_request_id::text, 0);
+  perform pg_catalog.pg_advisory_xact_lock(v_lock);
   select * into v_inst from public.quest_instances
     where id = p_instance_id and owner_id = v_user for update;
   if not found then raise exception 'Instance not found'; end if;
@@ -74,8 +79,7 @@ begin
     if v_old.instance_id <> p_instance_id or v_old.delta <> p_delta then
       raise exception 'Request ID reused with different payload';
     end if;
-    return query select v_old.resulting_amount, v_old.resulting_status,
-      (v_old.resulting_status = 'completed');
+    return query select v_old.resulting_amount, v_old.resulting_status, false;
     return;
   end if;
 
