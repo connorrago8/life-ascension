@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { GUARDIAN_ID, FIGHT_ID, EVENT_ID, SENTINEL, SIGIL, TREASURE_ID } from '../lib/crypt/content.ts';
+import { GUARDIAN_ID, FIGHT_ID, EVENT_ID, SENTINEL, SIGIL, COMBAT, TREASURE_ID } from '../lib/crypt/content.ts';
 import { createRun, nodeAccess, reduceRun } from '../lib/crypt/run.ts';
 
 function reachGuardian(seed = 13) {
@@ -39,6 +39,7 @@ test('guardian uses a distinct deterministic fight and the charm bonus', () => {
   const second = reduceRun(ready, { type: 'open', nodeId: GUARDIAN_ID });
   assert.deepEqual(first.battle, second.battle);
   assert.equal(first.battle?.enemy.id, SENTINEL.id);
+  assert.equal(first.fightCleared, true);
   assert.equal(first.battle?.enemy.hp, SENTINEL.maxHp);
   assert.equal(first.battle?.player.attackBonus, 2);
   assert.equal(first.hpAtFightStart, ready.hp);
@@ -49,6 +50,7 @@ test('retreat restores pre-fight HP; retry replays the encounter', () => {
   const ready = reachGuardian();
   let fight = reduceRun(ready, { type: 'open', nodeId: GUARDIAN_ID });
   const initial = fight.battle;
+  assert.equal(reduceRun(fight, { type: 'retry-fight' }), fight, 'an active battle cannot be restarted by a retry command');
   fight = reduceRun(fight, { type: 'combat', action: 'defend' });
   assert.ok(fight.hp < ready.hp);
   const retreat = reduceRun(fight, { type: 'back' });
@@ -95,4 +97,9 @@ test('victory grants a temporary sigil once; restart clears it', () => {
   assert.equal(fresh.sigilCollected, false);
   assert.equal(fresh.guardianCleared, false);
   assert.equal(fresh.attackBonus, 0);
+});
+
+test('guardian introduction identifies the sentinel rather than the rat', () => {
+  assert.match(COMBAT.guardianOpening, /Crypt Sentinel/);
+  assert.doesNotMatch(COMBAT.guardianOpening, /Crypt Rat/);
 });
