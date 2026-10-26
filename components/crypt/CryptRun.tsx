@@ -11,6 +11,7 @@ import {
   INTRO,
   NODES,
   PREVIEW_BANNER,
+  SIGIL,
   charmNote,
   endCardParagraphs,
   eventNode,
@@ -134,6 +135,8 @@ export function CryptRun() {
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
               <p><strong>Inscription:</strong> {run.eventCleared ? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
               <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
+              <p><strong>Guardian:</strong> {run.guardianCleared ? 'Crypt Sentinel defeated; the sealed door is reachable.' : run.treasureCleared ? 'An armored watcher blocks the final passage.' : 'Unexplored.'}</p>
+              <p><strong>{SIGIL.name}:</strong> {run.sigilCollected ? SIGIL.description : 'Not yet recovered.'}</p>
               <p><strong>Compass:</strong> {run.treasureCleared ? 'Its broken needle points toward something beneath the crypt.' : 'Not yet discovered. The sealed door may hold an answer.'}</p>
               <p className="muted">Field notes are temporary and reset when the preview restarts.</p>
             </aside>
@@ -167,7 +170,7 @@ export function CryptRun() {
           <ul className="floor-legend">
             {NODES.map((node) => <li key={node.id}>{node.label}</li>)}
           </ul>
-          {run.treasureCleared && (
+          {run.guardianCleared && (
             <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
               {FLOOR.door}
             </button>
@@ -236,6 +239,7 @@ export function CryptRun() {
             <p key={line} className={line === END_CARD.kicker ? 'end-kicker' : undefined}>{line}</p>
           ))}
           {run.attackBonus > 0 ? <p>{charmNote(run.attackBonus)}</p> : null}
+          {run.sigilCollected ? <p>{END_CARD.sigil}</p> : null}
           {run.hint ? <p className="muted">{run.hint}</p> : null}
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           <section className="crypt-epilogue" aria-label="Sealed door choices">
