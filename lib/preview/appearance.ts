@@ -220,8 +220,18 @@ export function appearanceFromLoadout(loadout: {
     const withoutSlot = items.filter((item) => item.slot !== gear.slot);
     items.splice(0, items.length, ...withoutSlot, gear);
   }
+  // Clothing hues are sourced from worn gear. Cosmetic dyes may override
+  // them afterwards, but changing hair or skin never recolors equipment.
+  const chest = items.find((item) => item.slot === 'chest');
+  const legs = items.find((item) => item.slot === 'legs');
+  const feet = items.find((item) => item.slot === 'feet');
+  const gearColors: Partial<AppearanceColors> = {
+    ...(chest ? { tunic: chest.accent, tunicLight: chest.accentLight } : {}),
+    ...(legs ? { trousers: legs.accent, trousersLight: legs.accentLight } : {}),
+    ...(feet ? { boots: feet.accent, bootsLight: feet.accentLight } : {}),
+  };
   return recolorAppearance(
     { ...SAMPLE_APPEARANCE, equipment: equipmentInOrder({ ...SAMPLE_APPEARANCE, equipment: items }) },
-    sanitizeAppearanceColors(loadout.colors ?? {}),
+    { ...gearColors, ...sanitizeAppearanceColors(loadout.colors ?? {}) },
   );
 }
