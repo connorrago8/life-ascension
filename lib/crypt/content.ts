@@ -62,6 +62,18 @@ export const RAT = {
   attack: 3,
 };
 
+export const SENTINEL = {
+  id: 'crypt-sentinel',
+  name: 'Crypt Sentinel',
+  maxHp: 16,
+  attack: 4,
+};
+
+export const SIGIL = {
+  name: 'Sentinel Sigil',
+  description: 'A run-only trophy. It grants no XP or permanent equipment.',
+};
+
 export const INTRO = {
   place: 'Brackenlight',
   speaker: 'Mira',
@@ -78,7 +90,7 @@ export const GATE = {
   title: 'Crypt gate',
   lines: [
     'The iron gate stands ajar. Cold air moves out of the dark.',
-    'Floor 1 is a rat, an inscription, and a charm. The door beyond them is sealed.',
+    'Floor 1 holds a rat, an inscription, and an Ember Charm. A sentinel guards the sealed door.',
   ],
   continue: 'Enter the crypt',
 };
@@ -180,11 +192,19 @@ export const NODES: readonly CryptNode[] = [
     take: 'Take the charm',
     attackBonus: 2,
   },
+  {
+    id: 'fight-sentinel',
+    kind: 'fight',
+    label: 'Guardian',
+    title: SENTINEL.name,
+    detail: 'The charm wakes an armored watcher at the sealed door.',
+  },
 ];
 
 export const FIGHT_ID = NODES[0].id;
 export const EVENT_ID = NODES[1].id;
 export const TREASURE_ID = NODES[2].id;
+export const GUARDIAN_ID = NODES[3].id;
 
 /**
  * Relic named on the end card.
@@ -199,6 +219,7 @@ export const END_CARD = {
   kicker: 'To be continued.',
   restart: 'Restart preview',
   charm: 'Ember Charm is in your pocket (+{bonus} damage, this run only).',
+  sigil: 'You recovered the Sentinel Sigil. It vanishes when this preview ends.',
 };
 
 export const COMBAT = {
@@ -206,6 +227,8 @@ export const COMBAT = {
   opening: 'A Crypt Rat blocks the stones.',
   win: 'The Crypt Rat falls. The path ahead is quiet.',
   lose: 'You drop to the stones. This fight can be tried again.',
+  guardianWin: 'The Crypt Sentinel crumbles. You recover its sigil for this run only.',
+  guardianLose: 'The Crypt Sentinel drives you back. Retry with the same run-only charm.',
   retry: 'Retry',
   continue: 'Continue',
   victory: 'Victory',
