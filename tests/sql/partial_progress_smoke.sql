@@ -21,6 +21,17 @@ begin
  exception when others then
    if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
  end;
+ -- A different user must not reconfigure this quest or inspect its operation journal.
+ begin
+   perform public.configure_quest_progress('00000000-0000-0000-0000-0000000000c2',8,'glasses',1);
+   raise exception 'Cross-user configuration accepted';
+ exception when others then
+   if sqlerrm <> 'Active quest not found' then raise; end if;
+ end;
+ if exists(select 1 from public.quest_progress_operations
+           where owner_id='00000000-0000-0000-0000-0000000000b2') then
+   raise exception 'Other user operation leaked';
+ end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
  if r.current_amount <> 1 or r.status <> 'available' then raise exception 'First increment failed'; end if;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e1',1);
