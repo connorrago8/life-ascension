@@ -762,3 +762,9 @@
 .inventory-empty { font-size: .83rem; color: #9299a2; }
 .inventory-item-row { gap: 10px; }
 @media (max-width: 390px) { .character-slot-hint { font-size: .6rem; } }
+
+/* Visual-only cosmetics are separate from gameplay equipment slots. */
+.character-cosmetics-panel { margin-top: 18px; padding: 14px; border: 1px solid rgba(126,217,184,.22); border-radius: 14px; background: rgba(126,217,184,.045); }
+.character-cosmetics-panel .character-picker-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.character-cosmetics-panel .character-gear-note { margin: 10px 0; }
+.character-cosmetics-panel .inventory-list { margin: 0; }
