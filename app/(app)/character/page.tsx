@@ -1,12 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AdventurerSprite } from '../../../components/AdventurerSprite';
-import { CharacterViewer, type CharacterViewerHandle } from '../../../components/CharacterViewer';
-import { EquipSlot } from '../../../components/EquipSlot';
+import { useCallback, useEffect, useState } from 'react';
+import '../../preview/preview.css';
+import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
-import { slotsWithItems, type OwnedItem } from '../../../lib/equipment';
 import { coerceXp, levelFor, levelProgress } from '../../../lib/level';
 import { supabase } from '../../../lib/supabase';
 import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
@@ -23,8 +21,6 @@ function loginHref() {
 
 export default function CharacterPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
-  const avatarRef = useRef<HTMLButtonElement>(null);
-  const viewerRef = useRef<CharacterViewerHandle>(null);
 
   const load = useCallback(async () => {
     const preview = process.env.NODE_ENV === 'development'
@@ -94,51 +90,18 @@ export default function CharacterPage() {
   const attributes = attributeEntries(state.profile);
   const pendingAttributes = attributes.some((attribute) => attribute.pending);
   const wellness = wellnessSnapshot(state.profile);
-  const owned: OwnedItem[] = [];
-  const slots = slotsWithItems(owned);
 
   return (
     <main className="screen character-screen">
       <p className="page-brand">LIFE ASCENSION</p>
       {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
-      <section className="avatar-card" aria-label="Adventurer">
-        <button
-          ref={avatarRef}
-          type="button"
-          className="avatar-hit"
-          aria-haspopup="dialog"
-          aria-label={`${state.name}, level ${progress.level}. Expand character`}
-          onClick={() => viewerRef.current?.open()}
-        >
-          <span className="avatar-circle">
-            <AdventurerSprite />
-          </span>
-        </button>
-        <div className="avatar-meta">
-          <h1 className="char-name">{state.name}</h1>
-          <p className="char-level">Level {progress.level}</p>
-          <div
-            className="xp-track"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={progress.xpForNext}
-            aria-valuenow={progress.xpIntoLevel}
-            aria-label="Progress to next level"
-          >
-            <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
-          </div>
-          <p className="xp-fraction">{progress.xpIntoLevel} / {progress.xpForNext} XP</p>
-        </div>
+      <section className="panel" aria-label="Your character progress">
+        <h1>{state.name}</h1>
+        <p>Level {progress.level} · {progress.xpIntoLevel} / {progress.xpForNext} XP toward next level</p>
+        <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
-
-      <ul className="equip-row" aria-label="Equipment">
-        {slots.map(({ slot, item }) => (
-          <li key={slot.key}>
-            <EquipSlot slot={slot} item={item} />
-          </li>
-        ))}
-      </ul>
-
+      <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
+      <CharacterScreen displayName={state.name} />
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (
@@ -170,13 +133,6 @@ export default function CharacterPage() {
         )}
       </section>
 
-      <CharacterViewer
-        ref={viewerRef}
-        name={state.name}
-        level={progress.level}
-        items={owned}
-        returnFocusRef={avatarRef}
-      />
     </main>
   );
 }
