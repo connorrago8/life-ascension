@@ -66,7 +66,8 @@ jobs:
             supabase/migrations/202610240006_quest_edit_archive.sql \
             supabase/migrations/202610240007_daily_late_window.sql \
             supabase/migrations/202610260008_partial_progress.sql \
-            supabase/migrations/202610260009_progress_configuration.sql; do
+            supabase/migrations/202610260009_progress_configuration.sql \
+            supabase/migrations/202610260010_progress_completion_guard.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
