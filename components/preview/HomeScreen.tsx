@@ -14,6 +14,7 @@ export function HomeScreen() {
   const { appearance } = usePreviewAppearance();
   const model = homeCharacterModel(appearance);
   const [done, setDone] = useState<string[]>([]);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [xp, setXp] = useState(SAMPLE_PROGRESSION.xp);
   const [feedback, setFeedback] = useState<{ id: string; amount: number } | null>(null);
@@ -24,6 +25,8 @@ export function HomeScreen() {
   const currentXp = useRef(SAMPLE_PROGRESSION.xp);
   const open = SAMPLE_QUESTS.find((quest) => quest.id === openId) ?? null;
   const progression = progressionFromTotal(xp);
+  const pendingQuests = SAMPLE_QUESTS.filter((quest) => !done.includes(quest.id));
+  const completedQuests = SAMPLE_QUESTS.filter((quest) => done.includes(quest.id));
 
   useEffect(() => () => {
     for (const id of timers.current) window.clearTimeout(id);
@@ -74,7 +77,7 @@ export function HomeScreen() {
           TODAY'S QUESTS — {done.length}/{SAMPLE_QUESTS.length}
         </h2>
         <ul className="quest-list">
-          {SAMPLE_QUESTS.map((quest) => {
+          {pendingQuests.map((quest) => {
             const complete = done.includes(quest.id);
             const popping = feedback?.id === quest.id;
             return (
@@ -92,6 +95,33 @@ export function HomeScreen() {
             );
           })}
         </ul>
+        {completedQuests.length > 0 ? (
+          <div className="completed-quests">
+            <button
+              type="button"
+              className="completed-toggle"
+              aria-expanded={showCompleted}
+              aria-controls="completed-quest-list"
+              onClick={() => setShowCompleted((current) => !current)}
+            >
+              <span>✓ {completedQuests.length} completed</span>
+              <span aria-hidden="true">{showCompleted ? '−' : '+'}</span>
+            </button>
+            {showCompleted ? (
+              <ul id="completed-quest-list" className="quest-list completed-list">
+                {completedQuests.map((quest) => (
+                  <li key={quest.id}>
+                    <button type="button" className="quest-row is-done"
+                      onClick={() => setOpenId(quest.id)} aria-label={`${quest.title}, completed`}>
+                      <span className="quest-mark" aria-hidden="true">✓</span>
+                      <span className="quest-label">{quest.title}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
       </section>
       {open ? (
         <QuestSheet
