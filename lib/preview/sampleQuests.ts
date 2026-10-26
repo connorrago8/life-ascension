@@ -9,7 +9,18 @@ export type SampleQuest = {
   xp: number;
 };
 
+export const MEAL_QUEST_ID = 'meals';
+export const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const;
+export type MealKey = (typeof MEAL_KEYS)[number];
+
 export const SAMPLE_QUESTS: readonly SampleQuest[] = [
+  {
+    id: MEAL_QUEST_ID,
+    title: 'Fuel the Adventurer',
+    detail: 'Log breakfast, lunch, and dinner. Nutrition imports can be added later.',
+    area: 'Nutrition',
+    xp: 40,
+  },
   {
     id: 'workout',
     title: 'Work out 30 min',
