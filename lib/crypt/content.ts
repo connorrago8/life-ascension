@@ -225,6 +225,7 @@ export const END_CARD = {
 export const COMBAT = {
   title: 'Combat',
   opening: 'A Crypt Rat blocks the stones.',
+  guardianOpening: 'The Crypt Sentinel rises before the sealed door.',
   win: 'The Crypt Rat falls. The path ahead is quiet.',
   lose: 'You drop to the stones. This fight can be tried again.',
   guardianWin: 'The Crypt Sentinel crumbles. You recover its sigil for this run only.',
