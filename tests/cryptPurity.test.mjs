@@ -67,6 +67,7 @@ test('field journal and epilogue remain UI-only and provide accessible choices',
   assert.match(screen, /run\.fightCleared/);
   assert.match(screen, /run\.eventCleared/);
   assert.match(screen, /run\.treasureCleared/);
+  assert.match(screen, /run\.treasureCleared \? 'Its broken needle points toward something beneath the crypt\.'/);
   assert.match(screen, /Inspect the compass/);
   assert.match(screen, /Return to Brackenlight/);
   assert.match(screen, /Choose another ending/);
