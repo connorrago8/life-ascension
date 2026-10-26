@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { VisibleSlot } from '../../lib/preview/appearance';
 import { PREVIEW_CATALOG } from '../../lib/preview/catalog';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
@@ -22,6 +22,12 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
 export function CharacterScreen({ displayName }: { displayName?: string } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
+  const pickerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!selectedSlot) return;
+    const id = window.requestAnimationFrame(() => pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    return () => window.cancelAnimationFrame(id);
+  }, [selectedSlot]);
   const base = SAMPLE_PROGRESSION;
   const slotLabel = [...LEFT_SLOTS, ...RIGHT_SLOTS].find((entry) => entry.slot === selectedSlot)?.label;
   const alternatives = PREVIEW_CATALOG.filter((item) => item.category === 'equipment' && item.slot === selectedSlot);
@@ -55,7 +61,7 @@ export function CharacterScreen({ displayName }: { displayName?: string } = {}) 
         <div className="character-slot-column">{RIGHT_SLOTS.map(({ slot, label }) => slotButton(slot, label))}</div>
       </section>
       {selectedSlot ? (
-        <section className="character-slot-picker" aria-label={`${slotLabel} equipment choices`}>
+        <section ref={pickerRef} className="character-slot-picker" aria-label={`${slotLabel} equipment choices`}>
           <div className="character-picker-heading">
             <div><span className="character-slot-label">{slotLabel}</span><h2>Choose equipment</h2></div>
             <button type="button" className="character-picker-close" onClick={() => setSelectedSlot(null)} aria-label="Close equipment choices">×</button>
