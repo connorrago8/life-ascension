@@ -733,3 +733,13 @@
 }
 .completed-list { margin-top: 6px; }
 .completed-list .quest-row { opacity: .72; }
+
+/* Nutrition quest: one-tap progress without turning Home into a food diary. */
+.meal-log-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 5px 0 8px; }
+.meal-log-button {
+  min-width: 0; min-height: 44px; padding: 7px 4px; border-radius: 9px;
+  border: 1px solid rgba(215,196,163,.25); background: #232a2f;
+  color: #e8e5db; font: inherit; font-size: .73rem; cursor: pointer;
+}
+.meal-log-button[aria-pressed="true"] { border-color: rgba(126,217,184,.55); color: #9fdfc6; background: #19302b; }
+.meal-log-button:disabled { cursor: default; }
