@@ -58,7 +58,8 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
    const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
    if(error){
     // Transport/server errors may have committed before the response was lost.
-    const ambiguous=!error.code || /^5|^08|^57P/.test(error.code) || /fetch|network|timeout|connection/i.test(error.message);
+    const definite=/^(22|23|P0001)/.test(error.code ?? '');
+    const ambiguous=!definite;
     setMessage(ambiguous?'Save not confirmed. Retry the pending operation.':error.message);
     if(!ambiguous)await load();
     return ambiguous?'retry':'rejected';
