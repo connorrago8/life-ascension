@@ -24,7 +24,7 @@ for i in $(seq 1 20); do
 done
 for pid in "${pids[@]}"; do wait "$pid" || true; done
 # At least eight requests must have succeeded; failures beyond target are expected.
-successes=$(grep -lE '^[[:space:]]*[0-9]+[[:space:]]*\\|[[:space:]]*(available|completed)[[:space:]]*\\|' "$tmp"/[0-9]*.log | wc -l || true)
+successes=$(grep -lE '^[[:space:]]*[0-9]+[[:space:]]*\|[[:space:]]*(available|completed)[[:space:]]*\|' "$tmp"/[0-9]*.log | wc -l || true)
 if [ "$successes" -lt 8 ]; then
   echo "Only $successes progress requests succeeded" >&2
   cat "$tmp"/*.log >&2
