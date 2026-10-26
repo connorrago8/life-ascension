@@ -27,8 +27,22 @@ import {
   TITLE_SEEN_KEY,
   TITLE_SKIP_SETTING_TODO,
 } from '../lib/preview/previewSession.ts';
-import { SAMPLE_PROGRESSION, levelTitle, xpLabel } from '../lib/preview/progression.ts';
-import { SAMPLE_QUESTS } from '../lib/preview/sampleQuests.ts';
+import { appearanceFromLoadout, sanitizeAppearanceColors } from '../lib/preview/appearance.ts';
+import {
+  DEFAULT_EQUIPMENT_IDS,
+  colorsForCosmetics,
+  equipCatalogId,
+} from '../lib/preview/catalog.ts';
+import { COLOR_CHOICES, HAIR_CHOICES } from '../lib/preview/creator.ts';
+import {
+  SAMPLE_PROGRESSION,
+  crossedLevelThreshold,
+  levelTitle,
+  levelUpView,
+  progressFromXp,
+  xpLabel,
+} from '../lib/preview/progression.ts';
+import { SAMPLE_QUESTS, displayedQuestXp } from '../lib/preview/sampleQuests.ts';
 
 const root = new URL('..', import.meta.url);
 
@@ -234,6 +248,86 @@ test('the title is a launch gate in sessionStorage and the skip setting is not b
   assert.match(read('components/preview/usePreviewAppearance.ts'), /MAIN_HAND_STORAGE_KEY/);
   assert.match(read('components/preview/usePreviewAppearance.ts'), /sessionStorage/);
   assert.equal(MAIN_HAND_STORAGE_KEY, 'life-ascension.preview.mainHandId');
+});
+
+test('completion feedback displays the sample quest XP and does not change progression', () => {
+  const before = structuredClone(SAMPLE_PROGRESSION);
+  const readQuest = SAMPLE_QUESTS.find((quest) => quest.title === 'Read 20 pages');
+  const bed = SAMPLE_QUESTS.find((quest) => quest.title === 'In bed by 11 PM');
+  assert.equal(displayedQuestXp(readQuest), 160);
+  assert.equal(displayedQuestXp(bed), 320);
+  assert.deepEqual(SAMPLE_PROGRESSION, before);
+  const fx = read('components/preview/QuestCompleteFx.tsx');
+  assert.match(fx, /data-xp-float=\{amount\}/);
+  assert.match(fx, /\+\{amount\} XP/);
+  assert.doesNotMatch(fx, /setXp|levelUpView|crossedLevelThreshold|progressionFromTotal/);
+  assert.match(read('components/preview/HomeScreen.tsx'), /displayedQuestXp\(quest\)/);
+  assert.match(read('components/preview/HomeScreen.tsx'), /QuestCompleteFx|floatXp/);
+  assert.doesNotMatch(previewSource, /streak/i);
+});
+
+test('level-up plays only when XP crosses a level threshold', () => {
+  assert.equal(progressFromXp(720).level, 7);
+  assert.equal(progressFromXp(720).title, 'Wayfarer');
+  assert.equal(progressFromXp(720).xpInto, 720);
+  assert.equal(crossedLevelThreshold(720, 880), false);
+  assert.equal(levelUpView(720, 880), null);
+  assert.equal(crossedLevelThreshold(720, 999), false);
+  assert.equal(crossedLevelThreshold(1000, 1500), false);
+  assert.equal(levelUpView(1000, 1500), null);
+  assert.equal(crossedLevelThreshold(720, 720), false);
+  assert.equal(crossedLevelThreshold(1040, 1000), false);
+
+  assert.equal(crossedLevelThreshold(720, 1040), true);
+  assert.equal(crossedLevelThreshold(999, 1000), true);
+  const view = levelUpView(720, 1040);
+  assert.equal(view.level, 8);
+  assert.equal(view.title, 'Pathfinder');
+  assert.equal(view.stats.find((stat) => stat.label === 'STR').after, 5);
+  assert.equal(view.unlocks.includes('+1 Strength'), true);
+  assert.match(read('components/preview/LevelUpCelebration.tsx'), />Skip</);
+  assert.match(read('components/preview/HomeScreen.tsx'), /levelUpView\(xp, nextXp\)/);
+  assert.match(read('app/preview/preview.css'), /xp-rise|cheer|level-in/);
+});
+
+test('creator colors and inventory equip update both renders without appearance granting bonuses', () => {
+  const base = appearanceFromLoadout({ equipmentIds: DEFAULT_EQUIPMENT_IDS });
+  assert.deepEqual(itemIds(base), itemIds(SAMPLE_APPEARANCE));
+  const black = HAIR_CHOICES.find((choice) => choice.label === 'Black');
+  const recolored = appearanceFromLoadout({ equipmentIds: DEFAULT_EQUIPMENT_IDS, colors: black.colors });
+  assert.equal(homeCharacterModel(recolored).hair, '#1A120E');
+  assert.equal(adventureCharacterModel(recolored).palette.h, homeCharacterModel(recolored).hair);
+  assert.equal(homeCharacterModel(recolored).skin, homeCharacterModel(base).skin);
+  assert.deepEqual(effectsForItems(itemIds(recolored)), effectsForItems(itemIds(base)));
+  assert.deepEqual(structuredClone(SAMPLE_PROGRESSION), SAMPLE_PROGRESSION);
+  assert.equal('strength' in sanitizeAppearanceColors({ hair: '#112233', strength: 9, luck: 3 }), false);
+  assert.equal(sanitizeAppearanceColors({ hair: '#112233', strength: 9 }).hair, '#112233');
+
+  const dyedIds = equipCatalogId(DEFAULT_EQUIPMENT_IDS, [], 'wine-cloak-dye');
+  assert.deepEqual(dyedIds.equipmentIds, [...DEFAULT_EQUIPMENT_IDS]);
+  const dyed = appearanceFromLoadout({
+    equipmentIds: dyedIds.equipmentIds,
+    colors: colorsForCosmetics(dyedIds.cosmeticIds),
+  });
+  assert.equal(homeCharacterModel(dyed).tunic, '#6E2438');
+  assert.equal(adventureCharacterModel(dyed).palette.t, '#6E2438');
+  assert.deepEqual(gameplayBonuses(effectsForItems(itemIds(dyed))), gameplayBonuses(effectsForItems(itemIds(base))));
+
+  const lantern = equipCatalogId(DEFAULT_EQUIPMENT_IDS, [], 'wayfarer-lantern');
+  assert.equal(lantern.equipmentIds.includes('walking-staff'), false);
+  assert.equal(lantern.equipmentIds.includes('wayfarer-lantern'), true);
+  const after = appearanceFromLoadout({ equipmentIds: lantern.equipmentIds });
+  assert.equal(homeCharacterModel(after).mainHand, 'lantern');
+  assert.equal(adventureCharacterModel(after).mainHand, 'lantern');
+  assert.notEqual(homeCharacterModel(base).signature, homeCharacterModel(after).signature);
+  assert.notEqual(adventureCharacterModel(base).overlaySignature, adventureCharacterModel(after).overlaySignature);
+  assert.equal(gameplayBonuses(effectsForItems(lantern.equipmentIds)).luck, 2);
+  assert.equal(gameplayBonuses(effectsForItems(itemIds(base))).strength, 1);
+  assert.match(read('components/preview/InventoryScreen.tsx'), /Equipment/);
+  assert.match(read('components/preview/InventoryScreen.tsx'), /Cosmetic/);
+  assert.match(read('components/preview/CharacterScreen.tsx'), /Hair/);
+  assert.match(read('components/preview/CharacterScreen.tsx'), /CharacterPair/);
+  assert.equal(COLOR_CHOICES.some((choice) => choice.colors.tunic || choice.colors.eye), true);
 });
 
 test('preview navigation is quests, character, adventure, and inventory', () => {

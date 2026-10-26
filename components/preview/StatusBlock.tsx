@@ -1,7 +1,18 @@
+import { QuestCompleteFx } from './QuestCompleteFx';
 import { SAMPLE_NOTIFICATION_COUNT } from '../../lib/preview/sampleQuests';
 import { levelTitle, xpFraction, xpLabel, type Progression } from '../../lib/preview/progression';
 
-export function StatusBlock({ name, progression }: { name: string; progression: Progression }) {
+export function StatusBlock({
+  name,
+  progression,
+  gaining = false,
+  floatXp = null,
+}: {
+  name: string;
+  progression: Progression;
+  gaining?: boolean;
+  floatXp?: number | null;
+}) {
   const fraction = xpFraction(progression);
   return (
     <header className="status-block">
@@ -17,7 +28,7 @@ export function StatusBlock({ name, progression }: { name: string; progression: 
       </div>
       <p className="level-line">{levelTitle(progression)}</p>
       <div
-        className="xp-track"
+        className={gaining ? 'xp-track is-gaining' : 'xp-track'}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={progression.xpToNext}
@@ -27,6 +38,7 @@ export function StatusBlock({ name, progression }: { name: string; progression: 
         <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
       </div>
       <p className="xp-readout">{xpLabel(progression)}</p>
+      {floatXp != null ? <QuestCompleteFx amount={floatXp} /> : null}
     </header>
   );
 }

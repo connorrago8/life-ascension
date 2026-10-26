@@ -167,3 +167,61 @@ export function swapMainHand(appearance: Appearance): Appearance {
   const next = held?.id === WAYFARER_LANTERN.id ? WALKING_STAFF : WAYFARER_LANTERN;
   return withEquippedItem(appearance, next);
 }
+
+export const SAMPLE_GEAR: readonly VisibleItem[] = [
+  TRAVELERS_HOOD,
+  WAYFARER_COAT,
+  WALKING_STAFF,
+  WAYFARER_LANTERN,
+  TRAIL_TROUSERS,
+  WORN_BOOTS,
+];
+
+export function gearById(id: string): VisibleItem | null {
+  return SAMPLE_GEAR.find((item) => item.id === id) ?? null;
+}
+
+export const APPEARANCE_COLOR_KEYS = [
+  'hair',
+  'hairHighlight',
+  'skin',
+  'skinShadow',
+  'eye',
+  'tunic',
+  'tunicLight',
+  'trousers',
+  'trousersLight',
+  'boots',
+  'bootsLight',
+  'belt',
+] as const satisfies readonly (keyof AppearanceColors)[];
+
+/** Keep only real color fields. Anything else in the payload is dropped. */
+export function sanitizeAppearanceColors(value: unknown): Partial<AppearanceColors> {
+  if (!value || typeof value !== 'object') return {};
+  const source = value as Record<string, unknown>;
+  const colors: Partial<AppearanceColors> = {};
+  for (const key of APPEARANCE_COLOR_KEYS) {
+    const raw = source[key];
+    if (typeof raw === 'string' && /^#[0-9A-Fa-f]{6}$/.test(raw)) colors[key] = raw.toUpperCase();
+  }
+  return colors;
+}
+
+/** Build the shared drawing from equipped ids and color overrides. */
+export function appearanceFromLoadout(loadout: {
+  equipmentIds: readonly string[];
+  colors?: Partial<AppearanceColors>;
+}): Appearance {
+  const items: VisibleItem[] = [];
+  for (const id of loadout.equipmentIds) {
+    const gear = gearById(id);
+    if (!gear) continue;
+    const withoutSlot = items.filter((item) => item.slot !== gear.slot);
+    items.splice(0, items.length, ...withoutSlot, gear);
+  }
+  return recolorAppearance(
+    { ...SAMPLE_APPEARANCE, equipment: equipmentInOrder({ ...SAMPLE_APPEARANCE, equipment: items }) },
+    sanitizeAppearanceColors(loadout.colors ?? {}),
+  );
+}

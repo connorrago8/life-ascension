@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { visibleItem } from '../../lib/preview/appearance';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
-import { SAMPLE_PROGRESSION } from '../../lib/preview/progression';
-import { SAMPLE_QUESTS } from '../../lib/preview/sampleQuests';
+import { levelUpView, progressionFromTotal, SAMPLE_PROGRESSION, type LevelUpView } from '../../lib/preview/progression';
+import { displayedQuestXp, SAMPLE_QUESTS, type SampleQuest } from '../../lib/preview/sampleQuests';
 import { HomeCharacter } from './HomeCharacter';
+import { LevelUpCelebration } from './LevelUpCelebration';
 import { Loadout } from './Loadout';
 import { QuestSheet } from './QuestSheet';
 import { StatusBlock } from './StatusBlock';
@@ -16,12 +17,43 @@ export function HomeScreen() {
   const model = homeCharacterModel(appearance);
   const [done, setDone] = useState<string[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [xp, setXp] = useState(SAMPLE_PROGRESSION.xp);
+  const [feedback, setFeedback] = useState<{ id: string; amount: number } | null>(null);
+  const [celebration, setCelebration] = useState<LevelUpView | null>(null);
+  const timers = useRef<number[]>([]);
   const open = SAMPLE_QUESTS.find((quest) => quest.id === openId) ?? null;
   const held = visibleItem(appearance, 'main-hand');
+  const progression = progressionFromTotal(xp);
+
+  useEffect(() => () => {
+    for (const id of timers.current) window.clearTimeout(id);
+  }, []);
+
+  function completeQuest(quest: SampleQuest) {
+    if (done.includes(quest.id)) return;
+    const gain = displayedQuestXp(quest);
+    const nextXp = xp + gain;
+    const view = levelUpView(xp, nextXp);
+    setDone((current) => [...current, quest.id]);
+    setOpenId(null);
+    setXp(nextXp);
+    setFeedback({ id: quest.id, amount: gain });
+    const hide = window.setTimeout(() => setFeedback((current) => (current?.id === quest.id ? null : current)), 1400);
+    timers.current.push(hide);
+    if (!view) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reveal = window.setTimeout(() => setCelebration(view), reduce ? 0 : 1100);
+    timers.current.push(reveal);
+  }
 
   return (
     <main className="preview-screen home-screen">
-      <StatusBlock name={appearance.name} progression={SAMPLE_PROGRESSION} />
+      <StatusBlock
+        name={appearance.name}
+        progression={progression}
+        gaining={feedback != null}
+        floatXp={feedback?.amount ?? null}
+      />
       <section className="home-stage" aria-label="Adventurer">
         <div
           className="stage-disc"
@@ -30,9 +62,11 @@ export function HomeScreen() {
             background: `radial-gradient(circle at 50% 42%, ${model.skin}33, ${model.tunic}22 46%, transparent 72%)`,
           }}
         />
-        <Loadout appearance={appearance} onSwapMain={toggleMainHand}>
-          <HomeCharacter model={model} />
-        </Loadout>
+        <div className={feedback ? 'react-wrap is-reacting' : 'react-wrap'} data-reacting={feedback ? 'true' : 'false'}>
+          <Loadout appearance={appearance} onSwapMain={toggleMainHand}>
+            <HomeCharacter model={model} />
+          </Loadout>
+        </div>
         <p className="held-caption">{held ? held.name : 'Empty hands'}</p>
       </section>
       <section className="quest-block" aria-labelledby="today-quests">
@@ -42,11 +76,12 @@ export function HomeScreen() {
         <ul className="quest-list">
           {SAMPLE_QUESTS.map((quest) => {
             const complete = done.includes(quest.id);
+            const popping = feedback?.id === quest.id;
             return (
               <li key={quest.id}>
                 <button
                   type="button"
-                  className={complete ? 'quest-row is-done' : 'quest-row'}
+                  className={['quest-row', complete ? 'is-done' : '', popping ? 'is-pop' : ''].filter(Boolean).join(' ')}
                   onClick={() => setOpenId(quest.id)}
                   aria-label={complete ? `${quest.title}, completed` : quest.title}
                 >
@@ -65,9 +100,10 @@ export function HomeScreen() {
           doneCount={done.length}
           total={SAMPLE_QUESTS.length}
           onClose={() => setOpenId(null)}
-          onComplete={() => setDone((current) => (current.includes(open.id) ? current : [...current, open.id]))}
+          onComplete={() => completeQuest(open)}
         />
       ) : null}
+      {celebration ? <LevelUpCelebration view={celebration} onSkip={() => setCelebration(null)} /> : null}
     </main>
   );
 }
