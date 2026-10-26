@@ -19,7 +19,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen({ displayName }: { displayName?: string } = {}) {
+export function CharacterScreen({ displayName, hideSampleStats = false }: { displayName?: string; hideSampleStats?: boolean } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
@@ -84,11 +84,11 @@ export function CharacterScreen({ displayName }: { displayName?: string } = {}) 
           </button> : null}
         </section>
       ) : <p className="character-gear-note">Tap an equipment slot to see what you can equip. Gear changes update your character.</p>}
-      <section className="character-stats" aria-label="Character attributes">
+      {!hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
         <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
         <span>LCK <strong>{base.luck}</strong></span>
-      </section>
+      </section>}
     </div>
   );
 }
