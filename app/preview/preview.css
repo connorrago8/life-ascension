@@ -706,3 +706,18 @@
   .character-loadout-stage { grid-template-columns: minmax(0, 1fr) minmax(105px, 1.5fr) minmax(0, 1fr); gap: 3px; }
   .character-slot-item { font-size: .61rem; }
 }
+
+/* Keep quest dialogs within the usable mobile viewport and above navigation. */
+.quest-sheet {
+  max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.preview-nav { isolation: isolate; }
+.preview-screen { scroll-margin-bottom: calc(84px + env(safe-area-inset-bottom)); }
+.preview-app .home-stage .stage-disc { opacity: .48; }
+@media (prefers-reduced-motion: reduce) {
+  .home-figure-bob, .react-wrap.is-reacting .home-figure-bob { animation: none; }
+  .preview-app .xp-fill { transition: none; }
+}
