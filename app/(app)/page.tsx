@@ -11,7 +11,7 @@ function todayLocal(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/
 export default function Home(){
  const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState(0),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2F');
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
- const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [showQuestForm,setShowQuestForm]=useState(false);
+ const [reward,setReward]=useState<{title:string;levelUp:boolean;id:number}|null>(null);const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [showQuestForm,setShowQuestForm]=useState(false);
  const load=useCallback(async()=>{
   if(process.env.NODE_ENV==='development'&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='1'){
     setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setInstances([]);setXp(0);setMessage('');return;
@@ -45,15 +45,18 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
   }
  },[user]);
  useEffect(()=>{void load();const {data:{subscription}}=supabase().auth.onAuthStateChange(()=>{void load()});return()=>subscription.unsubscribe()},[load]);
+ useEffect(()=>{if(!reward)return;const timer=window.setTimeout(()=>setReward(null),2300);return()=>window.clearTimeout(timer)},[reward]);
+ async function celebrate(title:string,previousXp:number){const {data,error}=await supabase().rpc('get_lifetime_xp');if(error)return;const nextXp=coerceXp(data);if(nextXp>previousXp)setReward({title,levelUp:levelFor(nextXp).level>levelFor(previousXp).level,id:Date.now()});}
  async function add(e:React.FormEvent){e.preventDefault();if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}if(!title.trim()||busy||!user)return;setBusy(true);const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
  const {error}=trackProgress
    ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
    : await supabase().rpc('create_scheduled_quest',payload);
  setMessage(error?.message||'Quest scheduled.');if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
- async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();setBusy(false)}
+ async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const previousXp=xp;const questTitle=quests.find(q=>instances.some(i=>i.id===id&&i.quest_id===q.id))?.title||'Quest';const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();if(!error&&action==='complete')await celebrate(questTitle,previousXp);setBusy(false)}
  async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
   if(layoutPreview||busy)return 'retry';
   setBusy(true);
+  const previousXp=xp;const current=instances.find(i=>i.id===id);const quest=quests.find(q=>q.id===current?.quest_id);
   try {
    const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
    if(error){
@@ -66,6 +69,7 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
    }
    setMessage('Progress saved.');
    await load();
+   if(current&&quest?.target_amount&&current.current_amount+delta===quest.target_amount)await celebrate(quest.title,previousXp);
    return 'saved';
   } catch {
    setMessage('Connection lost. Retry the pending operation; do not log again.');
@@ -76,7 +80,7 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
  if(!ready)return <main className="wrap">Loading your character…</main>;
  if(!user)return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Your adventure awaits</h1><p className="muted">Real actions. Real progress. Your private quest journal.</p><a className="btn" href={loginHref}>Sign in</a></main>;
  const today=todayLocal();const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.instance!.status!=='completed'||x.instance!.due_date===today));const completedQuests=visible.filter(x=>x.instance?.status==='completed');const activeQuests=visible.filter(x=>x.instance?.status!=='completed');const completed=completedQuests.length;const lvl=levelFor(xp);
- return <main className="wrap">{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}<header className="top"><div><div className="eyebrow">LIFE ASCENSION</div><h1>{mode==='daily'?'Today’s Quests':'The Adventurer’s Path'}</h1><p className="muted">{new Date(dateString()+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p></div><button className="btn ghost" onClick={logout}>Sign out</button></header>
+ return <main className="wrap">{reward&&<div key={reward.id} role="status" aria-live="polite" className="quest-reward-toast"><span className="reward-spark">✦</span><div><strong>{reward.levelUp?'LEVEL UP!':'QUEST COMPLETE'}</strong><div>{reward.title} · +1 XP</div></div></div>}{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}<header className="top"><div><div className="eyebrow">LIFE ASCENSION</div><h1>{mode==='daily'?'Today’s Quests':'The Adventurer’s Path'}</h1><p className="muted">{new Date(dateString()+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p></div><button className="btn ghost" onClick={logout}>Sign out</button></header>
  <nav className="tabs" aria-label="View mode"><button className={'btn '+(mode==='daily'?'':'ghost')} onClick={()=>setMode('daily')}>Daily Mode</button><button className={'btn '+(mode==='adventure'?'':'ghost')} onClick={()=>setMode('adventure')}>Adventure Mode</button></nav>
  <section className="panel"><div className="eyebrow">LEVEL {lvl.level} · {ADVENTURER_CLASS.toUpperCase()}</div><div className="xp">{xp} <small>lifetime XP</small></div><p className="muted">{completed} of {visible.length} quests completed · No XP penalty for missed days</p><div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={Math.max(visible.length,1)} aria-valuenow={completed}><span style={{width:(visible.length?completed/visible.length*100:0)+'%'}}/></div></section>
  {mode==='adventure'&&<section className="panel"><div className="eyebrow">CHAPTER I</div><h2>The Awakening</h2><p className="muted">Your character grows through real actions. Fantasy encounters are future upgrades.</p></section>}
