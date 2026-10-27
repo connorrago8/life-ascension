@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { QuestProgressControls } from '../../../components/QuestProgressControls';
 
 const INSTANCE_ID = 'qa-local-progress-only';
@@ -18,6 +18,8 @@ const QUEST = {
  */
 export function QuestProgressQAHarness() {
   const [amount, setAmount] = useState(2);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
   const [response, setResponse] = useState<'saved' | 'retry' | 'rejected'>('retry');
   const [events, setEvents] = useState<string[]>([]);
   const confirmed = useRef(new Set<string>());
@@ -40,7 +42,7 @@ export function QuestProgressQAHarness() {
     window.location.reload();
   };
 
-  return <section aria-label="Local progress QA controls">
+  return <section aria-label="Local progress QA controls" data-qa-hydrated={hydrated ? "true" : "false"}>
     <label htmlFor="qa-response">Mock next response (no network)</label>
     <select id="qa-response" className="field" value={response}
       onChange={event => setResponse(event.target.value as 'saved' | 'retry' | 'rejected')}>
