@@ -37,27 +37,41 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
       if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); } catch {} setRetrying(false); }
       else setRetrying(true);
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
-    }).finally(() => setSaving(false));
+    }).catch(() => { setRetrying(true); setSaveState('failed'); }).finally(() => setSaving(false));
   };
   const retryPending = () => {
     if (disabled || saving || storageError) return;
-    try { const raw = localStorage.getItem(storageKey); if(raw) { const p = JSON.parse(raw); setSaveState('idle'); setSaving(true); void onLog(instance.id,p.id,p.delta).then(outcome => { if(outcome !== 'retry'){localStorage.removeItem(storageKey);setRetrying(false);} setSaveState(outcome === 'saved' ? 'saved' : 'failed'); }).finally(() => setSaving(false)); } } catch {
-      // Malformed local storage must not permanently lock the quest.
-      try { localStorage.removeItem(storageKey); } catch {}
-      setRetrying(false);
+    let pending: { id: string; delta: number };
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) { setRetrying(false); setSaveState('failed'); return; }
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('delta' in parsed)
+        || typeof parsed.id !== 'string' || typeof parsed.delta !== 'number'
+        || !Number.isInteger(parsed.delta) || parsed.delta === 0) {
+        // Keep the unknown operation intact: never silently replace its ID.
+        setStorageError(true);
+        setSaveState('failed');
+        return;
+      }
+      pending = { id: parsed.id, delta: parsed.delta };
+    } catch {
+      // If storage is unreadable, prevent generating a different request ID.
+      setStorageError(true);
+      setSaveState('failed');
+      return;
     }
+    setSaveState('idle');
+    setSaving(true);
+    void onLog(instance.id, pending.id, pending.delta).then(outcome => {
+      if (outcome !== 'retry') {
+        try { localStorage.removeItem(storageKey); } catch { setStorageError(true); }
+        setRetrying(false);
+      } else setRetrying(true);
+      setSaveState(outcome === 'saved' ? 'saved' : 'failed');
+    }).catch(() => {
+      // Network failures must preserve the original operation ID for retry.
+      setRetrying(true);
+      setSaveState('failed');
+    }).finally(() => setSaving(false));
   };
-  return <div className="quest-progress-controls">
-    <label className="muted" htmlFor={`progress-${instance.id}`}>{amount} / {target} {quest.progress_unit}</label>
-    <progress id={`progress-${instance.id}`} value={amount} max={target} style={{width:'100%'}} />
-    {storageError && <p role="alert">Browser storage is unavailable. Progress logging is paused to prevent duplicate saves. Enable site storage and reload.</p>}
-    {retrying && <p role="alert">Save not confirmed. Retry the same operation before logging more.</p>}
-    <p className="muted" role="status" aria-live="polite">{saving ? 'Saving progress…' : retrying ? 'Save not confirmed — retry required.' : saveState === 'saved' ? 'Progress saved.' : saveState === 'failed' ? 'Progress was not saved.' : ''}</p>
-    <div className="actions">{retrying && <button type="button" className="btn" disabled={disabled || saving || storageError} onClick={retryPending}>Retry save</button>}
-      <button type="button" className="btn" disabled={disabled || saving || retrying || storageError || remaining === 0} onClick={() => submit(Math.min(quest.progress_increment!, remaining))}>+{Math.min(quest.progress_increment,remaining)}</button>
-      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || amount < quest.progress_increment} onClick={() => submit(-quest.progress_increment!)}>Undo −{quest.progress_increment}</button>
-      <input className="field" style={{maxWidth:90}} type="number" min={1} max={remaining} step={1} value={custom} aria-label="Custom progress amount" placeholder="Amount" onChange={e=>setCustom(e.target.value)} />
-      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || !Number.isInteger(Number(custom)) || Number(custom)<1 || Number(custom)>remaining} onClick={() => {submit(Number(custom));}}>Log</button>
-    </div>
-  </div>;
-}
