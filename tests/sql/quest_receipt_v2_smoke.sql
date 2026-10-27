@@ -1,5 +1,14 @@
 -- Versioned completion receipt is quest-scoped and reports newly awarded XP only once.
 insert into auth.users (id) values ('00000000-0000-0000-0000-0000000000b1');
+-- Seed legacy instances as test administrator to exercise dates no longer creatable via public RPC.
+insert into public.quests (id, owner_id, title, domain, cadence, scheduled_for, quest_type)
+values ('00000000-0000-0000-0000-0000000000b4', '00000000-0000-0000-0000-0000000000b1',
+        'Legacy daily receipt boundary', 'personal_growth', 'daily',
+        (now() at time zone 'America/Chicago')::date - 30, 'scheduled');
+insert into public.quest_instances (id, owner_id, quest_id, due_date)
+values
+ ('00000000-0000-0000-0000-0000000000b5','00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b4',(now() at time zone 'America/Chicago')::date - 3),
+ ('00000000-0000-0000-0000-0000000000b6','00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b4',(now() at time zone 'America/Chicago')::date + 1);
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
 select set_config('request.jwt.claim.role', '', false);
 set role authenticated;
@@ -91,6 +100,39 @@ begin
   if (select count(*) from public.xp_ledger where instance_id in (v_future_inst,v_archived_inst)) <> 0 then
     raise exception 'forbidden quest awarded XP';
   end if;
+
+  -- Future and outside-late-window daily instances must remain untouched.
+  begin
+    perform public.set_quest_instance_status_v2('00000000-0000-0000-0000-0000000000b5','complete');
+    raise exception 'today-minus-3 daily was accepted';
+  exception when others then
+    if sqlerrm <> 'Daily quests can only be completed for today or the previous 2 days' then raise; end if;
+  end;
+  begin
+    perform public.set_quest_instance_status_v2('00000000-0000-0000-0000-0000000000b6','complete');
+    raise exception 'tomorrow daily was accepted';
+  exception when others then
+    if sqlerrm <> 'Future daily quests cannot be completed' then raise; end if;
+  end;
+  if exists (select 1 from public.xp_ledger where instance_id in
+      ('00000000-0000-0000-0000-0000000000b5','00000000-0000-0000-0000-0000000000b6')) then
+    raise exception 'ineligible daily earned XP';
+  end if;
+
+  -- An already completed quest can be retried after archival but cannot receive XP again.
+  perform public.archive_quest(v_quest);
+  r := public.set_quest_instance_status_v2(v_inst,'complete');
+  if r->>'reward_status' <> 'already_awarded' or r->>'xp_awarded' <> '0'
+     or (select count(*) from public.xp_ledger where instance_id=v_inst) <> 1 then
+    raise exception 'completed-after-archive retry awarded extra XP: %', r;
+  end if;
+
+  begin
+    perform public.set_quest_instance_status_v2(v_inst,'unsupported');
+    raise exception 'unsupported action accepted';
+  exception when others then
+    if sqlerrm <> 'Unsupported action' then raise; end if;
+  end;
 
   raise notice 'PASS v2 receipt first award, retry, ownership, schedule, archive guards';
 end
