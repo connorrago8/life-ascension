@@ -66,6 +66,22 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
       `Keyboard focus must not cause horizontal overflow at ${width}px`);
   }
+  // CDP page-scale emulation is measurable, but is not equivalent to browser UI zoom.
+  const cdp = await context.newCDPSession(page);
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
+    const metrics = await cdp.send('Page.getLayoutMetrics');
+    assert.ok(Math.abs(metrics.visualViewport.scale - 2) < 0.01,
+      `Expected measurable 2x page scale at ${width}px`);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
+      `Document overflow at 2x page scale and ${width}px`);
+    await addButton.focus();
+    assert.equal(await addButton.evaluate(el => document.activeElement === el), true);
+    await page.screenshot({ path: join(output, `quest-progress-scale2-${width}.png`), fullPage: true });
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+  }
+  console.log('PASS: measured CDP 2x page scale, no document overflow, and focus at four widths.');
   await page.setViewportSize({ width: 390, height: 844 });
   console.log('PASS: real Tab focus, visible Add/Undo outlines and no overflow at 320/375/390/430px.');
   await addButton.click();
@@ -114,7 +130,7 @@ try {
     await page.screenshot({ path: join(output, `quest-progress-${width}.png`), fullPage: true });
   }
   console.log('PASS: real-component refresh, original-ID retry, Undo, corrupt journal, four viewport widths.');
-  console.log('Not covered: real backend idempotency, authenticated Preview, or true browser 200% zoom.');
+  console.log('Not covered: real backend idempotency, authenticated Preview, or genuine browser UI 200% zoom (CDP page scale is not equivalent).');
 } finally {
   await browser.close();
 }
