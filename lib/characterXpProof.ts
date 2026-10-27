@@ -8,7 +8,7 @@ export function verifiedLifetimeXp(value: unknown): number | null {
     return Number.isSafeInteger(value) && value >= 0 ? value : null;
   }
   if (typeof value === 'bigint') {
-    return value >= 0n && value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : null;
+    return value >= BigInt(0) && value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : null;
   }
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
     const parsed = Number(value.trim());
