@@ -457,3 +457,9 @@ code { font-family: ui-monospace, monospace; }
   .nav-link { font-size: 9px; padding-left: 0; padding-right: 0; }
   .nav-play-orb { width: 52px; height: 52px; }
 }
+
+/* Quest Board 2.0: retain readable titles and explicit Main hierarchy. */
+.main-quest { border-left: 3px solid var(--gold, #d8bd77); padding-left: 12px; }
+.highlight-action { margin-block: 12px; overflow-wrap: anywhere; }
+.highlight-action .btn { white-space: normal; text-align: left; max-width: 100%; }
+.quest:target { outline: 2px solid var(--gold, #d8bd77); outline-offset: 4px; }
