@@ -75,3 +75,10 @@ test('quest details disclosure has a touch target and visible keyboard focus', (
   assert.match(css, /\.quest-card-details > summary \{\s*display: flex;\s*align-items: center;\s*min-height: 44px;/);
   assert.match(css, /\.quest-card-details > summary:focus-visible \{\s*outline: 2px solid/);
 });
+
+test('progress controls identify their quest for assistive technology', () => {
+  const controls = readFileSync(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
+  assert.match(controls, /Custom progress amount for \$\{quest\.title\}/);
+  assert.match(controls, /Retry saving progress for \$\{quest\.title\}/);
+  assert.match(controls, /Add \$\{Math\.min\(quest\.progress_increment,remaining\)\} \$\{quest\.progress_unit\} to \$\{quest\.title\}/);
+});
