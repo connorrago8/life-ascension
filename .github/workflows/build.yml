@@ -110,3 +110,57 @@ jobs:
           done
           bash tests/sql/parallel_progress.sh "$db"
           echo "All six SQL smoke tests and concurrency test passed"
+
+  quest-browser-qa:
+    name: Quest progress browser QA (unprivileged, no backend)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/beta/quest-ui-clean-review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app and ephemeral browser driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright
+      - name: Run local real-component browser interactions with Chromium sandbox
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+          QA_BASE_URL: http://127.0.0.1:3128
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0 || { echo "ERROR: refusing root Chromium browser QA"; exit 1; }
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$browser" || { echo "ERROR: no system Chrome/Chromium for sandboxed browser QA"; exit 1; }
+          npm run dev -- --hostname 127.0.0.1 --port 3128 > /tmp/quest-progress-dev.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail --max-time 3 http://127.0.0.1:3128/qa/quest-progress > /dev/null 2>&1; then
+              echo 'Local development-only QA fixture responded HTTP 200'
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              echo 'ERROR: local QA fixture did not become ready'
+              cat /tmp/quest-progress-dev.log
+              exit 1
+            fi
+            sleep 2
+          done
+          CHROMIUM_BIN="$browser" node tests/browser/quest-progress.qa.mjs
+      - name: Upload browser screenshots for CEO review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quest-progress-browser-${{ github.sha }}
+          path: artifacts/quest-progress/
+          if-no-files-found: warn
+          retention-days: 7
