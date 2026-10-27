@@ -476,3 +476,21 @@ code { font-family: ui-monospace, monospace; }
   .quest-card-actions .btn { min-height: 48px; flex: 1 1 0; }
   .quest-card-actions .btn:not(.ghost) { order: -1; }
 }
+
+/* Quest details disclosure: comfortable touch target and visible keyboard focus. */
+.quest-card-details > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  width: fit-content;
+  max-width: 100%;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.quest-card-details > summary:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .quest-card-details > summary { transition: color 120ms ease; }
+}
