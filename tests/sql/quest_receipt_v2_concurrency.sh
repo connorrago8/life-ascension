@@ -23,10 +23,9 @@ psql -v ON_ERROR_STOP=1 -qAt -d "$db" >"$tmp/a.log" 2>"$tmp/a.err" <<SQL &
 BEGIN;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','$user_id',true);
-SELECT id FROM public.quest_instances WHERE id='$instance_id' FOR UPDATE;
-\! touch "$tmp/locked"
 SELECT (r->>'reward_status') || ':' || (r->>'xp_awarded')
 FROM (SELECT public.set_quest_instance_status_v2('$instance_id'::uuid,'complete') r) receipt;
+\! touch "$tmp/locked"
 SELECT pg_sleep(2);
 COMMIT;
 SQL
