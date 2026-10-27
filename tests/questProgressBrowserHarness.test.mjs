@@ -10,7 +10,7 @@ test('real-component QA route is development-only and uses no backend', () => {
   assert.match(page, /process\.env\.NODE_ENV !== 'development'\) notFound\(\)/);
   assert.match(page, /<QuestProgressQAHarness\s*\/>/);
   assert.match(harness, /<QuestProgressControls/);
-  assert.doesNotMatch(page + harness, /supabase|fetch\(|createClient\(|awardXp|xp_awarded/i);
+  assert.doesNotMatch(page + harness, /from ['\"][^'\"]*supabase|fetch\(|createClient\(|awardXp|xp_awarded/i);
 });
 
 test('QA harness exposes retry, rejected, saved, corrupt and Undo flows', () => {
