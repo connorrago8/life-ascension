@@ -79,6 +79,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
       if (outcome !== 'retry') {
         try { localStorage.removeItem(storageKey); setRetrying(false); } catch { setStorageError(true); }
       } else setRetrying(true);
+      if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
     }).catch(() => {
       // Network failures must preserve the original operation ID for retry.
