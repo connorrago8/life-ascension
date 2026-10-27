@@ -82,7 +82,7 @@ try {
     await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
   }
   console.log('PASS: measured CDP 2x page scale, no document overflow, and focus at four widths.');
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 844 });
   console.log('PASS: real Tab focus, visible Add/Undo outlines and no overflow at 320/375/390/430px.');
   const timedSaveRetryStart = performance.now();
   await addButton.click();
@@ -109,7 +109,7 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only')), null);
   const timedSaveRetryMs = Math.round(performance.now() - timedSaveRetryStart);
   const timedMetrics = await page.evaluate(() => ({ cssWidth: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
-  await page.screenshot({ path: join(output, 'quest-progress-timed-save-retry-390.png'), fullPage: true });
+  await page.screenshot({ path: join(output, 'quest-progress-timed-save-retry-320.png'), fullPage: true });
   console.log('QUEST_SAVE_RETRY_TIMING', JSON.stringify({ elapsedMs: timedSaveRetryMs, actions: 2, ...timedMetrics,
     operationIdPreserved: retryLog.includes(`|${original.id}|2|saved`) }));
   assert.ok(timedSaveRetryMs <= 30000, `Mock Save/Retry took ${timedSaveRetryMs}ms, exceeding 30-second budget`);
