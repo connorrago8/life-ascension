@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const page = readFileSync(new URL('../app/preview/qa-progress/page.tsx', import.meta.url), 'utf8');
-const harness = readFileSync(new URL('../app/preview/qa-progress/QuestProgressQAHarness.tsx', import.meta.url), 'utf8');
+const page = readFileSync(new URL('../app/qa/quest-progress/page.tsx', import.meta.url), 'utf8');
+const harness = readFileSync(new URL('../app/qa/quest-progress/QuestProgressQAHarness.tsx', import.meta.url), 'utf8');
 const browser = readFileSync(new URL('./browser/quest-progress.qa.mjs', import.meta.url), 'utf8');
 
 test('real-component QA route is development-only and uses no backend', () => {
