@@ -70,3 +70,8 @@ test('quest metadata uses progressive disclosure', () => {
   const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /<details><summary aria-label=\{\"Quest details for \" \+ quest\.title\}>Quest details<\/summary>/);
 });
+
+test('quest details disclosure has a touch target and visible keyboard focus', () => {
+  assert.match(css, /\.quest-card-details > summary \{\s*display: flex;\s*align-items: center;\s*min-height: 44px;/);
+  assert.match(css, /\.quest-card-details > summary:focus-visible \{\s*outline: 2px solid/);
+});
