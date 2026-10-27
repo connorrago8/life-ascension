@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export type ProgressQuest = { target_amount: number | null; progress_unit: string | null; progress_increment: number | null };
+export type ProgressQuest = { title: string; target_amount: number | null; progress_unit: string | null; progress_increment: number | null };
 export type ProgressInstance = { id: string; current_amount: number; status: 'available'|'completed'|'deferred' };
 type Props = { quest: ProgressQuest; instance: ProgressInstance; disabled: boolean; onLog: (id: string, requestId: string, delta: number) => Promise<'saved'|'retry'|'rejected'> };
 
@@ -92,11 +92,11 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     {retrying && <p role="alert">Save not confirmed. Retry the same operation before logging more.</p>}
     {saveState === 'failed' && !retrying && !storageError && <p role="alert">Progress was not saved. You can try again.</p>}
     <p className="muted" role="status" aria-live="polite">{saving ? 'Saving progress…' : retrying ? 'Save not confirmed — retry required.' : saveState === 'saved' ? 'Progress saved.' : saveState === 'failed' ? 'Progress was not saved.' : ''}</p>
-    <div className="actions">{retrying && <button type="button" className="btn" disabled={disabled || saving || storageError} onClick={retryPending}>Retry save</button>}
-      <button type="button" className="btn" disabled={disabled || saving || retrying || storageError || remaining === 0} onClick={() => submit(Math.min(quest.progress_increment!, remaining))}>+{Math.min(quest.progress_increment,remaining)}</button>
-      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || amount < quest.progress_increment} onClick={() => submit(-quest.progress_increment!)}>Undo −{quest.progress_increment}</button>
-      <input className="field" disabled={disabled || saving || retrying || storageError || remaining === 0} style={{maxWidth:90}} type="number" min={1} max={remaining} step={1} value={custom} aria-label="Custom progress amount" placeholder="Amount" onChange={e=>setCustom(e.target.value)} />
-      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || !Number.isInteger(Number(custom)) || Number(custom)<1 || Number(custom)>remaining} onClick={() => {submit(Number(custom));}}>Log</button>
+    <div className="actions">{retrying && <button type="button" className="btn" disabled={disabled || saving || storageError} aria-label={`Retry saving progress for ${quest.title}`} onClick={retryPending}>Retry save</button>}
+      <button type="button" className="btn" disabled={disabled || saving || retrying || storageError || remaining === 0} aria-label={`Add ${Math.min(quest.progress_increment,remaining)} ${quest.progress_unit} to ${quest.title}`} onClick={() => submit(Math.min(quest.progress_increment!, remaining))}>+{Math.min(quest.progress_increment,remaining)}</button>
+      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || amount < quest.progress_increment} aria-label={`Undo ${quest.progress_increment} ${quest.progress_unit} on ${quest.title}`} onClick={() => submit(-quest.progress_increment!)}>Undo −{quest.progress_increment}</button>
+      <input className="field" disabled={disabled || saving || retrying || storageError || remaining === 0} style={{maxWidth:90}} type="number" min={1} max={remaining} step={1} value={custom} aria-label={`Custom progress amount for ${quest.title}`} placeholder="Amount" onChange={e=>setCustom(e.target.value)} />
+      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || !Number.isInteger(Number(custom)) || Number(custom)<1 || Number(custom)>remaining} aria-label={`Log custom progress for ${quest.title}`} onClick={() => {submit(Number(custom));}}>Log</button>
     </div>
   </div>;
 }
