@@ -82,3 +82,8 @@ test('progress controls identify their quest for assistive technology', () => {
   assert.match(controls, /Retry saving progress for \$\{quest\.title\}/);
   assert.match(controls, /Add \$\{Math\.min\(quest\.progress_increment,remaining\)\} \$\{quest\.progress_unit\} to \$\{quest\.title\}/);
 });
+
+test('custom progress amount clears only after confirmed save or retry', () => {
+  const controls = readFileSync(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
+  assert.equal((controls.match(/if \(outcome === 'saved'\) setCustom\(''\);/g) || []).length, 2);
+});
