@@ -88,7 +88,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     }).finally(() => setSaving(false));
   };
   return <div className="quest-progress-controls">
-    <label className="muted" htmlFor={`progress-${instance.id}`}>{amount} / {target} {quest.progress_unit}</label>
+    <label className="muted" htmlFor={`progress-${instance.id}`}>{quest.title}: {amount} / {target} {quest.progress_unit}</label>
     <progress id={`progress-${instance.id}`} value={amount} max={target} style={{width:'100%'}} />
     {storageError && <p role="alert">Browser storage is unavailable. Progress logging is paused to prevent duplicate saves. Enable site storage and reload.</p>}
     {retrying && <p role="alert">Save not confirmed. Retry the same operation before logging more.</p>}
