@@ -9,6 +9,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   const [custom, setCustom] = useState('');
   const [retrying, setRetrying] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle'|'saved'|'failed'>('idle');
   const [storageError, setStorageError] = useState(false);
   const storageKey = `life-progress-pending:${instance.id}`;
   useEffect(() => {
@@ -30,15 +31,17 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     if (pending && pending.delta !== delta) { setRetrying(true); return; }
     const operation = pending ?? {id: crypto.randomUUID(), delta};
     try { localStorage.setItem(storageKey, JSON.stringify(operation)); } catch { setStorageError(true); return; }
+    setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, operation.id, operation.delta).then(outcome => {
       if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); } catch {} setRetrying(false); }
       else setRetrying(true);
+      setSaveState(outcome === 'saved' ? 'saved' : 'failed');
     }).finally(() => setSaving(false));
   };
   const retryPending = () => {
     if (disabled || saving || storageError) return;
-    try { const raw = localStorage.getItem(storageKey); if(raw) { const p = JSON.parse(raw); setSaving(true); void onLog(instance.id,p.id,p.delta).then(outcome => { if(outcome !== 'retry'){localStorage.removeItem(storageKey);setRetrying(false);} }).finally(() => setSaving(false)); } } catch {
+    try { const raw = localStorage.getItem(storageKey); if(raw) { const p = JSON.parse(raw); setSaveState('idle'); setSaving(true); void onLog(instance.id,p.id,p.delta).then(outcome => { if(outcome !== 'retry'){localStorage.removeItem(storageKey);setRetrying(false);} setSaveState(outcome === 'saved' ? 'saved' : 'failed'); }).finally(() => setSaving(false)); } } catch {
       // Malformed local storage must not permanently lock the quest.
       try { localStorage.removeItem(storageKey); } catch {}
       setRetrying(false);
@@ -49,6 +52,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     <progress id={`progress-${instance.id}`} value={amount} max={target} style={{width:'100%'}} />
     {storageError && <p role="alert">Browser storage is unavailable. Progress logging is paused to prevent duplicate saves. Enable site storage and reload.</p>}
     {retrying && <p role="alert">Save not confirmed. Retry the same operation before logging more.</p>}
+    <p className="muted" role="status" aria-live="polite">{saving ? 'Saving progress…' : retrying ? 'Save not confirmed — retry required.' : saveState === 'saved' ? 'Progress saved.' : saveState === 'failed' ? 'Progress was not saved.' : ''}</p>
     <div className="actions">{retrying && <button type="button" className="btn" disabled={disabled || saving || storageError} onClick={retryPending}>Retry save</button>}
       <button type="button" className="btn" disabled={disabled || saving || retrying || storageError || remaining === 0} onClick={() => submit(Math.min(quest.progress_increment!, remaining))}>+{Math.min(quest.progress_increment,remaining)}</button>
       <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || amount < quest.progress_increment} onClick={() => submit(-quest.progress_increment!)}>Undo −{quest.progress_increment}</button>
