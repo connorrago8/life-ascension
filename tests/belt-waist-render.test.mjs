@@ -68,7 +68,7 @@ test('waist stage remains visually distinguishable at compact avatar scales', as
   assert.match(equipped, /M86 198 Q120 194 154 198/);
   assert.doesNotMatch(starter, /M86 198 Q120 194 154 198/);
 
-  const buckle = equipped.match(/<rect x="(\\d+)" y="(\\d+)" width="(\\d+)" height="(\\d+)" rx="2" fill="#C8AC77"/);
+  const buckle = equipped.match(/<rect x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)" rx="2" fill="#C8AC77"/);
   assert.ok(buckle, 'earned buckle must have an identifiable outer frame');
   const [x, y, width, height] = buckle.slice(1).map(Number);
   assert.ok(x >= 0 && y >= 0 && x + width <= 240 && y + height <= 380);
