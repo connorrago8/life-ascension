@@ -469,3 +469,10 @@ code { font-family: ui-monospace, monospace; }
   .quest-progress-controls .actions input[type='number'] { flex: 1 1 90px; min-width: 64px; max-width: 110px !important; margin: 0; }
   .quest > .actions { width: 100%; }
 }
+
+/* Quest Board: keep the primary action thumb-friendly at small widths. */
+@media (max-width: 430px) {
+  .quest-card-actions { display: flex; flex-direction: row; gap: 8px; }
+  .quest-card-actions .btn { min-height: 48px; flex: 1 1 0; }
+  .quest-card-actions .btn:not(.ghost) { order: -1; }
+}
