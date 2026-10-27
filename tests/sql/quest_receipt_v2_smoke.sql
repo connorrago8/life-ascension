@@ -10,6 +10,10 @@ declare
   v_quest uuid;
   v_inst uuid;
   r jsonb;
+  v_future uuid;
+  v_future_inst uuid;
+  v_archived uuid;
+  v_archived_inst uuid;
 begin
   -- Use the supported API: authenticated direct INSERT into quests is deliberately denied.
   v_quest := public.create_scheduled_quest(
@@ -47,7 +51,48 @@ begin
     if sqlerrm <> 'Instance not found' then raise; end if;
   end;
 
-  raise notice 'PASS v2 receipt confirms first award once and duplicate retry reports zero newly awarded XP';
+
+  -- A second authenticated identity must not complete the first user's instance.
+  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b3',true);
+  begin
+    perform public.set_quest_instance_status_v2(v_inst,'complete');
+    raise exception 'cross-owner request was accepted';
+  exception when others then
+    if sqlerrm <> 'Instance not found' then raise; end if;
+  end;
+  perform set_config('request.jwt.claim.sub',v_user::text,true);
+
+  -- Future scheduled chores cannot be completed before their due date.
+  v_future := public.create_scheduled_quest(
+    'Future receipt test','personal_growth','once',
+    (now() at time zone 'America/Chicago')::date + 1,'scheduled'
+  );
+  select id into v_future_inst from public.quest_instances where quest_id=v_future;
+  begin
+    perform public.set_quest_instance_status_v2(v_future_inst,'complete');
+    raise exception 'future scheduled quest was accepted';
+  exception when others then
+    if sqlerrm <> 'Future scheduled quest cannot be completed yet' then raise; end if;
+  end;
+
+  -- An archived, uncompleted quest may not become completed or award XP.
+  v_archived := public.create_scheduled_quest(
+    'Archived receipt test','personal_growth','once',
+    (now() at time zone 'America/Chicago')::date,'scheduled'
+  );
+  select id into v_archived_inst from public.quest_instances where quest_id=v_archived;
+  perform public.archive_quest(v_archived);
+  begin
+    perform public.set_quest_instance_status_v2(v_archived_inst,'complete');
+    raise exception 'archived quest was accepted';
+  exception when others then
+    if sqlerrm <> 'Active quest not found' then raise; end if;
+  end;
+  if (select count(*) from public.xp_ledger where instance_id in (v_future_inst,v_archived_inst)) <> 0 then
+    raise exception 'forbidden quest awarded XP';
+  end if;
+
+  raise notice 'PASS v2 receipt first award, retry, ownership, schedule, archive guards';
 end
 $$;
 reset role;
