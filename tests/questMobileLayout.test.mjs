@@ -17,4 +17,7 @@ test('progress controls remain visible and keep a one-tap increment', () => {
   assert.match(css, /\.quest-progress-controls \.actions \{ display: flex; width: 100%;/);
   assert.match(controls, /onClick=\{\(\) => submit\(Math\.min\(quest\.progress_increment!/);
   assert.match(controls, /Retry save/);
+  assert.match(controls, /Saving progress…/);
+  assert.match(controls, /Progress saved\./);
+  assert.match(controls, /Save not confirmed — retry required\./);
 });
