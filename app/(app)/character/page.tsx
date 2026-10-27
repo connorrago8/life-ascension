@@ -101,7 +101,7 @@ export default function CharacterPage() {
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
       <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
-      <CharacterScreen displayName={state.name} hideSampleStats />
+      <CharacterScreen displayName={state.name} hideSampleStats hideSampleLevel />
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (
