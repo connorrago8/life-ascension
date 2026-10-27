@@ -149,6 +149,8 @@ jobs:
             }
             await writeFile(dir+"/sha256-evidence.json",JSON.stringify({sourceCommit:process.env.GITHUB_SHA,visualMode:"static-proposed-not-owned",screenshots:captures},null,2)+"\n");
           '
+      - name: Validate all eight helmet browser screenshots and hashes
+        run: node scripts/verify-helmet-mobile-evidence.mjs artifacts/helmet-mobile-qa
       - name: Upload immutable helmet QA evidence
         if: always()
         uses: actions/upload-artifact@v4
