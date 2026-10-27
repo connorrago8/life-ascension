@@ -57,3 +57,46 @@ test('preview equipped renders one belt and buckle, not inherited straps or pouc
   assert.doesNotMatch(html, /data-waist-part="starter-tie"/);
   assert.doesNotMatch(html, /M96 111 L141 216/);
 });
+
+/**
+ * Compare real full-character markup, not source patterns. The preview stage
+ * may change only the waist group; all other anatomy, gradients, accessories,
+ * hand equipment and accessibility attributes must remain byte-for-byte equal.
+ */
+function withoutPreviewWaist(html) {
+  const startTag = /<g\b[^>]*data-belt-stage="(?:starter|equipped)"[^>]*>/g;
+  const start = startTag.exec(html)?.index ?? -1;
+  assert.ok(start >= 0, 'expected exactly one opt-in waist layer');
+  const groupTag = /<\/?g(?:\s[^>]*)?>/g;
+  groupTag.lastIndex = start;
+  let depth = 0;
+  let end = -1;
+  for (const match of html.slice(start).matchAll(/<\/?g(?:\s[^>]*)?>/g)) {
+    depth += match[0].startsWith('</') ? -1 : 1;
+    if (depth === 0) {
+      end = start + match.index + match[0].length;
+      break;
+    }
+  }
+  assert.ok(end > start, 'waist layer group must be balanced');
+  return html.slice(0, start) + '<g data-belt-stage="normalized"></g>' + html.slice(end);
+}
+
+test('preview belt stages preserve the rest of the full character and accessibility', async () => {
+  const HomeCharacter = await loadCharacter();
+  const starter = renderToStaticMarkup(React.createElement(HomeCharacter, {
+    model, idPrefix: 'qa-character', beltPreviewStage: 'starter',
+  }));
+  const equipped = renderToStaticMarkup(React.createElement(HomeCharacter, {
+    model, idPrefix: 'qa-character', beltPreviewStage: 'equipped',
+  }));
+  assert.equal(withoutPreviewWaist(starter), withoutPreviewWaist(equipped));
+  for (const html of [starter, equipped]) {
+    assert.match(html, /role="img"/);
+    assert.match(html, /aria-label="Adventurer"/);
+    assert.match(html, /data-main-hand="staff"/);
+    assert.match(html, /viewBox="0 0 240 380"/);
+    assert.match(html, /qa-character-shirt/);
+    assert.match(html, /qa-character-coat/);
+  }
+});
