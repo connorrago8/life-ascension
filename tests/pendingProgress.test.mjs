@@ -53,3 +53,44 @@ test('reload checks the journal before enabling retry and fails closed on corrup
   assert.doesNotMatch(effect, /!!localStorage\.getItem\(storageKey\)/);
   assert.match(component, /pending save record is unreadable/);
 });
+
+
+test('mock-only duplicate delivery of one persisted operation does not double-credit', async () => {
+  // Contract-level mock, NOT evidence of the actual Supabase RPC or XP ledger.
+  const { parsePendingProgress } = await loadParser();
+  const journal = JSON.stringify({ id: 'stable-request-id', delta: 3 });
+  const applied = new Map();
+  let credited = 0;
+  function mockApply(raw) {
+    const operation = parsePendingProgress(raw);
+    assert.ok(operation);
+    if (!applied.has(operation.id)) {
+      applied.set(operation.id, operation.delta);
+      credited += operation.delta;
+    } else {
+      assert.equal(applied.get(operation.id), operation.delta);
+    }
+    return { requestId: operation.id, credited };
+  }
+  const ambiguousFirst = mockApply(journal);
+  const retriedAfterRefresh = mockApply(journal);
+  assert.deepEqual(retriedAfterRefresh, ambiguousFirst);
+  assert.equal(credited, 3);
+  assert.equal(applied.size, 1);
+});
+
+test('parser rejects nonfinite and nonnumeric JSON deltas without minting a replacement ID', async () => {
+  const { parsePendingProgress } = await loadParser();
+  const invalid = [
+    '{"id":"same-id","delta":1e400}',
+    '{"id":"same-id","delta":null}',
+    '{"id":"same-id","delta":true}',
+    '{"id":"same-id","delta":{}}',
+    '{"id":"same-id","delta":[]}',
+    '{"id":"same-id","delta":-9007199254740992}',
+    '{"id":"same-id","delta":0}',
+  ];
+  for (const raw of invalid) assert.throws(() => parsePendingProgress(raw), Error, raw);
+  const valid = parsePendingProgress('{"id":"same-id","delta":-9007199254740991}');
+  assert.deepEqual(valid, { id: 'same-id', delta: -9007199254740991 });
+});
