@@ -1,5 +1,8 @@
 -- Versioned completion receipt is quest-scoped and reports newly awarded XP only once.
 insert into auth.users (id) values ('00000000-0000-0000-0000-0000000000b1');
+-- Seed the fixture as the test administrator. Restrictive quest grants are intentional.
+insert into public.quests(id,owner_id,title,domain,cadence,xp)
+values('00000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-0000000000b1','Receipt contract test','personal_growth','once',1);
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
 select set_config('request.jwt.claim.role', '', false);
 set role authenticated;
@@ -11,9 +14,7 @@ declare
   v_inst uuid;
   r jsonb;
 begin
-  insert into public.quests(owner_id,title,domain,cadence,xp)
-  values(v_user,'Receipt contract test','personal_growth','once',1)
-  returning id into v_quest;
+  v_quest := '00000000-0000-0000-0000-0000000000b2';
   v_inst := public.ensure_quest_instance(v_quest,current_date);
 
   r := public.set_quest_instance_status_v2(v_inst,'complete');
