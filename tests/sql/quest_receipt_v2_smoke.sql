@@ -23,6 +23,8 @@ declare
   v_future_inst uuid;
   v_archived uuid;
   v_archived_inst uuid;
+  v_deferred uuid;
+  v_deferred_inst uuid;
 begin
   -- Use the supported API: authenticated direct INSERT into quests is deliberately denied.
   v_quest := public.create_scheduled_quest(
@@ -70,6 +72,27 @@ begin
     if sqlerrm <> 'Instance not found' then raise; end if;
   end;
   perform set_config('request.jwt.claim.sub',v_user::text,true);
+
+  -- Deferral and resumption never earn XP and must preserve a valid status.
+  v_deferred := public.create_scheduled_quest(
+    'Defer resume receipt test','personal_growth','once',
+    (now() at time zone 'America/Chicago')::date,'scheduled'
+  );
+  select id into v_deferred_inst from public.quest_instances where quest_id=v_deferred;
+  r := public.set_quest_instance_status_v2(v_deferred_inst,'defer');
+  if r->>'status' <> 'deferred' or r->>'reward_status' <> 'not_awarded'
+     or r->>'xp_awarded' <> '0' or r->>'reward_confirmed' <> 'false'
+     or r->>'quest_completion_confirmed' <> 'false' then
+    raise exception 'defer receipt incorrectly awarded XP: %', r;
+  end if;
+  r := public.set_quest_instance_status_v2(v_deferred_inst,'resume');
+  if r->>'status' <> 'available' or r->>'reward_status' <> 'not_awarded'
+     or r->>'xp_awarded' <> '0' or r->>'reward_confirmed' <> 'false' then
+    raise exception 'resume receipt incorrectly awarded XP: %', r;
+  end if;
+  if exists (select 1 from public.xp_ledger where instance_id=v_deferred_inst) then
+    raise exception 'defer/resume created an XP ledger entry';
+  end if;
 
   -- Future scheduled chores cannot be completed before their due date.
   v_future := public.create_scheduled_quest(
