@@ -147,7 +147,7 @@ jobs:
               assert.ok(b.readUInt32BE(20)>=380);
               captures.push({file:f,width:item.width,height:b.readUInt32BE(20),sha256:createHash("sha256").update(b).digest("hex")});
             }
-            await writeFile(dir+"/sha256-evidence.json",JSON.stringify({sourceCommit:process.env.GITHUB_SHA,visualMode:"static-proposed-not-owned",screenshots:captures},null,2)+"\\n");
+            await writeFile(dir+"/sha256-evidence.json",JSON.stringify({sourceCommit:process.env.GITHUB_SHA,visualMode:"static-proposed-not-owned",screenshots:captures},null,2)+"\n");
           '
       - name: Upload immutable helmet QA evidence
         if: always()
