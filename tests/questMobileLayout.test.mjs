@@ -50,3 +50,11 @@ test('definitive progress failures are announced to assistive technology', () =>
   assert.match(controls, /saveState === 'failed' && !retrying && !storageError/);
   assert.match(controls, /<p role="alert">Progress was not saved\. You can try again\.<\/p>/);
 });
+
+test('mobile quest card prioritizes completion without removing secondary actions', () => {
+  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /quest-card-actions/);
+  assert.match(home, /aria-label=\{\x60Actions for \$\{quest\.title\}\x60\}/);
+  assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px;/);
+  assert.match(css, /\.quest-card-actions \.btn:not\(\.ghost\) \{ order: -1;/);
+});
