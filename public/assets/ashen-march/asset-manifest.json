@@ -1,0 +1,47 @@
+{
+  "status": "proposed_visual_concepts_only",
+  "version": "0.1",
+  "assets": [
+    {
+      "file": "ashen-march-telegraph-concepts.svg",
+      "states": [
+        "cinder_hound_idle",
+        "cinder_hound_charge_windup",
+        "roadbound_sentry_guard",
+        "roadbound_sentry_counter_opening",
+        "ash_collector_idle",
+        "ash_collector_sweep_windup"
+      ]
+    },
+    {
+      "file": "ashen-march-active-recovery-concepts.svg",
+      "states": [
+        "cinder_hound_active_lunge",
+        "roadbound_sentry_shield_strike",
+        "ash_collector_recovery"
+      ]
+    }
+  ],
+  "notImplemented": [
+    "combat_logic",
+    "hitboxes",
+    "damage",
+    "xp",
+    "loot",
+    "unlocks",
+    "canonical_lore"
+  ],
+  "reviewGates": [
+    "visual_distinction_at_320_to_430_css_px",
+    "contrast_on_dark_and_light_backgrounds",
+    "reduced_motion_static_telegraph",
+    "renderer_compatibility",
+    "founder_visual_approval"
+  ],
+  "owners": {
+    "technicalConventions": "Alpha",
+    "rendererFeasibility": "Beta",
+    "assetRevisions": "Charlie",
+    "finalDirection": "Founder"
+  }
+}
