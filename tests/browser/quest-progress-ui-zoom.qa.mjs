@@ -70,14 +70,15 @@ try {
         const style = getComputedStyle(el);
         return { active: document.activeElement === el,
           withinViewport: rect.left >= 0 && rect.right <= innerWidth + 1,
+          withinHeight: rect.top >= 0 && rect.bottom <= innerHeight + 1,
           outlineVisible: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0 };
       });
-      assert.equal(focus.active && focus.withinViewport && focus.outlineVisible, true,
+      assert.equal(focus.active && focus.withinViewport && focus.withinHeight && focus.outlineVisible, true,
         `${label} focus must be visible and within viewport under 200% zoom at ${width}px`);
     }
     await page.screenshot({ path: join(output, `quest-progress-ui-zoom200-${width}.png`), fullPage: true });
   }
-  console.log('PASS: browser UI 200% zoom signal, layout shrink, no overflow and Add focus at all four widths.');
+  console.log('PASS: browser UI 200% zoom signal, layout shrink, no overflow and Add/Undo focus and vertical visibility at all four widths.');
   console.log('This is local UI evidence only, NOT authenticated Preview, backend idempotency or production acceptance.');
 } finally {
   await browser.close();
