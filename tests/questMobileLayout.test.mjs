@@ -68,5 +68,5 @@ test('authenticated character hides sample progression level', () => {
 
 test('quest metadata uses progressive disclosure', () => {
   const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
-  assert.match(home, /<details><summary>Quest details<\/summary>/);
+  assert.match(home, /<details><summary aria-label=\{\"Quest details for \" \+ quest\.title\}>Quest details<\/summary>/);
 });
