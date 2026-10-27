@@ -6,17 +6,18 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 user_id="00000000-0000-0000-0000-0000000000c1"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -c "INSERT INTO auth.users(id) VALUES ('$user_id');"
-instance_id="$(psql -v ON_ERROR_STOP=1 -qAt -d "$db" <<SQL
+quest_id="$(psql -v ON_ERROR_STOP=1 -qAt -d "$db" <<SQL
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','$user_id',false);
-WITH q AS (
-  SELECT public.create_scheduled_quest('Concurrent receipt','personal_growth','once',
-    (now() AT TIME ZONE 'America/Chicago')::date,'scheduled') quest_id
-)
-SELECT i.id FROM public.quest_instances i JOIN q ON i.quest_id=q.quest_id;
+SELECT public.create_scheduled_quest('Concurrent receipt','personal_growth','once',
+  (now() AT TIME ZONE 'America/Chicago')::date,'scheduled');
 SQL
 )"
-instance_id="$(printf '%s\n' "$instance_id" | grep -E '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$' | tail -1)"
+quest_id="$(printf '%s\n' "$quest_id" | grep -E '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$' | tail -1)"
+test -n "$quest_id"
+# Resolve the fixture as test administrator because direct authenticated
+# SELECT on quest_instances is intentionally restricted in this schema.
+instance_id="$(psql -v ON_ERROR_STOP=1 -qAt -d "$db" -c "SELECT id FROM public.quest_instances WHERE quest_id='$quest_id';")"
 test -n "$instance_id"
 psql -v ON_ERROR_STOP=1 -qAt -d "$db" >"$tmp/a.log" 2>"$tmp/a.err" <<SQL &
 BEGIN;
