@@ -19,7 +19,7 @@ import {
   runStatus,
   treasureNode,
 } from '../../lib/crypt/content';
-import { createRun, nodeAccess, reduceRun, type Phase, type RunState } from '../../lib/crypt/run';
+import { createRun, nodeAccess, reduceRun, type Phase, type RunCommand, type RunState } from '../../lib/crypt/run';
 import { CombatView } from './CombatView';
 import { PixelArt } from './PixelArt';
 
@@ -59,6 +59,11 @@ export function CryptRun() {
     if (run) window.scrollTo(0, 0);
   }, [run?.phase]);
 
+  // Always reduce against the latest state: rapid taps must not replay a stale battle turn.
+  function dispatch(command: RunCommand) {
+    setRun((current) => current ? reduceRun(current, command) : current);
+  }
+
   function restart() {
     setEndingChoice(null);
     setShowFieldNotes(false);
@@ -87,7 +92,7 @@ export function CryptRun() {
         {run.phase === 'intro' ? (
           <Link href="/play" className="icon-btn" aria-label={FLOOR.back}><BackIcon /></Link>
         ) : (
-          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => setRun(reduceRun(run, { type: 'back' }))}>
+          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => dispatch({ type: 'back' })}>
             <BackIcon />
           </button>
         )}
@@ -105,7 +110,7 @@ export function CryptRun() {
           <h2>{INTRO.speaker}</h2>
           <p className="story-role">{INTRO.role}</p>
           {INTRO.lines.map((line) => <p key={line}>{line}</p>)}
-          <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
+          <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' })}>
             {INTRO.continue}
           </button>
         </article>
@@ -116,7 +121,7 @@ export function CryptRun() {
           <div className="story-portrait story-portrait-dark"><PixelArt rows={SPRITES.gate} /></div>
           <h2>{GATE.title}</h2>
           {GATE.lines.map((line) => <p key={line}>{line}</p>)}
-          <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
+          <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' })}>
             {GATE.continue}
           </button>
         </article>
@@ -155,7 +160,7 @@ export function CryptRun() {
                     className={`floor-node is-${access}`}
                     disabled={access !== 'ready'}
                     aria-label={`${node.label}: ${node.title}. ${stateLabel}`}
-                    onClick={() => setRun(reduceRun(run, { type: 'open', nodeId: node.id }))}
+                    onClick={() => dispatch({ type: 'open', nodeId: node.id })}
                   >
                     <span className="floor-orb"><PixelArt rows={sprite} /></span>
                     <span className="floor-copy">
@@ -172,7 +177,7 @@ export function CryptRun() {
             {NODES.map((node) => <li key={node.id}>{node.label}</li>)}
           </ul>
           {run.guardianCleared && (
-            <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
+            <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' })}>
               {FLOOR.door}
             </button>
           )}
@@ -182,9 +187,9 @@ export function CryptRun() {
       {run.phase === 'fight' && run.battle && (
         <CombatView
           battle={run.battle}
-          onAction={(action) => setRun(reduceRun(run, { type: 'combat', action }))}
-          onContinue={() => setRun(reduceRun(run, { type: 'continue' }))}
-          onRetry={() => setRun(reduceRun(run, { type: 'retry-fight' }))}
+          onAction={(action) => dispatch({ type: 'combat', action })}
+          onContinue={() => dispatch({ type: 'continue' })}
+          onRetry={() => dispatch({ type: 'retry-fight' })}
         />
       )}
 
@@ -197,7 +202,7 @@ export function CryptRun() {
           {run.outcomeNote ? (
             <>
               <p className="ok">{run.outcomeNote}</p>
-              <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
+              <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' })}>
                 {event.continue}
               </button>
             </>
@@ -208,7 +213,7 @@ export function CryptRun() {
                   key={choice.id}
                   type="button"
                   className="btn ghost crypt-block"
-                  onClick={() => setRun(reduceRun(run, { type: 'choose', choiceId: choice.id }))}
+                  onClick={() => dispatch({ type: 'choose', choiceId: choice.id })}
                 >
                   {choice.label}
                 </button>
@@ -224,7 +229,7 @@ export function CryptRun() {
           <p className="lock-kicker">{treasure.label}</p>
           <h2>{treasure.title}</h2>
           <p>{treasure.prose}</p>
-          <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
+          <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' })}>
             {treasure.take}
           </button>
         </article>
