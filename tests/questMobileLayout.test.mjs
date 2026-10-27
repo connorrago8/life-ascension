@@ -58,3 +58,10 @@ test('mobile quest card prioritizes completion without removing secondary action
   assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px;/);
   assert.match(css, /\.quest-card-actions \.btn:not\(\.ghost\) \{ order: -1;/);
 });
+
+test('authenticated character hides sample progression level', () => {
+  const character = readFileSync(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
+  const screen = readFileSync(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
+  assert.match(character, /<CharacterScreen displayName=\{state\.name\} hideSampleStats hideSampleLevel \/>/);
+  assert.match(screen, /!hideSampleLevel && <p className="level-line">/);
+});
