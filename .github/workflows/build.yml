@@ -76,4 +76,5 @@ jobs:
             tests/sql/quest_receipt_v2_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
+          bash tests/sql/quest_receipt_v2_concurrency.sh
           echo "All SQL smoke tests passed"
