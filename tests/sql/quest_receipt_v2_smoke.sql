@@ -29,6 +29,9 @@ declare
   v_legacy_inst uuid;
   v_v2_quest uuid;
   v_v2_inst uuid;
+  v_lost_quest uuid;
+  v_lost_inst uuid;
+  v_awarded_at timestamptz;
 begin
   -- Use the supported API: authenticated direct INSERT into quests is deliberately denied.
   v_quest := public.create_scheduled_quest(
@@ -106,6 +109,27 @@ begin
   if public.set_quest_instance_status(v_v2_inst,'complete') <> 'completed'
      or (select count(*) from public.xp_ledger where instance_id=v_v2_inst) <> 1 then
     raise exception 'v2-to-legacy compatibility awarded duplicate XP';
+  end if;
+
+  -- Lost-response replay: commit the award but discard its first RPC response.
+  -- A retry must confirm the durable ledger award without awarding a second XP.
+  v_lost_quest := public.create_scheduled_quest(
+    'Lost response retry receipt','personal_growth','once',
+    (now() at time zone 'America/Chicago')::date,'scheduled'
+  );
+  select id into v_lost_inst from public.quest_instances where quest_id=v_lost_quest;
+  perform public.set_quest_instance_status_v2(v_lost_inst,'complete');
+  select awarded_at into v_awarded_at from public.xp_ledger where instance_id=v_lost_inst;
+  if v_awarded_at is null then
+    raise exception 'lost-response fixture did not durably award XP';
+  end if;
+  r := public.set_quest_instance_status_v2(v_lost_inst,'complete');
+  if r->>'reward_status' <> 'already_awarded'
+     or r->>'xp_awarded' <> '0'
+     or r->>'reward_confirmed' <> 'true'
+     or (r->>'reward_awarded_at')::timestamptz is distinct from v_awarded_at
+     or (select count(*) from public.xp_ledger where instance_id=v_lost_inst) <> 1 then
+    raise exception 'lost-response retry failed ledger-backed confirmation: %',r;
   end if;
 
   -- Deferral and resumption never earn XP and must preserve a valid status.
