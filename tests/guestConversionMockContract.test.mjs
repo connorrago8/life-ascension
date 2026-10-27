@@ -4,8 +4,15 @@ import test from 'node:test';
 
 function convertGuest({ guest, account, operationId, confirmedOverwrite = false }) {
   if (!operationId || !guest?.id || !account?.id) throw Error('invalid identity');
-  if (account.ownerGuestId && account.ownerGuestId !== guest.id && !confirmedOverwrite) {
-    return { status: 'confirmation-required', account };
+  const belongsToAnotherGuest = account.ownerGuestId && account.ownerGuestId !== guest.id;
+  const hasUnattributedExistingProgress = !account.ownerGuestId && (
+    (account.receipts?.length ?? 0) > 0 || (account.quests?.length ?? 0) > 0 ||
+    (account.inventory?.length ?? 0) > 0 || Object.keys(account.equipped ?? {}).length > 0
+  );
+  if (belongsToAnotherGuest || hasUnattributedExistingProgress) {
+    // A confirmation is only consent to request an authoritative server-side transfer.
+    // It must never silently merge or overwrite another account's progression in the client.
+    return { status: confirmedOverwrite ? 'server-transfer-required' : 'confirmation-required', account };
   }
   const receipts = new Map((account.receipts ?? []).map(r => [r.id, r]));
   if (account.appliedOperations?.includes(operationId)) {
@@ -64,4 +71,23 @@ test('two users stay independent and malformed rewards fail closed', () => {
   assert.equal(friend.account.xp, 5);
   assert.equal(friend.account.receipts.some(r => r.id === 'izzy-r1'), false);
   assert.throws(() => convertGuest({ guest: { id: 'bad', receipts: [{ id: 'r', xp: -5 }] }, account: { id: 'user' }, operationId: 'op' }), /invalid receipt/);
+});
+
+
+test('confirmation cannot merge or overwrite another guest account without server authority', () => {
+  const existing = { id: 'user-1', ownerGuestId: 'guest-A', receipts: [{ id: 'A-r1', xp: 90 }], xp: 90, inventory: ['A-gear'], equipped: { weapon: 'A-gear' } };
+  const guest = { id: 'guest-B', receipts: [{ id: 'B-r1', xp: 10 }], inventory: ['B-gear'] };
+  const result = convertGuest({ guest, account: existing, operationId: 'transfer-B', confirmedOverwrite: true });
+  assert.equal(result.status, 'server-transfer-required');
+  assert.deepEqual(result.account, existing);
+  assert.equal(existing.receipts.length, 1);
+});
+
+test('unattributed existing account progress requires server transfer even after confirmation', () => {
+  const existing = { id: 'user-1', quests: ['existing-quest'], inventory: ['existing-item'] };
+  const guest = { id: 'guest-new', quests: ['guest-quest'] };
+  assert.equal(convertGuest({ guest, account: existing, operationId: 'op-new' }).status, 'confirmation-required');
+  const result = convertGuest({ guest, account: existing, operationId: 'op-new', confirmedOverwrite: true });
+  assert.equal(result.status, 'server-transfer-required');
+  assert.deepEqual(result.account, existing);
 });
