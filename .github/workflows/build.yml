@@ -1,7 +1,7 @@
 name: Verify application build
 on:
   push:
-    branches: [main]
+    branches: [main, charlie/belt-static-mobile-qa]
   pull_request:
     branches: [main]
 permissions:
@@ -76,3 +76,34 @@ jobs:
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           echo "All five SQL smoke tests passed"
+
+  belt-mobile-qa:
+    name: Belt visual QA (sandboxed, static, 16 screenshots)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/charlie/belt-static-mobile-qa'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no hosted services)
+        run: npm install --no-audit --no-fund
+      - name: Capture and attest 16 belt comparisons using Chromium sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0 || { echo "ERROR: refusing root browser capture"; exit 1; }
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$browser" || { echo "ERROR: sandboxed Chromium/Chrome unavailable"; exit 1; }
+          CHROMIUM_BIN="$browser" node scripts/run-belt-mobile-qa-unprivileged.mjs artifacts/belt-mobile-qa
+      - name: Upload screenshot evidence for CEO/Charlie review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: belt-mobile-qa-${{ github.sha }}
+          path: artifacts/belt-mobile-qa/
+          if-no-files-found: warn
+          retention-days: 7
