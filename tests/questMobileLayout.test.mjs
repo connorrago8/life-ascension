@@ -33,7 +33,7 @@ test('retry preserves the original operation ID on network failure or unreadable
 test('new progress actions never reuse or replace a pending request', () => {
   assert.match(controls, /if \(pending\) \{ setRetrying\(true\); return; \}/);
   assert.match(controls, /const operation = \{id: crypto\.randomUUID\(\), delta\};/);
-  assert.match(controls, /Number\.isInteger\(parsed\.delta\)/);
+  assert.match(controls, /parsePendingProgress\(localStorage\.getItem\(storageKey\)\)/);
 });
 
 test('custom amount cannot change while saving or retrying', () => {
