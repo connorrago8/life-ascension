@@ -20,7 +20,11 @@ try {
   throw new Error('Playwright is not installed. Install it and Chromium in an isolated QA runner; no browser tests ran.');
 }
 const baseURL = process.env.QA_BASE_URL || 'http://127.0.0.1:3000';
-const browser = await chromium.launch({ headless: true, chromiumSandbox: true });
+const browser = await chromium.launch({
+  headless: true,
+  chromiumSandbox: true,
+  ...(process.env.CHROMIUM_BIN ? { executablePath: process.env.CHROMIUM_BIN } : {}),
+});
 const output = 'artifacts/quest-progress';
 await mkdir(output, { recursive: true });
 try {
