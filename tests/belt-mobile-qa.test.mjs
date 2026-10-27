@@ -35,3 +35,13 @@ test('offline belt QA generates 16 full-character static comparisons without bro
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('browser capture fails closed without disabling Chromium sandbox or mislabeling viewport width', async () => {
+  const script = await readFile(new URL('../scripts/generate-belt-mobile-qa.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(script, /['"]--no-sandbox['"]/);
+  assert.match(script, /Refusing root Chromium screenshot capture/);
+  assert.match(script, /checkedPngDimensions\(pngPath, width\)/);
+  assert.match(script, /assert\.equal\(actualWidth, expectedWidth/);
+  assert.match(script, /'--user-data-dir=' \+ profileDir/);
+  assert.match(script, /if \(profileDir\) await rm\(profileDir/);
+});
