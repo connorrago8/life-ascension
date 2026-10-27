@@ -84,6 +84,7 @@ try {
   console.log('PASS: measured CDP 2x page scale, no document overflow, and focus at four widths.');
   await page.setViewportSize({ width: 390, height: 844 });
   console.log('PASS: real Tab focus, visible Add/Undo outlines and no overflow at 320/375/390/430px.');
+  const timedSaveRetryStart = performance.now();
   await addButton.click();
   await page.getByText('Save not confirmed. Retry the same operation before logging more.').waitFor();
   const pending = await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only'));
@@ -106,6 +107,12 @@ try {
   const retryLog = await page.locator('[data-testid="qa-operation-log"]').innerText();
   assert.ok(retryLog.includes(`|${original.id}|2|saved`), 'Retry must reuse original operation ID and delta');
   assert.equal(await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only')), null);
+  const timedSaveRetryMs = Math.round(performance.now() - timedSaveRetryStart);
+  const timedMetrics = await page.evaluate(() => ({ cssWidth: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
+  await page.screenshot({ path: join(output, 'quest-progress-timed-save-retry-390.png'), fullPage: true });
+  console.log('QUEST_SAVE_RETRY_TIMING', JSON.stringify({ elapsedMs: timedSaveRetryMs, actions: 2, ...timedMetrics,
+    operationIdPreserved: retryLog.includes(`|${original.id}|2|saved`) }));
+  assert.ok(timedSaveRetryMs <= 30000, `Mock Save/Retry took ${timedSaveRetryMs}ms, exceeding 30-second budget`);
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
