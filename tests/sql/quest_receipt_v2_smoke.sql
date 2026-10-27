@@ -94,6 +94,18 @@ begin
     raise exception 'defer/resume created an XP ledger entry';
   end if;
 
+  -- SQL NULL is not a valid action. In PL/pgSQL, NULL NOT IN (...) is NULL,
+  -- not TRUE; reject explicitly rather than returning a misleading success receipt.
+  begin
+    perform public.set_quest_instance_status_v2(v_deferred_inst,null);
+    raise exception 'null action was accepted';
+  exception when others then
+    if sqlerrm <> 'Unsupported action' then raise; end if;
+  end;
+  if exists (select 1 from public.xp_ledger where instance_id=v_deferred_inst) then
+    raise exception 'null action created an XP ledger entry';
+  end if;
+
   -- Future scheduled chores cannot be completed before their due date.
   v_future := public.create_scheduled_quest(
     'Future receipt test','personal_growth','once',
