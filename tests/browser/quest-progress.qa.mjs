@@ -51,6 +51,14 @@ try {
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
   await page.getByRole('button', { name: /Undo 2 repetitions/ }).click();
+  // Preserve real-browser evidence even when Undo does not confirm; never claim a pass by timeout.
+  console.log('UNDO QA STATE:', JSON.stringify({
+    selectedMock: await page.getByLabel('Mock next response (no network)').inputValue(),
+    operations: await page.locator('[data-testid="qa-operation-log"]').innerText(),
+    alerts: await page.getByRole('alert').allInnerTexts(),
+    statuses: await page.getByRole('status').allInnerTexts(),
+  }));
+  await page.screenshot({ path: join(output, 'quest-progress-undo-diagnostic.png'), fullPage: true });
   await page.getByText('Progress saved.').waitFor();
   assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\|-2\|saved/);
   await page.getByRole('button', { name: /Seed malformed journal/ }).click();
