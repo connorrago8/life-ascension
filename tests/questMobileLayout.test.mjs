@@ -65,3 +65,8 @@ test('authenticated character hides sample progression level', () => {
   assert.match(character, /<CharacterScreen displayName=\{state\.name\} hideSampleStats hideSampleLevel \/>/);
   assert.match(screen, /!hideSampleLevel && <p className="level-line">/);
 });
+
+test('quest metadata uses progressive disclosure', () => {
+  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /<details><summary>Quest details<\/summary>/);
+});
