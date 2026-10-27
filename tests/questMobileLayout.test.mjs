@@ -94,3 +94,8 @@ test('progress save never sends a new operation when browser storage fails', () 
   assert.match(source, /localStorage\.setItem\(storageKey, JSON\.stringify\(operation\)\); \} catch \{ setStorageError\(true\); return; \}/);
   assert.ok(source.indexOf('localStorage.setItem(storageKey, JSON.stringify(operation))') < source.indexOf('void onLog(instance.id, operation.id, operation.delta)'));
 });
+
+test('each progress meter is labelled with its quest title', () => {
+  const controls = readFileSync(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
+  assert.match(controls, /htmlFor=\{`progress-\$\{instance\.id\}`\}>\{quest\.title\}: \{amount\} \/ \{target\}/);
+});
