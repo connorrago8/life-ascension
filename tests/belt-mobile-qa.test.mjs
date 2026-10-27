@@ -21,6 +21,7 @@ test('offline belt QA generates 16 full-character static comparisons without bro
     for (const item of manifest.files) {
       const html = await readFile(join(dir, item.html), 'utf8');
       assert.match(html, /<meta name="viewport"/);
+      assert.match(html, /\.card h2\{[^}]*min-height:28px;display:flex;align-items:center;justify-content:center/, 'starter and Level 2 labels must reserve equal height so avatars align at 320px');
       assert.match(html, /Preview only|Visual QA only/i);
       assert.match(html, /data-belt-stage="starter"/);
       assert.match(html, /data-belt-stage="equipped"/);
