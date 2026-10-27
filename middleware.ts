@@ -6,7 +6,12 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === '/preview' || request.nextUrl.pathname.startsWith('/preview/')) {
     return NextResponse.next();
   }
-  // The local-only QA fixture must never contact auth or Supabase in development.\n  // Its page independently returns notFound() outside development.\n  if (process.env.NODE_ENV === 'development' && request.nextUrl.pathname === '/qa/quest-progress') {\n    return NextResponse.next();\n  }\n  return refreshSession(request);
+  // The local-only QA fixture must never contact auth or Supabase in development.
+  // Its page independently returns notFound() outside development.
+  if (process.env.NODE_ENV === 'development' && request.nextUrl.pathname === '/qa/quest-progress') {
+    return NextResponse.next();
+  }
+  return refreshSession(request);
 }
 
 export const config = {
