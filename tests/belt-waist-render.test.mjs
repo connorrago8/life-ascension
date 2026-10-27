@@ -52,3 +52,32 @@ test('earned belt HTML renders leather and buckle, never later accessories', asy
   assert.doesNotMatch(html, /data-waist-part="starter-tie"/);
   assert.doesNotMatch(html, /pouch|diagonal-strap|charm/i);
 });
+
+
+test('waist stage remains visually distinguishable at compact avatar scales', async () => {
+  const Layer = await loadBeltLayer();
+  const starter = renderToStaticMarkup(React.createElement('svg', { viewBox: '0 0 240 380' },
+    React.createElement(Layer, { stage: 'starter' })));
+  const equipped = renderToStaticMarkup(React.createElement('svg', { viewBox: '0 0 240 380' },
+    React.createElement(Layer, { stage: 'equipped' })));
+
+  // The plain tie hangs below the upgraded waistline; the earned buckle must
+  // remain large enough to identify when the entire avatar is displayed small.
+  assert.match(starter, /M120 208 L117 220 121 231/);
+  assert.doesNotMatch(equipped, /M120 208 L117 220 121 231/);
+  assert.match(equipped, /M86 198 Q120 194 154 198/);
+  assert.doesNotMatch(starter, /M86 198 Q120 194 154 198/);
+
+  const buckle = equipped.match(/<rect x="(\\d+)" y="(\\d+)" width="(\\d+)" height="(\\d+)" rx="2" fill="#C8AC77"/);
+  assert.ok(buckle, 'earned buckle must have an identifiable outer frame');
+  const [x, y, width, height] = buckle.slice(1).map(Number);
+  assert.ok(x >= 0 && y >= 0 && x + width <= 240 && y + height <= 380);
+  for (const avatarWidth of [96, 120, 144, 160]) {
+    assert.ok(width * avatarWidth / 240 >= 8,
+      `buckle too narrow at ${avatarWidth}px avatar width`);
+    assert.ok(height * avatarWidth / 240 >= 7,
+      `buckle too short at ${avatarWidth}px avatar width`);
+  }
+  // Structural/scale regression only: actual 320/375/390/430 viewport
+  // screenshots and grayscale/occlusion inspection remain separate QA gates.
+});
