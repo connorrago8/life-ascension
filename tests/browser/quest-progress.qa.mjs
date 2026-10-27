@@ -36,7 +36,39 @@ try {
   await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
-  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  // CEO P1: verify a real Tab sequence and visible keyboard focus at phone widths.
+  // This uses the actual component, not a static markup assertion.
+  const addButton = page.getByRole('button', { name: /^Add 2 repetitions/ });
+  const undoButton = page.getByRole('button', { name: /Undo 2 repetitions/ });
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.getByLabel('Mock next response (no network)').focus();
+    for (const [target, label] of [[addButton, 'Add'], [undoButton, 'Undo']]) {
+      await page.keyboard.press('Tab');
+      const focus = await target.evaluate(element => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return {
+          active: document.activeElement === element,
+          focusVisible: element.matches(':focus-visible'),
+          outlineVisible: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
+          withinViewport: rect.left >= 0 && rect.right <= innerWidth + 1,
+        };
+      });
+      assert.equal(focus.active, true, `${label} must receive keyboard Tab focus at ${width}px`);
+      assert.equal(focus.focusVisible && focus.outlineVisible, true,
+        `${label} must show a visible keyboard focus outline at ${width}px`);
+      assert.equal(focus.withinViewport, true, `${label} focus must remain within ${width}px viewport`);
+      if (label === 'Add') {
+        await page.screenshot({ path: join(output, `quest-progress-keyboard-${width}.png`), fullPage: true });
+      }
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
+      `Keyboard focus must not cause horizontal overflow at ${width}px`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  console.log('PASS: real Tab focus, visible Add/Undo outlines and no overflow at 320/375/390/430px.');
+  await addButton.click();
   await page.getByText('Save not confirmed. Retry the same operation before logging more.').waitFor();
   const pending = await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only'));
   assert.ok(pending, 'Pending journal must survive an unconfirmed mock response');
