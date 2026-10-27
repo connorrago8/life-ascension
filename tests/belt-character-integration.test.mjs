@@ -20,8 +20,9 @@ async function loadCharacter() {
   const stage = execute(compile(await readFile(new URL('../lib/preview/beltProgression.ts', import.meta.url), 'utf8')), require);
   const waist = execute(compile(await readFile(new URL('../components/preview/BeltWaistLayer.tsx', import.meta.url), 'utf8'), ts.JsxEmit.ReactJSX),
     (name) => name.includes('beltProgression') ? stage : require(name));
+  const helmet = execute(compile(await readFile(new URL('../components/preview/HelmetHeadLayer.tsx', import.meta.url), 'utf8'), ts.JsxEmit.ReactJSX), require);
   return execute(compile(await readFile(new URL('../components/preview/HomeCharacter.tsx', import.meta.url), 'utf8'), ts.JsxEmit.ReactJSX),
-    (name) => name.includes('BeltWaistLayer') ? waist : name.includes('characterRender') ? { homeAriaLabel: () => 'Adventurer' } : require(name)).HomeCharacter;
+    (name) => name.includes('BeltWaistLayer') ? waist : name.includes('HelmetHeadLayer') ? helmet : name.includes('characterRender') ? { homeAriaLabel: () => 'Adventurer' } : require(name)).HomeCharacter;
 }
 const model = {
   name: 'Adventurer', skin: '#ccb18d', skinShadow: '#a78469', hair: '#63422e',

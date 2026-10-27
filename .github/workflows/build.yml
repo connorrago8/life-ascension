@@ -1,7 +1,7 @@
 name: Verify application build
 on:
   push:
-    branches: [main, charlie/belt-static-mobile-qa]
+    branches: [main, charlie/belt-static-mobile-qa, charlie/l1-l5-helmet-renderer-qa-20261027]
   pull_request:
     branches: [main]
 permissions:
@@ -105,5 +105,57 @@ jobs:
         with:
           name: belt-mobile-qa-${{ github.sha }}
           path: artifacts/belt-mobile-qa/
+          if-no-files-found: warn
+          retention-days: 7
+
+  helmet-mobile-qa:
+    name: Helmet visual QA (sandboxed, static, 8 screenshots)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/charlie/l1-l5-helmet-renderer-qa-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (mock-only, no hosted services)
+        run: npm install --no-audit --no-fund
+      - name: Capture actual Chromium screenshots (sandbox required)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0 || { echo 'ERROR: refusing root browser'; exit 1; }
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$browser" || { echo 'ERROR: sandboxed Chromium unavailable'; exit 1; }
+          CHROMIUM_BIN="$browser" node scripts/generate-helmet-mobile-qa.mjs artifacts/helmet-mobile-qa --capture
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            import {readFile,writeFile} from "node:fs/promises";
+            import {createHash} from "node:crypto";
+            const dir="artifacts/helmet-mobile-qa";
+            const manifest=JSON.parse(await readFile(dir+"/manifest.json","utf8"));
+            assert.equal(manifest.files.length,8);
+            assert.equal(manifest.browserScreenshotsCaptured,true);
+            const captures=[];
+            for(const item of manifest.files){
+              const f=item.png;
+              assert.ok(f && f.startsWith("helmet-"));
+              const b=await readFile(dir+"/"+f);
+              assert.equal(b.readUInt32BE(16),item.width);
+              assert.ok(b.readUInt32BE(20)>=380);
+              captures.push({file:f,width:item.width,height:b.readUInt32BE(20),sha256:createHash("sha256").update(b).digest("hex")});
+            }
+            await writeFile(dir+"/sha256-evidence.json",JSON.stringify({sourceCommit:process.env.GITHUB_SHA,visualMode:"static-proposed-not-owned",screenshots:captures},null,2)+"\n");
+          '
+      - name: Validate all eight helmet browser screenshots and hashes
+        run: node scripts/verify-helmet-mobile-evidence.mjs artifacts/helmet-mobile-qa
+      - name: Upload immutable helmet QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helmet-mobile-qa-${{ github.sha }}
+          path: artifacts/helmet-mobile-qa/
           if-no-files-found: warn
           retention-days: 7

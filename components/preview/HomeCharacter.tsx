@@ -1,5 +1,6 @@
 import { homeAriaLabel, type HomeCharacterModel } from '../../lib/preview/characterRender';
 import { BeltWaistLayer } from './BeltWaistLayer';
+import { HelmetHeadLayer } from './HelmetHeadLayer';
 import type { BeltStage } from '../../lib/preview/beltProgression';
 
 /**
@@ -7,7 +8,7 @@ import type { BeltStage } from '../../lib/preview/beltProgression';
  * the shared appearance model, so Character and Home stay in sync.
  * Flat material planes deliberately avoid the old puppet-like face and limbs.
  */
-export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { model: HomeCharacterModel; idPrefix?: string; beltPreviewStage?: BeltStage }) {
+export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage, helmetPreviewStage }: { model: HomeCharacterModel; idPrefix?: string; beltPreviewStage?: BeltStage; helmetPreviewStage?: 'starter' | 'proposed' }) {
   const shirt = `${idPrefix}-shirt`;
   const skin = `${idPrefix}-skin`;
   const hair = `${idPrefix}-hair`;
@@ -90,6 +91,8 @@ export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { 
         <path d="M100 88 L106 94 M140 88 L134 94" stroke={model.skinShadow} strokeWidth="1" opacity=".45" />
         {model.hood ? <path d="M84 54 Q79 11 120 8 Q163 10 157 56 L150 68 145 43 Q120 21 96 43 L91 68Z"
           fill={model.hood} stroke={model.hoodLight ?? model.hood} strokeWidth="2" /> : null}
+        {/* Explicit design-only head overlay: never inferred from level or inventory. */}
+        {helmetPreviewStage === 'proposed' ? <HelmetHeadLayer /> : null}
         {/* Main-hand equipment is carried, while its grip stays at hand height. */}
         {model.mainHand === 'lantern' ? (
           <g data-prop="lantern">

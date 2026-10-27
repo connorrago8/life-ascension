@@ -68,13 +68,16 @@ function execute(js, resolver) {
 async function loadCharacter() {
   const stageSource = await readFile(join(root, 'lib/preview/beltProgression.ts'), 'utf8');
   const waistSource = await readFile(join(root, 'components/preview/BeltWaistLayer.tsx'), 'utf8');
+  const helmetSource = await readFile(join(root, 'components/preview/HelmetHeadLayer.tsx'), 'utf8');
   const characterSource = await readFile(join(root, 'components/preview/HomeCharacter.tsx'), 'utf8');
   assert.match(characterSource, /beltPreviewStage/, 'requires Beta opt-in renderer; do not fake an unlocked belt');
   const stage = execute(compile(stageSource), require);
   const waist = execute(compile(waistSource), (name) =>
     name.includes('beltProgression') ? stage : require(name));
+  const helmet = execute(compile(helmetSource), require);
   const character = execute(compile(characterSource), (name) =>
     name.includes('BeltWaistLayer') ? waist :
+    name.includes('HelmetHeadLayer') ? helmet :
     name.includes('characterRender') ? { homeAriaLabel: () => 'Adventurer — visual QA only' } :
     require(name));
   assert.equal(typeof character.HomeCharacter, 'function');
