@@ -1,6 +1,6 @@
 # Belt → Helmet: truthful character appearance contract (draft)
 
-**Source of policy:** Latest Founder-approved milestones: Level 1 Weapon, Level 2 Traveler's Belt, Level 3 Forgotten Crypt access, Level 5 Helmet, Level 10 Chest, Level 15 Gloves, Level 20 Boots and Level 25 Legs. Level 5 Helmet is ON HOLD and is NOT an approved equipment slot. Separate founder rule: +1 XP once daily after three eligible daily quests. None of these policy decisions alone proves that a player currently owns an item.
+**Source of policy:** Latest Founder-approved milestones: Level 1 Weapon, Level 2 Traveler's Belt, Level 3 Forgotten Crypt access, Level 5 Helmet, Level 10 Chest, Level 15 Gloves, Level 20 Boots and Level 25 Legs. Level 4 Wayfarer's Mantle is ON HOLD and is NOT an approved equipment slot. Separate founder rule: +1 XP once daily after three eligible daily quests. None of these policy decisions alone proves that a player currently owns an item.
 
 ## Four distinct concepts
 
@@ -20,9 +20,9 @@
 | Base character | Recognizable face, body, plain waist tie | Starter already rich with upgraded buckle/pouches/strap |
 | Level 2 Traveler's Belt | Swap tie for leather belt and legible centered buckle. Keep torso silhouette, face and hands stable | XP bonus, extra strength, pouch or charm unlock without approval |
 | Level 3 Crypt | Dungeon availability changes in navigation, not the avatar silhouette | No automatic shoulder/helmet or permanent Crypt Sigil |
-| Level 5 Helmet | **Proposed future cosmetic** drape layer behind upper arms with recognizable head and waist visible; actual art/render requires approval | No auto equip, no automatic upgrade on reaching level, no gameplay stat claim |
+| Level 5 Helmet | **Proposed opt-in iron helmet** shaped around the head, keeping the eyes, mouth and hairline readable; draft PR #38 is design-only, not an owned item | No auto equip, no automatic upgrade on reaching level, no gameplay stat claim |
 
-The precise helmet geometry is **not** authorized as a completed asset in this contract. It must avoid concealing the Level 2 belt; Beta should verify the layering order: back cloth, legs, torso, belt, front arms/face. Any alternate helmet shape requires separate evidence-based design review.
+Draft PR #38 provides an isolated proposed helmet head overlay, not a live entitlement. Beta should verify the head layer does not cover the eyes, mouth or weapon; Level 2 belt remains unchanged below it. Any new helmet variant needs evidence-based review.
 
 ## Data boundary (review proposal, not currently implemented)
 
