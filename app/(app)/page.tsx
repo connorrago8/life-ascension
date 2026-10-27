@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {supabase} from '../../lib/supabase';
 import {ADVENTURER_CLASS} from '../../lib/character';
 import {coerceXp,levelFor} from '../../lib/level';
+import {confirmedQuestReward} from '../../lib/questReward';
 import {QuestProgressControls} from '../../components/QuestProgressControls';
 type Quest={id:string;title:string;domain:string;cadence:'once'|'daily';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
@@ -46,19 +47,19 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
  },[user]);
  useEffect(()=>{void load();const {data:{subscription}}=supabase().auth.onAuthStateChange(()=>{void load()});return()=>subscription.unsubscribe()},[load]);
  useEffect(()=>{if(!reward)return;const timer=window.setTimeout(()=>setReward(null),2300);return()=>window.clearTimeout(timer)},[reward]);
- async function celebrate(title:string,previousXp:number){try{const {data,error}=await supabase().rpc('get_lifetime_xp');if(error)return;const nextXp=coerceXp(data);if(nextXp>previousXp)setReward({title,levelUp:levelFor(nextXp).level>levelFor(previousXp).level,id:Date.now()});}catch{/* Reward visuals must never interrupt an already-saved quest. */}}
+ function celebrate(title:string, result:unknown){const verified=confirmedQuestReward(result);if(verified)setReward({title,levelUp:verified.levelUp,id:Date.now()});}
  async function add(e:React.FormEvent){e.preventDefault();if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}if(!title.trim()||busy||!user)return;setBusy(true);const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
  const {error}=trackProgress
    ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
    : await supabase().rpc('create_scheduled_quest',payload);
  setMessage(error?.message||'Quest scheduled.');if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
- async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const previousXp=xp;const questTitle=quests.find(q=>instances.some(i=>i.id===id&&i.quest_id===q.id))?.title||'Quest';const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();if(!error&&action==='complete')await celebrate(questTitle,previousXp);setBusy(false)}
+ async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const questTitle=quests.find(q=>instances.some(i=>i.id===id&&i.quest_id===q.id))?.title||'Quest';const {data,error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();if(!error&&action==='complete')celebrate(questTitle,data);setBusy(false)}
  async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
   if(layoutPreview||busy)return 'retry';
   setBusy(true);
-  const previousXp=xp;const current=instances.find(i=>i.id===id);const quest=quests.find(q=>q.id===current?.quest_id);
+  const current=instances.find(i=>i.id===id);const quest=quests.find(q=>q.id===current?.quest_id);
   try {
-   const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
+   const {data,error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
    if(error){
     // Transport/server errors may have committed before the response was lost.
     const definite=/^(22|23|P0001)/.test(error.code ?? '');
@@ -69,7 +70,7 @@ setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
    }
    setMessage('Progress saved.');
    await load();
-   if(current&&quest?.target_amount&&current.current_amount+delta===quest.target_amount)await celebrate(quest.title,previousXp);
+   if(current&&quest?.target_amount&&current.current_amount+delta===quest.target_amount)celebrate(quest.title,data);
    return 'saved';
   } catch {
    setMessage('Connection lost. Retry the pending operation; do not log again.');
