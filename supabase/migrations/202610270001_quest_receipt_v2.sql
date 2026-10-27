@@ -8,6 +8,8 @@ set search_path=''
 as $$
 declare
   inst public.quest_instances%rowtype;
+  q public.quests%rowtype;
+  v_today date := (now() at time zone 'America/Chicago')::date;
   ledger_entry_id uuid;
   receipt_status text;
   receipt_xp integer := 0;
@@ -28,7 +30,24 @@ begin
     raise exception 'Instance not found';
   end if;
 
+  -- Mirror archived quest and due-date enforcement from the effective 0007 RPC.
+  select * into q from public.quests where id=inst.quest_id and owner_id=auth.uid();
+  if not found then raise exception 'Quest not found'; end if;
+  if inst.status <> 'completed' and not q.active then
+    raise exception 'Active quest not found';
+  end if;
   if p_action='complete' then
+    if inst.status <> 'completed' then
+      if q.cadence='daily' and (inst.due_date > v_today or inst.due_date < q.scheduled_for) then
+        raise exception 'Future daily quests cannot be completed';
+      end if;
+      if q.cadence='daily' and inst.due_date < v_today-2 then
+        raise exception 'Daily quests can only be completed for today or the previous 2 days';
+      end if;
+      if q.cadence='once' and q.quest_type<>'goal' and inst.due_date > v_today then
+        raise exception 'Future scheduled quest cannot be completed yet';
+      end if;
+    end if;
     if inst.status='completed' then
       receipt_status := 'already_awarded';
     else
@@ -59,7 +78,7 @@ begin
       'quest_completion_confirmed', true,
       'reward_status', receipt_status,
       'xp_awarded', receipt_xp,
-      'level_up', false
+      'reward_confirmed', (receipt_xp = 1)
     );
   elsif p_action='defer' and inst.status='available' then
     update public.quest_instances set status='deferred' where id=inst.id;
@@ -72,7 +91,7 @@ begin
       'quest_completion_confirmed', false,
       'reward_status', 'not_awarded',
       'xp_awarded', 0,
-      'level_up', false
+      'reward_confirmed', (receipt_xp = 1)
     );
   elsif p_action='resume' and inst.status='deferred' then
     update public.quest_instances set status='available' where id=inst.id;
@@ -85,7 +104,7 @@ begin
       'quest_completion_confirmed', false,
       'reward_status', 'not_awarded',
       'xp_awarded', 0,
-      'level_up', false
+      'reward_confirmed', (receipt_xp = 1)
     );
   end if;
 
@@ -96,7 +115,7 @@ begin
     'quest_completion_confirmed', (inst.status='completed'),
     'reward_status', case when inst.status='completed' then 'already_awarded' else 'not_awarded' end,
     'xp_awarded', 0,
-    'level_up', false
+    'reward_confirmed', (receipt_xp = 1)
   );
 end;
 $$;
