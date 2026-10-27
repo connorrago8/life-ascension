@@ -7,7 +7,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const require = createRequire(import.meta.url);
-const compile = (source, jsx = ts.JsxEmit.None) => ts.transpileModule(source, {
+const compile = (source, jsx = ts.JsxEmit.ReactJSX) => ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx },
 }).outputText;
 const execute = (js, resolver) => {
