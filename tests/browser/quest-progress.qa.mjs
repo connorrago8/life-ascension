@@ -78,7 +78,14 @@ try {
   await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByRole('button', { name: /Retry saving progress/ }).waitFor();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
-  await page.getByRole('button', { name: /Retry saving progress/ }).click();
+  // Keyboard-only Retry must preserve the original operation ID and delta.
+  const retryButton = page.getByRole('button', { name: /Retry saving progress/ });
+  await page.getByLabel('Mock next response (no network)').focus();
+  await page.keyboard.press('Tab');
+  assert.equal(await retryButton.evaluate(element =>
+    document.activeElement === element && element.matches(':focus-visible')), true,
+    'Retry must be reachable with Tab and show keyboard focus');
+  await page.keyboard.press('Enter');
   await page.getByText('Progress saved.').waitFor();
   const retryLog = await page.locator('[data-testid="qa-operation-log"]').innerText();
   assert.ok(retryLog.includes(`|${original.id}|2|saved`), 'Retry must reuse original operation ID and delta');
