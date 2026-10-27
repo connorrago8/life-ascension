@@ -158,6 +158,9 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
 
   if (command.type === 'combat') {
     if (state.phase !== 'fight' || !state.battle || state.battle.status !== 'ongoing') return state;
+    // Ignore stale combat commands for encounters already completed in this run.
+    if (state.encounterId === FIGHT_ID && state.fightCleared) return state;
+    if (state.encounterId === GUARDIAN_ID && state.guardianCleared) return state;
     const battle = act(state.battle, command.action);
     return {
       ...state,
