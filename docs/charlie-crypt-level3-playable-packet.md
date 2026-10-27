@@ -48,3 +48,11 @@ At 320 / 375 / 390 / 430 CSS px, test keyboard focus and genuine 200% browser zo
 - **CEO/Grok:** Named independent review on accessibility and temporary-vs-owned item language. No assumed Grok dispatch.
 
 **STOP:** PR #22 stays draft, as do this PR and linked Belt work. No hosted writes, merges or deployments authorized by this packet.
+
+## Sentinel keyboard and screen-reader acceptance scenario (proposed, unverified)
+
+The phrase **one primary action** means one clearly prioritized *current task*, **not** removing the four existing combat choices. At 320 CSS px and actual 200% browser zoom, all four actions must remain discoverable and keyboard-operable with no horizontal overflow. The current enemy intent must remain visible as persistent text, not just a transient animation or aria-live announcement.
+
+**Executable reviewer procedure:** (1) enter an isolated, nonauthenticated QA fixture at the Sentinel wind-up with the same four actions as PR #22; (2) use keyboard Tab and Shift+Tab to reach each of the four choices, recording the DOM focus target and visible outline; (3) activate one choice with Enter or Space, check that current attack intent stays present and the status live region announces the transition **once**, rather than repeating the full page; (4) reach defeat and verify Retry and Leave remain keyboard accessible in reading order; (5) repeat with `prefers-reduced-motion: reduce` and a screen reader, recording actual spoken text and focus behavior. Do not equate a Playwright DOM assertion with a real screen-reader result.
+
+**Pass conditions:** No horizontal scroll or clipped action at 320px/200% zoom; heading/current intent/choice focus order is logical; focus does not jump onto an attack button; idle/wind-up/active/recovery each have enduring readable words and noncolor shape; Retry/Leave are independently identifiable; no XP or permanent Sigil/gear claims. **Fail closed** if the browser zoom method cannot be measured or actual screen-reader evidence is unavailable. This is design acceptance, not an implemented or verified test.
