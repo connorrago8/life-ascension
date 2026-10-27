@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashen March — Telegraph Asset Review</title>
+<style>
+:root{color-scheme:dark;--bg:#171a1d;--panel:#22272b;--line:#485158;--text:#f1eee7;--muted:#b8b1a3;--accent:#efb54c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+main{max-width:960px;margin:auto;padding:20px}h1{font-size:clamp(1.4rem,4vw,2rem);margin:.3rem 0}h2{font-size:1.1rem;margin:0 0 .4rem}.notice{color:var(--muted);max-width:70ch}
+section{border:1px solid var(--line);border-radius:14px;padding:14px;margin:16px 0;background:var(--panel)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+figure{margin:0;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px;background:#111417}
+img{display:block;width:100%;height:auto;image-rendering:pixelated;max-height:220px;object-fit:contain}
+figcaption{font-size:.85rem;color:var(--muted);padding-top:7px}
+.tag{display:inline-block;border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:1px 6px;font-size:.75rem}
+@media(max-width:520px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}section{padding:10px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+</head>
+<body><main>
+<p class="tag">PROPOSED — NOT GAMEPLAY</p>
+<h1>Ashen March Enemy Telegraphs</h1>
+<p class="notice">Static asset review for design and renderer feasibility. This page does not implement combat, attack timing, hitboxes, damage, XP, loot, or character unlocks. Cues use silhouette and directional marks; color is supplementary.</p>
+<section><h2>Wind-up / guard concepts</h2><div class="grid">
+<figure><img src="ashen-march-telegraph-concepts.svg" alt="Concept sheet containing the Cinder Hound idle and charge wind-up, Roadbound Sentry guard and counter opening, and Ash Collector idle and sweep wind-up poses"><figcaption>Original 6-state concept sheet (labels included)</figcaption></figure>
+<figure><img src="ashen-march-active-recovery-concepts.svg" alt="Concept sheet showing Cinder Hound active lunge, Roadbound Sentry shield strike, and Ash Collector recovery"><figcaption>Active and recovery concepts</figcaption></figure>
+<figure><img src="ashen-march-telegraph-concepts.svg" alt="Full telegraph concept sheet for comparing silhouettes"><figcaption>Review at actual mobile size before integration</figcaption></figure>
+</div></section>
+<section><h2>Review gates</h2><ul>
+<li>Confirm all three enemy silhouettes are distinguishable at 320–430 CSS px.</li>
+<li>Check wind-up, active, and recovery states are not visually confused.</li>
+<li>Verify reduced-motion users receive persistent, readable telegraph cues.</li>
+<li>Check contrast against both dark and lighter backgrounds.</li>
+<li>Do not integrate until Alpha/Beta and Founder review.</li>
+</ul></section>
+</main></body></html>

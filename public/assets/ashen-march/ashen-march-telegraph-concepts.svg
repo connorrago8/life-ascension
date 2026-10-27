@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 128" width="384" height="128" shape-rendering="crispEdges">
+  <title>Ashen March enemy telegraph prototype sprites</title>
+  <desc>Six transparent sprite panels: Cinder Hound idle and charge wind-up; Roadbound Sentry guard and counter-opening; Ash Collector neutral and sweep wind-up. Proposed art, not integrated gameplay.</desc>
+  <defs>
+    <g id="hound">
+      <path d="M8 35 L15 27 L29 25 L39 29 L47 27 L53 34 L49 41 L38 43 L32 51 L26 51 L27 43 L18 43 L15 51 L9 51 L11 41 Z" fill="#383b3c" stroke="#b06b43" stroke-width="2"/>
+      <path d="M14 29 L10 19 L20 25 L25 22 L29 26" fill="#383b3c" stroke="#b06b43" stroke-width="2"/>
+      <path d="M40 31 L49 22 L50 31" fill="#383b3c" stroke="#b06b43" stroke-width="2"/>
+      <rect x="43" y="33" width="4" height="3" fill="#f0c56c"/>
+      <path d="M18 43 L22 38 L30 40 L35 35 L42 38" fill="none" stroke="#e2a05b" stroke-width="2"/>
+    </g>
+    <g id="sentry">
+      <path d="M24 19 L39 19 L44 29 L41 45 L36 52 L26 52 L20 44 L19 29 Z" fill="#48545a" stroke="#b8a16b" stroke-width="2"/>
+      <path d="M24 19 L28 12 L37 12 L41 20" fill="#6a7478" stroke="#b8a16b" stroke-width="2"/>
+      <path d="M10 25 L22 22 L24 43 L12 46 Z" fill="#59656b" stroke="#d1b77b" stroke-width="2"/>
+      <path d="M15 28 L19 27 L20 40 L16 41 Z" fill="#2b3338"/>
+      <rect x="29" y="28" width="5" height="3" fill="#f0c56c"/>
+      <path d="M25 35 L38 35 M28 41 L36 41" stroke="#a9b1b2" stroke-width="2"/>
+    </g>
+    <g id="collector">
+      <path d="M27 13 L39 16 L43 27 L40 39 L46 51 L17 51 L22 39 L19 26 Z" fill="#424448" stroke="#b9a06a" stroke-width="2"/>
+      <path d="M24 15 L26 7 L38 8 L42 18 L35 23 L27 21 Z" fill="#34383c" stroke="#c5ad75" stroke-width="2"/>
+      <path d="M28 28 L39 31 L35 39 L24 37 Z" fill="#705944"/>
+      <path d="M21 39 L14 50 L20 52 L27 43 M39 40 L46 46 L43 52 L35 44" fill="#424448" stroke="#b9a06a" stroke-width="2"/>
+      <rect x="31" y="26" width="4" height="3" fill="#f0c56c"/>
+      <path d="M22 24 L17 34 M40 23 L45 32" stroke="#8c8f8e" stroke-width="2"/>
+    </g>
+  </defs>
+  <g transform="translate(0 0)">
+    <use href="#hound" x="0" y="0"/>
+    <text x="32" y="69" font-family="monospace" font-size="8" fill="#e8e1d3" text-anchor="middle">HOUND IDLE</text>
+  </g>
+  <g transform="translate(64 0)">
+    <path d="M3 18 L12 18 M5 14 L12 18 L5 22" stroke="#efb54c" stroke-width="2" fill="none"/>
+    <use href="#hound" transform="translate(-5 0) scale(1.08 1)"/>
+    <path d="M5 10 L15 10 M5 56 L15 56" stroke="#efb54c" stroke-width="2"/>
+    <text x="32" y="69" font-family="monospace" font-size="8" fill="#e8e1d3" text-anchor="middle">CHARGE WIND-UP</text>
+  </g>
+  <g transform="translate(128 0)">
+    <use href="#sentry"/>
+    <text x="32" y="69" font-family="monospace" font-size="8" fill="#e8e1d3" text-anchor="middle">SENTRY GUARD</text>
+  </g>
+  <g transform="translate(192 0)">
+    <use href="#sentry" transform="translate(5 0)"/>
+    <path d="M4 17 L13 11 L13 23 Z" fill="#efb54c"/>
+    <path d="M47 20 L58 20 M50 16 L58 20 L50 24" stroke="#efb54c" stroke-width="2" fill="none"/>
+    <text x="32" y="69" font-family="monospace" font-size="8" fill="#e8e1d3" text-anchor="middle">COUNTER OPEN</text>
+  </g>
+  <g transform="translate(256 0)">
+    <use href="#collector"/>
+    <text x="32" y="69" font-family="monospace" font-size="8" fill="#e8e1d3" text-anchor="middle">COLLECTOR IDLE</text>
+  </g>
+  <g transform="translate(320 0)">
+    <use href="#collector" transform="translate(-3 0)"/>
+    <path d="M7 19 Q32 4 57 19 M7 23 Q32 8 57 23" fill="none" stroke="#efb54c" stroke-width="2"/>
+    <path d="M6 30 L13 25 M58 30 L51 25" stroke="#efb54c" stroke-width="2"/>
+    <text x="32" y="69" font-family="monospace" font-size="8" fill="#e8e1d3" text-anchor="middle">SWEEP WIND-UP</text>
+  </g>
+  <path d="M0 80 H384" stroke="#666" stroke-width="1"/>
+  <text x="192" y="96" font-family="monospace" font-size="9" fill="#e8e1d3" text-anchor="middle">PROPOSED CONCEPT SHEET • 64px CELLS • TRANSPARENT BG</text>
+  <text x="192" y="109" font-family="monospace" font-size="8" fill="#b8b1a3" text-anchor="middle">Telegraph cues use shape + motion direction, not color alone.</text>
+  <text x="192" y="120" font-family="monospace" font-size="8" fill="#b8b1a3" text-anchor="middle">No combat logic, damage, rewards, or canon implied.</text>
+</svg>
