@@ -7,10 +7,12 @@
  *   node scripts/generate-belt-mobile-qa.mjs [output-dir]
  *   CHROMIUM_BIN=chromium node scripts/generate-belt-mobile-qa.mjs [output-dir] --capture
  * Generates 16 self-contained HTML pages (4 widths x 2 hand props x 2 color modes).
- * --capture additionally saves 16 actual browser PNGs when Chromium is available.
+ * --capture additionally saves 16 actual browser PNGs when sandboxed Chromium is available.
+ * Run capture as a non-root user with Chromium's sandbox enabled; never disable it.
  */
 import assert from 'node:assert/strict';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
@@ -28,6 +30,20 @@ const outputArg = process.argv.slice(2).find((arg) => !arg.startsWith('--'));
 const outDir = resolve(outputArg || join(root, 'artifacts', 'belt-mobile-qa'));
 const capture = process.argv.includes('--capture');
 const browser = process.env.CHROMIUM_BIN || 'chromium';
+if (capture && typeof process.getuid === 'function' && process.getuid() === 0) {
+  throw new Error('Refusing root Chromium screenshot capture: use an unprivileged sandboxed runner.');
+}
+
+async function checkedPngDimensions(file, expectedWidth) {
+  const png = await readFile(file);
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.ok(png.length >= 24 && png.subarray(0, 8).equals(signature), 'Browser did not write a valid PNG: ' + file);
+  const actualWidth = png.readUInt32BE(16);
+  const actualHeight = png.readUInt32BE(20);
+  assert.equal(actualWidth, expectedWidth, 'Chromium screenshot width mismatch: ' + file + '; expected actual ' + expectedWidth + 'px viewport, got ' + actualWidth + 'px');
+  assert.ok(actualHeight >= 380, 'Browser screenshot too short to inspect full character: ' + file);
+  return { width: actualWidth, height: actualHeight };
+}
 
 function compile(source) {
   const result = ts.transpileModule(source, {
@@ -128,6 +144,7 @@ function makePage(width, hand, mode, starter, equipped) {
 }
 
 await mkdir(outDir, { recursive: true });
+const profileDir = capture ? await mkdtemp(join(tmpdir(), 'belt-qa-chromium-')) : null;
 const HomeCharacter = await loadCharacter();
 const manifest = {
   kind: 'unauthenticated-static-belt-visual-qa',
@@ -136,6 +153,7 @@ const manifest = {
   widths, hands, modes, files: [],
   browserScreenshotsCaptured: capture,
 };
+try {
 for (const width of widths) {
   for (const hand of hands) {
     const starter = renderStage(HomeCharacter, width, hand, 'starter');
@@ -148,10 +166,13 @@ for (const width of widths) {
       if (capture) {
         const pngPath = join(outDir, name + '.png');
         execFileSync(browser, [
-          '--headless', '--no-sandbox', '--disable-gpu', '--hide-scrollbars',
+          '--headless', '--disable-gpu', '--hide-scrollbars',
+          '--disable-background-networking', '--no-first-run',
+          '--user-data-dir=' + profileDir,
           '--force-device-scale-factor=1', '--window-size=' + width + ',760',
           '--screenshot=' + pngPath, pathToFileURL(htmlPath).href,
         ], { stdio: 'pipe', timeout: 30000 });
+        item.pixelDimensions = await checkedPngDimensions(pngPath, width);
         item.png = name + '.png';
       }
       manifest.files.push(item);
@@ -159,6 +180,9 @@ for (const width of widths) {
   }
 }
 await writeFile(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+} finally {
+  if (profileDir) await rm(profileDir, { recursive: true, force: true });
+}
 console.log('Created ' + manifest.files.length + ' static full-character QA pages in ' + outDir);
 console.log(capture ? 'Captured browser screenshots; inspect actual pixels and clipping.' :
   'No screenshots captured. Rerun with --capture and Chromium to generate PNG evidence.');
