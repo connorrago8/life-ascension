@@ -13,6 +13,7 @@ declare
   ledger_entry_id uuid;
   receipt_status text;
   receipt_xp integer := 0;
+  receipt_awarded_at timestamptz;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
@@ -71,6 +72,15 @@ begin
       values(auth.uid(),inst.id,'completed');
     end if;
 
+    -- The initial RPC response may be lost after COMMIT. A retry must report
+    -- durable ledger evidence, not just XP newly minted by this invocation.
+    select awarded_at into receipt_awarded_at
+    from public.xp_ledger
+    where instance_id=inst.id and owner_id=auth.uid();
+    if receipt_awarded_at is null then
+      -- A completed instance without a ledger row is an anomaly, not proof of XP.
+      receipt_status := 'not_awarded';
+    end if;
     return jsonb_build_object(
       'schema_version', 1,
       'status', 'completed',
@@ -78,7 +88,8 @@ begin
       'quest_completion_confirmed', true,
       'reward_status', receipt_status,
       'xp_awarded', receipt_xp,
-      'reward_confirmed', (receipt_xp = 1)
+      'reward_confirmed', (receipt_awarded_at is not null),
+      'reward_awarded_at', receipt_awarded_at
     );
   elsif p_action='defer' and inst.status='available' then
     update public.quest_instances set status='deferred' where id=inst.id;
@@ -91,7 +102,8 @@ begin
       'quest_completion_confirmed', false,
       'reward_status', 'not_awarded',
       'xp_awarded', 0,
-      'reward_confirmed', (receipt_xp = 1)
+      'reward_confirmed', false,
+      'reward_awarded_at', null
     );
   elsif p_action='resume' and inst.status='deferred' then
     update public.quest_instances set status='available' where id=inst.id;
@@ -104,18 +116,27 @@ begin
       'quest_completion_confirmed', false,
       'reward_status', 'not_awarded',
       'xp_awarded', 0,
-      'reward_confirmed', (receipt_xp = 1)
+      'reward_confirmed', false,
+      'reward_awarded_at', null
     );
   end if;
 
+  -- Invalid/no-op transitions never mint XP. If a completed state is read,
+  -- only the existing ledger row can substantiate a reward confirmation.
+  if inst.status='completed' then
+    select awarded_at into receipt_awarded_at
+    from public.xp_ledger
+    where instance_id=inst.id and owner_id=auth.uid();
+  end if;
   return jsonb_build_object(
     'schema_version', 1,
     'status', inst.status,
     'quest_instance_id', inst.id,
     'quest_completion_confirmed', (inst.status='completed'),
-    'reward_status', case when inst.status='completed' then 'already_awarded' else 'not_awarded' end,
+    'reward_status', case when receipt_awarded_at is not null then 'already_awarded' else 'not_awarded' end,
     'xp_awarded', 0,
-    'reward_confirmed', (receipt_xp = 1)
+    'reward_confirmed', (receipt_awarded_at is not null),
+    'reward_awarded_at', receipt_awarded_at
   );
 end;
 $$;
