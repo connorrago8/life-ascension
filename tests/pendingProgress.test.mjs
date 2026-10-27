@@ -42,3 +42,14 @@ test('malformed pending journal cannot be mistaken for a fresh operation', async
     assert.throws(() => parsePendingProgress(raw), Error, raw);
   }
 });
+
+test('reload checks the journal before enabling retry and fails closed on corrupt storage', async () => {
+  const component = await readFile(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
+  const effect = component.slice(component.indexOf('useEffect(() => {'), component.indexOf('}, [storageKey]);') + '}, [storageKey]);'.length);
+  assert.match(effect, /parsePendingProgress\(localStorage\.getItem\(storageKey\)\)/);
+  assert.match(effect, /setRetrying\(pending !== null\)/);
+  assert.match(effect, /catch\s*\{\s*setRetrying\(false\);\s*setStorageError\(true\);/);
+  assert.match(effect, /window\.addEventListener\('storage', refresh\)/);
+  assert.doesNotMatch(effect, /!!localStorage\.getItem\(storageKey\)/);
+  assert.match(component, /pending save record is unreadable/);
+});
