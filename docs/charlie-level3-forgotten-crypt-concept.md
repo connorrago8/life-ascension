@@ -8,7 +8,7 @@
 - **Level 2:** Traveler's Belt is first equipment appearance improvement.
 - **Level 3:** Forgotten Crypt becomes available.
 - **Daily bonus:** once-daily +1 XP after three eligible dailies; this is independent of the Crypt and must not be silently awarded through dungeon actions.
-- **Level 4:** Wayfarer's Mantle is queued after Belt, not awarded by entering Crypt.
+- **Level 4:** Wayfarer's Mantle is ON HOLD and not an approved slot. Approved progression instead includes Level 5 Helmet, Level 10 Chest, Level 15 Gloves, Level 20 Boots and Level 25 Legs. None is awarded by Crypt entry.
 - No client-side claimed level may authorize content or reward ownership; Alpha must confirm a trusted progression readback. Exact level threshold mathematics and reward receipt are separate CEO/Alpha decisions.
 
 ## Existing implementation to reuse rather than replace
@@ -21,7 +21,7 @@ Draft PR #22, “Preview: Forgotten Crypt sentinel fight and run-only sigil loot
 2. **Trusted eligibility true:** Present a clearly actionable **Enter Crypt** button, route/map context and a short plain-language note that dungeon items belong to this run unless explicitly persistent in the backend.
 3. **Within the run:** Reuse the existing rat → inscription → Ember Charm → Sentinel structure in the existing preview; preserve its combat and retry rules. One screen should communicate the *current* objective and one primary action, rather than four competing calls to action.
 4. **On retreat/defeat:** Show a clear Resume/Retry or Leave option as supported by the existing state machine; do not silently reopen cleared nodes, mint XP, or restore permanent inventory.
-5. **On completion:** Report the Sentinel result and run-only Sigil plainly. No persistent gear, Level 4 mantle, or XP notification without a server receipt expressly covering it.
+5. **On completion:** Report the Sentinel result and run-only Sigil plainly. No persistent gear, held Mantle concept, or XP notification without a server receipt expressly covering it.
 
 ### State-to-copy matrix
 
