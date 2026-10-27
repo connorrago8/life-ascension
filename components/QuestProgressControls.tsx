@@ -47,6 +47,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     void onLog(instance.id, operation.id, operation.delta).then(outcome => {
       if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); setRetrying(false); } catch { setStorageError(true); } }
       else setRetrying(true);
+      if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
     }).catch(() => { setRetrying(true); setSaveState('failed'); }).finally(() => setSaving(false));
   };
