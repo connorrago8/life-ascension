@@ -1,5 +1,5 @@
 /**
- * REAL-COMPONENT browser QA against the development-only /preview/qa-progress fixture.
+ * REAL-COMPONENT browser QA against the development-only /qa/quest-progress fixture.
  * Requires an unprivileged local runner, a running 'npm run dev' server and
  * Playwright+Chromium installed separately. No credentials or backend requests.
  *
@@ -26,7 +26,7 @@ await mkdir(output, { recursive: true });
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
-  await page.goto(baseURL + '/preview/qa-progress');
+  await page.goto(baseURL + '/qa/quest-progress');
   assert.equal(await page.getByRole('heading', { name: /Quest progress interaction QA/ }).count(), 1,
     'QA fixture must be running under Next development mode');
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
