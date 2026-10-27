@@ -45,3 +45,8 @@ test('quest card does not promise XP before authoritative reward confirmation', 
   const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(home, /· \+1 XP/);
 });
+
+test('definitive progress failures are announced to assistive technology', () => {
+  assert.match(controls, /saveState === 'failed' && !retrying && !storageError/);
+  assert.match(controls, /<p role="alert">Progress was not saved\. You can try again\.<\/p>/);
+});
