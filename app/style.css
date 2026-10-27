@@ -470,3 +470,12 @@ code { font-family: ui-monospace, monospace; }
 .quest-progress-track{height:9px;border-radius:999px;overflow:hidden;background:rgba(170,188,185,.16);margin:9px 0 12px;border:1px solid rgba(170,188,185,.12)}
 .quest-progress-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#78bba2,#d3dca5);transition:width .45s cubic-bezier(.22,1,.36,1)}
 @media(prefers-reduced-motion:reduce){.quest-progress-fill{transition:none}}
+
+/* A minimal character-presence response until a verified avatar renderer is integrated. */
+.character-status{position:relative;overflow:hidden}
+.character-emblem{float:right;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;border:1px solid rgba(143,185,165,.35);color:#9bc8ae;background:rgba(115,165,142,.08);font-size:1.6rem}
+.character-celebrating .character-emblem{animation:character-celebrate .75s ease-out both}
+.reward-level-up{border-color:rgba(255,218,137,.8);background:linear-gradient(125deg,#28302d,#403522);box-shadow:0 12px 40px rgba(0,0,0,.42),0 0 24px rgba(237,188,93,.15)}
+.reward-level-detail{font-size:.78rem;opacity:.82}
+@keyframes character-celebrate{0%{transform:scale(.85) rotate(-8deg);filter:brightness(1)}45%{transform:scale(1.18) rotate(6deg);filter:brightness(1.6)}100%{transform:scale(1) rotate(0);filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.character-celebrating .character-emblem{animation:none}}
