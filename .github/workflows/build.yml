@@ -26,6 +26,33 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run build
+      - name: Production QA route must return 404
+        # Local production server only; no authenticated requests or hosted DB calls.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=3127 npm run start > /tmp/quest-progress-prod.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 40); do
+            status=$(curl --silent --show-error --max-time 2 --output /tmp/quest-progress-prod-body --write-out '%{http_code}' http://127.0.0.1:3127/qa/quest-progress 2>/dev/null || true)
+            if [ "$status" = "404" ]; then
+              echo 'PASS: /qa/quest-progress is 404 in the production build'
+              exit 0
+            fi
+            if [ "$status" != "000" ] && [ -n "$status" ]; then
+              echo "FAIL: production QA route returned HTTP $status (expected 404)"
+              cat /tmp/quest-progress-prod.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo 'FAIL: production server did not return 404 within 40 seconds'
+          cat /tmp/quest-progress-prod.log
+          exit 1
 
   sql-smoke:
     name: SQL smoke tests (isolated Postgres)
