@@ -16,7 +16,7 @@ async function loadBeltLayer() {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx },
     reportDiagnostics: true,
   });
-  const stageJs = compile(stageSource, ts.JsxEmit.None);
+  const stageJs = compile(stageSource, ts.JsxEmit.ReactJSX);
   const componentJs = compile(componentSource, ts.JsxEmit.ReactJSX);
   for (const compiled of [stageJs, componentJs]) {
     const errors = (compiled.diagnostics ?? []).filter((d) => d.category === ts.DiagnosticCategory.Error);
