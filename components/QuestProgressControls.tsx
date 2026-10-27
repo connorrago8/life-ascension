@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { parsePendingProgress } from '../lib/preview/pendingProgress';
 
 export type ProgressQuest = { title: string; target_amount: number | null; progress_unit: string | null; progress_increment: number | null };
 export type ProgressInstance = { id: string; current_amount: number; status: 'available'|'completed'|'deferred' };
@@ -26,18 +27,11 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     if (disabled || saving || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
     // One UUID per user action; the RPC journal deduplicates network retries.
     let pending: { id: string; delta: number } | null = null;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed: unknown = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('delta' in parsed)
-          || typeof parsed.id !== 'string' || !parsed.id || typeof parsed.delta !== 'number'
-          || !Number.isInteger(parsed.delta) || parsed.delta === 0) {
-          setStorageError(true); return;
-        }
-        pending = { id: parsed.id, delta: parsed.delta };
-      }
-    } catch { setStorageError(true); return; }
+    try { pending = parsePendingProgress(localStorage.getItem(storageKey)); }
+    catch {
+      // Keep the unknown operation intact: never silently replace its ID.
+      setStorageError(true); return;
+    }
     // Never create a new ID while the previous operation outcome is unknown.
     if (pending) { setRetrying(true); return; }
     const operation = {id: crypto.randomUUID(), delta};
@@ -53,26 +47,15 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   };
   const retryPending = () => {
     if (disabled || saving || storageError) return;
-    let pending: { id: string; delta: number };
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) { setRetrying(false); setSaveState('failed'); return; }
-      const parsed: unknown = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('delta' in parsed)
-        || typeof parsed.id !== 'string' || !parsed.id || typeof parsed.delta !== 'number'
-        || !Number.isInteger(parsed.delta) || parsed.delta === 0) {
-        // Keep the unknown operation intact: never silently replace its ID.
-        setStorageError(true);
-        setSaveState('failed');
-        return;
-      }
-      pending = { id: parsed.id, delta: parsed.delta };
-    } catch {
+    let pending: { id: string; delta: number } | null;
+    try { pending = parsePendingProgress(localStorage.getItem(storageKey)); }
+    catch {
       // If storage is unreadable, prevent generating a different request ID.
       setStorageError(true);
       setSaveState('failed');
       return;
     }
+    if (!pending) { setRetrying(false); setSaveState('failed'); return; }
     setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, pending.id, pending.delta).then(outcome => {
