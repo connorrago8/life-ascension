@@ -128,7 +128,7 @@ function makePage(width, hand, mode, starter, equipped) {
     'h1{font-size:15px;margin:0 0 6px}p{font-size:10px;margin:0 0 10px;color:#c7c9cc}',
     '.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}',
     '.card{min-width:0;padding:4px;border:1px solid #67717c;border-radius:8px;background:#28313c}',
-    '.card h2{text-align:center;font-size:12px;margin:4px 0}',
+    '.card h2{text-align:center;font-size:12px;line-height:14px;min-height:28px;display:flex;align-items:center;justify-content:center;margin:4px 0}',
     '.card svg{display:block;width:100%;height:auto;' + gray + '}',
     '.warning{margin-top:12px;font-size:11px;color:#ffd69a}',
     '</style></head><body>',
