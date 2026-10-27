@@ -14,7 +14,17 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   const [storageError, setStorageError] = useState(false);
   const storageKey = `life-progress-pending:${instance.id}`;
   useEffect(() => {
-    const refresh = () => { try { setRetrying(!!localStorage.getItem(storageKey)); setStorageError(false); } catch { setStorageError(true); } };
+    const refresh = () => {
+      try {
+        // A malformed journal must fail closed immediately after reload, not masquerade as a retryable request.
+        const pending = parsePendingProgress(localStorage.getItem(storageKey));
+        setRetrying(pending !== null);
+        setStorageError(false);
+      } catch {
+        setRetrying(false);
+        setStorageError(true);
+      }
+    };
     refresh();
     window.addEventListener('storage', refresh);
     return () => window.removeEventListener('storage', refresh);
@@ -73,7 +83,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   return <div className="quest-progress-controls">
     <label className="muted" htmlFor={`progress-${instance.id}`}>{quest.title}: {amount} / {target} {quest.progress_unit}</label>
     <progress id={`progress-${instance.id}`} value={amount} max={target} style={{width:'100%'}} />
-    {storageError && <p role="alert">Browser storage is unavailable. Progress logging is paused to prevent duplicate saves. Enable site storage and reload.</p>}
+    {storageError && <p role="alert">Browser storage is unavailable or the pending save record is unreadable. Progress logging is paused to prevent duplicate saves. Restore site storage or recover the pending record before reloading.</p>}
     {retrying && <p role="alert">Save not confirmed. Retry the same operation before logging more.</p>}
     {saveState === 'failed' && !retrying && !storageError && <p role="alert">Progress was not saved. You can try again.</p>}
     <p className="muted" role="status" aria-live="polite">{saving ? 'Saving progress…' : retrying ? 'Save not confirmed — retry required.' : saveState === 'saved' ? 'Progress saved.' : saveState === 'failed' ? 'Progress was not saved.' : ''}</p>
