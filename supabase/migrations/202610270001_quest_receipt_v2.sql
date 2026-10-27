@@ -17,7 +17,7 @@ begin
   if auth.uid() is null then
     raise exception 'Authentication required';
   end if;
-  if p_action not in ('complete','defer','resume') then
+  if p_action is null or p_action not in ('complete','defer','resume') then
     raise exception 'Unsupported action';
   end if;
 
