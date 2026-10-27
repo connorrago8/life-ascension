@@ -1,17 +1,17 @@
-# Belt → Mantle: truthful character appearance contract (draft)
+# Belt → Helmet: truthful character appearance contract (draft)
 
-**Source of policy:** Founder chose Traveler's Belt at Level 2, Crypt at Level 3, Wayfarer's Mantle at Level 4. Mantle is now *queued*, superseding older HOLD wording; not approved for premature release. Separate founder rule: +1 XP once daily after three eligible daily quests. None of these policy decisions alone proves that a player currently owns an item.
+**Source of policy:** Latest Founder-approved milestones: Level 1 Weapon, Level 2 Traveler's Belt, Level 3 Forgotten Crypt access, Level 5 Helmet, Level 10 Chest, Level 15 Gloves, Level 20 Boots and Level 25 Legs. Level 5 Helmet is ON HOLD and is NOT an approved equipment slot. Separate founder rule: +1 XP once daily after three eligible daily quests. None of these policy decisions alone proves that a player currently owns an item.
 
 ## Four distinct concepts
 
 | UI status | Meaning | Rendering / wording |
 | --- | --- | --- |
-| Starter | No level-granted item verified | Plain cloth waist tie; no belt hardware, no mantle |
+| Starter | No level-granted item verified | Plain cloth waist tie; no belt hardware, no helmet |
 | Locked | Trusted server policy says not yet eligible | Silhouette/outline only in catalog, with explicit level requirement; **never show on worn character** |
 | Earned / available | Trusted server inventory confirms grant, but not equipped | Named item in inventory with "Equip" action; character still shows previously equipped appearance |
 | Equipped | Server confirms item belongs to account *and* is equipped | Render that visual overlay, with a persistent equipped indicator |
 
-**Missing/stale/failed server read is UNKNOWN, not Earned.** On UNKNOWN, don't infer belt or mantle from locally stored level, optimistic progress, toast, or a previously viewed demo. Do not call a cosmetic equipped when the render actually shows it only for preview.
+**Missing/stale/failed server read is UNKNOWN, not Earned.** On UNKNOWN, don't infer belt or helmet from locally stored level, optimistic progress, toast, or a previously viewed demo. Do not call a cosmetic equipped when the render actually shows it only for preview.
 
 ## Visual sequence and composition
 
@@ -19,10 +19,10 @@
 | --- | --- | --- |
 | Base character | Recognizable face, body, plain waist tie | Starter already rich with upgraded buckle/pouches/strap |
 | Level 2 Traveler's Belt | Swap tie for leather belt and legible centered buckle. Keep torso silhouette, face and hands stable | XP bonus, extra strength, pouch or charm unlock without approval |
-| Level 3 Crypt | Dungeon availability changes in navigation, not the avatar silhouette | No automatic shoulder/mantle or permanent Crypt Sigil |
-| Level 4 Wayfarer's Mantle | **Proposed future cosmetic** drape layer behind upper arms with recognizable head and waist visible; actual art/render requires approval | No auto equip, no automatic upgrade on reaching level, no gameplay stat claim |
+| Level 3 Crypt | Dungeon availability changes in navigation, not the avatar silhouette | No automatic shoulder/helmet or permanent Crypt Sigil |
+| Level 5 Helmet | **Proposed future cosmetic** drape layer behind upper arms with recognizable head and waist visible; actual art/render requires approval | No auto equip, no automatic upgrade on reaching level, no gameplay stat claim |
 
-The precise mantle geometry is **not** authorized as a completed asset in this contract. It must avoid concealing the Level 2 belt; Beta should verify the layering order: back cloth, legs, torso, belt, front arms/face. Any alternate mantle shape requires separate evidence-based design review.
+The precise helmet geometry is **not** authorized as a completed asset in this contract. It must avoid concealing the Level 2 belt; Beta should verify the layering order: back cloth, legs, torso, belt, front arms/face. Any alternate helmet shape requires separate evidence-based design review.
 
 ## Data boundary (review proposal, not currently implemented)
 
@@ -33,9 +33,9 @@ Alpha owns ownership and idempotency; Beta owns safe UI readback and reversible 
 ## Acceptance tests
 
 1. Signed-out/demo/static fixture: labels read **Concept / not owned**; no persistent grants.
-2. Locked trusted player: equipped Belt/Mantle overlay absent even if a client modifies displayed level.
+2. Locked trusted player: equipped Belt/Helmet overlay absent even if a client modifies displayed level.
 3. Earned but unequipped: item in catalog, avatar unchanged.
-4. Equipped Belt: belt visible, mantle absent. Equipped Mantle: belt and mantle both visibly present if both confirmed equipped.
+4. Equipped Belt: belt visible, helmet absent. Equipped Helmet: belt and helmet both visibly present if both confirmed equipped.
 5. Network timeout/old receipt: no new XP, unlocked art, or equip state inferred; clear retry.
 6. At 320, 375, 390 and 430px, compare color/grayscale, weapon props, reduced motion, and real 200% browser zoom. Level 2 belt may be subtly different from plain tie in grayscale: Beta independent acceptance is pending.
 7. Daily bonus and Crypt rewards are not conflated with cosmetic grant; never display an unsolicited XP toast.
