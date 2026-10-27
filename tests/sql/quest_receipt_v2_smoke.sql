@@ -31,6 +31,8 @@ declare
   v_v2_inst uuid;
   v_lost_quest uuid;
   v_lost_inst uuid;
+  v_spoof_quest uuid;
+  v_spoof_inst uuid;
   v_awarded_at timestamptz;
 begin
   -- Use the supported API: authenticated direct INSERT into quests is deliberately denied.
@@ -180,6 +182,41 @@ begin
   exception when others then
     if sqlerrm <> 'Future scheduled quest cannot be completed yet' then raise; end if;
   end;
+
+  -- A12-02: a forged client timezone must not move the server's Chicago
+  -- daily completion boundary. Both the legacy TEXT RPC and the v2 JSON RPC
+  -- must reject tomorrow's daily, leaving its instance and XP ledger untouched.
+  -- This is a compatibility/security negative test, NOT player-local-day support.
+  v_spoof_quest := public.create_scheduled_quest(
+    'Client timezone spoof rejection','personal_growth','daily',
+    (now() at time zone 'America/Chicago')::date + 1,'scheduled'
+  );
+  select id into v_spoof_inst from public.quest_instances where quest_id=v_spoof_quest;
+  if v_spoof_inst is null then
+    raise exception 'timezone spoof test failed to create future daily fixture';
+  end if;
+  perform set_config('request.headers', '{"x-time-zone":"Pacific/Kiritimati","x-timezone":"Pacific/Kiritimati"}', true);
+  perform set_config('request.jwt.claim.timezone', 'Pacific/Kiritimati', true);
+  perform set_config('TimeZone', 'Pacific/Kiritimati', true);
+  begin
+    perform public.set_quest_instance_status(v_spoof_inst,'complete');
+    raise exception 'legacy RPC accepted forged client timezone';
+  exception when others then
+    if sqlerrm <> 'Future daily quests cannot be completed' then raise; end if;
+  end;
+  begin
+    perform public.set_quest_instance_status_v2(v_spoof_inst,'complete');
+    raise exception 'v2 RPC accepted forged client timezone';
+  exception when others then
+    if sqlerrm <> 'Future daily quests cannot be completed' then raise; end if;
+  end;
+  if exists (select 1 from public.xp_ledger where instance_id=v_spoof_inst)
+     or (select status from public.quest_instances where id=v_spoof_inst) <> 'available' then
+    raise exception 'forged timezone changed daily status or XP ledger';
+  end if;
+  perform set_config('request.headers', '', true);
+  perform set_config('request.jwt.claim.timezone', '', true);
+  perform set_config('TimeZone', 'UTC', true);
 
   -- An archived, uncompleted quest may not become completed or award XP.
   v_archived := public.create_scheduled_quest(
