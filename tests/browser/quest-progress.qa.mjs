@@ -33,7 +33,9 @@ try {
   await page.goto(baseURL + '/qa/quest-progress');
   assert.equal(await page.getByRole('heading', { name: /Quest progress interaction QA/ }).count(), 1,
     'QA fixture must be running under Next development mode');
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
   await page.getByText('Save not confirmed. Retry the same operation before logging more.').waitFor();
   const pending = await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only'));
@@ -41,6 +43,7 @@ try {
   const original = JSON.parse(pending);
   assert.equal(original.delta, 2);
   await page.reload();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByRole('button', { name: /Retry saving progress/ }).waitFor();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
   await page.getByRole('button', { name: /Retry saving progress/ }).click();
@@ -49,6 +52,7 @@ try {
   assert.ok(retryLog.includes(`|${original.id}|2|saved`), 'Retry must reuse original operation ID and delta');
   assert.equal(await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only')), null);
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
   await page.getByRole('button', { name: /Undo 2 repetitions/ }).click();
   // Preserve real-browser evidence even when Undo does not confirm; never claim a pass by timeout.
