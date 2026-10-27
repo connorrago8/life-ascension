@@ -29,3 +29,9 @@ test('retry preserves the original operation ID on network failure or unreadable
   assert.match(controls, /Keep the unknown operation intact: never silently replace its ID/);
   assert.doesNotMatch(controls, /Malformed local storage must not permanently lock the quest/);
 });
+
+test('new progress actions never reuse or replace a pending request', () => {
+  assert.match(controls, /if \(pending\) \{ setRetrying\(true\); return; \}/);
+  assert.match(controls, /const operation = \{id: crypto\.randomUUID\(\), delta\};/);
+  assert.match(controls, /Number\.isInteger\(parsed\.delta\)/);
+});
