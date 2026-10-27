@@ -62,9 +62,19 @@ try {
     assert.ok(after.scrollWidth <= after.width + 1,
       `Horizontal overflow under genuine browser 200% zoom at ${width}px`);
     const add = page.getByRole('button', { name: /^Add 2 repetitions/ });
-    await add.focus();
-    assert.equal(await add.evaluate(el => document.activeElement === el), true,
-      `Add focus lost under browser zoom at ${width}px`);
+    const undo = page.getByRole('button', { name: /Undo 2 repetitions/ });
+    for (const [label, button] of [['Add', add], ['Undo', undo]]) {
+      await button.focus();
+      const focus = await button.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return { active: document.activeElement === el,
+          withinViewport: rect.left >= 0 && rect.right <= innerWidth + 1,
+          outlineVisible: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0 };
+      });
+      assert.equal(focus.active && focus.withinViewport && focus.outlineVisible, true,
+        `${label} focus must be visible and within viewport under 200% zoom at ${width}px`);
+    }
     await page.screenshot({ path: join(output, `quest-progress-ui-zoom200-${width}.png`), fullPage: true });
   }
   console.log('PASS: browser UI 200% zoom signal, layout shrink, no overflow and Add focus at all four widths.');
