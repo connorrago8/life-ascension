@@ -26,15 +26,26 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     if (disabled || saving || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
     // One UUID per user action; the RPC journal deduplicates network retries.
     let pending: { id: string; delta: number } | null = null;
-    try { const raw = localStorage.getItem(storageKey); if(raw) pending = JSON.parse(raw); } catch { setStorageError(true); return; }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('delta' in parsed)
+          || typeof parsed.id !== 'string' || !parsed.id || typeof parsed.delta !== 'number'
+          || !Number.isInteger(parsed.delta) || parsed.delta === 0) {
+          setStorageError(true); return;
+        }
+        pending = { id: parsed.id, delta: parsed.delta };
+      }
+    } catch { setStorageError(true); return; }
     // Never create a new ID while the previous operation outcome is unknown.
-    if (pending && pending.delta !== delta) { setRetrying(true); return; }
-    const operation = pending ?? {id: crypto.randomUUID(), delta};
+    if (pending) { setRetrying(true); return; }
+    const operation = {id: crypto.randomUUID(), delta};
     try { localStorage.setItem(storageKey, JSON.stringify(operation)); } catch { setStorageError(true); return; }
     setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, operation.id, operation.delta).then(outcome => {
-      if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); } catch {} setRetrying(false); }
+      if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); setRetrying(false); } catch { setStorageError(true); } }
       else setRetrying(true);
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
     }).catch(() => { setRetrying(true); setSaveState('failed'); }).finally(() => setSaving(false));
@@ -47,7 +58,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
       if (!raw) { setRetrying(false); setSaveState('failed'); return; }
       const parsed: unknown = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('delta' in parsed)
-        || typeof parsed.id !== 'string' || typeof parsed.delta !== 'number'
+        || typeof parsed.id !== 'string' || !parsed.id || typeof parsed.delta !== 'number'
         || !Number.isInteger(parsed.delta) || parsed.delta === 0) {
         // Keep the unknown operation intact: never silently replace its ID.
         setStorageError(true);
