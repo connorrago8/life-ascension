@@ -45,6 +45,10 @@ try {
     await page.keyboard.press('Control+Digit0');
     await page.setViewportSize({ width, height: 844 });
     const before = await metrics();
+    assert.ok(Math.abs(before.width - width) <= 1,
+      `Browser zoom reset failed before ${width}px test: expected CSS width ${width}, got ${before.width}`);
+    assert.ok(Math.abs(before.scale - 1) < 0.01,
+      `Unexpected visual viewport pinch scale before ${width}px test: ${before.scale}`);
     let after = before;
     for (let attempt = 0; attempt < 8; attempt++) {
       await page.keyboard.press('Control+Equal');
