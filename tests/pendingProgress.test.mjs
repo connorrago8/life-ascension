@@ -204,3 +204,43 @@ test('actual QuestProgressControls handlers preserve request IDs across ambiguou
     [['generated-id-1', 3], ['generated-id-1', 3],
      ['generated-id-2', -2], ['generated-id-2', -2]]);
 });
+
+
+test('actual submit handler fails closed when journal is corrupt or storage persistence is denied', async () => {
+  const { parsePendingProgress } = await loadParser();
+  const handlers = await loadProgressHandlers();
+  let minted = 0;
+  let sent = 0;
+  function attempt(raw, denyWrite) {
+    const state = {
+      disabled: false, saving: false, storageError: false, retrying: false,
+      amount: 0, target: 10, instance: { id: 'q1' },
+      storageKey: 'life-progress-pending:q1', parsePendingProgress,
+      localStorage: {
+        getItem: () => raw,
+        setItem: () => { if (denyWrite) throw new Error('Simulated quota/storage denial'); },
+        removeItem: () => {},
+      },
+      onLog: () => { sent++; return Promise.resolve('saved'); },
+      crypto: { randomUUID: () => `new-id-${++minted}` },
+      setStorageError: value => { state.storageError = value; },
+      setRetrying: value => { state.retrying = value; },
+      setSaving: value => { state.saving = value; },
+      setSaveState: value => { state.saveState = value; },
+      setCustom: () => {},
+    };
+    vm.runInNewContext(handlers.get('submit'), state)(1);
+    return state;
+  }
+
+  const corrupt = attempt('{"id":', false);
+  assert.equal(corrupt.storageError, true, 'Corrupt pending journal blocks new submission');
+  assert.equal(minted, 0, 'No replacement ID minted for corrupt journal');
+  assert.equal(sent, 0, 'Corrupt journal must not reach onLog');
+
+  const denied = attempt(null, true);
+  assert.equal(denied.storageError, true, 'Storage denial blocks new submission');
+  assert.equal(minted, 1, 'UUID may be generated but cannot be sent without durable journal');
+  assert.equal(denied.saving, false);
+  assert.equal(sent, 0, 'No RPC attempt without successfully persisted journal');
+});
