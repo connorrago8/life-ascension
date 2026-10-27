@@ -53,7 +53,9 @@ begin
   r := public.set_quest_instance_status_v2(v_inst,'complete');
   if r->>'reward_status' <> 'already_awarded'
      or r->>'xp_awarded' <> '0'
-     or r->>'quest_completion_confirmed' <> 'true' then
+     or r->>'quest_completion_confirmed' <> 'true'
+     or r->>'reward_confirmed' <> 'true'
+     or r->>'reward_awarded_at' is null then
     raise exception 'duplicate completion receipt invalid: %', r;
   end if;
 
@@ -91,7 +93,8 @@ begin
   end if;
   r := public.set_quest_instance_status_v2(v_legacy_inst,'complete');
   if r->>'reward_status' <> 'already_awarded' or r->>'xp_awarded' <> '0'
-     or r->>'reward_confirmed' <> 'false'
+     or r->>'reward_confirmed' <> 'true'
+     or r->>'reward_awarded_at' is null
      or (select count(*) from public.xp_ledger where instance_id=v_legacy_inst) <> 1 then
     raise exception 'legacy-to-v2 compatibility violated: %',r;
   end if;
