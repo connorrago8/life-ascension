@@ -21,3 +21,11 @@ test('progress controls remain visible and keep a one-tap increment', () => {
   assert.match(controls, /Progress saved\./);
   assert.match(controls, /Save not confirmed — retry required\./);
 });
+
+
+test('retry preserves the original operation ID on network failure or unreadable storage', () => {
+  assert.match(controls, /onLog\(instance\.id, pending\.id, pending\.delta\)/);
+  assert.match(controls, /Network failures must preserve the original operation ID for retry/);
+  assert.match(controls, /Keep the unknown operation intact: never silently replace its ID/);
+  assert.doesNotMatch(controls, /Malformed local storage must not permanently lock the quest/);
+});
