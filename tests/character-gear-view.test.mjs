@@ -47,7 +47,8 @@ test('authenticated character route opts out of preview loadout even when previe
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
   assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : 'unverified'\}/);
   assert.match(screen, /characterGearView\(equipmentMode, appearance\)/);
-  assert.match(screen, /homeCharacterModel\(gearView\.appearance\)/);
+  assert.match(screen, /visibleAppearance = displayName \? \{ \.\.\.gearView\.appearance, name: displayName \}/);
+  assert.match(screen, /homeCharacterModel\(visibleAppearance\)/);
   assert.match(screen, /beltPreviewStage=\{gearView\.beltStage\}/);
   assert.match(screen, /gearView\.canChange && selectedSlot/);
   assert.match(screen, /gearView\.canChange && !hideSampleStats/);

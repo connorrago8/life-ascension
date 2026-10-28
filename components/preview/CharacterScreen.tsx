@@ -23,6 +23,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
 export function CharacterScreen({ displayName, hideSampleStats = false, equipmentMode = 'preview' }: { displayName?: string; hideSampleStats?: boolean; equipmentMode?: CharacterEquipmentMode } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const gearView = characterGearView(equipmentMode, appearance);
+  const visibleAppearance = displayName ? { ...gearView.appearance, name: displayName } : gearView.appearance;
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -58,7 +59,7 @@ export function CharacterScreen({ displayName, hideSampleStats = false, equipmen
       <section className="character-loadout-stage" aria-label={gearView.canChange ? 'Equipped character and gear' : 'Character with unverified equipment hidden'}>
         <div className="character-slot-column">{gearView.canChange ? LEFT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
         <div className="character-avatar" aria-label="Full-body front-facing adventurer">
-          <HomeCharacter model={homeCharacterModel(gearView.appearance)} idPrefix="character" beltPreviewStage={gearView.beltStage} />
+          <HomeCharacter model={homeCharacterModel(visibleAppearance)} idPrefix="character" beltPreviewStage={gearView.beltStage} />
         </div>
         <div className="character-slot-column">{gearView.canChange ? RIGHT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
       </section>

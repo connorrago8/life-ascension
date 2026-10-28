@@ -135,9 +135,10 @@ test('unverified account full-character render has starter tie, no earned belt, 
   const sample = appearance.appearanceFromLoadout({ equipmentIds: ['walking-staff', 'travelers-hood'] });
   const safe = view.characterGearView('unverified', sample);
   const html = renderToStaticMarkup(React.createElement(HomeCharacter, {
-    model: render.homeCharacterModel(safe.appearance), beltPreviewStage: safe.beltStage,
+    model: render.homeCharacterModel({ ...safe.appearance, name: 'Account Adventurer' }), beltPreviewStage: safe.beltStage,
   }));
   assert.match(html, /data-belt-stage="starter"/);
+  assert.match(html, /aria-label="Account Adventurer\./);
   assert.match(html, /data-waist-part="starter-tie"/);
   assert.match(html, /data-main-hand="none"/);
   assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
