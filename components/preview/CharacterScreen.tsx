@@ -20,9 +20,11 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen({ displayName, hideSampleStats = false, equipmentMode = 'preview', verifiedGear }: { displayName?: string; hideSampleStats?: boolean; equipmentMode?: CharacterEquipmentMode; verifiedGear?: AuthenticatedGearSnapshot | null } = {}) {
+export function CharacterScreen({ displayName, hideSampleStats = false, equipmentMode = 'preview', verifiedGear, onEquipArmor, armorBusy = false }: { displayName?: string; hideSampleStats?: boolean; equipmentMode?: CharacterEquipmentMode; verifiedGear?: AuthenticatedGearSnapshot | null; onEquipArmor?: (equip: boolean) => void; armorBusy?: boolean } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const gearView = characterGearView(equipmentMode, appearance, verifiedGear);
+  const ownedArmor = gearView.source === 'verified' && verifiedGear?.ownedItemIds.includes('ashen-hood') === true;
+  const wearingArmor = gearView.appearance.equipment.some((item) => item.id === 'ashen-hood');
   const visibleAppearance = displayName ? { ...gearView.appearance, name: displayName } : gearView.appearance;
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
@@ -87,6 +89,10 @@ export function CharacterScreen({ displayName, hideSampleStats = false, equipmen
           </button> : null}
         </section>
       ) : <p className="character-gear-note" role={gearView.canChange ? undefined : 'status'}>{gearView.canChange ? 'Tap an equipment slot to see what you can equip. Gear changes update your character.' : gearView.source === 'verified' ? (gearView.appearance.equipment.some((item) => item.id === 'ashen-hood') ? 'Ashen Hood equipped (server-verified). Gear changes require server authorization.' : 'No armor equipped on this account. Gear changes require server authorization.') : 'Equipment is not yet verified for this account. Preview items are hidden and cannot be equipped.'}</p>}
+      {ownedArmor && onEquipArmor && <button type="button" className="btn" disabled={armorBusy}
+        onClick={() => onEquipArmor(!wearingArmor)} aria-label={wearingArmor ? 'Unequip Ashen Hood' : 'Equip Ashen Hood'}>
+        {armorBusy ? 'Saving armor…' : wearingArmor ? 'Unequip Ashen Hood' : 'Equip Ashen Hood'}
+      </button>}
       {gearView.canChange && !hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
         <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
