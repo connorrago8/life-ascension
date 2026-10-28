@@ -12,6 +12,15 @@ export type AuthenticatedGearSnapshot = Readonly<{
   equippedItemIds: readonly string[];
 }>;
 
+/** Fail closed on malformed or unknown RPC data; never substitute preview storage. */
+export function parseAuthenticatedGearSnapshot(value: unknown): AuthenticatedGearSnapshot | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const data = value as Record<string, unknown>;
+  if (!Array.isArray(data.ownedItemIds) || !Array.isArray(data.equippedItemIds)) return null;
+  if (![...data.ownedItemIds, ...data.equippedItemIds].every((id) => id === 'ashen-hood')) return null;
+  return { ownedItemIds: [...data.ownedItemIds], equippedItemIds: [...data.equippedItemIds] };
+}
+
 export type CharacterEquipmentMode = 'preview' | 'unverified' | 'verified';
 export type CharacterGearView = Readonly<{
   appearance: Appearance;
