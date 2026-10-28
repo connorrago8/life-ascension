@@ -146,7 +146,7 @@ test('actual QuestProgressControls handlers preserve request IDs across ambiguou
     const state = { disabled: false, saving: false, storageError: false,
       retrying: parsePendingProgress(storage.getItem('life-progress-pending:q1')) !== null,
       amount, target: 10, instance: { id: 'q1', status: 'available' }, storageKey: 'life-progress-pending:q1',
-      parsePendingProgress, localStorage: storage, onLog,
+      parsePendingProgress, localStorage: storage, onLog, onJournalResolved: () => {},
       crypto: { randomUUID: () => `generated-id-${++generated}` },
       setRetrying: value => { state.retrying = value; },
       setSaving: value => { state.saving = value; },
@@ -222,6 +222,7 @@ test('actual submit handler fails closed when journal is corrupt or storage pers
         removeItem: () => {},
       },
       onLog: () => { sent++; return Promise.resolve('saved'); },
+      onJournalResolved: () => {},
       crypto: { randomUUID: () => `new-id-${++minted}` },
       setStorageError: value => { state.storageError = value; },
       setRetrying: value => { state.retrying = value; },
@@ -265,6 +266,7 @@ test('completed and deferred instances cannot mint new progress operations; comp
       },
       crypto: { randomUUID: () => `unexpected-${++minted}` },
       onLog: async () => { sent++; return 'saved'; },
+      onJournalResolved: () => {},
       setRetrying: value => { state.retrying = value; },
       setSaving: value => { state.saving = value; },
       setStorageError: value => { state.storageError = value; },
@@ -381,4 +383,70 @@ test('archived same-day and older completed pending saves remain visible without
     'The current-day Completed Journal already renders this request');
   assert.equal(result.some(({ instance }) => instance.status !== 'completed'), false,
     'Never surface a new operation on an unfinished quest as a completed retry');
+});
+
+// Regression: Home's load() can snapshot a still-pending journal before the
+// child receives RPC confirmation. The post-delete callback must remove the
+// archived recovery row without a second network request or new operation ID.
+test('completed archived retry removes stale recovery row only after confirmed journal deletion', async () => {
+  const { parsePendingProgress, recoverableCompletedEntries } = await loadParser();
+  const handlers = await loadProgressHandlers();
+  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /function journalResolved\(instanceId:string\)\{setRecoveryIds\(ids=>ids\.filter\(id=>id!==instanceId\)\)\}/);
+  assert.equal((home.match(/onJournalResolved=\{journalResolved\}/g) ?? []).length, 3,
+    'Active, current-day Completed and archived recovery controls all notify Home');
+
+  const id = 'archived-q', key = 'life-progress-pending:' + id;
+  const request = { id: 'original-completion-id', delta: 2 };
+  const values = new Map([[key, JSON.stringify(request)]]);
+  const storage = {
+    getItem: name => values.get(name) ?? null,
+    setItem: (name, value) => values.set(name, value),
+    removeItem: name => values.delete(name),
+  };
+  const instance = { id, quest_id: 'archived-quest', due_date: '2026-10-27', status: 'completed' };
+  const recoverable = () => recoverableCompletedEntries([instance], recoveryIds, [],
+    [{ id: 'archived-quest', title: 'Archived quest' }], []);
+  let recoveryIds = [id], resolved = 0, backendApplies = 0, attempts = 0;
+  const seenRequests = new Set();
+  const state = {
+    disabled: false, saving: false, storageError: false, retrying: true,
+    amount: 2, target: 2, instance, storageKey: key,
+    parsePendingProgress, localStorage: storage,
+    onLog: async (instanceId, requestId, delta) => {
+      assert.equal(instanceId, id);
+      assert.deepEqual({ id: requestId, delta }, request);
+      attempts++;
+      if (!seenRequests.has(requestId)) { seenRequests.add(requestId); backendApplies++; }
+      // Home.load() snapshots the pending journal before onLog resolves.
+      recoveryIds = storage.getItem(key) ? [id] : [];
+      return attempts === 1 ? 'retry' : 'saved';
+    },
+    onJournalResolved: instanceId => {
+      assert.equal(instanceId, id);
+      assert.equal(storage.getItem(key), null, 'Parent notification follows durable journal deletion');
+      resolved++;
+      recoveryIds = recoveryIds.filter(item => item !== instanceId);
+    },
+    setRetrying: value => { state.retrying = value; },
+    setSaving: value => { state.saving = value; },
+    setStorageError: value => { state.storageError = value; },
+    setSaveState: value => { state.saveState = value; },
+    setCustom: () => {},
+  };
+  const retryPending = vm.runInNewContext(handlers.get('retryPending'), state);
+  const settle = () => new Promise(resolve => setImmediate(resolve));
+  assert.equal(recoverable().length, 1);
+  retryPending();
+  await settle();
+  assert.equal(resolved, 0, 'Ambiguous response must retain the journal and recovery row');
+  assert.equal(storage.getItem(key), JSON.stringify(request));
+  assert.equal(recoverable().length, 1);
+  retryPending();
+  await settle();
+  assert.equal(attempts, 2);
+  assert.equal(backendApplies, 1, 'The same request ID is never treated as a new operation');
+  assert.equal(resolved, 1);
+  assert.equal(storage.getItem(key), null);
+  assert.equal(recoverable().length, 0, 'Resolved archived recovery row disappears without manual refresh');
 });
