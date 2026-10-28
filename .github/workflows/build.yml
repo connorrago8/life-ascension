@@ -57,7 +57,12 @@ jobs:
           for attempt in $(seq 1 40); do
             status=$(curl --silent --show-error --max-time 2 --output /tmp/quest-progress-prod-body --write-out '%{http_code}' http://127.0.0.1:3127/qa/quest-progress 2>/dev/null || true)
             if [ "$status" = "404" ]; then
-              echo 'PASS: /qa/quest-progress is 404 in the production build'
+              gear_status=$(curl --silent --show-error --max-time 2 --output /tmp/character-gear-prod-body --write-out '%{http_code}' http://127.0.0.1:3127/qa/character-gear)
+              if [ "$gear_status" != "404" ]; then
+                echo "FAIL: production /qa/character-gear returned HTTP $gear_status (expected 404)"
+                exit 1
+              fi
+              echo 'PASS: both /qa/quest-progress and /qa/character-gear are 404 in the production build'
               exit 0
             fi
             if [ "$status" != "000" ] && [ -n "$status" ]; then
@@ -184,6 +189,7 @@ jobs:
           done
           CHROMIUM_BIN="$browser" node tests/browser/quest-progress.qa.mjs
           CHROMIUM_BIN="$browser" node tests/browser/crypt-preview.qa.mjs
+          CHROMIUM_BIN="$browser" node tests/browser/character-gear.qa.mjs
       - name: Upload Quest and Crypt browser screenshots for CEO review
         if: always()
         uses: actions/upload-artifact@v4
@@ -192,5 +198,6 @@ jobs:
           path: |
             artifacts/quest-progress/
             artifacts/crypt-preview/
+            artifacts/character-gear/
           if-no-files-found: warn
           retention-days: 7
