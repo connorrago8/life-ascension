@@ -335,11 +335,11 @@ test('older pending request discovery is bounded, UUID-filtered and fails closed
 
 test('Home loads only owner-scoped older completed journals and renders retry separately from daily completion', async () => {
   const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
-  assert.match(home, /try\\{pendingIds=pendingProgressInstanceIds\\(localStorage\\)\\}catch/);
-  assert.match(home, /pendingIds\\.length\\?s\\.from\\('quest_instances'\\)\\.select\\([^\\n]+\\)\\.eq\\('owner_id',user\\.id\\)\\.in\\('id',pendingIds\\)\\.eq\\('status','completed'\\)/);
-  assert.match(home, /earlierRecoveries=instances\\.filter\\(i=>i\\.status==='completed'&&i\\.due_date!==today&&recoveryIds\\.includes\\(i\\.id\\)\\)/);
+  assert.match(home, /try\{pendingIds=pendingProgressInstanceIds\(localStorage\)\}catch/);
+  assert.match(home, /pendingIds\.length\?s\.from\('quest_instances'\)\.select\([^\n]+\)\.eq\('owner_id',user\.id\)\.in\('id',pendingIds\)\.eq\('status','completed'\)/);
+  assert.match(home, /earlierRecoveries=instances\.filter\(i=>i\.status==='completed'&&i\.due_date!==today&&recoveryIds\.includes\(i\.id\)\)/);
   assert.match(home, /Earlier completed quests with pending saves/);
-  assert.match(home, /earlierRecoveries\\.map\\(\\(\\{quest,instance\\}\\)=>[\\s\\S]*?<QuestProgressControls quest=\\{quest\\} instance=\\{instance\\}/);
-  assert.match(home, /const completed=completedQuests\\.length;/,
+  assert.match(home, /earlierRecoveries\.map\(\(\{quest,instance\}\)=>[\s\S]*?<QuestProgressControls quest=\{quest\} instance=\{instance\}/);
+  assert.match(home, /const completed=completedQuests\.length;/,
     'Older recovery records must not inflate today completion totals');
 });
