@@ -20,7 +20,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
 ];
 
 export function CharacterScreen({ displayName, hideSampleStats = false, hideSampleLevel = false, verifiedXp }: { displayName?: string; hideSampleStats?: boolean; hideSampleLevel?: boolean; verifiedXp?: number } = {}) {
-  const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
+  const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance(verifiedXp);
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
   useEffect(() => {
