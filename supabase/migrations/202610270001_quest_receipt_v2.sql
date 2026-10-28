@@ -39,6 +39,15 @@ begin
   end if;
   if p_action='complete' then
     if inst.status <> 'completed' then
+      -- Parity with the tracked-progress completion guard when migration 0008
+      -- is present. JSON conversion keeps this standalone receipt migration
+      -- compatible with the legacy schema (which has no progress columns).
+      -- A missing current amount on a tracked quest fails closed.
+      if (to_jsonb(q)->>'target_amount') is not null
+         and (to_jsonb(inst)->>'current_amount')::integer is distinct from
+             (to_jsonb(q)->>'target_amount')::integer then
+        raise exception 'Tracked quest has not reached its target';
+      end if;
       if q.cadence='daily' and (inst.due_date > v_today or inst.due_date < q.scheduled_for) then
         raise exception 'Future daily quests cannot be completed';
       end if;
