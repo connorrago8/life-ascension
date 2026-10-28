@@ -40,6 +40,31 @@ export function hasPendingCompletedRecovery(
   return false;
 }
 
+/** Reconcile server-confirmed completed retries with their quest metadata.
+ * Include same-day archived quests, but never duplicate a completed card
+ * already visible in Today's Journal. The caller must owner-scope DB reads.
+ */
+export function recoverableCompletedEntries<
+  Q extends { id: string },
+  I extends { id: string; quest_id: string; status: string },
+>(
+  instances: ReadonlyArray<I>,
+  pendingInstanceIds: ReadonlyArray<string>,
+  activeQuests: ReadonlyArray<Q>,
+  archivedQuests: ReadonlyArray<Q>,
+  shownCompletedIds: ReadonlyArray<string>,
+): Array<{ quest: Q; instance: I }> {
+  const pending = new Set(pendingInstanceIds);
+  const shown = new Set(shownCompletedIds);
+  const questById = new Map<string, Q>();
+  for (const quest of [...activeQuests, ...archivedQuests]) questById.set(quest.id, quest);
+  return instances.flatMap(instance => {
+    if (instance.status !== 'completed' || !pending.has(instance.id) || shown.has(instance.id)) return [];
+    const quest = questById.get(instance.quest_id);
+    return quest ? [{ quest, instance }] : [];
+  });
+}
+
 /** Find older pending instance IDs without scanning the user's entire quest history.
  * Returned IDs are only lookup hints: the server query MUST still filter owner_id.
  */
