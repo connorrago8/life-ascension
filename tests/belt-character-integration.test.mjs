@@ -20,8 +20,9 @@ async function loadCharacter() {
   const stage = execute(compile(await readFile(new URL('../lib/preview/beltProgression.ts', import.meta.url), 'utf8')), require);
   const waist = execute(compile(await readFile(new URL('../components/preview/BeltWaistLayer.tsx', import.meta.url), 'utf8'), ts.JsxEmit.ReactJSX),
     (name) => name.includes('beltProgression') ? stage : require(name));
+  const render = execute(compile(await readFile(new URL('../lib/preview/characterRender.ts', import.meta.url), 'utf8')), require);
   return execute(compile(await readFile(new URL('../components/preview/HomeCharacter.tsx', import.meta.url), 'utf8'), ts.JsxEmit.ReactJSX),
-    (name) => name.includes('BeltWaistLayer') ? waist : name.includes('characterRender') ? { homeAriaLabel: () => 'Adventurer' } : require(name)).HomeCharacter;
+    (name) => name.includes('BeltWaistLayer') ? waist : name.includes('characterRender') ? render : require(name)).HomeCharacter;
 }
 const model = {
   name: 'Adventurer', skin: '#ccb18d', skinShadow: '#a78469', hair: '#63422e',
@@ -93,7 +94,7 @@ test('preview belt stages preserve the rest of the full character and accessibil
   assert.equal(withoutPreviewWaist(starter), withoutPreviewWaist(equipped));
   for (const html of [starter, equipped]) {
     assert.match(html, /role="img"/);
-    assert.match(html, /aria-label="Adventurer"/);
+    assert.match(html, /aria-label="Adventurer\./);
     assert.match(html, /data-main-hand="staff"/);
     assert.match(html, /viewBox="0 0 240 380"/);
     assert.match(html, /qa-character-shirt/);
