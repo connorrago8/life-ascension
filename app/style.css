@@ -463,3 +463,9 @@ code { font-family: ui-monospace, monospace; }
 .highlight-action { margin-block: 12px; overflow-wrap: anywhere; }
 .highlight-action .btn { white-space: normal; text-align: left; max-width: 100%; }
 .quest:target { outline: 2px solid var(--gold, #d8bd77); outline-offset: 4px; }
+/* Local completion feedback remains beside its originating control. */
+.completion-feedback { flex-basis: 100%; min-width: 0; padding-block: 8px; overflow-wrap: anywhere; }
+.completion-feedback p { margin-block: 8px; }
+.completion-feedback[data-completion-phase="error"] { border-left: 3px solid #f4a9a9; padding-left: 10px; }
+.quest-instructions { font-size: 1.1rem; line-height: 1.6; overflow-wrap: anywhere; }
+dd { margin: 0 0 12px; overflow-wrap: anywhere; }

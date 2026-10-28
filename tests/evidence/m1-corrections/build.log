@@ -1,0 +1,54 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> life-ascension@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.28
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 2.4s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/21) ...
+   Generating static pages (5/21) 
+   Generating static pages (10/21) 
+   Generating static pages (15/21) 
+ ✓ Generating static pages (21/21)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    7.93 kB         178 kB
+├ ○ /_not-found                            996 B         104 kB
+├ ƒ /api/api-keys                          151 B         103 kB
+├ ƒ /api/mcp                               151 B         103 kB
+├ ƒ /api/whoami                            151 B         103 kB
+├ ƒ /auth/callback                         151 B         103 kB
+├ ○ /character                           3.72 kB         180 kB
+├ ○ /health                                151 B         103 kB
+├ ○ /journal                             2.28 kB         173 kB
+├ ○ /login                               2.08 kB         173 kB
+├ ○ /login/forgot                        1.09 kB         172 kB
+├ ○ /play                                  151 B         103 kB
+├ ○ /preview/adventure                   2.02 kB         108 kB
+├ ○ /preview/character                   1.63 kB         110 kB
+├ ○ /preview/compare                     2.58 kB         111 kB
+├ ○ /preview/home                        3.01 kB         112 kB
+├ ○ /preview/inventory                   2.93 kB         106 kB
+├ ○ /preview/title                         676 B         103 kB
+├ ○ /quests                              2.01 kB         172 kB
+├ ƒ /quests/[id]                          5.1 kB         176 kB
+├ ○ /quests/manage                       1.64 kB         175 kB
+├ ○ /settings/api-keys                   2.21 kB         173 kB
+└ ○ /settings/password                   1.64 kB         172 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/255-b1e2483a7e02feee.js       46.6 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.94 kB
+
+
+ƒ Middleware                             93.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

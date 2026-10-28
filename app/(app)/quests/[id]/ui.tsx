@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import QuestDetailCompletion from '../../../../components/QuestDetailCompletion';
 import {CADENCE_LABELS} from '../../../../lib/questReceipt';
 import { supabase } from '../../../../lib/supabase';
 
-type Quest = { id: string; title: string; domain: string; cadence: keyof typeof CADENCE_LABELS; active: boolean; quest_class?: 'main'|'side' };
+type Quest = { id: string; title: string; domain: string; cadence: keyof typeof CADENCE_LABELS; active: boolean; quest_class?: 'main'|'side'; quest_type?: string; scheduled_for: string|null; target_amount?: number|null };
 type Instance = { id: string; due_date: string; status: string };
 type Note = {
   id: string;
@@ -17,7 +18,9 @@ type Note = {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default function QuestNotes({ questId }: { questId: string }) {
+export default function QuestNotes({ questId,preferredInstance }: { questId: string; preferredInstance?:string }) {
+  const generation=useRef(0),currentOwner=useRef<string|null>(null);
+  const [loadError,setLoadError]=useState('');
   const validId = UUID_PATTERN.test(questId);
   const [ready, setReady] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -31,6 +34,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    const version=++generation.current;setLoadError('');
     if (!validId) {
       setReady(true);
       return;
@@ -38,24 +42,29 @@ export default function QuestNotes({ questId }: { questId: string }) {
     try {
       const client = supabase();
       const { data: authData, error: authError } = await client.auth.getUser();
-      const user = authError ? null : authData.user;
+      if(version!==generation.current)return;
+      if(authError)throw authError;
+      const user = authData.user;
+      if(currentOwner.current!==user?.id){setQuest(null);setInstances([]);setNotes([]);currentOwner.current=user?.id??null;}
       setUserId(user?.id ?? null);
       setReady(true);
       if (!user) return;
       const [questResult, noteResult, instanceResult] = await Promise.all([
-        client.from('quests').select('id,title,domain,cadence,active,quest_class').eq('id', questId).maybeSingle(),
+        client.from('quests').select('*').eq('id', questId).maybeSingle(),
         client.from('quest_progress').select('id,note,percent,source,created_at,instance_id').eq('quest_id', questId).order('created_at', { ascending: false }).limit(20),
         client.from('quest_instances').select('id,due_date,status').eq('quest_id', questId).order('due_date', { ascending: false }).limit(30),
       ]);
       if (questResult.error || noteResult.error || instanceResult.error) {
-        setMessage(questResult.error?.message || noteResult.error?.message || instanceResult.error?.message || 'Unable to load notes.');
+        setLoadError(questResult.error?.message || noteResult.error?.message || instanceResult.error?.message || 'Unable to load notes.');
         return;
       }
+      if(version!==generation.current)return;
       setQuest((questResult.data ?? null) as Quest | null);
       setNotes((noteResult.data ?? []) as Note[]);
       setInstances((instanceResult.data ?? []) as Instance[]);
     } catch {
-      setMessage('Supabase is not configured in this browser.');
+      if(version!==generation.current)return;
+      setLoadError('Could not load quest details. Please retry.');
       setReady(true);
     }
   }, [questId, validId]);
@@ -104,11 +113,12 @@ export default function QuestNotes({ questId }: { questId: string }) {
     return <main className="wrap"><h1>Quest notes</h1><p className="muted">That quest link is not valid.</p><a className="btn ghost" href="/quests">All notes</a></main>;
   }
   if (!ready) return <main className="wrap">Loading quest notes…</main>;
+  if(loadError)return <main className="wrap"><h1>Quest Detail</h1><p role="alert">{loadError}</p><button className="btn" onClick={()=>void load()}>Retry loading details</button></main>;
   if (!userId) {
     return (
       <main className="wrap">
         <div className="eyebrow">LIFE ASCENSION</div>
-        <h1>Quest notes</h1>
+        <h1>Quest Detail</h1>
         <p className="muted">Sign in to record progress.</p>
         <a className="btn" href={'/login?next=' + encodeURIComponent('/quests/' + questId)}>Sign in</a>
       </main>
@@ -121,11 +131,12 @@ export default function QuestNotes({ questId }: { questId: string }) {
         <div>
           <div className="eyebrow">LIFE ASCENSION</div>
           <h1>{quest?.title ?? 'Quest notes'}</h1>{quest&&<p>{quest.quest_class==='main'?'Main':'Side'} · {CADENCE_LABELS[quest.cadence]} · Reward: 1 XP on confirmed completion</p>}
-          <p className="muted">Saving a note keeps a journal entry. XP is awarded only when you confirm completion on the quest board.</p>
+          <p className="muted">Saving a note keeps a journal entry. XP is awarded only after the server confirms completion.</p>
         </div>
         <a className="btn ghost" href="/quests">All notes</a>
       </header>
       {!quest && <section className="panel"><p className="muted">Quest not found.</p></section>}
+      {quest&&<><section className="panel"><h2>Instructions</h2><p className="quest-instructions">{quest.title}</p><p>Complete this real-world action before selecting Complete quest. Only confirm work you have actually finished.</p><dl><dt>Quest</dt><dd>{quest.quest_class==='main'?'Main':'Side'}</dd><dt>Recurrence</dt><dd>{CADENCE_LABELS[quest.cadence]}</dd><dt>Life domain</dt><dd>{quest.domain.replaceAll('_',' ')}</dd><dt>First due date</dt><dd>{quest.scheduled_for??'Not specified'} · Chicago time</dd></dl></section><QuestDetailCompletion key={userId+quest.id} owner={userId} quest={quest} preferredInstance={preferredInstance} instances={instances} onSaved={load}/></>}
       {quest && (
         <form className="panel" onSubmit={save}>
           <h2>Add a progress note</h2>

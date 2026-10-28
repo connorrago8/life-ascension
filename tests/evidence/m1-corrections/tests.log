@@ -1,0 +1,129 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> life-ascension@0.1.0 test
+> node --test tests/*.test.mjs
+
+(node:26) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/apiKey.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ generated keys are high entropy and hashed (1.941247ms)
+✔ digest compare is exact and rejects uneven input (0.290168ms)
+✔ bearer parsing keeps the token intact (0.282446ms)
+✔ key names are trimmed and bounded (0.269416ms)
+✔ migration only adds new api and progress objects (0.586765ms)
+✔ crypto import stays available to the hasher (0.099911ms)
+(node:27) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/attributes.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ preview copy does not offer allocation or equipping (0.909691ms)
+✔ attributes are only STR, INT, VIT, and DIS (1.061049ms)
+✔ attributes fall back to a placeholder when the profile has no such column (0.253812ms)
+✔ attributes read numeric or text values when the row actually has them (0.190628ms)
+✔ the adventurer name prefers display_name, then the email local part (0.276888ms)
+(node:28) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/attributes.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ primary nav is Home, Quests, Play, Character, and More (2.258746ms)
+✔ equipment slots start empty unless the player owns that item (6.820836ms)
+✔ attribute cells stay a placeholder until the profile has real values (0.43738ms)
+✔ wellness stays disconnected unless real readings exist (0.287934ms)
+✔ the adventurer is layered and beginner clothes are not weapons or armor (1.577248ms)
+✔ slot silhouettes share one 16 by 16 pixel grid (0.381425ms)
+✔ character and play screens do not invent stats, wellness, or XP (0.334094ms)
+(node:30) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/preview/appearance.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ meal quest tracks three distinct logs and awards completion only at 3/3 (1.600543ms)
+✔ completed quests collapse below unfinished quests in Home preview (0.243197ms)
+✔ front-facing game avatar uses shared equipment palette and renders held gear (0.199921ms)
+✔ changing appearance leaves progression and effects unchanged (3.025772ms)
+✔ swapping an equipped item updates both renders and bonuses come only from effects (17.843227ms)
+✔ home and adventure views are wired to the shared render models (0.680857ms)
+✔ today's quests include the meal quest and complete in place (0.382086ms)
+✔ preview routes do not import a Supabase client or write over the network (1.846164ms)
+✔ the title is a launch gate in sessionStorage and the skip setting is not built (0.520054ms)
+✔ completion feedback displays the sample quest XP and does not change progression (0.704062ms)
+✔ level-up plays only when XP crosses a level threshold (0.627696ms)
+✔ creator colors and inventory equip update both renders without appearance granting bonuses (8.097891ms)
+✔ preview navigation is quests, character, adventure, and inventory (0.220673ms)
+✔ character equipment slots open available gear choices (0.166171ms)
+✔ inventory supports equipment-slot filters (0.125429ms)
+✔ visible outfit palette derives from equipped armor legs and feet (0.208044ms)
+(node:35) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/level.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ the board curve reaches level 10 at 270 XP and steps up by 5 (1.077665ms)
+✔ levelFor matches the board at each threshold and one XP below it (1.411588ms)
+✔ early totals land on the levels the board describes (0.256306ms)
+✔ progress fraction stays inside [0, 1) and a fresh adventurer at 2 XP is 2/10 (1.106849ms)
+✔ coerceXp accepts the shapes get_lifetime_xp can return (0.420254ms)
+✔ OTP verify flow is a six-digit email code and does not enumerate accounts (1.225708ms)
+✔ an already signed-in user leaves /login for the safe return path (0.209135ms)
+✔ callback and auth-gated links use safeNext or a fixed same-origin next (0.188855ms)
+✔ mcp and whoami still advertise Bearer on 401 (0.197478ms)
+✔ 401 responses advertise Bearer and revoked keys use that response (0.906668ms)
+✔ mcp tools use the scheduling and progress RPCs (0.426373ms)
+(node:82) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/mcpTools.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ list_quests hides inactive instances and the other user (2.899081ms)
+✔ an API key cannot read, note, complete, or create the other user rows (1.192959ms)
+✔ Bob is isolated from Alice the same way (0.438661ms)
+✔ API-key submit_completion of a daily three days ago is rejected with XP unchanged (0.509658ms)
+(node:83) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/emailAuthRedirect.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ email links use the calling origin, including a Vercel preview (0.977394ms)
+✔ request origin prefers the forwarded host and rejects a spoofed host (0.815079ms)
+✔ login is a password form and keeps the magic-link option (0.710451ms)
+✔ forgot password redirects to the set-password page on this origin (0.19916ms)
+✔ signed-in users can set a password of at least 8 characters (0.21191ms)
+✔ the quest board links to set or change password beside quest notes and API keys (0.236076ms)
+✔ middleware refreshes the cookie session and does not disable persistence (0.293132ms)
+(node:96) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/questReceipt.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ shared action path validates owner before submitting (56.055568ms)
+✔ valid receipt clears exact pending operation; duplicate feedback never adds XP (14.64895ms)
+✔ unknown response retains occurrence/action and origin for safe recovery (8.807252ms)
+✔ explicit transaction rejection clears pending state and reports error (6.289173ms)
+(node:103) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/questBoard.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ due date outranks Main; equal dates use classification, creation, ID (8.064611ms)
+✔ no filler, duplicates, future, deferred, completed or ineligible occurrences (0.170707ms)
+✔ completion, refresh, new quests and classification changes never refill today (0.296948ms)
+✔ empty selection remains empty across refresh; unavailable storage fails closed (0.630671ms)
+✔ Chicago day respects midnight and both DST transitions (7.78537ms)
+✔ Journal uses completion date, preserves missing reward evidence and deduplicates occurrences (0.595368ms)
+(node:105) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/questReceipt.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ receipt binds completion and new XP to the exact occurrence (1.388584ms)
+✔ lost-response retry confirms previous reward with zero new XP (0.241995ms)
+✔ calendar additions preserve Chicago date anchors across DST, months and years (0.672374ms)
+(node:118) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/642a81ac83b1/life-ascension/lib/safeNext.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/642a81ac83b1/life-ascension/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ safeNext keeps all 42 redirect payloads on the same origin (1.166449ms)
+✔ documented open-redirect payloads collapse to the home page (0.148574ms)
+✔ safe quest and settings paths are preserved (0.203016ms)
+ℹ tests 72
+ℹ suites 0
+ℹ pass 72
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 610.450645

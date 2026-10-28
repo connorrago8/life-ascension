@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
+import CompletionFeedback from './CompletionFeedback';
+import type {ActionFeedback} from '../lib/questAction';
 import { chicagoDay, dailyHighlights, type HighlightCandidate } from '../lib/questBoard';
 
-export default function DailyHighlights({ ownerId, candidates, titles, cadences, disabled, onComplete }: {
+export default function DailyHighlights({ ownerId, candidates, titles, cadences, disabled, onComplete, feedback, onRetry, detailLinks }: {
   ownerId: string; candidates: HighlightCandidate[]; titles: Record<string, string>;
-  cadences?: Record<string,string>; disabled?: boolean; onComplete?: (id:string)=>void;
+  feedback?: ActionFeedback|null; onRetry?:(id:string)=>void; detailLinks?:Record<string,string>; cadences?: Record<string,string>; disabled?: boolean; onComplete?: (id:string)=>void;
 }) {
   const [selection, setSelection] = useState<{ key: string; ids: string[] } | null>(null);
   const [error, setError] = useState(false);
@@ -25,8 +27,8 @@ export default function DailyHighlights({ ownerId, candidates, titles, cadences,
       <ol>{selection.ids.map(id => {
         const candidate = candidates.find(c => c.id === id);
         return <li key={id} className={'highlight-action '+(candidate?.classification==='main'?'main-quest':'')}>{candidate && candidate.status !== 'completed' && candidate.eligible ?
-          <><p className="eyebrow">{candidate.classification==='main'?'Main':'Side'} · {cadences?.[id]}</p><a className="btn ghost" href={`#occurrence-${id}`}>{titles[id]}</a>{onComplete&&<button className="btn" disabled={disabled} aria-label={'Complete quest: '+titles[id]} onClick={()=>onComplete(id)}>Complete quest</button>}</> :
-          <span>{titles[id] ?? 'Selected quest'} · {candidate?.status === 'completed' ? 'Completed' : 'No longer available'}</span>}</li>;
+          <><p className="eyebrow">{candidate.classification==='main'?'Main':'Side'} · {cadences?.[id]}</p><a className="btn ghost" href={detailLinks?.[id]??`#occurrence-${id}`}>{titles[id]}</a>{onComplete&&<button className="btn" disabled={disabled} aria-label={'Complete quest: '+titles[id]} onClick={()=>onComplete(id)}>Complete quest</button>}</> :
+          <span>{titles[id] ?? 'Selected quest'} · {candidate?.status === 'completed' ? 'Completed' : 'No longer available'}</span>}{feedback?.id===id&&<CompletionFeedback feedback={feedback} disabled={feedback.phase==='pending'} onRetry={onRetry?()=>onRetry(id):undefined}/>}</li>;
       })}</ol>}
     {selection?.key===key&&selection.ids.length>0&&selection.ids.every(id=>candidates.find(c=>c.id===id)?.status==='completed')&&<p role="status">Today’s selected quests complete. Other active quests remain below.</p>}
     <a className="btn ghost" href="/journal">Completed Journal</a>

@@ -1,0 +1,5 @@
+PASS 320px: three Main/Side highlights, Detail completion, inline pending/confirmed/uncertain/error, Chicago completed_at, Journal/reload/day boundary; 12 screenshots
+PASS 375px: three Main/Side highlights, Detail completion, inline pending/confirmed/uncertain/error, Chicago completed_at, Journal/reload/day boundary; 12 screenshots
+PASS 390px: three Main/Side highlights, Detail completion, inline pending/confirmed/uncertain/error, Chicago completed_at, Journal/reload/day boundary; 12 screenshots
+PASS 430px: three Main/Side highlights, Detail completion, inline pending/confirmed/uncertain/error, Chicago completed_at, Journal/reload/day boundary; 12 screenshots
+PASS account switch: previous account content and pending action absent

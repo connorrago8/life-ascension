@@ -1,0 +1,7 @@
+PASS api_keys_progress_smoke.sql
+PASS scheduling_auth_smoke.sql
+PASS two_user_mcp_auth.sql
+PASS archive_compat_smoke.sql
+PASS daily_late_window_smoke.sql
+PASS quest_classification_smoke.sql
+PASS quest_board_m1_smoke.sql
