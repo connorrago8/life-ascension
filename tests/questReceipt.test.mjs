@@ -32,7 +32,7 @@ test('malformed or timezone-free ledger timestamps never justify XP feedback', (
   const invalidTimes = ['not-a-timestamp', '2026-10-28', '2026-10-28T07:00:00',
     '2026-10-28T07:00:00+99:99', '', 123];
   for (const reward_awarded_at of invalidTimes) {
-    assert.doesNotMatch(completionFeedback({ ...awarded, reward_awarded_at }, instanceId), /\\+1 XP/,
+    assert.doesNotMatch(completionFeedback({ ...awarded, reward_awarded_at }, instanceId), /\+1 XP/,
       'Malformed ledger timestamp cannot substantiate a new reward');
     assert.equal(completionFeedback({ ...awarded, reward_status: 'already_awarded',
       xp_awarded: 0, reward_awarded_at }, instanceId),
