@@ -5,7 +5,8 @@ import '../../preview/preview.css';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
-import { coerceXp, levelFor, levelProgress } from '../../../lib/level';
+import { levelFor, levelProgress } from '../../../lib/level';
+import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { supabase } from '../../../lib/supabase';
 import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
 
@@ -46,11 +47,16 @@ export default function CharacterPage() {
         setState({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
         return;
       }
+      const verifiedXp = verifiedLifetimeXp(xpResult.data);
+      if (verifiedXp === null) {
+        setState({ status: 'error', message: 'Could not verify lifetime XP. Your quests are unchanged.' });
+        return;
+      }
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
       setState({
         status: 'ready',
         name: adventurerName(user.email, profile?.display_name),
-        xp: coerceXp(xpResult.data),
+        xp: verifiedXp,
         profile,
         preview: false,
       });
@@ -101,7 +107,7 @@ export default function CharacterPage() {
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
       <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
-      <CharacterScreen displayName={state.name} hideSampleStats />
+      <CharacterScreen displayName={state.name} hideSampleStats hideSampleLevel />
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (
