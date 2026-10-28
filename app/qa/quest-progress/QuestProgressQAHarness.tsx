@@ -18,6 +18,7 @@ const QUEST = {
  */
 export function QuestProgressQAHarness() {
   const [amount, setAmount] = useState(2);
+  const [status, setStatus] = useState<'available' | 'completed'>('available');
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { setHydrated(true); }, []);
   const [response, setResponse] = useState<'saved' | 'retry' | 'rejected'>('retry');
@@ -52,11 +53,12 @@ export function QuestProgressQAHarness() {
     </select>
     <QuestProgressControls
       quest={QUEST}
-      instance={{ id: INSTANCE_ID, current_amount: amount, status: 'available' }}
+      instance={{ id: INSTANCE_ID, current_amount: amount, status }}
       disabled={false}
       onLog={onLog}
     />
     <div className="actions">
+      <button type="button" className="btn ghost" onClick={() => setStatus('completed')}>Mark QA instance completed (mock only)</button>
       <button type="button" className="btn ghost" onClick={seedCorruptJournal}>Seed malformed journal and reload</button>
       <button type="button" className="btn ghost" onClick={reset}>Clear QA journal and reload</button>
     </div>
