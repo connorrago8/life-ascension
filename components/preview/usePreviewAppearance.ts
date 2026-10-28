@@ -84,6 +84,8 @@ function readLoadout(): Loadout {
       return { ...base, ...equipCatalogId(base.equipmentIds, [], main) };
     }
   } catch {
+    // A malformed JSON payload should not keep breaking future preview loads.
+    try { sessionStorage.removeItem(LOADOUT_KEY); } catch { /* storage unavailable */ }
     return base;
   }
   return base;
