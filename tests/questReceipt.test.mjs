@@ -24,7 +24,7 @@ test('new XP feedback requires the matching quest-scoped ledger receipt', () => 
     { ...awarded, xp_awarded: 0 },
     { ...awarded, xp_awarded: 2 }
   ]) {
-    assert.doesNotMatch(completionFeedback(invalid, instanceId), /\\+1 XP/);
+    assert.doesNotMatch(completionFeedback(invalid, instanceId), /\+1 XP/);
   }
 });
 
@@ -32,7 +32,7 @@ test('duplicate completion confirms previous reward without claiming a new award
   const duplicate = { ...awarded, reward_status: 'already_awarded', xp_awarded: 0 };
   assert.equal(completionFeedback(duplicate, instanceId),
     'Quest already completed. XP was awarded previously.');
-  assert.doesNotMatch(completionFeedback({ ...duplicate, reward_confirmed: false }, instanceId), /\\+1 XP/);
+  assert.doesNotMatch(completionFeedback({ ...duplicate, reward_confirmed: false }, instanceId), /\+1 XP/);
 });
 
 test('Home calls v2 only for completion and never infers XP from lifetime delta', () => {
