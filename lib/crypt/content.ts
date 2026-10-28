@@ -188,7 +188,7 @@ export const NODES: readonly CryptNode[] = [
     label: 'Treasure',
     title: 'Ember Charm',
     detail: 'A coal-warm charm on a broken plinth.',
-    prose: 'The Ember Charm is hot to the touch and leaves no mark. While you carry it, your strikes hit 2 harder. It fades when you leave this preview.',
+    prose: 'The Ember Charm is hot to the touch and leaves no mark. While carried, it adds 2 base damage to Attack and Heavy Strike. Focus doubles the total Attack damage. It fades when you leave this preview.',
     take: 'Take the charm',
     attackBonus: 2,
   },
@@ -232,7 +232,7 @@ export const END_CARD = {
   twitch: 'Your {artifact} twitches once, then goes still.',
   kicker: 'To be continued.',
   restart: 'Restart preview',
-  charm: 'Ember Charm is in your pocket (+{bonus} damage, this run only).',
+  charm: 'Ember Charm adds +{bonus} base damage (Focus doubles Attack), this run only.',
   sigil: 'You recovered the Sentinel Sigil. It vanishes when this preview ends.',
 };
 
