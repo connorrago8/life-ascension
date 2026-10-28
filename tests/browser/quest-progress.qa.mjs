@@ -39,11 +39,11 @@ try {
   // CEO P1: verify a real Tab sequence and visible keyboard focus at phone widths.
   // This uses the actual component, not a static markup assertion.
   const addButton = page.getByRole('button', { name: /^Add 2 repetitions/ });
-  const undoButton = page.getByRole('button', { name: /Undo 2 repetitions/ });
+  const clearButton = page.getByRole('button', { name: /^Clear progress for/ });
   for (const width of [320, 375, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     await page.getByLabel('Mock next response (no network)').focus();
-    for (const [target, label] of [[addButton, 'Add'], [undoButton, 'Undo']]) {
+    for (const [target, label] of [[addButton, 'Add'], [clearButton, 'Clear']]) {
       await page.keyboard.press('Tab');
       const focus = await target.evaluate(element => {
         const style = getComputedStyle(element);
@@ -83,7 +83,7 @@ try {
   }
   console.log('PASS: measured CDP 2x page scale, no document overflow, and focus at four widths.');
   await page.setViewportSize({ width: 320, height: 844 });
-  console.log('PASS: real Tab focus, visible Add/Undo outlines and no overflow at 320/375/390/430px.');
+  console.log('PASS: real Tab focus, visible Add/Clear outlines and no overflow at 320/375/390/430px.');
   const timedSaveRetryStart = performance.now();
   await addButton.click();
   await page.getByText('Save not confirmed. Retry the same operation before logging more.').waitFor();
@@ -116,9 +116,9 @@ try {
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
-  await page.getByRole('button', { name: /Undo 2 repetitions/ }).click();
+  await page.getByRole('button', { name: /^Clear progress for/ }).click();
   // Preserve real-browser evidence even when Undo does not confirm; never claim a pass by timeout.
-  console.log('UNDO QA STATE:', JSON.stringify({
+  console.log('CLEAR QA STATE:', JSON.stringify({
     selectedMock: await page.getByLabel('Mock next response (no network)').inputValue(),
     operations: await page.locator('[data-testid="qa-operation-log"]').innerText(),
     alerts: await page.getByRole('alert').allInnerTexts(),
@@ -127,6 +127,8 @@ try {
   await page.screenshot({ path: join(output, 'quest-progress-undo-diagnostic.png'), fullPage: true });
   await page.getByText('Progress saved.').waitFor();
   assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\|-2\|saved/);
+  assert.equal(await page.locator('progress').evaluate(element => element.value), 0,
+    'One-step Clear must return the progress indicator to zero after confirmed save');
   await page.getByRole('button', { name: /Seed malformed journal/ }).click();
   await page.getByRole('alert').filter({ hasText: /pending save record is unreadable/ }).waitFor();
   assert.equal(await page.getByRole('button', { name: /^Add 2 repetitions/ }).isDisabled(), true);
@@ -136,7 +138,7 @@ try {
     assert.equal(overflow, false, `Unexpected horizontal overflow at ${width}px`);
     await page.screenshot({ path: join(output, `quest-progress-${width}.png`), fullPage: true });
   }
-  console.log('PASS: real-component refresh, original-ID retry, Undo, corrupt journal, four viewport widths.');
+  console.log('PASS: real-component refresh, original-ID retry, one-step Clear, corrupt journal, four viewport widths.');
   console.log('Not covered: real backend idempotency, authenticated Preview, or genuine browser UI 200% zoom (CDP page scale is not equivalent).');
 } finally {
   await browser.close();
