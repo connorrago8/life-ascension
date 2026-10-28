@@ -24,7 +24,7 @@ export default function Home(){
   setLayoutPreview(false);const s=supabase();const {data:{user},error:authError}=await s.auth.getUser();setUser(user?.id||null);setReady(true);if(authError||!user)return;
  // Recover only journal-backed older completed instances owned by this signed-in user.
  // Never query arbitrary history or trust a browser key without server owner filtering.
- const pendingIds=pendingProgressInstanceIds(localStorage);
+ let pendingIds:string[]=[];try{pendingIds=pendingProgressInstanceIds(localStorage)}catch{/* Storage getter denied; never query broad history. */}
  const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(qe){setMessage(qe.message);return}const all=q||[];setQuests(all);const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return}const today=todayLocal();
 const goalIds=all.filter(q=>q.quest_type==='goal').map(q=>q.id);
 const onceIds=all.filter(q=>q.quest_type==='scheduled'&&q.cadence==='once').map(q=>q.id);
