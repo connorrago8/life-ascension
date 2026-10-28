@@ -104,11 +104,32 @@ try {
       `Crypt end card must not overflow the ${width}px viewport`);
     await page.screenshot({ path: join(output, `crypt-end-${width}.png`), fullPage: true });
   }
+  // The screenshot/overflow check alone cannot catch fixed-bottom-nav overlap.
+  // Exercise both ending buttons, the alternate-choice control and restart at
+  // the narrowest supported iPhone viewport, scrolling as a real user would.
+  await page.setViewportSize({ width: 320, height: 844 });
+  const inspect = page.getByRole('button', { name: 'Inspect the compass' });
+  await inspect.scrollIntoViewIfNeeded();
+  await inspect.click();
+  await page.getByRole('status').filter({ hasText: /needle points downward/ }).waitFor();
+  const chooseAgain = page.getByRole('button', { name: 'Choose another ending' });
+  await chooseAgain.scrollIntoViewIfNeeded();
+  await chooseAgain.click();
+  const leave = page.getByRole('button', { name: 'Return to Brackenlight' });
+  await leave.scrollIntoViewIfNeeded();
+  await leave.click();
+  await page.getByRole('status').filter({ hasText: /return to Mira/ }).waitFor();
+  await chooseAgain.scrollIntoViewIfNeeded();
+  await chooseAgain.click();
+  assert.equal(await inspect.count(), 1, 'Both ending choices must be reachable again at 320px');
+  assert.equal(await leave.count(), 1, 'Alternate ending must remain reachable at 320px');
   assert.deepEqual(accountWrites, [], 'Unsaved Crypt preview must not send account progress writes');
-  await page.getByRole('button', { name: 'Restart preview' }).click();
+  const restart = page.getByRole('button', { name: 'Restart preview' });
+  await restart.scrollIntoViewIfNeeded();
+  await restart.click();
   await page.locator('[data-phase="intro"]').waitFor();
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
-  console.log('clue retention, ending revisit, restart, 320/390px no overflow, and no account writes.');
+  console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no account writes.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');
 } finally {
   await browser.close();
