@@ -12,6 +12,19 @@ export default function Home(){
  const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState(0),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2F');
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [showQuestForm,setShowQuestForm]=useState(false);
+ // A lost completion response can leave an immutable retry receipt on a completed quest.
+ // Reveal the Journal automatically so that Retry is discoverable after refresh.
+ useEffect(()=>{
+  for(const instance of instances){
+   if(instance.status!=='completed')continue;
+   try{
+    if(localStorage.getItem(`life-progress-pending:${instance.id}`)!==null){setShowCompleted(true);break;}
+   }catch{
+    // Unreadable storage must not hide the recovery controls.
+    setShowCompleted(true);break;
+   }
+  }
+ },[instances]);
  const load=useCallback(async()=>{
   if(process.env.NODE_ENV==='development'&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='1'){
     setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setInstances([]);setXp(0);setMessage('');return;
