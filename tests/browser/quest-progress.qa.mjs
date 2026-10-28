@@ -157,7 +157,7 @@ try {
   await page.waitForFunction(() => document.querySelector('progress')?.value === 7);
   await page.getByRole('button', { name: /^Clear progress for/ }).click();
   await page.waitForFunction(() => document.querySelector('progress')?.value === 0);
-  assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\\|-7\\|saved/,
+  assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\|-7\|saved/,
     'Atomic Clear from 7/10 must submit exactly -7');
   await page.getByRole('button', { name: /Seed malformed journal/ }).click();
   await page.getByRole('alert').filter({ hasText: /pending save record is unreadable/ }).waitFor();
