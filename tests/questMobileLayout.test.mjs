@@ -102,8 +102,13 @@ test('each progress meter is labelled with its quest title', () => {
 });
 
 
-test('clear is offered only when the existing server undo can reset progress in one operation', () => {
+test('clear and undo are separate actions using the verified atomic clear contract', () => {
   assert.match(controls, /const clearDelta = nextProgressDelta\(progressBounds, 'clear'\)/);
-  assert.match(controls, /clearDelta !== null \? 'Clear' : `Undo/);
   assert.match(controls, /if \(undoDelta !== null\) submit\(undoDelta\)/);
+  assert.match(controls, /if \(clearDelta !== null\) submit\(clearDelta\)/);
+  assert.match(controls, /disabled=\{disabled \|\| saving \|\| retrying \|\| storageError \|\| clearDelta === null\}/);
+  assert.match(controls, /aria-label=\{`Clear progress for \$\{quest.title\}`\}/);
+  assert.match(controls, /aria-label=\{`Undo \$\{quest.progress_increment\}/);
+  assert.match(controls, /if \(instance.status !== 'available' \|\| disabled \|\| saving \|\| storageError \|\| retrying/);
+  assert.match(controls, /const operation = \{id: crypto.randomUUID\(\), delta\}/);
 });
