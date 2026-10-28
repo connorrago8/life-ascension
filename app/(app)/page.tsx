@@ -5,6 +5,7 @@ import {ADVENTURER_CLASS} from '../../lib/character';
 import {coerceXp,levelFor} from '../../lib/level';
 import {QuestProgressControls} from '../../components/QuestProgressControls';
 import {completionFeedback} from '../../lib/preview/questReceipt.mjs';
+import {confirmedProgressResult} from '../../lib/preview/progressDelta.mjs';
 import {hasPendingCompletedRecovery,pendingProgressInstanceIds,recoverableCompletedEntries} from '../../lib/preview/pendingProgress';
 type Quest={id:string;title:string;domain:string;cadence:'once'|'daily';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
@@ -93,7 +94,7 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
   if(layoutPreview||busy)return 'retry';
   setBusy(true);
   try {
-   const {error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
+   const {data,error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
    if(error){
     // Transport/server errors may have committed before the response was lost.
     const definite=/^(22|23|P0001)/.test(error.code ?? '');
@@ -102,7 +103,15 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
     if(!ambiguous)await load();
     return ambiguous?'retry':'rejected';
    }
-   setMessage('Progress saved.');
+   const confirmation=confirmedProgressResult(data);
+   if(!confirmation){
+    // A missing/malformed RPC result may follow a committed operation: keep its request ID.
+    setMessage('Progress save response not verified. Retry the same operation.');
+    return 'retry';
+   }
+   setMessage(confirmation.status === 'completed'
+    ? 'Quest completion confirmed. XP is displayed from your account ledger.'
+    : 'Progress saved.');
    await load();
    return 'saved';
   } catch {

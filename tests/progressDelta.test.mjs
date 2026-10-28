@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextProgressDelta } from '../lib/preview/progressDelta.mjs';
+import { nextProgressDelta, confirmedProgressResult } from '../lib/preview/progressDelta.mjs';
+import { readFileSync } from 'node:fs';
 
 test('quick increment stops at the target without over-logging', () => {
   assert.equal(nextProgressDelta({target:8,amount:5,increment:5},'add'),3);
@@ -26,4 +27,32 @@ test('invalid, fractional and unsafe progress never generate an operation', () =
   }
   assert.equal(nextProgressDelta({target:8,amount:2,increment:0},'undo'),null);
   assert.equal(nextProgressDelta({target:8,amount:2,increment:1},'other'),null);
+});
+
+
+test('progress RPC success requires exactly one valid result row', () => {
+  const row = { current_amount: 7, status: 'available', completed_now: false };
+  assert.deepEqual(confirmedProgressResult([row]),
+    { currentAmount: 7, status: 'available', completedNow: false });
+  assert.deepEqual(confirmedProgressResult([{ ...row, current_amount: 8, status: 'completed', completed_now: true }]),
+    { currentAmount: 8, status: 'completed', completedNow: true });
+  assert.deepEqual(confirmedProgressResult([{ ...row, status: 'completed' }]),
+    { currentAmount: 7, status: 'completed', completedNow: false },
+    'An idempotent completed replay must remain confirmable without new XP');
+  for (const invalid of [null, undefined, [], {}, [row, row], [null],
+    [{ ...row, current_amount: -1 }], [{ ...row, current_amount: 0.5 }],
+    [{ ...row, current_amount: '7' }], [{ ...row, status: 'deferred' }],
+    [{ ...row, completed_now: 'true' }], [{ ...row, completed_now: true }]]) {
+    assert.equal(confirmedProgressResult(invalid), null,
+      'Unexpected RPC payload must preserve the original retry journal');
+  }
+});
+
+test('Home retains original progress request on unverified RPC response', () => {
+  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /const confirmation=confirmedProgressResult\\(data\\)/);
+  assert.match(home, /if\\(!confirmation\\)\\{[^}]*return 'retry';\\}/);
+  assert.match(home, /confirmation\\.status === 'completed'/);
+  assert.doesNotMatch(home, /Quest completed\\. \\+1 XP/,
+    'Tracked progress cannot claim a new XP award without a v2 ledger receipt');
 });
