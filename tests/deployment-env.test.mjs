@@ -205,6 +205,23 @@ test('runtime server/Edge config accepts only correctly pinned project and targe
   ]) assert.equal(await runtimePublicConfig(env), null);
 });
 
+test('runtime server/Edge refuses privileged key injected after Preview build', async () => {
+  // The build guard rejects this too; runtime drift must not re-enable
+  // public-key authentication with a privileged credential present.
+  for (const target of ['preview', 'development']) {
+    const config = await runtimePublicConfig({
+      ...qa, VERCEL_ENV: target, VERCEL: '1',
+      SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+    });
+    assert.equal(config, null);
+  }
+  // Production is not blocked merely because its legitimate service key exists.
+  const productionConfig = await runtimePublicConfig({
+    ...prod, VERCEL: '1', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+  });
+  assert.equal(productionConfig?.url, prod.NEXT_PUBLIC_SUPABASE_URL);
+});
+
 test('runtime config leaves non-Vercel local development unchanged', async () => {
   const local = await runtimePublicConfig({
     NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
