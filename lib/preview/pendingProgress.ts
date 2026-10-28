@@ -39,3 +39,25 @@ export function hasPendingCompletedRecovery(
   }
   return false;
 }
+
+/** Find older pending instance IDs without scanning the user's entire quest history.
+ * Returned IDs are only lookup hints: the server query MUST still filter owner_id.
+ */
+export function pendingProgressInstanceIds(
+  storage: Pick<Storage, 'length' | 'key'>,
+): string[] {
+  const ids: string[] = [];
+  try {
+    for (let i = 0; i < storage.length && ids.length < 100; i++) {
+      const key = storage.key(i);
+      if (!key?.startsWith('life-progress-pending:')) continue;
+      const id = key.slice('life-progress-pending:'.length);
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+        && !ids.includes(id)) ids.push(id);
+    }
+  } catch {
+    // Do not issue a broad fallback query when storage is unreadable.
+    return [];
+  }
+  return ids;
+}
