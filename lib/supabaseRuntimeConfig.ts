@@ -16,6 +16,10 @@ export async function readServerSupabaseConfig(): Promise<{ url: string; key: st
   if (!target && process.env.VERCEL !== '1') return { url, key }; // Local only.
   const ref = target ? PROJECTS[target] : undefined;
   if (!ref) return null; // Unknown or missing Vercel target: fail closed.
+  // A Preview may receive an injected privileged key after the build. Deny
+  // server/Edge public-key clients too, so the QA probe cannot report PASS
+  // while a privileged credential is present in this runtime.
+  if (target !== 'production' && process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
 
   try {
     const parsed = new URL(url);
