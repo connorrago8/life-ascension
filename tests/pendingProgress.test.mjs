@@ -145,7 +145,7 @@ test('actual QuestProgressControls handlers preserve request IDs across ambiguou
   function mount(amount) {
     const state = { disabled: false, saving: false, storageError: false,
       retrying: parsePendingProgress(storage.getItem('life-progress-pending:q1')) !== null,
-      amount, target: 10, instance: { id: 'q1' }, storageKey: 'life-progress-pending:q1',
+      amount, target: 10, instance: { id: 'q1', status: 'available' }, storageKey: 'life-progress-pending:q1',
       parsePendingProgress, localStorage: storage, onLog,
       crypto: { randomUUID: () => `generated-id-${++generated}` },
       setRetrying: value => { state.retrying = value; },
@@ -214,7 +214,7 @@ test('actual submit handler fails closed when journal is corrupt or storage pers
   function attempt(raw, denyWrite) {
     const state = {
       disabled: false, saving: false, storageError: false, retrying: false,
-      amount: 0, target: 10, instance: { id: 'q1' },
+      amount: 0, target: 10, instance: { id: 'q1', status: 'available' },
       storageKey: 'life-progress-pending:q1', parsePendingProgress,
       localStorage: {
         getItem: () => raw,
@@ -243,4 +243,45 @@ test('actual submit handler fails closed when journal is corrupt or storage pers
   assert.equal(minted, 1, 'UUID may be generated but cannot be sent without durable journal');
   assert.equal(denied.saving, false);
   assert.equal(sent, 0, 'No RPC attempt without successfully persisted journal');
+});
+
+
+test('completed and deferred instances cannot mint new progress operations; completed pending retry stays recoverable', async () => {
+  const { parsePendingProgress } = await loadParser();
+  const handlers = await loadProgressHandlers();
+  const key = 'life-progress-pending:q1';
+  for (const status of ['completed', 'deferred']) {
+    const journal = new Map();
+    let minted = 0;
+    let sent = 0;
+    const state = {
+      disabled: false, saving: false, storageError: false, retrying: false,
+      amount: 2, target: 10, instance: { id: 'q1', status }, storageKey: key,
+      parsePendingProgress,
+      localStorage: {
+        getItem: name => journal.get(name) ?? null,
+        setItem: (name, value) => journal.set(name, value),
+        removeItem: name => journal.delete(name),
+      },
+      crypto: { randomUUID: () => `unexpected-${++minted}` },
+      onLog: async () => { sent++; return 'saved'; },
+      setRetrying: value => { state.retrying = value; },
+      setSaving: value => { state.saving = value; },
+      setStorageError: value => { state.storageError = value; },
+      setSaveState: value => { state.saveState = value; },
+      setCustom: () => {},
+    };
+    vm.runInNewContext(handlers.get('submit'), state)(2);
+    assert.equal(minted, 0, `${status} must not mint a new request ID`);
+    assert.equal(sent, 0, `${status} must not call the progress RPC`);
+    assert.equal(journal.size, 0);
+    if (status === 'completed') {
+      journal.set(key, JSON.stringify({ id: 'original-pending-id', delta: 2 }));
+      vm.runInNewContext(handlers.get('retryPending'), state)();
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(sent, 1, 'Completed pending retry may replay its original operation');
+      assert.equal(minted, 0, 'Retry must not mint another request ID');
+      assert.equal(journal.has(key), false, 'Confirmed retry clears the pending journal');
+    }
+  }
 });
