@@ -137,6 +137,15 @@ jobs:
             "$progress/supabase/migrations/202610260011_atomic_tracked_creation.sql" \
             "$progress/supabase/migrations/202610260012_api_progress_wrapper.sql" \
             supabase/migrations/202610270001_quest_receipt_v2.sql; do
+            if [[ "$file" == "supabase/migrations/202610270001_quest_receipt_v2.sql" ]]; then
+              # Read-only compatibility gate BEFORE adding v2; fail closed on drift.
+              fingerprint="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -c "select md5(pg_get_functiondef('public.log_quest_progress(uuid,uuid,integer)'::regprocedure))")"
+              preflight="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -v expected_progress_md5="$fingerprint" -f tests/sql/qa_forward_only_preflight.sql)"
+              test "$preflight" = "PASS" || { echo "::error::QA forward-only preflight failed: $preflight"; exit 1; }
+              negative="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -v expected_progress_md5=00000000000000000000000000000000 -f tests/sql/qa_forward_only_preflight.sql)"
+              test "$negative" = "STOP" || { echo "::error::QA preflight did not fail closed on wrong fingerprint"; exit 1; }
+              echo "PASS read-only QA forward-only preflight; mismatched fingerprint rejected"
+            fi
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           psql -v ON_ERROR_STOP=1 -d "$db" -f "$progress/tests/sql/partial_progress_smoke.sql"
