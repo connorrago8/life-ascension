@@ -54,14 +54,17 @@ function readLoadout(): Loadout {
   try {
     const raw = sessionStorage.getItem(LOADOUT_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<Loadout>;
-      const equipmentIds = Array.isArray(parsed.equipmentIds)
-        ? parsed.equipmentIds.filter((id): id is string => typeof id === 'string')
+      const parsed: unknown = JSON.parse(raw);
+      // Stored preview data is untrusted and may be null or a primitive.
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return base;
+      const saved = parsed as Partial<Loadout>;
+      const equipmentIds = Array.isArray(saved.equipmentIds)
+        ? saved.equipmentIds.filter((id): id is string => typeof id === 'string')
         : base.equipmentIds;
-      const cosmeticIds = Array.isArray(parsed.cosmeticIds)
-        ? parsed.cosmeticIds.filter((id): id is string => typeof id === 'string')
+      const cosmeticIds = Array.isArray(saved.cosmeticIds)
+        ? saved.cosmeticIds.filter((id): id is string => typeof id === 'string')
         : [];
-      return { equipmentIds, cosmeticIds, colors: sanitizeAppearanceColors(parsed.colors) };
+      return { equipmentIds, cosmeticIds, colors: sanitizeAppearanceColors(saved.colors) };
     }
     const main = sessionStorage.getItem(MAIN_HAND_STORAGE_KEY);
     if (isMainHandId(main)) {
