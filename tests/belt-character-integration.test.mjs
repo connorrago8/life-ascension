@@ -125,3 +125,21 @@ test('explicit staff and lantern each render only their own prop', async () => {
     assert.doesNotMatch(html, new RegExp('data-prop="' + (mainHand === 'staff' ? 'lantern' : 'staff') + '"'));
   }
 });
+
+test('unverified account full-character render has starter tie, no earned belt, staff or hood', async () => {
+  const HomeCharacter = await loadCharacter();
+  const appearance = execute(compile(await readFile(new URL('../lib/preview/appearance.ts', import.meta.url), 'utf8')), require);
+  const view = execute(compile(await readFile(new URL('../lib/preview/characterGearView.ts', import.meta.url), 'utf8')),
+    (name) => name === './appearance' ? appearance : require(name));
+  const render = execute(compile(await readFile(new URL('../lib/preview/characterRender.ts', import.meta.url), 'utf8')), require);
+  const sample = appearance.appearanceFromLoadout({ equipmentIds: ['walking-staff', 'travelers-hood'] });
+  const safe = view.characterGearView('unverified', sample);
+  const html = renderToStaticMarkup(React.createElement(HomeCharacter, {
+    model: render.homeCharacterModel(safe.appearance), beltPreviewStage: safe.beltStage,
+  }));
+  assert.match(html, /data-belt-stage="starter"/);
+  assert.match(html, /data-waist-part="starter-tie"/);
+  assert.match(html, /data-main-hand="none"/);
+  assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
+  assert.doesNotMatch(html, /data-prop="(?:staff|lantern)"/);
+});

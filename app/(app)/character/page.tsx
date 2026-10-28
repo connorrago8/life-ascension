@@ -100,8 +100,8 @@ export default function CharacterPage() {
         <p>Level {progress.level} · {progress.xpIntoLevel} / {progress.xpForNext} XP toward next level</p>
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
-      <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
-      <CharacterScreen displayName={state.name} hideSampleStats />
+      <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : 'Equipment is hidden until account ownership and equipped state can be verified. Your XP and attributes above and below remain account-derived.'}</p>
+      <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : 'unverified'} />
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (

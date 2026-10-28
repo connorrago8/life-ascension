@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { VisibleSlot } from '../../lib/preview/appearance';
 import { PREVIEW_CATALOG } from '../../lib/preview/catalog';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
+import { characterGearView, type CharacterEquipmentMode } from '../../lib/preview/characterGearView';
 import { levelTitle, SAMPLE_PROGRESSION } from '../../lib/preview/progression';
 import { HomeCharacter } from './HomeCharacter';
 import { usePreviewAppearance } from './usePreviewAppearance';
@@ -19,8 +20,9 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen({ displayName, hideSampleStats = false }: { displayName?: string; hideSampleStats?: boolean } = {}) {
+export function CharacterScreen({ displayName, hideSampleStats = false, equipmentMode = 'preview' }: { displayName?: string; hideSampleStats?: boolean; equipmentMode?: CharacterEquipmentMode } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
+  const gearView = characterGearView(equipmentMode, appearance);
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -31,10 +33,10 @@ export function CharacterScreen({ displayName, hideSampleStats = false }: { disp
   const base = SAMPLE_PROGRESSION;
   const slotLabel = [...LEFT_SLOTS, ...RIGHT_SLOTS].find((entry) => entry.slot === selectedSlot)?.label;
   const alternatives = PREVIEW_CATALOG.filter((item) => item.category === 'equipment' && item.slot === selectedSlot);
-  const equippedItem = selectedSlot ? appearance.equipment.find((item) => item.slot === selectedSlot) : null;
+  const equippedItem = selectedSlot ? gearView.appearance.equipment.find((item) => item.slot === selectedSlot) : null;
 
   function slotButton(slot: VisibleSlot, label: string) {
-    const item = appearance.equipment.find((entry) => entry.slot === slot);
+    const item = gearView.appearance.equipment.find((entry) => entry.slot === slot);
     return (
       <button key={slot} type="button" className="character-gear-slot character-slot-button"
         aria-label={`Change ${label}: ${item?.name ?? 'Empty'}`}
@@ -50,17 +52,17 @@ export function CharacterScreen({ displayName, hideSampleStats = false }: { disp
   return (
     <div className="preview-screen character-preview character-equipment-screen">
       <header className="character-header">
-        <div><h1 className="status-name">{displayName ?? appearance.name}</h1><p className="level-line">{levelTitle(base)}</p></div>
+        <div><h1 className="status-name">{displayName ?? gearView.appearance.name}</h1>{gearView.canChange && <p className="level-line">{levelTitle(base)}</p>}</div>
         <p className="character-header-note">EQUIPMENT</p>
       </header>
-      <section className="character-loadout-stage" aria-label="Equipped character and gear">
-        <div className="character-slot-column">{LEFT_SLOTS.map(({ slot, label }) => slotButton(slot, label))}</div>
+      <section className="character-loadout-stage" aria-label={gearView.canChange ? 'Equipped character and gear' : 'Character with unverified equipment hidden'}>
+        <div className="character-slot-column">{gearView.canChange ? LEFT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
         <div className="character-avatar" aria-label="Full-body front-facing adventurer">
-          <HomeCharacter model={homeCharacterModel(appearance)} idPrefix="character" />
+          <HomeCharacter model={homeCharacterModel(gearView.appearance)} idPrefix="character" beltPreviewStage={gearView.beltStage} />
         </div>
-        <div className="character-slot-column">{RIGHT_SLOTS.map(({ slot, label }) => slotButton(slot, label))}</div>
+        <div className="character-slot-column">{gearView.canChange ? RIGHT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
       </section>
-      {selectedSlot ? (
+      {gearView.canChange && selectedSlot ? (
         <section ref={pickerRef} className="character-slot-picker" aria-label={`${slotLabel} equipment choices`}>
           <div className="character-picker-heading">
             <div><span className="character-slot-label">{slotLabel}</span><h2>Choose equipment</h2></div>
@@ -83,8 +85,8 @@ export function CharacterScreen({ displayName, hideSampleStats = false }: { disp
             Unequip {equippedItem.name}
           </button> : null}
         </section>
-      ) : <p className="character-gear-note">Tap an equipment slot to see what you can equip. Gear changes update your character.</p>}
-      {!hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
+      ) : <p className="character-gear-note" role={gearView.canChange ? undefined : 'status'}>{gearView.canChange ? 'Tap an equipment slot to see what you can equip. Gear changes update your character.' : 'Equipment is not yet verified for this account. Preview items are hidden and cannot be equipped.'}</p>}
+      {gearView.canChange && !hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
         <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
         <span>LCK <strong>{base.luck}</strong></span>
