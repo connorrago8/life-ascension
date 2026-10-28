@@ -142,6 +142,18 @@ function paintLantern(rows: string[]) {
   paint(rows, 8, 20, 'y');
 }
 
+function paintSword(rows: string[]) {
+  // Thin bright blade, horizontal guard and wrapped grip. All pixels stay in bounds.
+  for (let y = 5; y <= 19; y += 1) {
+    paint(rows, 5, y, 'I');
+    paint(rows, 6, y, 'i');
+  }
+  paint(rows, 5, 4, 'i');
+  for (let x = 3; x <= 8; x += 1) paint(rows, x, 20, 'G');
+  for (let y = 21; y <= 26; y += 1) paint(rows, 5, y, 'g');
+  for (let x = 4; x <= 6; x += 1) paint(rows, x, 27, 'G');
+}
+
 function overlaysFor(equipment: readonly VisibleItem[]): Partial<Record<SpriteLayerId, string[]>> {
   const overlays: Partial<Record<SpriteLayerId, string[]>> = {};
   const hood = equipment.find((item) => item.motif === 'hood');
@@ -151,10 +163,11 @@ function overlaysFor(equipment: readonly VisibleItem[]): Partial<Record<SpriteLa
     paintHood(rows);
     overlays.head = rows;
   }
-  if (main?.motif === 'staff' || main?.motif === 'lantern') {
+  if (main?.motif === 'staff' || main?.motif === 'lantern' || main?.motif === 'sword') {
     const rows = blankGrid();
     if (main.motif === 'staff') paintStaff(rows);
-    else paintLantern(rows);
+    else if (main.motif === 'lantern') paintLantern(rows);
+    else paintSword(rows);
     overlays['main-hand'] = rows;
   }
   return overlays;
@@ -193,6 +206,10 @@ export function pixelPalette(appearance: Appearance): Record<string, string> {
     y: (main?.motif === 'lantern' ? main.accent : '#E2A23A').toUpperCase(),
     N: '#3E4650',
     n: '#F4E2B8',
+    I: (main?.motif === 'sword' ? main.accent : '#697D8A').toUpperCase(),
+    i: (main?.motif === 'sword' ? main.accentLight : '#E3EDF0').toUpperCase(),
+    G: '#C6A66D',
+    g: '#51392C',
   };
 }
 

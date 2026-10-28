@@ -9,7 +9,7 @@ export const VISIBLE_SLOTS = ['head', 'chest', 'main-hand', 'off-hand', 'feet', 
 
 export type VisibleSlot = (typeof VISIBLE_SLOTS)[number];
 
-export type VisibleMotif = 'hood' | 'coat' | 'staff' | 'lantern' | 'trousers' | 'boots';
+export type VisibleMotif = 'hood' | 'coat' | 'staff' | 'lantern' | 'sword' | 'trousers' | 'boots';
 
 /** What is drawn. Accent colors are cloth, wood, and metal — not bonuses. */
 export type VisibleItem = {
@@ -88,6 +88,16 @@ export const WAYFARER_LANTERN: VisibleItem = {
   motif: 'lantern',
   accent: '#E2A23A',
   accentLight: '#FFE7A3',
+};
+
+/** First sword: preview visual only; owning it must be verified separately. */
+export const INITIATE_SWORD: VisibleItem = {
+  id: 'initiate-sword',
+  slot: 'main-hand',
+  name: 'Initiate Sword',
+  motif: 'sword',
+  accent: '#697D8A',
+  accentLight: '#E3EDF0',
 };
 
 export const TRAIL_TROUSERS: VisibleItem = {
@@ -191,6 +201,7 @@ export const SAMPLE_GEAR: readonly VisibleItem[] = [
   WAYFARER_COAT,
   WALKING_STAFF,
   WAYFARER_LANTERN,
+  INITIATE_SWORD,
   TRAIL_TROUSERS,
   WORN_BOOTS,
   ASHEN_HOOD,

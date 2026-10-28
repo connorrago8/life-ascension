@@ -10,12 +10,17 @@ import {
 import {
   colorsForCosmetics,
   DEFAULT_EQUIPMENT_IDS,
+  catalogItem,
   equipCatalogId,
   unequipCatalogId,
 } from '../../lib/preview/catalog';
 import { MAIN_HAND_STORAGE_KEY } from '../../lib/preview/previewSession';
 
 const LOADOUT_KEY = 'life-ascension.preview.loadout';
+const MAIN_HAND_IDS = ['walking-staff', 'wayfarer-lantern', 'initiate-sword'] as const;
+function isMainHandId(value: string | null): value is (typeof MAIN_HAND_IDS)[number] {
+  return value !== null && MAIN_HAND_IDS.some((id) => id === value);
+}
 
 type Loadout = {
   equipmentIds: string[];
@@ -37,8 +42,9 @@ function appearanceFor(loadout: Loadout): Appearance {
 function persist(loadout: Loadout) {
   try {
     sessionStorage.setItem(LOADOUT_KEY, JSON.stringify(loadout));
-    const main = loadout.equipmentIds.find((id) => id === 'walking-staff' || id === 'wayfarer-lantern');
+    const main = loadout.equipmentIds.find((id) => isMainHandId(id));
     if (main) sessionStorage.setItem(MAIN_HAND_STORAGE_KEY, main);
+    else sessionStorage.removeItem(MAIN_HAND_STORAGE_KEY);
   } catch {
     // The in-memory choice still updates both drawings on this screen.
   }
@@ -46,24 +52,47 @@ function persist(loadout: Loadout) {
 
 function readLoadout(): Loadout {
   const base = defaultLoadout();
+  let raw: string | null;
   try {
-    const raw = sessionStorage.getItem(LOADOUT_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<Loadout>;
-      const equipmentIds = Array.isArray(parsed.equipmentIds)
-        ? parsed.equipmentIds.filter((id): id is string => typeof id === 'string')
-        : base.equipmentIds;
-      const cosmeticIds = Array.isArray(parsed.cosmeticIds)
-        ? parsed.cosmeticIds.filter((id): id is string => typeof id === 'string')
-        : [];
-      return { equipmentIds, cosmeticIds, colors: sanitizeAppearanceColors(parsed.colors) };
-    }
-    const main = sessionStorage.getItem(MAIN_HAND_STORAGE_KEY);
-    if (main === 'wayfarer-lantern' || main === 'walking-staff') {
-      return { ...base, ...equipCatalogId(base.equipmentIds, [], main) };
-    }
+    raw = sessionStorage.getItem(LOADOUT_KEY);
   } catch {
+    // Private browsing or restricted storage: keep the in-memory default.
     return base;
+  }
+  if (raw) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Only malformed JSON is deleted; storage failures are not corruption.
+      try { sessionStorage.removeItem(LOADOUT_KEY); } catch { /* unavailable */ }
+      return base;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      try { sessionStorage.removeItem(LOADOUT_KEY); } catch { /* unavailable */ }
+      return base;
+    }
+    const saved = parsed as Partial<Loadout>;
+    // Preview catalog validation does not establish authenticated ownership.
+    const equipmentIds = Array.isArray(saved.equipmentIds)
+      ? saved.equipmentIds.filter((id): id is string =>
+          typeof id === 'string' && catalogItem(id)?.category === 'equipment').slice(0, 32)
+      : base.equipmentIds;
+    const uniqueEquipment = equipmentIds.reduce<string[]>((selected, id) => {
+      const slot = catalogItem(id)?.slot;
+      return [...selected.filter((existing) => catalogItem(existing)?.slot !== slot), id];
+    }, []);
+    const cosmeticIds = Array.isArray(saved.cosmeticIds)
+      ? [...new Set(saved.cosmeticIds.filter((id): id is string =>
+          typeof id === 'string' && catalogItem(id)?.category === 'cosmetic'))].slice(0, 32)
+      : [];
+    return { equipmentIds: uniqueEquipment, cosmeticIds, colors: sanitizeAppearanceColors(saved.colors) };
+  }
+  try {
+    const main = sessionStorage.getItem(MAIN_HAND_STORAGE_KEY);
+    if (isMainHandId(main)) return { ...base, ...equipCatalogId(base.equipmentIds, [], main) };
+  } catch {
+    // Storage unavailable; keep the default preview appearance.
   }
   return base;
 }
