@@ -204,7 +204,7 @@ reset role;
 -- Both owners now have real journal entries. A zero-row fixture cannot prove RLS.
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b1',false);
 set role authenticated;
-do $
+do $$
 begin
  if not exists(select 1 from public.quest_progress_operations
                where owner_id='00000000-0000-0000-0000-0000000000b1') then
@@ -228,11 +228,11 @@ begin
    raise exception 'Authenticated direct journal UPDATE permitted';
  exception when insufficient_privilege then null;
  end;
-end $;
+end $$;
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b2',false);
 set role authenticated;
-do $
+do $$
 begin
  if not exists(select 1 from public.quest_progress_operations
                where owner_id='00000000-0000-0000-0000-0000000000b2') then
@@ -242,7 +242,7 @@ begin
            where owner_id='00000000-0000-0000-0000-0000000000b1') then
    raise exception 'Owner A journal visible to B';
  end if;
-end $;
+end $$;
 reset role;
 
 -- Verify ledger as migration-test owner; service_role lacks explicit SELECT in the isolated harness.
