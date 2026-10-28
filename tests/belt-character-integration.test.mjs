@@ -192,3 +192,12 @@ test('restored preview equipment catalog identifies invalid IDs and conflicting 
   assert.equal(equipped.equipmentIds.filter((id) => catalog.catalogItem(id)?.slot === 'main-hand').length, 1);
   assert.deepEqual(catalog.equipCatalogId(equipped.equipmentIds, [], 'not-a-real-item').equipmentIds, equipped.equipmentIds);
 });
+
+test('preview restore removes malformed JSON and falls back to default equipment', async () => {
+  const source = await readFile(new URL('../components/preview/usePreviewAppearance.ts', import.meta.url), 'utf8');
+  // Regression guard for the recovery path: invalid JSON must not remain
+  // in sessionStorage and poison every subsequent character preview.
+  assert.match(source, /parsed = JSON\\.parse\\(raw)/);
+  assert.match(source, /catch \\{[\\s\\S]*?sessionStorage\\.removeItem\\(LOADOUT_KEY\\)/);
+  assert.match(source, /return base;/);
+});
