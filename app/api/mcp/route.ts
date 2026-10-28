@@ -45,6 +45,19 @@ const tools = [
     },
   },
   {
+    name: 'log_quest_progress',
+    description: 'Record a confirmed numeric increment for an opt-in tracked quest instance. Reuse the SAME request_id UUID when retrying an uncertain result. The target awards 1 XP once; partial updates award no XP. Never invent progress.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        instance_id: { type: 'string', description: 'Quest instance UUID from list_quests' },
+        request_id: { type: 'string', description: 'Unique UUID for this operation. Reuse exactly on retries.' },
+        delta: { type: 'integer', description: 'Positive amount to log; negative default increment to undo.' },
+      },
+      required: ['instance_id','request_id','delta'],
+    },
+  },
+  {
     name: 'submit_completion',
     description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once. A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
     inputSchema: {
@@ -107,7 +120,7 @@ export async function POST(req: NextRequest) {
 
   const name = body.params?.name ?? '';
   const args = body.params?.arguments ?? {};
-  if (name === 'create_quest' || name === 'update_progress' || name === 'submit_completion') {
+  if (name === 'create_quest' || name === 'update_progress' || name === 'submit_completion' || name === 'log_quest_progress') {
     if (!hasScope(auth, 'quests:write')) return NextResponse.json({ error: 'Missing quests:write scope' }, { status: 403 });
   } else if (name === 'list_quests' || name === 'get_character_progress') {
     if (!hasScope(auth, 'quests:read')) return NextResponse.json({ error: 'Missing quests:read scope' }, { status: 403 });
