@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { GUARDIAN_ID, FIGHT_ID, EVENT_ID, SENTINEL, SIGIL, COMBAT, TREASURE_ID, charmNote } from '../lib/crypt/content.ts';
 import { createRun, nodeAccess, reduceRun } from '../lib/crypt/run.ts';
+import { act, createBattle } from '../lib/crypt/engine.ts';
 
 function reachGuardian(seed = 13) {
   let run = createRun(seed);
@@ -108,9 +109,25 @@ test('guardian introduction identifies the sentinel rather than the rat', () => 
 test('sentinel combat visibly discloses its temporary Ember Charm damage bonus', () => {
   const fight = reduceRun(reachGuardian(), { type: 'open', nodeId: GUARDIAN_ID });
   assert.equal(fight.battle?.player.attackBonus, 2);
-  assert.match(charmNote(fight.battle.player.attackBonus), /Ember Charm.*\+2 damage, this run only/);
+  assert.match(charmNote(fight.battle.player.attackBonus), /Ember Charm.*\+2 base damage.*Focus doubles Attack.*this run only/);
   const combatView = readFileSync(new URL('../components/crypt/CombatView.tsx', import.meta.url), 'utf8');
   assert.match(combatView, /battle\.player\.attackBonus > 0/);
   assert.match(combatView, /charmNote\(battle\.player\.attackBonus\)/);
   assert.doesNotMatch(charmNote(2), /XP|owned|permanent/i);
+});
+
+
+test('Ember Charm base bonus is doubled by Focus, matching visible combat guidance', () => {
+  const fight = reduceRun(reachGuardian(), { type: 'open', nodeId: GUARDIAN_ID });
+  assert.equal(fight.battle?.player.attackBonus, 2);
+  const initial = createBattle({
+    script: [0, 0, 0],
+    player: fight.battle.player,
+    enemy: fight.battle.enemy,
+  });
+  const focused = act(act(initial, 'focus'), 'attack');
+  assert.equal(focused.enemy.hp, SENTINEL.maxHp - 12, 'Focus doubles (4 Attack + 2 Charm)');
+  assert.match(focused.log.join(' '), /focused strike for 12/);
+  assert.match(charmNote(2), /Focus doubles Attack/);
+  assert.doesNotMatch(charmNote(2), /XP|permanent|owned/i);
 });
