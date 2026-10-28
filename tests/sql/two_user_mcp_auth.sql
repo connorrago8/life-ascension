@@ -280,3 +280,92 @@ begin
   raise notice 'PASS two-user mcp auth smoke';
 end
 $$;
+
+
+-- Direct authenticated quest RLS regression (two real owners, non-vacuous).
+-- The wrapper tests above are not a substitute for invoker SELECT and INSERT
+-- policies. Exercise both owners with visible own rows, invisible foreign rows,
+-- successful own writes and rejected foreign writes. Disposable CI database only.
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', false);
+do $$
+declare
+  alice uuid := '00000000-0000-0000-0000-0000000000e1';
+  bob uuid := '00000000-0000-0000-0000-0000000000e2';
+  own_quest uuid := (select quest_id from pair_ids where label = 'alice_goal');
+  foreign_quest uuid := (select quest_id from pair_ids where label = 'bob_goal');
+  own_instance uuid := (select instance_id from pair_ids where label = 'alice_goal');
+  foreign_instance uuid := (select instance_id from pair_ids where label = 'bob_goal');
+  created uuid;
+begin
+  if (select count(*) from public.quests where id = own_quest) <> 1
+     or (select count(*) from public.quests where id = foreign_quest) <> 0
+     or (select count(*) from public.quest_instances where id = own_instance) <> 1
+     or (select count(*) from public.quest_instances where id = foreign_instance) <> 0
+     or (select count(*) from public.xp_ledger where owner_id = alice) <> 1
+     or (select count(*) from public.xp_ledger where owner_id = bob) <> 0 then
+    raise exception 'Alice direct RLS reads are not owner-isolated/non-vacuous';
+  end if;
+  insert into public.quests (owner_id, title, domain, cadence)
+  values (alice, 'RLS Alice own insert', 'home', 'once')
+  returning id into created;
+  if not exists (select 1 from public.quests where id = created and owner_id = alice) then
+    raise exception 'Alice own quest insert did not persist or is not readable';
+  end if;
+  begin
+    insert into public.quests (owner_id, title, domain, cadence)
+    values (bob, 'RLS forbidden Alice to Bob', 'home', 'once');
+    raise exception 'Alice inserted a quest owned by Bob';
+  exception when insufficient_privilege then
+    null; -- PostgreSQL RLS WITH CHECK violation (SQLSTATE 42501).
+  end;
+end
+$$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e2', false);
+do $$
+declare
+  alice uuid := '00000000-0000-0000-0000-0000000000e1';
+  bob uuid := '00000000-0000-0000-0000-0000000000e2';
+  own_quest uuid := (select quest_id from pair_ids where label = 'bob_goal');
+  foreign_quest uuid := (select quest_id from pair_ids where label = 'alice_goal');
+  own_instance uuid := (select instance_id from pair_ids where label = 'bob_goal');
+  foreign_instance uuid := (select instance_id from pair_ids where label = 'alice_goal');
+  created uuid;
+begin
+  if (select count(*) from public.quests where id = own_quest) <> 1
+     or (select count(*) from public.quests where id = foreign_quest) <> 0
+     or (select count(*) from public.quest_instances where id = own_instance) <> 1
+     or (select count(*) from public.quest_instances where id = foreign_instance) <> 0
+     or (select count(*) from public.xp_ledger where owner_id = bob) <> 1
+     or (select count(*) from public.xp_ledger where owner_id = alice) <> 0 then
+    raise exception 'Bob direct RLS reads are not owner-isolated/non-vacuous';
+  end if;
+  insert into public.quests (owner_id, title, domain, cadence)
+  values (bob, 'RLS Bob own insert', 'home', 'once')
+  returning id into created;
+  if not exists (select 1 from public.quests where id = created and owner_id = bob) then
+    raise exception 'Bob own quest insert did not persist or is not readable';
+  end if;
+  begin
+    insert into public.quests (owner_id, title, domain, cadence)
+    values (alice, 'RLS forbidden Bob to Alice', 'home', 'once');
+    raise exception 'Bob inserted a quest owned by Alice';
+  exception when insufficient_privilege then
+    null;
+  end;
+end
+$$;
+
+reset role;
+do $$
+begin
+  if (select count(*) from public.quests where title in ('RLS Alice own insert', 'RLS Bob own insert')) <> 2
+     or exists (select 1 from public.quests where title like 'RLS forbidden%')
+     or (select count(*) from public.xp_ledger where owner_id in
+       ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2')) <> 2 then
+    raise exception 'RLS direct-write regression leaked rows or changed XP';
+  end if;
+  raise notice 'PASS direct two-user quest/instance/XP RLS reads and owned/foreign quest inserts';
+end
+$$;
