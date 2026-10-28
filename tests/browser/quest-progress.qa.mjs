@@ -113,6 +113,22 @@ try {
   console.log('QUEST_SAVE_RETRY_TIMING', JSON.stringify({ elapsedMs: timedSaveRetryMs, actions: 2, ...timedMetrics,
     operationIdPreserved: retryLog.includes(`|${original.id}|2|saved`) }));
   assert.ok(timedSaveRetryMs <= 30000, `Mock Save/Retry took ${timedSaveRetryMs}ms, exceeding 30-second budget`);
+  // A server-confirmed completion may arrive before the lost response is retried.
+  // The original pending operation must remain recoverable in the Completed view.
+  await page.getByRole('button', { name: /Clear QA journal/ }).click();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
+  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  await page.getByRole('button', { name: /Retry saving progress/ }).waitFor();
+  await page.getByRole('button', { name: /Mark QA instance completed/ }).click();
+  assert.equal(await page.getByRole('button', { name: /Retry saving progress/ }).count(), 1,
+    'A completed instance with an ambiguous operation must still offer Retry');
+  assert.equal(await page.getByRole('button', { name: /^Add 2 repetitions/ }).count(), 0,
+    'A completed instance must not offer new progress operations');
+  await page.getByLabel('Mock next response (no network)').selectOption('saved');
+  await page.getByRole('button', { name: /Retry saving progress/ }).click();
+  await page.waitForFunction(() => localStorage.getItem('life-progress-pending:qa-local-progress-only') === null);
+  assert.equal(await page.getByRole('button', { name: /Retry saving progress/ }).count(), 0);
+  // Reset fixture to test the separate one-step Clear behavior.
   await page.getByRole('button', { name: /Clear QA journal/ }).click();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
   await page.getByLabel('Mock next response (no network)').selectOption('saved');
