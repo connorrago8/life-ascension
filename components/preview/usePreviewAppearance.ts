@@ -59,10 +59,10 @@ function readLoadout(): Loadout {
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return base;
       const saved = parsed as Partial<Loadout>;
       const equipmentIds = Array.isArray(saved.equipmentIds)
-        ? saved.equipmentIds.filter((id): id is string => typeof id === 'string')
+        ? saved.equipmentIds.filter((id): id is string => typeof id === 'string' && id.length <= 80).slice(0, 32)
         : base.equipmentIds;
       const cosmeticIds = Array.isArray(saved.cosmeticIds)
-        ? saved.cosmeticIds.filter((id): id is string => typeof id === 'string')
+        ? saved.cosmeticIds.filter((id): id is string => typeof id === 'string' && id.length <= 80).slice(0, 32)
         : [];
       return { equipmentIds, cosmeticIds, colors: sanitizeAppearanceColors(saved.colors) };
     }
