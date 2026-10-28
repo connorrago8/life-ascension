@@ -12,14 +12,14 @@ function todayLocal(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/
 export default function Home(){
  const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState(0),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2F');
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
- const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
+ const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  // A completed quest with an unconfirmed request must expose Retry after refresh.
  useEffect(()=>{
   if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
  },[instances]);
  const load=useCallback(async()=>{
   if(process.env.NODE_ENV==='development'&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='1'){
-    setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setInstances([]);setXp(0);setMessage('');return;
+    setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setRecoveryQuests([]);setInstances([]);setXp(0);setMessage('');return;
   }
   setLayoutPreview(false);const s=supabase();const {data:{user},error:authError}=await s.auth.getUser();setUser(user?.id||null);setReady(true);if(authError||!user)return;
  // Recover only journal-backed older completed instances owned by this signed-in user.
@@ -36,6 +36,14 @@ const [{data:todayRows,error:te},{data:goals,error:ge},{data:openOnce,error:oe},
  pendingIds.length?s.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id',user.id).in('id',pendingIds).eq('status','completed').limit(100):Promise.resolve({data:[] as Instance[],error:null})
 ]);
 if(te||ge||oe||le||re){setMessage(te?.message||ge?.message||oe?.message||le?.message||re?.message||'Unable to load');return}
+// A pending retry must remain visible if its quest was archived after completion.
+// Fetch metadata only for server-confirmed, owner-scoped recovered instances.
+const missingRecoveryQuestIds=[...new Set((recoveries||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
+const {data:missingRecoveryQuests,error:missingRecoveryError}=missingRecoveryQuestIds.length
+ ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
+ :{data:[] as Quest[],error:null};
+if(missingRecoveryError){setMessage(missingRecoveryError.message);return}
+setRecoveryQuests(missingRecoveryQuests||[]);
 const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(goals||[]),...(openOnce||[]),...(recoveries||[])])rows.set(row.id,row);
 setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
  useEffect(()=>{
@@ -85,7 +93,7 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
  async function logout(){if(layoutPreview){window.location.assign('/login');return}await supabase().auth.signOut();setUser(null)}
  if(!ready)return <main className="wrap">Loading your character…</main>;
  if(!user)return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Your adventure awaits</h1><p className="muted">Real actions. Real progress. Your private quest journal.</p><a className="btn" href={loginHref}>Sign in</a></main>;
- const today=todayLocal();const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.instance!.status!=='completed'||x.instance!.due_date===today));const completedQuests=visible.filter(x=>x.instance?.status==='completed');const earlierRecoveries=instances.filter(i=>i.status==='completed'&&i.due_date!==today&&recoveryIds.includes(i.id)).flatMap(i=>{const quest=quests.find(q=>q.id===i.quest_id);return quest?[{quest,instance:i}]:[]});const activeQuests=visible.filter(x=>x.instance?.status!=='completed');const completed=completedQuests.length;const lvl=levelFor(xp);
+ const today=todayLocal();const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.instance!.status!=='completed'||x.instance!.due_date===today));const completedQuests=visible.filter(x=>x.instance?.status==='completed');const earlierRecoveries=instances.filter(i=>i.status==='completed'&&i.due_date!==today&&recoveryIds.includes(i.id)).flatMap(i=>{const quest=quests.find(q=>q.id===i.quest_id)||recoveryQuests.find(q=>q.id===i.quest_id);return quest?[{quest,instance:i}]:[]});const activeQuests=visible.filter(x=>x.instance?.status!=='completed');const completed=completedQuests.length;const lvl=levelFor(xp);
  return <main className="wrap">{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}<header className="top"><div><div className="eyebrow">LIFE ASCENSION</div><h1>{mode==='daily'?'Today’s Quests':'The Adventurer’s Path'}</h1><p className="muted">{new Date(dateString()+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p></div><button className="btn ghost" onClick={logout}>Sign out</button></header>
  <nav className="tabs" aria-label="View mode"><button className={'btn '+(mode==='daily'?'':'ghost')} onClick={()=>setMode('daily')}>Daily Mode</button><button className={'btn '+(mode==='adventure'?'':'ghost')} onClick={()=>setMode('adventure')}>Adventure Mode</button></nav>
  <section className="panel"><div className="eyebrow">LEVEL {lvl.level} · {ADVENTURER_CLASS.toUpperCase()}</div><div className="xp">{xp} <small>lifetime XP</small></div><p className="muted">{completed} of {visible.length} quests completed · No XP penalty for missed days</p><div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={Math.max(visible.length,1)} aria-valuenow={completed}><span style={{width:(visible.length?completed/visible.length*100:0)+'%'}}/></div></section>
