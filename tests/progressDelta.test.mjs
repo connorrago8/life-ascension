@@ -51,7 +51,7 @@ test('progress RPC success requires exactly one valid result row', () => {
 test('Home retains original progress request on unverified RPC response', () => {
   const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /const confirmation=confirmedProgressResult\(data\)/);
-  assert.match(home, /if\(!confirmation\)\{[^}]*return 'retry';\}/);
+  assert.match(home, /if\(!confirmation\)\{[^}]*return 'retry';\s*\}/);
   assert.match(home, /confirmation\.status === 'completed'/);
   assert.doesNotMatch(home, /Quest completed\. \+1 XP/,
     'Tracked progress cannot claim a new XP award without a v2 ledger receipt');
