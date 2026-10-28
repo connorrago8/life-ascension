@@ -153,3 +153,43 @@ jobs:
           bash "$progress/tests/sql/parallel_progress.sh" "$db"
           bash tests/sql/quest_receipt_v2_concurrency.sh
           echo "PASS pinned PR21 + PR31 combined migration and regression sequence"
+
+      - name: Exercise QA forward-only delta on separate disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          progress="$RUNNER_TEMP/partial-progress"
+          db=life_ascension_qa_delta_test
+          createdb "$db"
+          psql -v ON_ERROR_STOP=1 -d "$db" -f "$progress/tests/sql/prelude.sql"
+          for file in \
+            "$progress/supabase/migrations/202610230001_core.sql" \
+            "$progress/supabase/migrations/202610230002_api_keys_progress.sql" \
+            "$progress/supabase/migrations/202610230003_future_quest_scheduling.sql" \
+            "$progress/supabase/migrations/202610230004_lifetime_xp.sql" \
+            "$progress/supabase/migrations/202610240005_api_key_user_context.sql" \
+            "$progress/supabase/migrations/202610240006_quest_edit_archive.sql" \
+            "$progress/supabase/migrations/202610240007_daily_late_window.sql" \
+            "$progress/supabase/migrations/202610260008_partial_progress.sql" \
+            "$progress/supabase/migrations/202610260009_progress_configuration.sql" \
+            "$progress/supabase/migrations/202610260010_progress_completion_guard.sql" \
+            "$progress/supabase/migrations/202610260011_atomic_tracked_creation.sql" \
+            "$progress/supabase/migrations/202610260012_api_progress_wrapper.sql"; do
+            psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
+          done
+          psql -v ON_ERROR_STOP=1 -d "$db" -f tests/sql/qa_legacy_progress_fixture.sql
+          before="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -c "select md5(pg_get_functiondef('public.log_quest_progress(uuid,uuid,integer)'::regprocedure))")"
+          if PGOPTIONS="-c qa.expected_progress_md5=00000000000000000000000000000000" \
+              psql -v ON_ERROR_STOP=1 -d "$db" -f tests/sql/qa_forward_only_delta_candidate.sql >/tmp/qa-delta-negative.log 2>&1; then
+            echo "::error::QA delta accepted mismatched function fingerprint"
+            exit 1
+          fi
+          after="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -c "select md5(pg_get_functiondef('public.log_quest_progress(uuid,uuid,integer)'::regprocedure))")"
+          test "$before" = "$after" || { echo "::error::Rejected QA delta changed function"; exit 1; }
+          test "$(psql -At -d "$db" -c "select to_regprocedure('public.set_quest_instance_status_v2(uuid,text)') is null")" = "t"
+          PGOPTIONS="-c qa.expected_progress_md5=$before" \
+            psql --single-transaction -v ON_ERROR_STOP=1 -d "$db" \
+              -f tests/sql/qa_forward_only_delta_candidate.sql \
+              -f supabase/migrations/202610270001_quest_receipt_v2.sql
+          psql -v ON_ERROR_STOP=1 -d "$db" -f tests/sql/quest_receipt_v2_combined_smoke.sql
+          echo "PASS disposable QA forward-only delta: drift STOP, unchanged on rejection, clear + v2 + RLS"
