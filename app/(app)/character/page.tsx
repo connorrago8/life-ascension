@@ -116,7 +116,7 @@ export default function CharacterPage() {
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
       <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
-      <CharacterScreen displayName={state.name} hideSampleStats hideSampleLevel />
+      <CharacterScreen displayName={state.name} hideSampleStats hideSampleLevel verifiedXp={state.preview ? undefined : state.xp} />
       <section className="panel" aria-label="Earn your next reward">
         <h2>Continue your adventure</h2>
         <p className="muted">Complete a real-world quest to earn verified XP. Equipment shown above is still a preview, not an earned account reward.</p>
