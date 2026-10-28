@@ -309,7 +309,7 @@ test('Home exposes completed progress retry after refresh without creating anoth
   assert.match(home, /hasPendingCompletedRecovery\(instances,key=>localStorage\.getItem\(key\)\)/);
   assert.match(home, /setShowCompleted\(true\)/);
   assert.match(home, /completedQuests\.map\(\(\{quest,instance\}\)=>/);
-  assert.match(home, /<QuestProgressControls quest=\{quest\} instance=\{instance!\}/);
+  assert.match(home, /<QuestProgressControls onJournalResolved=\{journalResolved\} quest=\{quest\} instance=\{instance!\}/);
 });
 
 
@@ -341,7 +341,7 @@ test('Home loads only owner-scoped older completed journals and renders retry se
   assert.match(home, /pendingIds\.length\?s\.from\('quest_instances'\)\.select\([^\n]+\)\.eq\('owner_id',user\.id\)\.in\('id',pendingIds\)\.eq\('status','completed'\)/);
   assert.match(home, /earlierRecoveries=recoverableCompletedEntries\(instances,recoveryIds,quests,recoveryQuests,completedQuests\.map\(x=>x\.instance!\.id\)\)/);
   assert.match(home, /Completed quests with pending saves/);
-  assert.match(home, /earlierRecoveries\.map\(\(\{quest,instance\}\)=>[\s\S]*?<QuestProgressControls quest=\{quest\} instance=\{instance\}/);
+  assert.match(home, /earlierRecoveries\.map\(\(\{quest,instance\}\)=>[\s\S]*?<QuestProgressControls onJournalResolved=\{journalResolved\} quest=\{quest\} instance=\{instance\}/);
   assert.match(home, /const completed=completedQuests\.length;/,
     'Older recovery records must not inflate today completion totals');
 });
