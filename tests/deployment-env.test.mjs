@@ -7,6 +7,7 @@ import ts from 'typescript';
 import { validateDeploymentEnv } from '../scripts/verify-deployment-env.mjs';
 
 const qaRef = 'njqwwimzrsunheehnnnt';
+const qaBranch = 'audit/qa-isolation-and-reliability-20261027';
 const prodRef = 'ugcvhmrriazbbymjxvch';
 const pin = key => createHash('sha256').update(key).digest('hex');
 const jwt = (ref, role = 'anon') => [
@@ -16,7 +17,8 @@ const jwt = (ref, role = 'anon') => [
 ].join('.');
 const qaKey = jwt(qaRef);
 const prodKey = jwt(prodRef);
-const qa = {VERCEL_ENV:'preview', NEXT_PUBLIC_SUPABASE_URL:`https://${qaRef}.supabase.co`,
+const qa = {VERCEL_ENV:'preview', VERCEL_GIT_COMMIT_REF:qaBranch,
+  NEXT_PUBLIC_SUPABASE_URL:`https://${qaRef}.supabase.co`,
   NEXT_PUBLIC_SUPABASE_ANON_KEY:qaKey, SUPABASE_PUBLIC_KEY_SHA256:pin(qaKey)};
 const prod = {VERCEL_ENV:'production', NEXT_PUBLIC_SUPABASE_URL:`https://${prodRef}.supabase.co`,
   NEXT_PUBLIC_SUPABASE_ANON_KEY:prodKey, SUPABASE_PUBLIC_KEY_SHA256:pin(prodKey)};
@@ -25,6 +27,17 @@ test('accepts independently pinned QA preview/development and Production fixture
   assert.equal(validateDeploymentEnv(qa), true);
   assert.equal(validateDeploymentEnv({...qa, VERCEL_ENV:'development'}), true);
   assert.equal(validateDeploymentEnv(prod), true);
+});
+
+test('Preview builds reject non-protected branches even with valid QA URL/key/pin', () => {
+  assert.equal(validateDeploymentEnv(qa), true);
+  for (const ref of [undefined, '', 'main', 'beta/quest-ui-clean-review',
+    'audit/qa-isolation-and-reliability-20261027/other']) {
+    assert.throws(() => validateDeploymentEnv({ ...qa, VERCEL_GIT_COMMIT_REF: ref }),
+      /protected QA branch/);
+  }
+  // Production remains independently controlled and does not require a QA branch.
+  assert.equal(validateDeploymentEnv({ ...prod, VERCEL_GIT_COMMIT_REF: 'main' }), true);
 });
 
 test('fails closed on unpinned, placeholder, wrong-fingerprint and malformed keys', () => {
