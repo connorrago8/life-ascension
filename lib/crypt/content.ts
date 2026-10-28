@@ -62,6 +62,18 @@ export const RAT = {
   attack: 3,
 };
 
+export const SENTINEL = {
+  id: 'crypt-sentinel',
+  name: 'Crypt Sentinel',
+  maxHp: 16,
+  attack: 4,
+};
+
+export const SIGIL = {
+  name: 'Sentinel Sigil',
+  description: 'A run-only trophy. It grants no XP or permanent equipment.',
+};
+
 export const INTRO = {
   place: 'Brackenlight',
   speaker: 'Mira',
@@ -78,7 +90,7 @@ export const GATE = {
   title: 'Crypt gate',
   lines: [
     'The iron gate stands ajar. Cold air moves out of the dark.',
-    'Floor 1 is a rat, an inscription, and a charm. The door beyond them is sealed.',
+    'Floor 1 holds a rat, an inscription, and an Ember Charm. A sentinel guards the sealed door.',
   ],
   continue: 'Enter the crypt',
 };
@@ -176,15 +188,37 @@ export const NODES: readonly CryptNode[] = [
     label: 'Treasure',
     title: 'Ember Charm',
     detail: 'A coal-warm charm on a broken plinth.',
-    prose: 'The Ember Charm is hot to the touch and leaves no mark. While you carry it, your strikes hit 2 harder. It fades when you leave this preview.',
+    prose: 'The Ember Charm is hot to the touch and leaves no mark. While carried, it adds 2 base damage to Attack and Heavy Strike. Focus doubles the total Attack damage. It fades when you leave this preview.',
     take: 'Take the charm',
     attackBonus: 2,
+  },
+  {
+    id: 'fight-sentinel',
+    kind: 'fight',
+    label: 'Guardian',
+    title: SENTINEL.name,
+    detail: 'The charm wakes an armored watcher at the sealed door.',
   },
 ];
 
 export const FIGHT_ID = NODES[0].id;
 export const EVENT_ID = NODES[1].id;
 export const TREASURE_ID = NODES[2].id;
+export const GUARDIAN_ID = NODES[3].id;
+
+// Guide the current unsaved run; never imply account-level rewards.
+export function nextCryptObjective(progress: {
+  fightCleared: boolean;
+  eventCleared: boolean;
+  treasureCleared: boolean;
+  guardianCleared: boolean;
+}): string {
+  if (!progress.fightCleared) return 'Defeat the Crypt Rat';
+  if (!progress.eventCleared) return 'Read the ancient inscription';
+  if (!progress.treasureCleared) return 'Take the Ember Charm';
+  if (!progress.guardianCleared) return 'Defeat the Crypt Sentinel';
+  return 'Approach the sealed door';
+}
 
 /**
  * Relic named on the end card.
@@ -198,14 +232,18 @@ export const END_CARD = {
   twitch: 'Your {artifact} twitches once, then goes still.',
   kicker: 'To be continued.',
   restart: 'Restart preview',
-  charm: 'Ember Charm is in your pocket (+{bonus} damage, this run only).',
+  charm: 'Ember Charm adds +{bonus} base damage (Focus doubles Attack), this run only.',
+  sigil: 'You recovered the Sentinel Sigil. It vanishes when this preview ends.',
 };
 
 export const COMBAT = {
   title: 'Combat',
   opening: 'A Crypt Rat blocks the stones.',
+  guardianOpening: 'The Crypt Sentinel rises before the sealed door.',
   win: 'The Crypt Rat falls. The path ahead is quiet.',
-  lose: 'You drop to the stones. This fight can be tried again.',
+  lose: 'You drop to the stones. Retry restores full HP without losing real-world XP or equipment.',
+  guardianWin: 'The Crypt Sentinel crumbles. You recover its sigil for this run only.',
+  guardianLose: 'The Crypt Sentinel drives you back. Retry restores full HP and keeps your run-only Ember Charm.',
   retry: 'Retry',
   continue: 'Continue',
   victory: 'Victory',

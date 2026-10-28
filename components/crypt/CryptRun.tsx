@@ -8,12 +8,15 @@ import {
   END_CARD,
   FLOOR,
   GATE,
+  GUARDIAN_ID,
   INTRO,
   NODES,
   PREVIEW_BANNER,
+  SIGIL,
   charmNote,
   endCardParagraphs,
   eventNode,
+  nextCryptObjective,
   runStatus,
   treasureNode,
 } from '../../lib/crypt/content';
@@ -85,7 +88,11 @@ export function CryptRun() {
         {run.phase === 'intro' ? (
           <Link href="/play" className="icon-btn" aria-label={FLOOR.back}><BackIcon /></Link>
         ) : (
-          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => setRun(reduceRun(run, { type: 'back' }))}>
+          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
+            // Returning to the sealed door should offer both endings again.
+            if (run.phase === 'end') setEndingChoice(null);
+            setRun(reduceRun(run, { type: 'back' }));
+          }}>
             <BackIcon />
           </button>
         )}
@@ -124,6 +131,7 @@ export function CryptRun() {
         <div className="floor-wrap">
           <p className="floor-kicker">{FLOOR.mapLabel}</p>
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
+          <p className="crypt-status">Next objective: {nextCryptObjective(run)}</p>
           <button type="button" className="btn ghost crypt-block" aria-expanded={showFieldNotes}
             onClick={() => setShowFieldNotes((value) => !value)}>
             {showFieldNotes ? 'Hide' : 'Open'} Wayfarer field journal
@@ -132,16 +140,18 @@ export function CryptRun() {
             <aside className="crypt-journal" aria-label="Wayfarer field journal">
               <h2>Field journal</h2>
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
-              <p><strong>Inscription:</strong> {run.eventCleared ? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
+              <p><strong>Inscription:</strong> {run.eventCleared ? run.hint ?? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
               <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
-              <p><strong>Compass:</strong> {run.treasureCleared ? 'Its broken needle points toward something beneath the crypt.' : 'Not yet discovered. The sealed door may hold an answer.'}</p>
+              <p><strong>Guardian:</strong> {run.guardianCleared ? 'Crypt Sentinel defeated; the sealed door is reachable.' : run.treasureCleared ? 'An armored watcher blocks the final passage.' : 'Unexplored.'}</p>
+              <p><strong>{SIGIL.name}:</strong> {run.sigilCollected ? SIGIL.description : 'Not yet recovered.'}</p>
+              <p><strong>Compass:</strong> {run.hint ?? 'Its broken needle offers no clear direction yet.'}</p>
               <p className="muted">Field notes are temporary and reset when the preview restarts.</p>
             </aside>
           )}
           <div className="floor-map">
             {NODES.map((node, index) => {
               const access = nodeAccess(run, node.id);
-              const sprite = node.kind === 'fight' ? SPRITES.skull : node.kind === 'event' ? SPRITES.scroll : SPRITES.chest;
+              const sprite = node.id === GUARDIAN_ID ? SPRITES.sentinel : node.kind === 'fight' ? SPRITES.skull : node.kind === 'event' ? SPRITES.scroll : SPRITES.chest;
               const stateLabel = access === 'done' ? FLOOR.done : access === 'ready' ? FLOOR.open : FLOOR.locked;
               return (
                 <div key={node.id} className="floor-step">
@@ -167,7 +177,7 @@ export function CryptRun() {
           <ul className="floor-legend">
             {NODES.map((node) => <li key={node.id}>{node.label}</li>)}
           </ul>
-          {run.treasureCleared && (
+          {run.guardianCleared && (
             <button type="button" className="btn crypt-block" onClick={() => setRun(reduceRun(run, { type: 'continue' }))}>
               {FLOOR.door}
             </button>
@@ -236,6 +246,7 @@ export function CryptRun() {
             <p key={line} className={line === END_CARD.kicker ? 'end-kicker' : undefined}>{line}</p>
           ))}
           {run.attackBonus > 0 ? <p>{charmNote(run.attackBonus)}</p> : null}
+          {run.sigilCollected ? <p>{END_CARD.sigil}</p> : null}
           {run.hint ? <p className="muted">{run.hint}</p> : null}
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           <section className="crypt-epilogue" aria-label="Sealed door choices">

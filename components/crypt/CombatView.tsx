@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { SPRITES } from '../../lib/crypt/art';
-import { COMBAT, RAT, turnLabel } from '../../lib/crypt/content';
+import { COMBAT, SENTINEL, charmNote, turnLabel } from '../../lib/crypt/content';
 import { availableActions, type ActionId, type BattleState } from '../../lib/crypt/engine';
 import { PixelArt } from './PixelArt';
 
@@ -64,13 +64,14 @@ export function CombatView({
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const ready = availableActions(battle);
-  const lines = battle.log.length > 0 ? battle.log.slice(-2) : [COMBAT.opening];
+  const guardian = battle.enemy.id === SENTINEL.id;
+  const lines = battle.log.length > 0 ? battle.log.slice(-2) : [guardian ? COMBAT.guardianOpening : COMBAT.opening];
   return (
     <div className="combat">
       <section className="fighter" aria-label={battle.enemy.name}>
         <Health name={battle.enemy.name} hp={battle.enemy.hp} maxHp={battle.enemy.maxHp} />
         <div className="crypt-stage">
-          <PixelArt rows={SPRITES.rat} label={RAT.name} className="crypt-actor" />
+          <PixelArt rows={guardian ? SPRITES.sentinel : SPRITES.rat} label={battle.enemy.name} className="crypt-actor" />
           <PixelArt rows={SPRITES.platform} className="crypt-platform" />
         </div>
         <h2>{battle.enemy.name}</h2>
@@ -88,6 +89,9 @@ export function CombatView({
         </div>
         <h2>{battle.player.name}</h2>
         <Health name={battle.player.name} hp={battle.player.hp} maxHp={battle.player.maxHp} />
+        {battle.player.attackBonus > 0 ? (
+          <p className="crypt-status">{charmNote(battle.player.attackBonus)}</p>
+        ) : null}
       </section>
 
       <div className="combat-log" role="status" aria-live="polite">
@@ -111,13 +115,13 @@ export function CombatView({
 
       {battle.status === 'won' && (
         <>
-          <p className="combat-result">{COMBAT.win}</p>
+          <p className="combat-result">{guardian ? COMBAT.guardianWin : COMBAT.win}</p>
           <button type="button" className="btn crypt-block" onClick={onContinue}>{COMBAT.continue}</button>
         </>
       )}
       {battle.status === 'lost' && (
         <>
-          <p className="combat-result">{COMBAT.lose}</p>
+          <p className="combat-result">{guardian ? COMBAT.guardianLose : COMBAT.lose}</p>
           <button type="button" className="btn crypt-block" onClick={onRetry}>{COMBAT.retry}</button>
         </>
       )}

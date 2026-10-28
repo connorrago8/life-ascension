@@ -6,15 +6,19 @@ import {
   END_CARD,
   EVENT_ID,
   FIGHT_ID,
+  GUARDIAN_ID,
   HUB,
   INTRO,
   NODES,
   PLAYER,
   PREVIEW_BANNER,
   RAT,
+  SENTINEL,
+  SIGIL,
   TREASURE_ID,
   endCardParagraphs,
   eventNode,
+  nextCryptObjective,
   treasureNode,
 } from '../lib/crypt/content.ts';
 import {
@@ -195,10 +199,10 @@ test('the same seed replays the same fight and a different seed does not', () =>
   assert.equal(rollAt(7, 3), rollAt(7, 3));
 });
 
-test('the preview run is a rat, an inscription, and a charm, with no boss', () => {
+test('the preview run has a rat, inscription, charm, and gated sentinel encounter', () => {
   assert.equal(PREVIEW_BANNER, 'Preview — progress is not saved and earns no XP');
-  assert.deepEqual(NODES.map((node) => node.kind), ['fight', 'event', 'treasure']);
-  assert.deepEqual(NODES.map((node) => node.id), [FIGHT_ID, EVENT_ID, TREASURE_ID]);
+  assert.deepEqual(NODES.map((node) => node.kind), ['fight', 'event', 'treasure', 'fight']);
+  assert.deepEqual(NODES.map((node) => node.id), [FIGHT_ID, EVENT_ID, TREASURE_ID, GUARDIAN_ID]);
   assert.equal(PLAYER.maxHp, 20);
   assert.ok(RAT.maxHp < PLAYER.maxHp);
   assert.ok(RAT.attack < PLAYER.attack);
@@ -210,10 +214,31 @@ test('the preview run is a rat, an inscription, and a charm, with no boss', () =
   assert.equal(eventNode().choices[0].heal, 2);
   assert.equal(treasureNode().title, 'Ember Charm');
   assert.equal(treasureNode().attackBonus, 2);
+  assert.equal(SENTINEL.maxHp, 16);
+  assert.equal(SIGIL.name, 'Sentinel Sigil');
   assert.deepEqual(COMBAT.actions.map((action) => action.id), [...ACTION_IDS]);
   assert.deepEqual(HUB.locations.map((location) => location.kind), ['preview', 'locked', 'locked']);
   const joined = JSON.stringify(NODES);
-  assert.doesNotMatch(joined, /boss|Bone King/);
+  assert.doesNotMatch(joined, /Bone King/);
+});
+
+test('the floor map names only the next available preview objective', () => {
+  const progress = {
+    fightCleared: false,
+    eventCleared: false,
+    treasureCleared: false,
+    guardianCleared: false,
+  };
+  assert.equal(nextCryptObjective(progress), 'Defeat the Crypt Rat');
+  progress.fightCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Read the ancient inscription');
+  progress.eventCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Take the Ember Charm');
+  progress.treasureCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Defeat the Crypt Sentinel');
+  progress.guardianCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Approach the sealed door');
+  assert.doesNotMatch(nextCryptObjective(progress), /XP|permanent|owned/i);
 });
 
 test('event choices and the ember charm change only this run', () => {
@@ -222,6 +247,7 @@ test('event choices and the ember charm change only this run', () => {
   run = reduceRun(run, { type: 'continue' });
   assert.equal(reduceRun(run, { type: 'open', nodeId: TREASURE_ID }).phase, 'map');
   assert.equal(reduceRun(run, { type: 'open', nodeId: EVENT_ID }).phase, 'map');
+  assert.equal(reduceRun(run, { type: 'open', nodeId: GUARDIAN_ID }).phase, 'map');
   run = reduceRun(run, { type: 'open', nodeId: FIGHT_ID });
   assert.equal(run.phase, 'fight');
   for (let i = 0; i < 3 && run.battle?.status !== 'won'; i += 1) {
@@ -255,8 +281,22 @@ test('event choices and the ember charm change only this run', () => {
   hinted = reduceRun(hinted, { type: 'open', nodeId: TREASURE_ID });
   assert.equal(hinted.attackBonus, 0);
   hinted = reduceRun(hinted, { type: 'continue' });
-  assert.equal(hinted.phase, 'end');
+  assert.equal(hinted.phase, 'map');
   assert.equal(hinted.attackBonus, 2);
+  assert.equal(nodeAccess(hinted, GUARDIAN_ID), 'ready');
+  assert.equal(reduceRun(hinted, { type: 'continue' }).phase, 'map'); // door stays sealed
+  hinted = reduceRun(hinted, { type: 'open', nodeId: GUARDIAN_ID });
+  assert.equal(hinted.battle?.enemy.id, SENTINEL.id);
+  assert.equal(hinted.battle?.player.attackBonus, 2);
+  hinted = reduceRun(hinted, { type: 'combat', action: 'heavy' });
+  if (hinted.battle?.status === 'ongoing') hinted = reduceRun(hinted, { type: 'combat', action: 'attack' });
+  assert.equal(hinted.battle?.status, 'won');
+  assert.equal(hinted.guardianCleared, true);
+  assert.equal(hinted.sigilCollected, true);
+  hinted = reduceRun(hinted, { type: 'continue' });
+  assert.equal(hinted.phase, 'map');
+  hinted = reduceRun(hinted, { type: 'continue' });
+  assert.equal(hinted.phase, 'end');
 
   const buffed = act(createBattle({
     script: [0, 0],
@@ -270,6 +310,8 @@ test('event choices and the ember charm change only this run', () => {
   assert.equal(restarted.seed, 99);
   assert.equal(restarted.hp, PLAYER.maxHp);
   assert.equal(restarted.attackBonus, 0);
+  assert.equal(restarted.guardianCleared, false);
+  assert.equal(restarted.sigilCollected, false);
   assert.equal(restarted.hint, null);
   assert.equal(nodeAccess(restarted, FIGHT_ID), 'ready');
 });
