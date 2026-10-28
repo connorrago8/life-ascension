@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { parsePendingProgress } from '../lib/preview/pendingProgress';
+import { nextProgressDelta } from '../lib/preview/progressDelta.mjs';
 
 export type ProgressQuest = { title: string; target_amount: number | null; progress_unit: string | null; progress_increment: number | null };
 export type ProgressInstance = { id: string; current_amount: number; status: 'available'|'completed'|'deferred' };
@@ -33,6 +34,10 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   const target = quest.target_amount;
   const amount = instance.current_amount;
   const remaining = target - amount;
+  const progressBounds = { target, amount, increment: quest.progress_increment };
+  const addDelta = nextProgressDelta(progressBounds, 'add');
+  const undoDelta = nextProgressDelta(progressBounds, 'undo');
+  const clearDelta = nextProgressDelta(progressBounds, 'clear');
   const submit = (delta: number) => {
     if (disabled || saving || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
     // One UUID per user action; the RPC journal deduplicates network retries.
@@ -88,8 +93,8 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     {saveState === 'failed' && !retrying && !storageError && <p role="alert">Progress was not saved. You can try again.</p>}
     <p className="muted" role="status" aria-live="polite">{saving ? 'Saving progress…' : retrying ? 'Save not confirmed — retry required.' : saveState === 'saved' ? 'Progress saved.' : saveState === 'failed' ? 'Progress was not saved.' : ''}</p>
     <div className="actions">{retrying && <button type="button" className="btn" disabled={disabled || saving || storageError} aria-label={`Retry saving progress for ${quest.title}`} onClick={retryPending}>Retry save</button>}
-      <button type="button" className="btn" disabled={disabled || saving || retrying || storageError || remaining === 0} aria-label={`Add ${Math.min(quest.progress_increment,remaining)} ${quest.progress_unit} to ${quest.title}`} onClick={() => submit(Math.min(quest.progress_increment!, remaining))}>+{Math.min(quest.progress_increment,remaining)}</button>
-      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || amount < quest.progress_increment} aria-label={`Undo ${quest.progress_increment} ${quest.progress_unit} on ${quest.title}`} onClick={() => submit(-quest.progress_increment!)}>Undo −{quest.progress_increment}</button>
+      <button type="button" className="btn" disabled={disabled || saving || retrying || storageError || addDelta === null} aria-label={`Add ${addDelta ?? 0} ${quest.progress_unit} to ${quest.title}`} onClick={() => { if (addDelta !== null) submit(addDelta); }}>+{addDelta ?? 0}</button>
+      <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || undoDelta === null} aria-label={clearDelta !== null ? `Clear progress for ${quest.title}` : `Undo ${quest.progress_increment} ${quest.progress_unit} on ${quest.title}`} onClick={() => { if (undoDelta !== null) submit(undoDelta); }}>{clearDelta !== null ? 'Clear' : `Undo −${quest.progress_increment}`}</button>
       <input className="field" disabled={disabled || saving || retrying || storageError || remaining === 0} style={{maxWidth:90}} type="number" min={1} max={remaining} step={1} value={custom} aria-label={`Custom progress amount for ${quest.title}`} placeholder="Amount" onChange={e=>setCustom(e.target.value)} />
       <button type="button" className="btn ghost" disabled={disabled || saving || retrying || storageError || !Number.isInteger(Number(custom)) || Number(custom)<1 || Number(custom)>remaining} aria-label={`Log custom progress for ${quest.title}`} onClick={() => {submit(Number(custom));}}>Log</button>
     </div>

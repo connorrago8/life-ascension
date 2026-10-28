@@ -15,7 +15,8 @@ test('quest cards stack title and actions at iPhone widths', () => {
 test('progress controls remain visible and keep a one-tap increment', () => {
   assert.match(css, /\.quest-progress-controls \{ width: 100%; min-width: 0;/);
   assert.match(css, /\.quest-progress-controls \.actions \{ display: flex; width: 100%;/);
-  assert.match(controls, /onClick=\{\(\) => submit\(Math\.min\(quest\.progress_increment!/);
+  assert.match(controls, /const addDelta = nextProgressDelta\(progressBounds, 'add'\)/);
+  assert.match(controls, /if \(addDelta !== null\) submit\(addDelta\)/);
   assert.match(controls, /Retry save/);
   assert.match(controls, /Saving progress…/);
   assert.match(controls, /Progress saved\./);
@@ -98,4 +99,11 @@ test('progress save never sends a new operation when browser storage fails', () 
 test('each progress meter is labelled with its quest title', () => {
   const controls = readFileSync(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
   assert.match(controls, /htmlFor=\{`progress-\$\{instance\.id\}`\}>\{quest\.title\}: \{amount\} \/ \{target\}/);
+});
+
+
+test('clear is offered only when the existing server undo can reset progress in one operation', () => {
+  assert.match(controls, /const clearDelta = nextProgressDelta\(progressBounds, 'clear'\)/);
+  assert.match(controls, /clearDelta !== null \? 'Clear' : `Undo/);
+  assert.match(controls, /if \(undoDelta !== null\) submit\(undoDelta\)/);
 });
