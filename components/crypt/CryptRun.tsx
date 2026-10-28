@@ -88,7 +88,11 @@ export function CryptRun() {
         {run.phase === 'intro' ? (
           <Link href="/play" className="icon-btn" aria-label={FLOOR.back}><BackIcon /></Link>
         ) : (
-          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => setRun(reduceRun(run, { type: 'back' }))}>
+          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
+            // Returning to the sealed door should offer both endings again.
+            if (run.phase === 'end') setEndingChoice(null);
+            setRun(reduceRun(run, { type: 'back' }));
+          }}>
             <BackIcon />
           </button>
         )}
