@@ -100,3 +100,28 @@ test('preview belt stages preserve the rest of the full character and accessibil
     assert.match(html, /qa-character-coat/);
   }
 });
+
+test('empty and unsupported main hands never fabricate a weapon in starter belt state', async () => {
+  const HomeCharacter = await loadCharacter();
+  for (const mainHand of ['none', 'unrecognized']) {
+    const html = renderToStaticMarkup(React.createElement(HomeCharacter, {
+      model: { ...model, mainHand }, beltPreviewStage: 'starter',
+    }));
+    assert.match(html, new RegExp('data-main-hand="' + mainHand + '"'));
+    assert.doesNotMatch(html, /data-prop="(?:staff|lantern)"/);
+    assert.match(html, /data-waist-part="starter-tie"/);
+    assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
+  }
+});
+
+test('explicit staff and lantern each render only their own prop', async () => {
+  const HomeCharacter = await loadCharacter();
+  for (const mainHand of ['staff', 'lantern']) {
+    const html = renderToStaticMarkup(React.createElement(HomeCharacter, {
+      model: { ...model, mainHand }, beltPreviewStage: 'starter',
+    }));
+    assert.equal((html.match(/data-prop="/g) ?? []).length, 1);
+    assert.match(html, new RegExp('data-prop="' + mainHand + '"'));
+    assert.doesNotMatch(html, new RegExp('data-prop="' + (mainHand === 'staff' ? 'lantern' : 'staff') + '"'));
+  }
+});
