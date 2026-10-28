@@ -96,7 +96,8 @@ jobs:
             supabase/migrations/202610260009_progress_configuration.sql \
             supabase/migrations/202610260010_progress_completion_guard.sql \
             supabase/migrations/202610260011_atomic_tracked_creation.sql \
-            supabase/migrations/202610260012_api_progress_wrapper.sql; do
+            supabase/migrations/202610260012_api_progress_wrapper.sql \
+            supabase/migrations/202610270001_quest_receipt_v2.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
@@ -105,11 +106,13 @@ jobs:
             tests/sql/two_user_mcp_auth.sql \
             tests/sql/archive_compat_smoke.sql \
             tests/sql/daily_late_window_smoke.sql \
-            tests/sql/partial_progress_smoke.sql; do
+            tests/sql/partial_progress_smoke.sql \
+            tests/sql/quest_receipt_v2_combined_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           bash tests/sql/parallel_progress.sh "$db"
-          echo "All six SQL smoke tests and concurrency test passed"
+          bash tests/sql/quest_receipt_v2_concurrency.sh
+          echo "All seven SQL smoke tests and both concurrency tests passed"
 
   quest-browser-qa:
     name: Quest progress browser QA (unprivileged, no backend)
