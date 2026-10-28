@@ -30,7 +30,7 @@ const model = {
   tunicLight: '#72957b', trousers: '#5c4c3b', trousersLight: '#81715e',
   boots: '#413329', bootsLight: '#706052', belt: '#76533b',
   hood: null, hoodLight: null, mainHand: 'staff',
-  mainHandAccent: '#60422b', mainHandAccentLight: '#bba587',
+  mainHandAccent: '#60422b', mainHandAccentLight: '#bba587', itemNames: [],
 };
 
 test('default character remains unchanged and shows neither proof stage', async () => {
