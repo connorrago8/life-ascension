@@ -179,3 +179,16 @@ test('first sword is selectable preview gear and appears in the adventure sprite
   assert.match(swordPixels, /g/);
   assert.equal(characterRender.pixelPalette(next).G, '#C6A66D');
 });
+
+test('restored preview equipment catalog identifies invalid IDs and conflicting slots', async () => {
+  const appearance = execute(compile(await readFile(new URL('../lib/preview/appearance.ts', import.meta.url), 'utf8')), require);
+  const catalog = execute(compile(await readFile(new URL('../lib/preview/catalog.ts', import.meta.url), 'utf8')),
+    (name) => name.includes('appearance') ? appearance : require(name));
+  assert.equal(catalog.catalogItem('not-a-real-item'), null);
+  assert.equal(catalog.catalogItem('wine-cloak-dye')?.category, 'cosmetic');
+  assert.equal(catalog.catalogItem('initiate-sword')?.category, 'equipment');
+  const equipped = catalog.equipCatalogId(['walking-staff', 'travelers-hood'], [], 'initiate-sword');
+  assert.deepEqual(equipped.equipmentIds, ['travelers-hood', 'initiate-sword']);
+  assert.equal(equipped.equipmentIds.filter((id) => catalog.catalogItem(id)?.slot === 'main-hand').length, 1);
+  assert.deepEqual(catalog.equipCatalogId(equipped.equipmentIds, [], 'not-a-real-item').equipmentIds, equipped.equipmentIds);
+});
