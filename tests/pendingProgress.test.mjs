@@ -285,3 +285,27 @@ test('completed and deferred instances cannot mint new progress operations; comp
     }
   }
 });
+
+
+test('completed quest with pending or malformed journal is discoverable after refresh', async () => {
+  const { hasPendingCompletedRecovery } = await loadParser();
+  const completed = [{ id: 'done', status: 'completed' }];
+  const available = [{ id: 'active', status: 'available' }];
+  const read = key => key === 'life-progress-pending:done' ? '{broken-journal' : null;
+  assert.equal(hasPendingCompletedRecovery(completed, read), true,
+    'Even a malformed pending receipt must reveal the Completed recovery path');
+  assert.equal(hasPendingCompletedRecovery(available, read), false,
+    'Active quests must not automatically open Completed');
+  assert.equal(hasPendingCompletedRecovery(completed, () => null), false,
+    'No pending receipt should preserve the collapsed default');
+  assert.equal(hasPendingCompletedRecovery(completed, () => { throw new Error('Storage blocked'); }), true,
+    'Unreadable storage must reveal recovery controls rather than hide them');
+});
+
+test('Home exposes completed progress retry after refresh without creating another request', async () => {
+  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /hasPendingCompletedRecovery\(instances,key=>localStorage\.getItem\(key\)\)/);
+  assert.match(home, /setShowCompleted\(true\)/);
+  assert.match(home, /completedQuests\.map\(\(\{quest,instance\}\)=>/);
+  assert.match(home, /<QuestProgressControls quest=\{quest\} instance=\{instance!\}/);
+});
