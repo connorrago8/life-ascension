@@ -44,38 +44,38 @@ try {
   await avatar.waitFor();
   const imageLabel = () => avatar.getAttribute('aria-label');
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i);
-  assert.equal(await page.getByRole('button', { name: 'Equip Ashen Hood' }).count(), 0,
+  assert.equal(await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).count(), 0,
     'Unverified character must not offer equipment writes');
 
   await page.getByRole('button', { name: 'Mock server: invalid unowned equip' }).click();
-  assert.equal(await page.getByRole('button', { name: 'Equip Ashen Hood' }).count(), 0,
+  assert.equal(await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).count(), 0,
     'Equipped-but-unowned mock must fail closed');
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i);
 
   await page.getByRole('button', { name: 'Mock server: grant Ashen Hood' }).click();
-  await page.getByRole('button', { name: 'Equip Ashen Hood' }).waitFor();
+  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).waitFor();
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i,
     'Ownership alone must not draw armor before equip');
 
-  await page.getByRole('button', { name: 'Equip Ashen Hood' }).click();
-  await page.getByRole('button', { name: 'Unequip Ashen Hood' }).waitFor();
+  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).click();
+  await page.getByRole('button', { name: 'Unequip Ashen Hood', exact: true }).waitFor();
   assert.match(await imageLabel(), /Ashen Hood/i,
     'Confirmed equip must change the actual character SVG');
   await page.screenshot({ path: join(output, 'earned-hood-equipped-390.png'), fullPage: true });
 
   await page.reload();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
-  await page.getByRole('button', { name: 'Unequip Ashen Hood' }).waitFor();
+  await page.getByRole('button', { name: 'Unequip Ashen Hood', exact: true }).waitFor();
   assert.match(await imageLabel(), /Ashen Hood/i,
     'Reload must rehydrate the synthetic confirmed equipment snapshot');
 
-  await page.getByRole('button', { name: 'Unequip Ashen Hood' }).click();
-  await page.getByRole('button', { name: 'Equip Ashen Hood' }).waitFor();
+  await page.getByRole('button', { name: 'Unequip Ashen Hood', exact: true }).click();
+  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).waitFor();
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i,
     'Unequip must remove the visible hood');
   await page.reload();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
-  await page.getByRole('button', { name: 'Equip Ashen Hood' }).waitFor();
+  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).waitFor();
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i,
     'Reload must preserve synthetic unequipped state');
 
