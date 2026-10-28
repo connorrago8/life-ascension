@@ -39,7 +39,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   const undoDelta = nextProgressDelta(progressBounds, 'undo');
   const clearDelta = nextProgressDelta(progressBounds, 'clear');
   const submit = (delta: number) => {
-    if (disabled || saving || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
+    if (instance.status !== 'available' || disabled || saving || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
     // One UUID per user action; the RPC journal deduplicates network retries.
     let pending: { id: string; delta: number } | null = null;
     try { pending = parsePendingProgress(localStorage.getItem(storageKey)); }
