@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
 import { levelFor, levelProgress } from '../../../lib/level';
 import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
+import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
 import { supabase } from '../../../lib/supabase';
 import { parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
 import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
@@ -25,13 +26,18 @@ export default function CharacterPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [equipmentBusy, setEquipmentBusy] = useState(false);
   const [equipmentError, setEquipmentError] = useState('');
+  const loadGate = useRef(createLatestCharacterLoadGate());
 
   const load = useCallback(async () => {
+    // Focus/visibility refreshes and post-equip reads may overlap. Only the
+    // latest request may commit a verified XP/equipment snapshot or error.
+    const isCurrent = loadGate.current.begin();
+    const commit = (next: LoadState) => { if (isCurrent()) setState(next); };
     const preview = process.env.NODE_ENV === 'development'
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      setState({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, preview: true, gear: null });
+      commit({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, preview: true, gear: null });
       return;
     }
     try {
@@ -39,7 +45,7 @@ export default function CharacterPage() {
       const { data: authData, error: authError } = await client.auth.getUser();
       const user = authError ? null : authData.user;
       if (!user) {
-        setState({ status: 'signed-out', loginHref: loginHref() });
+        commit({ status: 'signed-out', loginHref: loginHref() });
         return;
       }
       const [xpResult, profileResult, gearResult] = await Promise.all([
@@ -48,16 +54,16 @@ export default function CharacterPage() {
         client.rpc('get_earned_gear'),
       ]);
       if (xpResult.error) {
-        setState({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
+        commit({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
         return;
       }
       const verifiedXp = verifiedLifetimeXp(xpResult.data);
       if (verifiedXp === null) {
-        setState({ status: 'error', message: 'Could not verify lifetime XP. Your quests and equipment are unchanged.' });
+        commit({ status: 'error', message: 'Could not verify lifetime XP. Your quests and equipment are unchanged.' });
         return;
       }
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
-      setState({
+      commit({
         status: 'ready',
         name: adventurerName(user.email, profile?.display_name),
         xp: verifiedXp,
@@ -67,7 +73,7 @@ export default function CharacterPage() {
       });
     } catch {
       // A transient network failure is not evidence that the user signed out.
-      setState({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
+      commit({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
     }
   }, []);
 
@@ -104,6 +110,7 @@ export default function CharacterPage() {
     return () => {
       document.removeEventListener('visibilitychange', refreshOnFocus);
       window.removeEventListener('focus', refreshOnFocus);
+      loadGate.current.invalidate();
     };
   }, [load]);
 
