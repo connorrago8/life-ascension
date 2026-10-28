@@ -104,6 +104,23 @@ test('victory grants a temporary sigil once; restart clears it', () => {
   assert.equal(fresh.attackBonus, 0);
 });
 
+test('defeat messaging truthfully explains full-health retry and preserved rewards', () => {
+  assert.match(COMBAT.lose, /Retry restores full HP/);
+  assert.match(COMBAT.lose, /without losing real-world XP or equipment/);
+  assert.match(COMBAT.guardianLose, /Retry restores full HP/);
+  assert.match(COMBAT.guardianLose, /run-only Ember Charm/);
+  let run = reduceRun(reachGuardian(), { type: 'open', nodeId: GUARDIAN_ID });
+  for (let i = 0; i < 15 && run.battle?.status === 'ongoing'; i++) {
+    run = reduceRun(run, { type: 'combat', action: 'focus' });
+  }
+  assert.equal(run.battle?.status, 'lost');
+  const retry = reduceRun(run, { type: 'retry-fight' });
+  assert.equal(retry.hp, retry.maxHp);
+  assert.equal(retry.attackBonus, 2);
+  assert.equal(retry.treasureCleared, true);
+  assert.equal(Object.hasOwn(retry, 'xp'), false);
+});
+
 test('guardian introduction identifies the sentinel rather than the rat', () => {
   assert.match(COMBAT.guardianOpening, /Crypt Sentinel/);
   assert.doesNotMatch(COMBAT.guardianOpening, /Crypt Rat/);
