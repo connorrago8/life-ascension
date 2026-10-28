@@ -97,7 +97,7 @@ function exerciseAdminFactory(env, browser = false) {
   const calls = [];
   const module = { exports: {} };
   runInNewContext(adminCompiled, {
-    module, exports: module.exports, process: { env },
+    module, exports: module.exports, process: { env }, URL,
     ...(browser ? { window: {} } : {}),
     require(name) {
       assert.equal(name, '@supabase/supabase-js');
@@ -147,6 +147,24 @@ test('runtime service-role factory preserves Production and local-only behavior'
   assert.equal(localFactory.calls.length, 1);
 });
 
+test('rejects privileged runtime URL drift before constructing a Production client', () => {
+  for (const url of [
+    qa.NEXT_PUBLIC_SUPABASE_URL,
+    `http://${prodRef}.supabase.co`,
+    `https://${prodRef}.supabase.co.evil.example`,
+    `https://user:pass@${prodRef}.supabase.co`,
+    `https://${prodRef}.supabase.co/?override=1`,
+  ]) {
+    const factory = exerciseAdminFactory({
+      VERCEL_ENV: 'production', VERCEL: '1',
+      NEXT_PUBLIC_SUPABASE_URL: url,
+      SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+    });
+    assert.equal(factory.create(), null);
+    assert.equal(factory.calls.length, 0);
+  }
+});
+
 test('runtime service-role factory is never callable in the browser', () => {
   const browserFactory = exerciseAdminFactory({ VERCEL_ENV: 'production',
     NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL,
@@ -185,6 +203,23 @@ test('runtime server/Edge config accepts only correctly pinned project and targe
     { ...qa, VERCEL_ENV: undefined, VERCEL: '1' },
     { ...qa, SUPABASE_PUBLIC_KEY_SHA256: pin('synthetic-mismatched') },
   ]) assert.equal(await runtimePublicConfig(env), null);
+});
+
+test('runtime server/Edge refuses privileged key injected after Preview build', async () => {
+  // The build guard rejects this too; runtime drift must not re-enable
+  // public-key authentication with a privileged credential present.
+  for (const target of ['preview', 'development']) {
+    const config = await runtimePublicConfig({
+      ...qa, VERCEL_ENV: target, VERCEL: '1',
+      SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+    });
+    assert.equal(config, null);
+  }
+  // Production is not blocked merely because its legitimate service key exists.
+  const productionConfig = await runtimePublicConfig({
+    ...prod, VERCEL: '1', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+  });
+  assert.equal(productionConfig?.url, prod.NEXT_PUBLIC_SUPABASE_URL);
 });
 
 test('runtime config leaves non-Vercel local development unchanged', async () => {
