@@ -100,19 +100,23 @@ jobs:
             supabase/migrations/202610270001_quest_receipt_v2.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
+          # Run the combined v2 contract against an isolated clone of the
+          # migrated disposable database; the legacy suites use overlapping
+          # fixture IDs and must not share their test data.
+          createdb --template="$db" life_ascension_combined_test
+          psql -v ON_ERROR_STOP=1 -d life_ascension_combined_test -f tests/sql/quest_receipt_v2_combined_smoke.sql
           for file in \
             tests/sql/api_keys_progress_smoke.sql \
             tests/sql/scheduling_auth_smoke.sql \
             tests/sql/two_user_mcp_auth.sql \
             tests/sql/archive_compat_smoke.sql \
             tests/sql/daily_late_window_smoke.sql \
-            tests/sql/partial_progress_smoke.sql \
-            tests/sql/quest_receipt_v2_combined_smoke.sql; do
+            tests/sql/partial_progress_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           bash tests/sql/parallel_progress.sh "$db"
           bash tests/sql/quest_receipt_v2_concurrency.sh
-          echo "All seven SQL smoke tests and both concurrency tests passed"
+          echo "All six SQL smoke tests, combined v2 contract and both concurrency tests passed"
 
   quest-browser-qa:
     name: Quest progress browser QA (unprivileged, no backend)
