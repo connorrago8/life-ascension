@@ -13,13 +13,13 @@ test('real-component QA route is development-only and uses no backend', () => {
   assert.doesNotMatch(page + harness, /from ['\"][^'\"]*supabase|fetch\(|createClient\(|awardXp|xp_awarded/i);
 });
 
-test('QA harness exposes retry, rejected, saved, corrupt and Undo flows', () => {
+test('QA harness exposes retry, rejected, saved, corrupt and Clear flows', () => {
   assert.match(harness, /'saved' \| 'retry' \| 'rejected'/);
   assert.match(harness, /Seed malformed journal and reload/);
   assert.match(harness, /life-progress-pending:/);
   assert.match(harness, /confirmed\.current\.has\(requestId\)/);
   assert.match(browser, /original\.id/);
-  assert.match(browser, /Undo 2 repetitions/);
+  assert.match(browser, /Clear progress for/);
   assert.match(browser, /pending save record is unreadable/);
 });
 
