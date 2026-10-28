@@ -45,7 +45,7 @@ test('preview retains its session-only cosmetics without promoting them to owner
 test('authenticated character route opts out of preview loadout even when preview storage exists', async () => {
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
-  assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : 'unverified'\}/);
+  assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   assert.match(screen, /characterGearView\(equipmentMode, appearance, verifiedGear\)/);
   assert.match(screen, /visibleAppearance = displayName \? \{ \.\.\.gearView\.appearance, name: displayName \}/);
   assert.match(screen, /homeCharacterModel\(visibleAppearance\)/);
@@ -103,12 +103,37 @@ test('verified gear fails closed on absent, malformed or unsupported ownership d
   assert.equal(unsupported.source, 'verified');
 });
 
-test('verified armor is read-only; authenticated route cannot fabricate the snapshot', async () => {
+test('verified armor is server-only; authenticated route cannot fabricate the snapshot', async () => {
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
-  assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : 'unverified'\}/);
+  assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   assert.match(screen, /gearView\.source === 'verified'/);
   assert.match(screen, /verifiedGear\?: AuthenticatedGearSnapshot/);
   assert.match(screen, /gearView\.canChange && selectedSlot/);
   assert.doesNotMatch(route, /equipmentMode=\{'verified'\}/);
+});
+
+test('server snapshot parser rejects malformed, preview and unsupported data', async () => {
+  const { view } = await viewModule();
+  for (const invalid of [null, [], {}, { ownedItemIds: ['ashen-hood'] },
+    { ownedItemIds: 'ashen-hood', equippedItemIds: [] },
+    { ownedItemIds: ['walking-staff'], equippedItemIds: [] },
+    { ownedItemIds: ['ashen-hood'], equippedItemIds: [42] }]) {
+    assert.equal(view.parseAuthenticatedGearSnapshot(invalid), null);
+  }
+  assert.deepEqual(view.parseAuthenticatedGearSnapshot({
+    ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'],
+  }), { ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'] });
+});
+
+test('authenticated armor controls call only owner-checked RPC and refresh after success', async () => {
+  const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
+  const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
+  assert.match(route, /client\\.rpc\\('get_earned_gear'\\)/);
+  assert.match(route, /parseAuthenticatedGearSnapshot\\(gearResult\\.data\\)/);
+  assert.match(route, /rpc\\('equip_earned_armor'/);
+  assert.match(route, /await load\\(\\)/);
+  assert.match(screen, /ownedArmor && onEquipArmor/);
+  assert.match(screen, /disabled=\\{armorBusy\\}/);
+  assert.doesNotMatch(route, /sessionStorage\\.setItem/);
 });
