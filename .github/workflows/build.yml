@@ -183,11 +183,14 @@ jobs:
             sleep 2
           done
           CHROMIUM_BIN="$browser" node tests/browser/quest-progress.qa.mjs
-      - name: Upload browser screenshots for CEO review
+          CHROMIUM_BIN="$browser" node tests/browser/crypt-preview.qa.mjs
+      - name: Upload Quest and Crypt browser screenshots for CEO review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: quest-progress-browser-${{ github.sha }}
-          path: artifacts/quest-progress/
+          path: |
+            artifacts/quest-progress/
+            artifacts/crypt-preview/
           if-no-files-found: warn
           retention-days: 7
