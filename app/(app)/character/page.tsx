@@ -67,6 +67,15 @@ export default function CharacterPage() {
 
   useEffect(() => {
     void load();
+    // Refresh verified XP when returning from the quest board or another tab.
+    // Avoid stale level progress after a quest was completed elsewhere.
+    const refreshOnFocus = () => { if (document.visibilityState === 'visible') void load(); };
+    document.addEventListener('visibilitychange', refreshOnFocus);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshOnFocus);
+      window.removeEventListener('focus', refreshOnFocus);
+    };
   }, [load]);
 
   if (state.status === 'loading') return <main className="wrap">Loading your character…</main>;
