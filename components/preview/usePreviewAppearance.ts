@@ -72,12 +72,17 @@ function readLoadout(): Loadout {
 
 /** Preview-only appearance persists on this device across browser restarts.
  * This is not authenticated ownership or server-synced equipment. */
-export function usePreviewAppearance() {
+export function usePreviewAppearance(verifiedXp?: number) {
   const [loadout, setLoadout] = useState<Loadout>(defaultLoadout);
 
   useEffect(() => {
-    setLoadout(readLoadout());
-  }, []);
+    const stored = readLoadout();
+    if (verifiedXp !== undefined && verifiedXp < 10) {
+      // Cached preview choices cannot bypass the current verified XP gate.
+      stored.equipmentIds = stored.equipmentIds.filter((id) => id !== 'ashen-hood');
+    }
+    setLoadout(stored);
+  }, [verifiedXp]);
 
   const toggleMainHand = useCallback(() => {
     setLoadout((current) => {
@@ -90,12 +95,13 @@ export function usePreviewAppearance() {
   }, []);
 
   const equip = useCallback((id: string) => {
+    if (id === 'ashen-hood' && verifiedXp !== undefined && verifiedXp < 10) return;
     setLoadout((current) => {
       const next = { ...current, ...equipCatalogId(current.equipmentIds, current.cosmeticIds, id) };
       persist(next);
       return next;
     });
-  }, []);
+  }, [verifiedXp]);
 
   const unequip = useCallback((id: string) => {
     setLoadout((current) => {
