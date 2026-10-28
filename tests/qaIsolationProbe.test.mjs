@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 
-const source = readFileSync(new URL('../app/preview/qa-isolation/route.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../app/api/qa-isolation/route.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
@@ -73,4 +73,10 @@ test('Preview fails closed on absent/mismatched server config, privileged client
     assert.deepEqual(JSON.parse(JSON.stringify(body)), { status: 'blocked' });
     assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0');
   }
+});
+
+test('diagnostic API bypasses session-refresh middleware without changing preview paths', () => {
+  const middleware = readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8');
+  assert.match(middleware, /pathname === '\/api\/qa-isolation'/);
+  assert.match(middleware, /pathname\.startsWith\('\/preview\/'\)/);
 });
