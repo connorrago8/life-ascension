@@ -36,7 +36,6 @@ function appearanceFor(loadout: Loadout): Appearance {
 
 function persist(loadout: Loadout) {
   try {
-    localStorage.setItem(LOADOUT_KEY, JSON.stringify(loadout));
     sessionStorage.setItem(LOADOUT_KEY, JSON.stringify(loadout));
     const main = loadout.equipmentIds.find((id) => id === 'walking-staff' || id === 'wayfarer-lantern');
     if (main) sessionStorage.setItem(MAIN_HAND_STORAGE_KEY, main);
@@ -48,8 +47,7 @@ function persist(loadout: Loadout) {
 function readLoadout(): Loadout {
   const base = defaultLoadout();
   try {
-    // Prefer durable local preview state; migrate older session-only selections.
-    const raw = localStorage.getItem(LOADOUT_KEY) ?? sessionStorage.getItem(LOADOUT_KEY);
+    const raw = sessionStorage.getItem(LOADOUT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Loadout>;
       const equipmentIds = Array.isArray(parsed.equipmentIds)
@@ -70,19 +68,13 @@ function readLoadout(): Loadout {
   return base;
 }
 
-/** Preview-only appearance persists on this device across browser restarts.
- * This is not authenticated ownership or server-synced equipment. */
-export function usePreviewAppearance(verifiedXp?: number) {
+/** Sample look kept in sessionStorage so Home, Adventure, and Inventory match. */
+export function usePreviewAppearance() {
   const [loadout, setLoadout] = useState<Loadout>(defaultLoadout);
 
   useEffect(() => {
-    const stored = readLoadout();
-    if (verifiedXp !== undefined && verifiedXp < 10) {
-      // Cached preview choices cannot bypass the current verified XP gate.
-      stored.equipmentIds = stored.equipmentIds.filter((id) => id !== 'ashen-hood');
-    }
-    setLoadout(stored);
-  }, [verifiedXp]);
+    setLoadout(readLoadout());
+  }, []);
 
   const toggleMainHand = useCallback(() => {
     setLoadout((current) => {
@@ -95,13 +87,12 @@ export function usePreviewAppearance(verifiedXp?: number) {
   }, []);
 
   const equip = useCallback((id: string) => {
-    if (id === 'ashen-hood' && verifiedXp !== undefined && verifiedXp < 10) return;
     setLoadout((current) => {
       const next = { ...current, ...equipCatalogId(current.equipmentIds, current.cosmeticIds, id) };
       persist(next);
       return next;
     });
-  }, [verifiedXp]);
+  }, []);
 
   const unequip = useCallback((id: string) => {
     setLoadout((current) => {

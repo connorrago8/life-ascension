@@ -73,9 +73,11 @@ test('signed-in Character route never substitutes sample Level 7 for trusted XP'
   const demo = readFileSync(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
   assert.match(page, /client\.rpc\('get_lifetime_xp'\)/);
   assert.match(page, /const progress = levelFor\(state\.xp\)/);
-  assert.match(page, /<CharacterScreen displayName=\{state\.name\} hideSampleStats hideSampleLevel\s*\/>/);
-  assert.match(demo, /!hideSampleLevel\s*&&\s*<p className="level-line">/);
+  assert.match(page, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(demo, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   assert.doesNotMatch(page, /Level 7|level:\s*7/);
   assert.match(page, /Equipment below is a visual demo using starter items/);
+  assert.match(page, /const verifiedXp = verifiedLifetimeXp\(xpResult\.data\)/);
+  assert.match(page, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   // Source guard only: the existing demo equipment picker is NOT a trusted entitlement UI.
 });

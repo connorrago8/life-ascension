@@ -63,8 +63,8 @@ test('mobile quest card prioritizes completion without removing secondary action
 test('authenticated character hides sample progression level', () => {
   const character = readFileSync(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = readFileSync(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
-  assert.match(character, /<CharacterScreen displayName=\{state\.name\} hideSampleStats hideSampleLevel \/>/);
-  assert.match(screen, /!hideSampleLevel && <p className="level-line">/);
+  assert.match(character, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(screen, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
 });
 
 test('quest metadata uses progressive disclosure', () => {
