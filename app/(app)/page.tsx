@@ -4,7 +4,7 @@ import {supabase} from '../../lib/supabase';
 import {ADVENTURER_CLASS} from '../../lib/character';
 import {coerceXp,levelFor} from '../../lib/level';
 import {QuestProgressControls} from '../../components/QuestProgressControls';
-import {hasPendingCompletedRecovery} from '../../lib/preview/pendingProgress';
+import {hasPendingCompletedRecovery,pendingProgressInstanceIds} from '../../lib/preview/pendingProgress';
 type Quest={id:string;title:string;domain:string;cadence:'once'|'daily';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
 const DOMAINS=[['hygiene','Hygiene & appearance'],['home','Home & environment'],['mental_health','Mental health & recovery'],['personal_growth','Growth & hobbies'],['finance','Financial health'],['career','Career & productivity'],['relationships','Relationships'],['physical_health','Physical health']];
@@ -24,12 +24,7 @@ export default function Home(){
   setLayoutPreview(false);const s=supabase();const {data:{user},error:authError}=await s.auth.getUser();setUser(user?.id||null);setReady(true);if(authError||!user)return;
  // Recover only journal-backed older completed instances owned by this signed-in user.
  // Never query arbitrary history or trust a browser key without server owner filtering.
- const pendingIds:string[]=[];
- try { for(let i=0;i<localStorage.length&&pendingIds.length<100;i++){
-  const key=localStorage.key(i);if(!key?.startsWith('life-progress-pending:'))continue;
-  const id=key.slice('life-progress-pending:'.length);
-  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)&&!pendingIds.includes(id))pendingIds.push(id);
- }}catch{/* Unreadable storage must not cause a broad history query. */}
+ const pendingIds=pendingProgressInstanceIds(localStorage);
  const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(qe){setMessage(qe.message);return}const all=q||[];setQuests(all);const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return}const today=todayLocal();
 const goalIds=all.filter(q=>q.quest_type==='goal').map(q=>q.id);
 const onceIds=all.filter(q=>q.quest_type==='scheduled'&&q.cadence==='once').map(q=>q.id);
