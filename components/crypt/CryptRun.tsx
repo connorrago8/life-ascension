@@ -93,7 +93,7 @@ export function CryptRun() {
         {run.phase === 'intro' ? (
           <Link href="/play" className="icon-btn" aria-label={FLOOR.back}><BackIcon /></Link>
         ) : (
-          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => dispatch({ type: 'back' })}>
+          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => { if (run.phase === 'end') setEndingChoice(null); dispatch({ type: 'back' }); }}>
             <BackIcon />
           </button>
         )}
@@ -141,7 +141,7 @@ export function CryptRun() {
             <aside className="crypt-journal" aria-label="Wayfarer field journal">
               <h2>Field journal</h2>
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
-              <p><strong>Inscription:</strong> {run.eventCleared ? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
+              <p><strong>Inscription:</strong> {run.eventCleared ? run.hint ?? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
               <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
               <p><strong>Guardian:</strong> {run.guardianCleared ? 'Crypt Sentinel defeated; the sealed door is reachable.' : run.treasureCleared ? 'An armored watcher blocks the final passage.' : 'Unexplored.'}</p>
               <p><strong>{SIGIL.name}:</strong> {run.sigilCollected ? SIGIL.description : 'Not yet recovered.'}</p>

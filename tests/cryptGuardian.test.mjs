@@ -169,3 +169,44 @@ test('low-HP guardian loss retries at full health without resetting prior clears
   const retreated = reduceRun(run, { type: 'back' });
   assert.equal(retreated.hp, run.maxHp, 'retreat after retry preserves the new full-HP checkpoint');
 });
+
+test('warning clue stays readable in the field journal after inscription Continue', () => {
+  let run = reduceRun(reduceRun(createRun(13), { type: 'continue' }), { type: 'continue' });
+  run = reduceRun(run, { type: 'open', nodeId: FIGHT_ID });
+  for (let i = 0; i < 4 && run.battle?.status === 'ongoing'; i++) {
+    run = reduceRun(run, { type: 'combat', action: 'attack' });
+  }
+  assert.equal(run.battle?.status, 'won');
+  run = reduceRun(run, { type: 'continue' });
+  run = reduceRun(run, { type: 'open', nodeId: EVENT_ID });
+  run = reduceRun(run, { type: 'choose', choiceId: 'warning' });
+  const clue = run.hint;
+  assert.match(clue, /broken compass/);
+  run = reduceRun(run, { type: 'continue' });
+  assert.equal(run.phase, 'map');
+  assert.equal(run.outcomeNote, null, 'Continue clears the temporary event result');
+  assert.equal(run.hint, clue, 'the clue is retained for later inspection');
+  const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
+  assert.match(view, /run\.eventCleared \? run\.hint \?\? run\.outcomeNote \?\?/);
+  assert.equal(Object.hasOwn(run, 'xp'), false);
+});
+
+test('revisiting the sealed door resets the previous ending choice', () => {
+  let run = reduceRun(reachGuardian(), { type: 'open', nodeId: GUARDIAN_ID });
+  run = reduceRun(run, { type: 'combat', action: 'heavy' });
+  if (run.battle?.status === 'ongoing') run = reduceRun(run, { type: 'combat', action: 'attack' });
+  assert.equal(run.battle?.status, 'won');
+  run = reduceRun(run, { type: 'continue' });
+  run = reduceRun(run, { type: 'continue' });
+  assert.equal(run.phase, 'end');
+  run = reduceRun(run, { type: 'back' });
+  assert.equal(run.phase, 'map');
+  assert.equal(run.guardianCleared, true);
+  assert.equal(run.sigilCollected, true);
+  run = reduceRun(run, { type: 'continue' });
+  assert.equal(run.phase, 'end', 'the sealed door remains reachable without replaying combat');
+  const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
+  assert.match(view, /if \(run\.phase === 'end'\) setEndingChoice\(null\)/, 'Back clears stale epilogue selection');
+  assert.match(view, /endingChoice === null \? \(/, 'both ending choices return on revisit');
+  assert.equal(Object.hasOwn(run, 'xp'), false);
+});
