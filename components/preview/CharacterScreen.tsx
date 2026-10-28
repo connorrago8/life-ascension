@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { VisibleSlot } from '../../lib/preview/appearance';
 import { PREVIEW_CATALOG } from '../../lib/preview/catalog';
 import { homeCharacterModel } from '../../lib/preview/characterRender';
-import { characterGearView, type CharacterEquipmentMode } from '../../lib/preview/characterGearView';
+import { characterGearView, type AuthenticatedGearSnapshot, type CharacterEquipmentMode } from '../../lib/preview/characterGearView';
 import { levelTitle, SAMPLE_PROGRESSION } from '../../lib/preview/progression';
 import { HomeCharacter } from './HomeCharacter';
 import { usePreviewAppearance } from './usePreviewAppearance';
@@ -20,9 +20,9 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen({ displayName, hideSampleStats = false, equipmentMode = 'preview' }: { displayName?: string; hideSampleStats?: boolean; equipmentMode?: CharacterEquipmentMode } = {}) {
+export function CharacterScreen({ displayName, hideSampleStats = false, equipmentMode = 'preview', verifiedGear }: { displayName?: string; hideSampleStats?: boolean; equipmentMode?: CharacterEquipmentMode; verifiedGear?: AuthenticatedGearSnapshot | null } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
-  const gearView = characterGearView(equipmentMode, appearance);
+  const gearView = characterGearView(equipmentMode, appearance, verifiedGear);
   const visibleAppearance = displayName ? { ...gearView.appearance, name: displayName } : gearView.appearance;
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
@@ -56,7 +56,7 @@ export function CharacterScreen({ displayName, hideSampleStats = false, equipmen
         <div><h1 className="status-name">{displayName ?? gearView.appearance.name}</h1>{gearView.canChange && <p className="level-line">{levelTitle(base)}</p>}</div>
         <p className="character-header-note">EQUIPMENT</p>
       </header>
-      <section className="character-loadout-stage" aria-label={gearView.canChange ? 'Equipped character and gear' : 'Character with unverified equipment hidden'}>
+      <section className="character-loadout-stage" aria-label={gearView.canChange ? 'Equipped character and gear preview' : gearView.source === 'verified' ? 'Server-verified equipped character' : 'Character with unverified equipment hidden'}>
         <div className="character-slot-column">{gearView.canChange ? LEFT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
         <div className="character-avatar" aria-label="Full-body front-facing adventurer">
           <HomeCharacter model={homeCharacterModel(visibleAppearance)} idPrefix="character" beltPreviewStage={gearView.beltStage} />
@@ -86,7 +86,7 @@ export function CharacterScreen({ displayName, hideSampleStats = false, equipmen
             Unequip {equippedItem.name}
           </button> : null}
         </section>
-      ) : <p className="character-gear-note" role={gearView.canChange ? undefined : 'status'}>{gearView.canChange ? 'Tap an equipment slot to see what you can equip. Gear changes update your character.' : 'Equipment is not yet verified for this account. Preview items are hidden and cannot be equipped.'}</p>}
+      ) : <p className="character-gear-note" role={gearView.canChange ? undefined : 'status'}>{gearView.canChange ? 'Tap an equipment slot to see what you can equip. Gear changes update your character.' : gearView.source === 'verified' ? (gearView.appearance.equipment.some((item) => item.id === 'ashen-hood') ? 'Ashen Hood equipped (server-verified). Gear changes require server authorization.' : 'No armor equipped on this account. Gear changes require server authorization.') : 'Equipment is not yet verified for this account. Preview items are hidden and cannot be equipped.'}</p>}
       {gearView.canChange && !hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
         <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
         <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
