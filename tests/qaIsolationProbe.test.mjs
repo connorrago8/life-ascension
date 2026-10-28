@@ -10,7 +10,8 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 const sha = 'a'.repeat(40);
 const qaUrl = 'https://njqwwimzrsunheehnnnt.supabase.co';
-const preview = { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_SHA: sha };
+const preview = { VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_SHA: sha,
+  VERCEL_GIT_COMMIT_REF: 'audit/qa-isolation-and-reliability-20261027' };
 
 async function probe(env, { config = { url: qaUrl, key: 'never-exposed' }, admin = null } = {}) {
   const module = { exports: {} };
@@ -67,6 +68,9 @@ test('Preview fails closed on absent/mismatched server config, privileged client
     [preview, { admin: { dangerous: true } }],
     [{ ...preview, VERCEL_GIT_COMMIT_SHA: undefined }, {}],
     [{ ...preview, VERCEL_GIT_COMMIT_SHA: 'not-a-sha' }, {}],
+    [{ ...preview, VERCEL_GIT_COMMIT_REF: undefined }, {}],
+    [{ ...preview, VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' }, {}],
+    [{ ...preview, VERCEL_GIT_COMMIT_REF: 'main' }, {}],
   ]) {
     const { response, body } = await probe(env, options);
     assert.equal(response.status, 503);
@@ -79,4 +83,15 @@ test('diagnostic API bypasses session-refresh middleware without changing previe
   const middleware = readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8');
   assert.match(middleware, /pathname === '\/api\/qa-isolation'/);
   assert.match(middleware, /pathname\.startsWith\('\/preview\/'\)/);
+});
+
+// Regression: a different Preview branch must not be accepted as the protected
+// QA integration destination, even when its URL/key configuration is valid.
+test('non-protected Preview branch never receives a positive QA attestation', async () => {
+  for (const branch of [undefined, 'beta/quest-ui-clean-review', 'main']) {
+    const { response, body } = await probe({ ...preview, VERCEL_GIT_COMMIT_REF: branch });
+    assert.equal(response.status, 503);
+    assert.equal(body.status, 'blocked');
+    assert.equal(body.serverPublicTarget, undefined);
+  }
 });

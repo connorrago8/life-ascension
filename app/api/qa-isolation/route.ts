@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic';
 
 const noStore = { 'Cache-Control': 'no-store, max-age=0' };
 const QA_URL = 'https://njqwwimzrsunheehnnnt.supabase.co';
+// Only the founder-designated protected QA branch can attest QA routing.
+const QA_BRANCH = 'audit/qa-isolation-and-reliability-20261027';
 
 export async function GET(): Promise<Response> {
   // No diagnostic endpoint in Production, local development, or unknown targets.
@@ -21,6 +23,7 @@ export async function GET(): Promise<Response> {
     // client can be constructed. Never return or log either credential.
     const privilegedDenied = createServiceRoleClient() === null;
     if (!sha || !/^[a-f0-9]{40}$/i.test(sha) ||
+        process.env.VERCEL_GIT_COMMIT_REF !== QA_BRANCH ||
         config?.url !== QA_URL || !privilegedDenied) {
       return Response.json({ status: 'blocked' }, { status: 503, headers: noStore });
     }
