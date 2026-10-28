@@ -154,6 +154,17 @@ test('low-HP guardian loss retries at full health without resetting prior clears
   assert.equal(run.attackBonus, 2);
   run = reduceRun(run, { type: 'combat', action: 'heavy' });
   assert.equal(run.battle?.status, 'lost', 'guardian survives the first blow and defeats the 4-HP player');
+  const backAfterDefeat = reduceRun(run, { type: 'back' });
+  assert.equal(backAfterDefeat.phase, 'map');
+  assert.equal(backAfterDefeat.hp, backAfterDefeat.maxHp, 'Back after defeat must not restore an unwinnable 4-HP checkpoint');
+  assert.equal(backAfterDefeat.fightCleared, true);
+  assert.equal(backAfterDefeat.eventCleared, true);
+  assert.equal(backAfterDefeat.treasureCleared, true);
+  assert.equal(backAfterDefeat.attackBonus, 2);
+  assert.equal(backAfterDefeat.sigilCollected, false);
+  const reopened = reduceRun(backAfterDefeat, { type: 'open', nodeId: GUARDIAN_ID });
+  assert.equal(reopened.battle?.player.hp, reopened.maxHp, 're-entering after defeat starts at full HP');
+  assert.equal(reopened.battle?.enemy.hp, SENTINEL.maxHp);
   run = reduceRun(run, { type: 'retry-fight' });
   assert.equal(run.hp, run.maxHp);
   assert.equal(run.hpAtFightStart, run.maxHp);
