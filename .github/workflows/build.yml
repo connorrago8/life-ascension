@@ -1,7 +1,7 @@
 name: Verify application build
 on:
   push:
-    branches: [main]
+    branches: [main, ci/quest-board-528d77d]
   pull_request:
     branches: [main]
 permissions:
@@ -79,5 +79,15 @@ jobs:
             tests/sql/quest_board_m1_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
-          bash tests/sql/quest_receipt_v2_concurrency.sh
+          mkdir -p artifacts/concurrency
+          bash tests/sql/quest_receipt_v2_concurrency.sh | tee artifacts/concurrency/candidate-test.log
+          export PGDATABASE="$db"
+          bash tests/evidence/release-verification/prove-overlap.sh | tee artifacts/concurrency/overlap-test.log
           echo "Candidate SQL regressions passed"
+      - name: Upload concurrency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: concurrency-${{ github.sha }}
+          path: artifacts/concurrency/
+          if-no-files-found: warn

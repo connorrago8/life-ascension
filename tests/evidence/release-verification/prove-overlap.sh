@@ -47,9 +47,13 @@ for n in $(seq 1 100); do
  sleep 0.1
 done
 test "$witness" = 1 || { echo 'FAIL: no actual lock contention witnessed'; exit 1; }
+mkdir -p artifacts/concurrency
+psql -X -qAt -v ON_ERROR_STOP=1 -c "SELECT pid,application_name,wait_event_type,wait_event,pg_blocking_pids(pid) FROM pg_stat_activity WHERE application_name='m1_overlap_competitor';" > artifacts/concurrency/lock-witness.log
 touch "$scratch/release"
 wait "$pid_a" || { cat "$scratch/a.err"; exit 1; }
 wait "$pid_b" || { cat "$scratch/b.err"; exit 1; }
+cp "$scratch/a.log" artifacts/concurrency/session-a.log
+cp "$scratch/b.log" artifacts/concurrency/session-b.log
 backend_b=$(sed -n 's/^backend://p' "$scratch/b.log")
 test -n "$backend_a" && test -n "$backend_b" && test "$backend_a" != "$backend_b"
 receipts=$(cat "$scratch/a.log" "$scratch/b.log" | grep -E '^(awarded:1|already_awarded:0)$' | sort)
