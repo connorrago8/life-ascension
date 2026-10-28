@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { refreshSession } from './lib/supabaseServer';
 
 export async function middleware(request: NextRequest) {
-  // Sample preview routes must not refresh or write an auth session.
-  if (request.nextUrl.pathname === '/preview' || request.nextUrl.pathname.startsWith('/preview/')) {
+  // Sample preview and read-only QA probe must not refresh or write an auth session.
+  if (request.nextUrl.pathname === '/api/qa-isolation' ||
+      request.nextUrl.pathname === '/preview' || request.nextUrl.pathname.startsWith('/preview/')) {
     return NextResponse.next();
   }
   // The local-only QA fixture must never contact auth or Supabase in development.
