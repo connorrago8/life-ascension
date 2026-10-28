@@ -4,6 +4,7 @@ import {supabase} from '../../lib/supabase';
 import {ADVENTURER_CLASS} from '../../lib/character';
 import {coerceXp,levelFor} from '../../lib/level';
 import {QuestProgressControls} from '../../components/QuestProgressControls';
+import {completionFeedback} from '../../lib/preview/questReceipt.mjs';
 import {hasPendingCompletedRecovery,pendingProgressInstanceIds,recoverableCompletedEntries} from '../../lib/preview/pendingProgress';
 type Quest={id:string;title:string;domain:string;cadence:'once'|'daily';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
@@ -68,7 +69,26 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
    ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
    : await supabase().rpc('create_scheduled_quest',payload);
  setMessage(error?.message||'Quest scheduled.');if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
- async function act(id:string,action:'complete'|'defer'|'resume'){if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}if(busy)return;if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;setBusy(true);const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});setMessage(error?.message||({complete:'Quest completion recorded.',defer:'Quest deferred without penalty.',resume:'Quest returned to your board.'})[action]);await load();setBusy(false)}
+ async function act(id:string,action:'complete'|'defer'|'resume'){
+  if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}
+  if(busy)return;
+  if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;
+  setBusy(true);
+  try {
+    if(action==='complete'){
+      // Only the versioned, quest-scoped receipt may justify a new XP claim.
+      // QA must include Alpha PR #31's reviewed v2 migration before this draft is deployed.
+      const {data,error}=await supabase().rpc('set_quest_instance_status_v2',{p_instance_id:id,p_action:action});
+      setMessage(error?.message||completionFeedback(data,id));
+    } else {
+      const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});
+      setMessage(error?.message||(action==='defer'?'Quest deferred without penalty.':'Quest returned to your board.'));
+    }
+    await load();
+  } catch {
+    setMessage('Quest update not confirmed. Refresh before retrying.');
+  } finally {setBusy(false)}
+ }
  async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
   if(layoutPreview||busy)return 'retry';
   setBusy(true);
