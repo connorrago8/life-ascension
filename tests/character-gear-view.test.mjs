@@ -137,3 +137,18 @@ test('authenticated armor controls call only owner-checked RPC and refresh after
   assert.match(screen, /disabled=\{armorBusy\}/);
   assert.doesNotMatch(route, /sessionStorage\\.setItem/);
 });
+
+test('authenticated gear parser rejects equipped-but-unowned and duplicate items', async () => {
+  const { view } = await viewModule();
+  const invalid = [
+    { ownedItemIds: [], equippedItemIds: ['ashen-hood'] },
+    { ownedItemIds: ['ashen-hood', 'ashen-hood'], equippedItemIds: [] },
+    { ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood', 'ashen-hood'] },
+  ];
+  for (const snapshot of invalid) {
+    assert.equal(view.parseAuthenticatedGearSnapshot(snapshot), null);
+  }
+  assert.deepEqual(view.parseAuthenticatedGearSnapshot({
+    ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'],
+  }), { ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'] });
+});
