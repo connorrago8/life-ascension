@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import ts from 'typescript';
 import { validateDeploymentEnv } from '../scripts/verify-deployment-env.mjs';
 
 const qaRef = 'njqwwimzrsunheehnnnt';
@@ -80,4 +83,75 @@ test('failure messages do not expose credential contents', () => {
     assert.doesNotMatch(error.message, /synthetic-sensitive-key/);
     return true;
   });
+});
+
+
+// Exercise the actual TypeScript factory with an isolated client constructor.
+// These tests never connect to Supabase or use hosted credentials.
+const adminSource = readFileSync(new URL('../lib/supabaseAdmin.ts', import.meta.url), 'utf8');
+const adminCompiled = ts.transpileModule(adminSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+
+function exerciseAdminFactory(env, browser = false) {
+  const calls = [];
+  const module = { exports: {} };
+  runInNewContext(adminCompiled, {
+    module, exports: module.exports, process: { env },
+    ...(browser ? { window: {} } : {}),
+    require(name) {
+      assert.equal(name, '@supabase/supabase-js');
+      return { createClient(url, key, options) {
+        calls.push({ url, key, options });
+        return { url, key };
+      } };
+    },
+  });
+  return { create: () => module.exports.createServiceRoleClient(), calls };
+}
+
+test('runtime service-role factory refuses injected keys in all nonproduction Vercel targets', () => {
+  for (const target of ['preview', 'development', 'staging']) {
+    const { create, calls } = exerciseAdminFactory({
+      VERCEL_ENV: target, VERCEL: '1', NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+    });
+    assert.equal(create(), null);
+    assert.equal(calls.length, 0);
+  }
+  const missingTarget = exerciseAdminFactory({
+    VERCEL: '1', NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+  });
+  assert.equal(missingTarget.create(), null);
+  assert.equal(missingTarget.calls.length, 0);
+});
+
+test('runtime service-role factory preserves Production and local-only behavior', () => {
+  const prodFactory = exerciseAdminFactory({
+    VERCEL_ENV: 'production', VERCEL: '1', NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+  });
+  assert.equal(prodFactory.create().url, prod.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(prodFactory.calls.length, 1);
+  assert.equal(prodFactory.calls[0].options.auth.persistSession, false);
+  const absentKey = exerciseAdminFactory({ VERCEL_ENV: 'production',
+    NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL });
+  assert.equal(absentKey.create(), null);
+  assert.equal(absentKey.calls.length, 0);
+  const localFactory = exerciseAdminFactory({
+    NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: 'synthetic-local-key',
+  });
+  assert.equal(localFactory.create().url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(localFactory.calls.length, 1);
+});
+
+test('runtime service-role factory is never callable in the browser', () => {
+  const browserFactory = exerciseAdminFactory({ VERCEL_ENV: 'production',
+    NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+  }, true);
+  assert.throws(() => browserFactory.create(), /server-only/);
+  assert.equal(browserFactory.calls.length, 0);
 });
