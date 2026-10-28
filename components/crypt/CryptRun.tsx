@@ -144,7 +144,7 @@ export function CryptRun() {
               <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
               <p><strong>Guardian:</strong> {run.guardianCleared ? 'Crypt Sentinel defeated; the sealed door is reachable.' : run.treasureCleared ? 'An armored watcher blocks the final passage.' : 'Unexplored.'}</p>
               <p><strong>{SIGIL.name}:</strong> {run.sigilCollected ? SIGIL.description : 'Not yet recovered.'}</p>
-              <p><strong>Compass:</strong> {run.treasureCleared ? 'Its broken needle points toward something beneath the crypt.' : 'Not yet discovered. The sealed door may hold an answer.'}</p>
+              <p><strong>Compass:</strong> {run.hint ?? 'Its broken needle offers no clear direction yet.'}</p>
               <p className="muted">Field notes are temporary and reset when the preview restarts.</p>
             </aside>
           )}

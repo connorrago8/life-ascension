@@ -239,3 +239,15 @@ test('revisiting the sealed door resets the previous ending choice', () => {
   assert.match(view, /endingChoice === null \? \(/, 'both ending choices return on revisit');
   assert.equal(Object.hasOwn(run, 'xp'), false);
 });
+
+test('field journal does not reveal the optional warning clue after choosing mending', () => {
+  const mend = reachGuardian();
+  assert.equal(mend.eventChoiceId, 'mend');
+  assert.equal(mend.treasureCleared, true);
+  assert.equal(mend.hint, null, 'the healing branch must not unlock the warning clue');
+
+  const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
+  assert.match(view, /<strong>Compass:<\\/strong> \\{run\\.hint \\?\\?/);
+  assert.doesNotMatch(view, /run\\.treasureCleared \\? 'Its broken needle points/);
+  assert.match(view, /Its broken needle offers no clear direction yet/);
+});
