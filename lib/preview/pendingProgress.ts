@@ -22,3 +22,20 @@ export function parsePendingProgress(raw: string | null): PendingProgress | null
   }
   return { id: value.id, delta: value.delta };
 }
+
+/** Reveal the collapsed Completed journal when an unresolved request needs recovery. */
+export function hasPendingCompletedRecovery(
+  instances: ReadonlyArray<{ id: string; status: string }>,
+  readJournal: (key: string) => string | null,
+): boolean {
+  for (const instance of instances) {
+    if (instance.status !== 'completed') continue;
+    try {
+      // Even malformed journals need a visible recovery/error path; never discard them.
+      if (readJournal(`life-progress-pending:${instance.id}`) !== null) return true;
+    } catch {
+      return true;
+    }
+  }
+  return false;
+}
