@@ -9,6 +9,7 @@ import {
 import { readBearerToken } from '../../../lib/apiKey';
 import { mcpDomains, runMcpTool } from '../../../lib/mcpTools';
 import { createServiceRoleClient } from '../../../lib/supabaseAdmin';
+import { readServerSupabaseConfig } from '../../../lib/supabaseRuntimeConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -99,7 +100,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const auth = await authenticateRequest(req);
   if (!auth.ok) return authenticationErrorResponse(auth);
-  const opened = openActor(auth, readBearerToken(req.headers.get('authorization')) ?? '');
+  const opened = await openActor(auth, readBearerToken(req.headers.get('authorization')) ?? '');
   if ('ok' in opened) return authenticationErrorResponse(opened);
   const actor: Actor = { auth, db: opened.db };
 
@@ -138,10 +139,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(outcome.result) }] } });
 }
 
-function openActor(auth: AuthSuccess, token: string): { db: SupabaseClient } | { ok: false; status: 503; error: string } {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return { ok: false, status: 503, error: 'Server not configured' };
+async function openActor(auth: AuthSuccess, token: string): Promise<{ db: SupabaseClient } | { ok: false; status: 503; error: string }> {
+  const config = await readServerSupabaseConfig();
+  if (!config) return { ok: false, status: 503, error: 'Server not configured' };
+  const { url, key: anonKey } = config;
   if (auth.method === 'supabase_jwt') {
     return {
       db: createClient(url, anonKey, {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, webcrypto } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
@@ -154,4 +154,44 @@ test('runtime service-role factory is never callable in the browser', () => {
   }, true);
   assert.throws(() => browserFactory.create(), /server-only/);
   assert.equal(browserFactory.calls.length, 0);
+});
+
+const runtimeSource = readFileSync(new URL('../lib/supabaseRuntimeConfig.ts', import.meta.url), 'utf8');
+const runtimeCompiled = ts.transpileModule(runtimeSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+
+async function runtimePublicConfig(env) {
+  const module = { exports: {} };
+  runInNewContext(runtimeCompiled, {
+    module, exports: module.exports, process: { env }, URL, TextEncoder, atob, crypto: webcrypto,
+  });
+  return module.exports.readServerSupabaseConfig();
+}
+
+test('runtime server/Edge config accepts only correctly pinned project and target', async () => {
+  const qaRuntime = await runtimePublicConfig(qa);
+  assert.equal(qaRuntime?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(qaRuntime?.key, qaKey);
+  const prodRuntime = await runtimePublicConfig(prod);
+  assert.equal(prodRuntime?.url, prod.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(prodRuntime?.key, prodKey);
+  for (const env of [
+    { ...qa, NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL },
+    { ...qa, NEXT_PUBLIC_SUPABASE_ANON_KEY: prodKey, SUPABASE_PUBLIC_KEY_SHA256: pin(prodKey) },
+    { ...qa, SUPABASE_PUBLIC_KEY_SHA256: undefined },
+    { ...qa, SUPABASE_PUBLIC_KEY_SHA256: '0'.repeat(64) },
+    { ...qa, VERCEL_ENV: 'staging' },
+    { ...qa, VERCEL_ENV: undefined, VERCEL: '1' },
+    { ...qa, SUPABASE_PUBLIC_KEY_SHA256: pin('synthetic-mismatched') },
+  ]) assert.equal(await runtimePublicConfig(env), null);
+});
+
+test('runtime config leaves non-Vercel local development unchanged', async () => {
+  const local = await runtimePublicConfig({
+    NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: qaKey,
+  });
+  assert.equal(local?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(local?.key, qaKey);
 });
