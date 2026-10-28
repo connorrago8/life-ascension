@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import {CADENCE_LABELS} from '../../../lib/questReceipt';
 import { supabase } from '../../../lib/supabase';
 
-type Quest = { id: string; title: string; domain: string; cadence: string; active: boolean };
+type Quest = { id: string; title: string; domain: string; cadence: keyof typeof CADENCE_LABELS; active: boolean };
 type Note = { id: string; quest_id: string; note: string; percent: number | null; created_at: string };
 
 const DOMAINS: Record<string, string> = {
@@ -75,7 +76,7 @@ export default function QuestNotesIndex() {
   const inactiveQuests = quests.filter((quest) => !quest.active);
   const renderQuest = (quest: Quest) => {
     const latest = notes.find((note) => note.quest_id === quest.id);
-    return <div className="quest" key={quest.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : 'One-time'}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions"><a className="btn ghost" href={`/quests/${quest.id}`}>View progress</a></div></div>;
+    return <div className="quest" key={quest.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {CADENCE_LABELS[quest.cadence]}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions"><a className="btn ghost" href={`/quests/${quest.id}`}>View progress</a></div></div>;
   };
 
   return (

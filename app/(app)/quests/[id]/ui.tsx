@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import {CADENCE_LABELS} from '../../../../lib/questReceipt';
 import { supabase } from '../../../../lib/supabase';
 
-type Quest = { id: string; title: string; domain: string; cadence: string; active: boolean };
+type Quest = { id: string; title: string; domain: string; cadence: keyof typeof CADENCE_LABELS; active: boolean; quest_class?: 'main'|'side' };
 type Instance = { id: string; due_date: string; status: string };
 type Note = {
   id: string;
@@ -42,7 +43,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
       setReady(true);
       if (!user) return;
       const [questResult, noteResult, instanceResult] = await Promise.all([
-        client.from('quests').select('id,title,domain,cadence,active').eq('id', questId).maybeSingle(),
+        client.from('quests').select('id,title,domain,cadence,active,quest_class').eq('id', questId).maybeSingle(),
         client.from('quest_progress').select('id,note,percent,source,created_at,instance_id').eq('quest_id', questId).order('created_at', { ascending: false }).limit(20),
         client.from('quest_instances').select('id,due_date,status').eq('quest_id', questId).order('due_date', { ascending: false }).limit(30),
       ]);
@@ -119,7 +120,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
       <header className="top">
         <div>
           <div className="eyebrow">LIFE ASCENSION</div>
-          <h1>{quest?.title ?? 'Quest notes'}</h1>
+          <h1>{quest?.title ?? 'Quest notes'}</h1>{quest&&<p>{quest.quest_class==='main'?'Main':'Side'} · {CADENCE_LABELS[quest.cadence]} · Reward: 1 XP on confirmed completion</p>}
           <p className="muted">Saving a note keeps a journal entry. XP is awarded only when you confirm completion on the quest board.</p>
         </div>
         <a className="btn ghost" href="/quests">All notes</a>

@@ -50,7 +50,7 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migrations 0001–0007 and run all five SQL smoke tests
+      - name: Apply candidate migrations and run SQL regressions
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +64,9 @@ jobs:
             supabase/migrations/202610230004_lifetime_xp.sql \
             supabase/migrations/202610240005_api_key_user_context.sql \
             supabase/migrations/202610240006_quest_edit_archive.sql \
-            supabase/migrations/202610240007_daily_late_window.sql; do
+            supabase/migrations/202610240007_daily_late_window.sql \
+            supabase/migrations/20261027225625_quest_board_classification.sql \
+            supabase/migrations/20261028002427_quest_board_recurrence_receipts.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
@@ -72,7 +74,10 @@ jobs:
             tests/sql/scheduling_auth_smoke.sql \
             tests/sql/two_user_mcp_auth.sql \
             tests/sql/archive_compat_smoke.sql \
-            tests/sql/daily_late_window_smoke.sql; do
+            tests/sql/daily_late_window_smoke.sql \
+            tests/sql/quest_classification_smoke.sql \
+            tests/sql/quest_board_m1_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
-          echo "All five SQL smoke tests passed"
+          bash tests/sql/quest_receipt_v2_concurrency.sh
+          echo "Candidate SQL regressions passed"

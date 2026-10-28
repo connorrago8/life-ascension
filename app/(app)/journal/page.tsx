@@ -21,7 +21,8 @@ export default function CompletedJournal() {
         const client = supabase();
         const auth = await client.auth.getUser();
         if (current !== generation.current) return;
-        if (auth.error || !auth.data.user) { setSignedOut(true); return; }
+        if (auth.error) throw auth.error;
+        if (!auth.data.user) { setSignedOut(true); return; }
         setSignedOut(false);
         const owner = auth.data.user.id;
         const result = await client.from('quest_instances').select('id,quest_id,completed_at')

@@ -84,7 +84,9 @@ begin
   if position('xp_ledger' in pg_get_functiondef('public.add_quest_progress(uuid,text,integer,uuid,text)'::regprocedure)) > 0 then
     raise exception 'add_quest_progress references xp_ledger';
   end if;
-  if position('xp_ledger' in pg_get_functiondef('public.set_quest_instance_status(uuid,text)'::regprocedure)) = 0 then
+  if position('xp_ledger' in pg_get_functiondef('public.set_quest_instance_status(uuid,text)'::regprocedure)) = 0
+     and not (position('set_quest_instance_status_v2' in pg_get_functiondef('public.set_quest_instance_status(uuid,text)'::regprocedure)) > 0
+       and position('xp_ledger' in pg_get_functiondef(to_regprocedure('public.set_quest_instance_status_v2(uuid,text)'))) > 0) then
     raise exception 'existing completion function was replaced';
   end if;
 end
