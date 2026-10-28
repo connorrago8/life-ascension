@@ -39,7 +39,7 @@ jobs:
             `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
             `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
             '',
-          ].join('\\n'));
+          ].join('\n'));
           NODE
       - name: Production build (isolated synthetic Preview configuration)
         run: npm run build
