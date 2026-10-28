@@ -337,8 +337,8 @@ test('Home loads only owner-scoped older completed journals and renders retry se
   const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /try\{pendingIds=pendingProgressInstanceIds\(localStorage\)\}catch/);
   assert.match(home, /pendingIds\.length\?s\.from\('quest_instances'\)\.select\([^\n]+\)\.eq\('owner_id',user\.id\)\.in\('id',pendingIds\)\.eq\('status','completed'\)/);
-  assert.match(home, /earlierRecoveries=instances\.filter\(i=>i\.status==='completed'&&i\.due_date!==today&&recoveryIds\.includes\(i\.id\)\)/);
-  assert.match(home, /Earlier completed quests with pending saves/);
+  assert.match(home, /earlierRecoveries=recoverableCompletedEntries\(instances,recoveryIds,quests,recoveryQuests,completedQuests\.map\(x=>x\.instance!\.id\)\)/);
+  assert.match(home, /Completed quests with pending saves/);
   assert.match(home, /earlierRecoveries\.map\(\(\{quest,instance\}\)=>[\s\S]*?<QuestProgressControls quest=\{quest\} instance=\{instance\}/);
   assert.match(home, /const completed=completedQuests\.length;/,
     'Older recovery records must not inflate today completion totals');
@@ -350,8 +350,35 @@ test('archived completed quest keeps pending retry metadata owner-scoped', async
   assert.match(home, /missingRecoveryQuestIds=\[\.\.\.new Set\(\(recoveries\|\|\[\]\)\.map\(row=>row\.quest_id\)\)\]/);
   assert.match(home, /\.eq\('owner_id',user\.id\)\.in\('id',missingRecoveryQuestIds\)\.limit\(100\)/);
   assert.match(home, /setRecoveryQuests\(missingRecoveryQuests\|\|\[\]\)/);
-  assert.match(home, /const quest=quests\.find\(q=>q\.id===i\.quest_id\)\|\|recoveryQuests\.find\(q=>q\.id===i\.quest_id\)/);
-  assert.match(home, /earlierRecoveries=instances\.filter\(i=>i\.status==='completed'&&i\.due_date!==today&&recoveryIds\.includes\(i\.id\)\)/);
+  assert.match(home, /recoverableCompletedEntries\(instances,recoveryIds,quests,recoveryQuests/);
+  assert.match(home, /earlierRecoveries=recoverableCompletedEntries\(instances,recoveryIds,quests,recoveryQuests,completedQuests\.map\(x=>x\.instance!\.id\)\)/);
   assert.match(home, /const completed=completedQuests\.length;/,
     'Recovered historical quests must not inflate today completion');
+});
+
+test('archived same-day and older completed pending saves remain visible without duplicate Today cards', async () => {
+  const { recoverableCompletedEntries } = await loadParser();
+  const instances = [
+    { id: 'visible-today', quest_id: 'active', due_date: '2026-10-28', status: 'completed' },
+    { id: 'archived-today', quest_id: 'archived', due_date: '2026-10-28', status: 'completed' },
+    { id: 'archived-older', quest_id: 'archived', due_date: '2026-10-27', status: 'completed' },
+    { id: 'active-older', quest_id: 'active', due_date: '2026-10-27', status: 'completed' },
+    { id: 'unfinished', quest_id: 'active', due_date: '2026-10-28', status: 'available' },
+    { id: 'no-journal', quest_id: 'archived', due_date: '2026-10-27', status: 'completed' },
+    { id: 'missing-metadata', quest_id: 'missing', due_date: '2026-10-27', status: 'completed' },
+  ];
+  const pendingIds = ['visible-today', 'archived-today', 'archived-older', 'active-older', 'unfinished', 'missing-metadata'];
+  const result = recoverableCompletedEntries(
+    instances, pendingIds, [{ id: 'active', title: 'Current quest' }],
+    [{ id: 'archived', title: 'Archived quest' }], ['visible-today'],
+  );
+  assert.deepEqual(result.map(({ quest, instance }) => [instance.id, quest.title]), [
+    ['archived-today', 'Archived quest'],
+    ['archived-older', 'Archived quest'],
+    ['active-older', 'Current quest'],
+  ]);
+  assert.equal(result.some(({ instance }) => instance.id === 'visible-today'), false,
+    'The current-day Completed Journal already renders this request');
+  assert.equal(result.some(({ instance }) => instance.status !== 'completed'), false,
+    'Never surface a new operation on an unfinished quest as a completed retry');
 });
