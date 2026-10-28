@@ -77,6 +77,9 @@ export default function CharacterPage() {
         return;
       }
       // Only the authoritative server read can change the visible equipment.
+      // If that read fails, do not leave the previous gear snapshot looking
+      // like a confirmed successful equip operation.
+      setState({ status: 'loading' });
       await load();
     } catch {
       setEquipmentError('Could not update your armor. Try again.');
