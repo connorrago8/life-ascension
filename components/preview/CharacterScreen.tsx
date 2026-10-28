@@ -19,7 +19,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen({ displayName, hideSampleStats = false, hideSampleLevel = false }: { displayName?: string; hideSampleStats?: boolean; hideSampleLevel?: boolean } = {}) {
+export function CharacterScreen({ displayName, hideSampleStats = false, hideSampleLevel = false, verifiedXp }: { displayName?: string; hideSampleStats?: boolean; hideSampleLevel?: boolean; verifiedXp?: number } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
@@ -70,10 +70,12 @@ export function CharacterScreen({ displayName, hideSampleStats = false, hideSamp
             <ul className="inventory-list">
               {alternatives.map((item) => {
                 const worn = equipmentIds.includes(item.id);
+                // A visual preview reward, not proof of server-side inventory ownership.
+                const locked = verifiedXp !== undefined && item.id === 'ashen-hood' && verifiedXp < 10;
                 return <li key={item.id}>
-                  <span>{item.name}{worn ? <small className="inventory-equipped-label"> · Equipped</small> : null}</span>
-                  <button type="button" className="mini-action" disabled={worn}
-                    onClick={() => { equip(item.id); setSelectedSlot(null); }}>{worn ? 'Equipped' : 'Equip'}</button>
+                  <span>{item.name}{worn ? <small className="inventory-equipped-label"> · Equipped</small> : null}{locked ? <small className="inventory-equipped-label"> · Unlock preview at 10 lifetime XP</small> : null}</span>
+                  <button type="button" className="mini-action" disabled={worn || locked}
+                    onClick={() => { equip(item.id); setSelectedSlot(null); }}>{worn ? 'Equipped' : locked ? 'Locked' : 'Equip'}</button>
                 </li>;
               })}
             </ul>
