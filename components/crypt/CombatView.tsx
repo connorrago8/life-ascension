@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { SPRITES } from '../../lib/crypt/art';
-import { COMBAT, SENTINEL, turnLabel } from '../../lib/crypt/content';
+import { COMBAT, SENTINEL, charmNote, turnLabel } from '../../lib/crypt/content';
 import { availableActions, type ActionId, type BattleState } from '../../lib/crypt/engine';
 import { PixelArt } from './PixelArt';
 
@@ -89,6 +89,9 @@ export function CombatView({
         </div>
         <h2>{battle.player.name}</h2>
         <Health name={battle.player.name} hp={battle.player.hp} maxHp={battle.player.maxHp} />
+        {battle.player.attackBonus > 0 ? (
+          <p className="crypt-status">{charmNote(battle.player.attackBonus)}</p>
+        ) : null}
       </section>
 
       <div className="combat-log" role="status" aria-live="polite">

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { GUARDIAN_ID, FIGHT_ID, EVENT_ID, SENTINEL, SIGIL, COMBAT, TREASURE_ID } from '../lib/crypt/content.ts';
+import { GUARDIAN_ID, FIGHT_ID, EVENT_ID, SENTINEL, SIGIL, COMBAT, TREASURE_ID, charmNote } from '../lib/crypt/content.ts';
 import { createRun, nodeAccess, reduceRun } from '../lib/crypt/run.ts';
 
 function reachGuardian(seed = 13) {
@@ -102,4 +103,14 @@ test('victory grants a temporary sigil once; restart clears it', () => {
 test('guardian introduction identifies the sentinel rather than the rat', () => {
   assert.match(COMBAT.guardianOpening, /Crypt Sentinel/);
   assert.doesNotMatch(COMBAT.guardianOpening, /Crypt Rat/);
+});
+
+test('sentinel combat visibly discloses its temporary Ember Charm damage bonus', () => {
+  const fight = reduceRun(reachGuardian(), { type: 'open', nodeId: GUARDIAN_ID });
+  assert.equal(fight.battle?.player.attackBonus, 2);
+  assert.match(charmNote(fight.battle.player.attackBonus), /Ember Charm.*\+2 damage, this run only/);
+  const combatView = readFileSync(new URL('../components/crypt/CombatView.tsx', import.meta.url), 'utf8');
+  assert.match(combatView, /battle\.player\.attackBonus > 0/);
+  assert.match(combatView, /charmNote\(battle\.player\.attackBonus\)/);
+  assert.doesNotMatch(charmNote(2), /XP|owned|permanent/i);
 });
