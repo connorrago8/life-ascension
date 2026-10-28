@@ -147,6 +147,24 @@ test('runtime service-role factory preserves Production and local-only behavior'
   assert.equal(localFactory.calls.length, 1);
 });
 
+test('rejects privileged runtime URL drift before constructing a Production client', () => {
+  for (const url of [
+    qa.NEXT_PUBLIC_SUPABASE_URL,
+    `http://${prodRef}.supabase.co`,
+    `https://${prodRef}.supabase.co.evil.example`,
+    `https://user:pass@${prodRef}.supabase.co`,
+    `https://${prodRef}.supabase.co/?override=1`,
+  ]) {
+    const factory = exerciseAdminFactory({
+      VERCEL_ENV: 'production', VERCEL: '1',
+      NEXT_PUBLIC_SUPABASE_URL: url,
+      SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
+    });
+    assert.equal(factory.create(), null);
+    assert.equal(factory.calls.length, 0);
+  }
+});
+
 test('runtime service-role factory is never callable in the browser', () => {
   const browserFactory = exerciseAdminFactory({ VERCEL_ENV: 'production',
     NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL,
