@@ -46,10 +46,69 @@ test('authenticated character route opts out of preview loadout even when previe
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
   assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : 'unverified'\}/);
-  assert.match(screen, /characterGearView\(equipmentMode, appearance\)/);
+  assert.match(screen, /characterGearView\(equipmentMode, appearance, verifiedGear\)/);
   assert.match(screen, /visibleAppearance = displayName \? \{ \.\.\.gearView\.appearance, name: displayName \}/);
   assert.match(screen, /homeCharacterModel\(visibleAppearance\)/);
   assert.match(screen, /beltPreviewStage=\{gearView\.beltStage\}/);
   assert.match(screen, /gearView\.canChange && selectedSlot/);
   assert.match(screen, /gearView\.canChange && !hideSampleStats/);
+});
+
+test('verified armor needs both server-owned and equipped evidence, not XP or preview storage', async () => {
+  const { appearance, view } = await viewModule();
+  const demo = appearance.appearanceFromLoadout({
+    equipmentIds: ['ashen-hood', 'walking-staff', 'ember-coat'],
+  });
+  const ownedOnly = view.characterGearView('verified', demo, {
+    ownedItemIds: ['ashen-hood'], equippedItemIds: [],
+  });
+  assert.deepEqual(ownedOnly.appearance.equipment, []);
+  assert.equal(ownedOnly.source, 'verified');
+  assert.equal(ownedOnly.canChange, false);
+  assert.equal(ownedOnly.beltStage, 'starter');
+
+  const forgedEquip = view.characterGearView('verified', demo, {
+    ownedItemIds: [], equippedItemIds: ['ashen-hood'],
+  });
+  assert.deepEqual(forgedEquip.appearance.equipment, []);
+  assert.equal(forgedEquip.canChange, false);
+
+  const earned = { ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'] };
+  const firstLoad = view.characterGearView('verified', demo, earned);
+  const refreshLoad = view.characterGearView('verified', appearance.appearanceFromLoadout({
+    equipmentIds: ['walking-staff'],
+  }), earned);
+  assert.deepEqual(firstLoad.appearance.equipment.map((item) => item.id), ['ashen-hood']);
+  assert.deepEqual(refreshLoad.appearance.equipment.map((item) => item.id), ['ashen-hood']);
+  assert.equal(firstLoad.canChange, false);
+  assert.equal(firstLoad.beltStage, 'starter');
+  assert.equal(firstLoad.source, 'verified');
+});
+
+test('verified gear fails closed on absent, malformed or unsupported ownership data', async () => {
+  const { appearance, view } = await viewModule();
+  const demo = appearance.appearanceFromLoadout({ equipmentIds: ['ashen-hood'] });
+  for (const invalid of [undefined, null, {}, { ownedItemIds: 'ashen-hood', equippedItemIds: ['ashen-hood'] },
+    { ownedItemIds: ['ashen-hood'], equippedItemIds: null }]) {
+    const result = view.characterGearView('verified', demo, invalid);
+    assert.deepEqual(result.appearance.equipment, []);
+    assert.equal(result.source, 'unverified');
+    assert.equal(result.canChange, false);
+  }
+  const unsupported = view.characterGearView('verified', demo, {
+    ownedItemIds: ['ember-coat', 'walking-staff'],
+    equippedItemIds: ['ember-coat', 'walking-staff'],
+  });
+  assert.deepEqual(unsupported.appearance.equipment, []);
+  assert.equal(unsupported.source, 'verified');
+});
+
+test('verified armor is read-only; authenticated route cannot fabricate the snapshot', async () => {
+  const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
+  const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
+  assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : 'unverified'\}/);
+  assert.match(screen, /gearView\.source === 'verified'/);
+  assert.match(screen, /verifiedGear\?: AuthenticatedGearSnapshot/);
+  assert.match(screen, /gearView\.canChange && selectedSlot/);
+  assert.doesNotMatch(route, /equipmentMode=\{'verified'\}/);
 });
