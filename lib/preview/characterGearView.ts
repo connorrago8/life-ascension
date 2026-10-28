@@ -16,14 +16,18 @@ export type AuthenticatedGearSnapshot = Readonly<{
 export function parseAuthenticatedGearSnapshot(value: unknown): AuthenticatedGearSnapshot | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const data = value as Record<string, unknown>;
-  if (!Array.isArray(data.ownedItemIds) || !Array.isArray(data.equippedItemIds)) return null;
-  if (![...data.ownedItemIds, ...data.equippedItemIds].every((id) => id === 'ashen-hood')) return null;
+  // Capture narrowed arrays in locals so the ownership check remains type-safe
+  // inside callbacks (and cannot be confused with a later property mutation).
+  const ownedItemIds = data.ownedItemIds;
+  const equippedItemIds = data.equippedItemIds;
+  if (!Array.isArray(ownedItemIds) || !Array.isArray(equippedItemIds)) return null;
+  if (![...ownedItemIds, ...equippedItemIds].every((id) => id === 'ashen-hood')) return null;
   // Reject impossible or duplicated server snapshots rather than silently
   // treating an inconsistent equipment state as authenticated evidence.
-  if (new Set(data.ownedItemIds).size !== data.ownedItemIds.length ||
-      new Set(data.equippedItemIds).size !== data.equippedItemIds.length ||
-      data.equippedItemIds.some((id) => !data.ownedItemIds.includes(id))) return null;
-  return { ownedItemIds: [...data.ownedItemIds], equippedItemIds: [...data.equippedItemIds] };
+  if (new Set(ownedItemIds).size !== ownedItemIds.length ||
+      new Set(equippedItemIds).size !== equippedItemIds.length ||
+      equippedItemIds.some((id) => !ownedItemIds.includes(id))) return null;
+  return { ownedItemIds: [...ownedItemIds], equippedItemIds: [...equippedItemIds] };
 }
 
 export type CharacterEquipmentMode = 'preview' | 'unverified' | 'verified';
