@@ -117,6 +117,11 @@ export default function CharacterPage() {
       </section>
       <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
       <CharacterScreen displayName={state.name} hideSampleStats hideSampleLevel />
+      <section className="panel" aria-label="Earn your next reward">
+        <h2>Continue your adventure</h2>
+        <p className="muted">Complete a real-world quest to earn verified XP. Equipment shown above is still a preview, not an earned account reward.</p>
+        <a className="btn" href="/">Go to Quest Board</a>
+      </section>
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (
