@@ -97,7 +97,7 @@ function exerciseAdminFactory(env, browser = false) {
   const calls = [];
   const module = { exports: {} };
   runInNewContext(adminCompiled, {
-    module, exports: module.exports, process: { env },
+    module, exports: module.exports, process: { env }, URL,
     ...(browser ? { window: {} } : {}),
     require(name) {
       assert.equal(name, '@supabase/supabase-js');
