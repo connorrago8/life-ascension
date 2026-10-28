@@ -10,6 +10,7 @@ import {
 import {
   colorsForCosmetics,
   DEFAULT_EQUIPMENT_IDS,
+  catalogItem,
   equipCatalogId,
   unequipCatalogId,
 } from '../../lib/preview/catalog';
@@ -58,13 +59,21 @@ function readLoadout(): Loadout {
       // Stored preview data is untrusted and may be null or a primitive.
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return base;
       const saved = parsed as Partial<Loadout>;
+      // Restore only catalog-backed selections, with at most one item per slot.
+      // This is preview-only validation, never proof of earned ownership.
       const equipmentIds = Array.isArray(saved.equipmentIds)
-        ? saved.equipmentIds.filter((id): id is string => typeof id === 'string' && id.length <= 80).slice(0, 32)
+        ? saved.equipmentIds.filter((id): id is string =>
+            typeof id === 'string' && catalogItem(id)?.category === 'equipment').slice(0, 32)
         : base.equipmentIds;
+      const uniqueEquipment = equipmentIds.reduce<string[]>((selected, id) => {
+        const slot = catalogItem(id)?.slot;
+        return [...selected.filter((existing) => catalogItem(existing)?.slot !== slot), id];
+      }, []);
       const cosmeticIds = Array.isArray(saved.cosmeticIds)
-        ? saved.cosmeticIds.filter((id): id is string => typeof id === 'string' && id.length <= 80).slice(0, 32)
+        ? [...new Set(saved.cosmeticIds.filter((id): id is string =>
+            typeof id === 'string' && catalogItem(id)?.category === 'cosmetic'))].slice(0, 32)
         : [];
-      return { equipmentIds, cosmeticIds, colors: sanitizeAppearanceColors(saved.colors) };
+      return { equipmentIds: uniqueEquipment, cosmeticIds, colors: sanitizeAppearanceColors(saved.colors) };
     }
     const main = sessionStorage.getItem(MAIN_HAND_STORAGE_KEY);
     if (isMainHandId(main)) {
