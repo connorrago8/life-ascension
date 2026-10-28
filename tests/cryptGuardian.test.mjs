@@ -247,7 +247,7 @@ test('field journal does not reveal the optional warning clue after choosing men
   assert.equal(mend.hint, null, 'the healing branch must not unlock the warning clue');
 
   const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
-  assert.match(view, /<strong>Compass:<\\/strong> \\{run\\.hint \\?\\?/);
-  assert.doesNotMatch(view, /run\\.treasureCleared \\? 'Its broken needle points/);
+  assert.ok(view.includes("<p><strong>Compass:</strong> {run.hint ?? 'Its broken needle offers no clear direction yet.'}</p>"));
+  assert.ok(!view.includes("run.treasureCleared ? 'Its broken needle points"));
   assert.match(view, /Its broken needle offers no clear direction yet/);
 });
