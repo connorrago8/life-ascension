@@ -43,7 +43,7 @@ try {
   for (const width of [320, 375, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     await page.getByLabel('Mock next response (no network)').focus();
-    for (const [target, label] of [[addButton, 'Add'], [clearButton, 'Clear']]) {
+    for (const [target, label] of [[addButton, 'Add'], [page.getByRole('button', { name: /^Undo 2 repetitions/ }), 'Undo'], [clearButton, 'Clear']]) {
       await page.keyboard.press('Tab');
       const focus = await target.evaluate(element => {
         const style = getComputedStyle(element);
@@ -83,7 +83,7 @@ try {
   }
   console.log('PASS: measured CDP 2x page scale, no document overflow, and focus at four widths.');
   await page.setViewportSize({ width: 320, height: 844 });
-  console.log('PASS: real Tab focus, visible Add/Clear outlines and no overflow at 320/375/390/430px.');
+  console.log('PASS: real Tab focus, visible Add/Undo/Clear outlines and no overflow at 320/375/390/430px.');
   const timedSaveRetryStart = performance.now();
   await addButton.click();
   await page.getByText('Save not confirmed. Retry the same operation before logging more.').waitFor();
@@ -145,6 +145,20 @@ try {
   assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\|-2\|saved/);
   assert.equal(await page.locator('progress').evaluate(element => element.value), 0,
     'One-step Clear must return the progress indicator to zero after confirmed save');
+  // Alpha PR21 atomic contract: 0 -> 2 -> 4 -> 7 -> 0 must send ONE -7 operation.
+  // This fixture verifies the actual React control and original-ID journal flow,
+  // not authenticated PostgreSQL execution (covered by isolated Alpha SQL).
+  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 2);
+  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 4);
+  await page.getByRole('spinbutton', { name: /Custom progress amount for/ }).fill('3');
+  await page.getByRole('button', { name: /Log custom progress for/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 7);
+  await page.getByRole('button', { name: /^Clear progress for/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 0);
+  assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\\|-7\\|saved/,
+    'Atomic Clear from 7/10 must submit exactly -7');
   await page.getByRole('button', { name: /Seed malformed journal/ }).click();
   await page.getByRole('alert').filter({ hasText: /pending save record is unreadable/ }).waitFor();
   assert.equal(await page.getByRole('button', { name: /^Add 2 repetitions/ }).isDisabled(), true);
@@ -154,7 +168,7 @@ try {
     assert.equal(overflow, false, `Unexpected horizontal overflow at ${width}px`);
     await page.screenshot({ path: join(output, `quest-progress-${width}.png`), fullPage: true });
   }
-  console.log('PASS: real-component refresh, original-ID retry, one-step Clear, corrupt journal, four viewport widths.');
+  console.log('PASS: real-component refresh, original-ID retry, one-step and 7-to-0 atomic Clear, corrupt journal, four viewport widths.');
   console.log('Not covered: real backend idempotency, authenticated Preview, or genuine browser UI 200% zoom (CDP page scale is not equivalent).');
 } finally {
   await browser.close();
