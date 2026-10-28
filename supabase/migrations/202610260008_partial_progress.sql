@@ -105,8 +105,12 @@ begin
   if v_quest.cadence = 'once' and v_quest.quest_type <> 'goal' and v_inst.due_date > v_today then
     raise exception 'Future scheduled quest cannot log progress yet';
   end if;
-  if p_delta < 0 and p_delta <> -v_quest.progress_increment then
-    raise exception 'Undo must reverse one default increment';
+  -- Permit an explicit atomic clear of the entire current amount, in addition
+  -- to the configured one-step undo. Both remain owner-locked and journaled.
+  if p_delta < 0
+     and p_delta <> -v_quest.progress_increment
+     and p_delta <> -v_inst.current_amount then
+    raise exception 'Undo must reverse one increment or clear current progress';
   end if;
   if p_delta > v_quest.target_amount then raise exception 'Progress amount exceeds target'; end if;
   if p_delta < 0 and not exists (
