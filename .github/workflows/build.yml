@@ -21,12 +21,27 @@ jobs:
         run: npx tsc --noEmit
       - name: Unit tests
         run: npm test
-      - name: Production build
-        env:
-          # Synthetic, unsigned QA-target fixture; no real credentials or hosted calls.
-          VERCEL_ENV: preview
-          NEXT_PUBLIC_SUPABASE_URL: https://njqwwimzrsunheehnnnt.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qcXd3aW16cnN1bmhlZWhubm50Iiwicm9sZSI6ImFub24ifQ.test-only-invalid-signature
+      - name: Prepare synthetic QA build fixture (no hosted credentials)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const ref = 'njqwwimzrsunheehnnnt';
+          const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const key = [b64({ alg: 'HS256', typ: 'JWT' }),
+            b64({ iss: 'supabase', ref, role: 'anon' }),
+            'synthetic-invalid-signature'].join('.');
+          const pin = createHash('sha256').update(key).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, [
+            'VERCEL_ENV=preview',
+            `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
+            `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
+            '',
+          ].join('\n'));
+          NODE
+      - name: Production build (isolated synthetic Preview configuration)
         run: npm run build
       - name: Production QA route must return 404
         # Local production server only; no authenticated requests or hosted DB calls.
