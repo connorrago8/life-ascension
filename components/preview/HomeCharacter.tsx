@@ -98,13 +98,13 @@ export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { 
             <rect x="48" y="281" width="18" height="20" rx="2" fill={model.mainHandAccentLight} />
             <path d="M42 309 L72 309" stroke={model.mainHandAccent} strokeWidth="4" />
           </g>
-        ) : (
+        ) : model.mainHand === 'staff' ? (
           <g data-prop="staff">
             <path d="M55 40 L58 352" stroke={model.mainHandAccent} strokeWidth="7" />
             <path d="M53 40 L56 352" stroke={model.mainHandAccentLight} strokeWidth="2" />
             <path d="M48 43 L55 29 62 43Z" fill={model.mainHandAccentLight} />
           </g>
-        )}
+        ) : null}
       </g>
     </svg>
   );
