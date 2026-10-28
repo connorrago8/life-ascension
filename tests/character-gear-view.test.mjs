@@ -129,11 +129,11 @@ test('server snapshot parser rejects malformed, preview and unsupported data', a
 test('authenticated armor controls call only owner-checked RPC and refresh after success', async () => {
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
-  assert.match(route, /client\\.rpc\\('get_earned_gear'\\)/);
-  assert.match(route, /parseAuthenticatedGearSnapshot\\(gearResult\\.data\\)/);
-  assert.match(route, /rpc\\('equip_earned_armor'/);
-  assert.match(route, /await load\\(\\)/);
+  assert.match(route, /client\.rpc\('get_earned_gear'\)/);
+  assert.match(route, /parseAuthenticatedGearSnapshot\(gearResult\.data\)/);
+  assert.match(route, /rpc\('equip_earned_armor'/);
+  assert.match(route, /await load\(\)/);
   assert.match(screen, /ownedArmor && onEquipArmor/);
-  assert.match(screen, /disabled=\\{armorBusy\\}/);
+  assert.match(screen, /disabled=\{armorBusy\}/);
   assert.doesNotMatch(route, /sessionStorage\\.setItem/);
 });
