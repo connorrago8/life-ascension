@@ -494,3 +494,9 @@ code { font-family: ui-monospace, monospace; }
 @media (prefers-reduced-motion: no-preference) {
   .quest-card-details > summary { transition: color 120ms ease; }
 }
+
+/* At high browser zoom, keep quest actions readable instead of squeezing labels. */
+@media (max-width: 280px) {
+  .quest-card-actions { flex-direction: column; align-items: stretch; }
+  .quest-card-actions .btn { width: 100%; flex: 0 0 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+}
