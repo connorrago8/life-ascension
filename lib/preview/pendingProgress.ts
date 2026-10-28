@@ -52,7 +52,7 @@ export function pendingProgressInstanceIds(
       const key = storage.key(i);
       if (!key?.startsWith('life-progress-pending:')) continue;
       const id = key.slice('life-progress-pending:'.length);
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)
         && !ids.includes(id)) ids.push(id);
     }
   } catch {
