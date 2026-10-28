@@ -76,17 +76,14 @@ test('field journal and epilogue remain UI-only and provide accessible choices',
 });
 
 
-test('Character cosmetic controls preserve six equipment slots and avoid gameplay writes', () => {
+test('Character preserves six slots and never grants preview gear as authenticated ownership', () => {
   const screen = readFileSync(join(root, 'components/preview/CharacterScreen.tsx'), 'utf8');
-  const catalog = readFileSync(join(root, 'lib/preview/catalog.ts'), 'utf8');
   for (const slot of ['head', 'chest', 'legs', 'main-hand', 'off-hand', 'feet']) {
     assert.ok(screen.includes("slot: '" + slot + "'"), slot);
   }
-  assert.match(screen, /aria-label="Cosmetic appearance preview"/);
-  assert.match(screen, /item.category === 'cosmetic'/);
-  assert.match(screen, /cosmeticIds.includes/);
-  assert.match(screen, /No stat bonuses/);
-  assert.match(screen, /Try on/);
-  assert.match(catalog, /colorsForCosmetics/);
+  assert.match(screen, /characterGearView\(equipmentMode, appearance, verifiedGear\)/);
+  assert.match(screen, /gearView\.source === 'verified'/);
+  assert.match(screen, /verifiedGear\?\.ownedItemIds\.includes\('ashen-hood'\)/);
+  assert.match(screen, /onEquipArmor/);
   assert.doesNotMatch(screen, /set_quest_instance_status|add_quest_progress|grantXp|supabase/);
 });
