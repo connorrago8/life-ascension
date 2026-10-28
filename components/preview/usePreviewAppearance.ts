@@ -36,6 +36,7 @@ function appearanceFor(loadout: Loadout): Appearance {
 
 function persist(loadout: Loadout) {
   try {
+    localStorage.setItem(LOADOUT_KEY, JSON.stringify(loadout));
     sessionStorage.setItem(LOADOUT_KEY, JSON.stringify(loadout));
     const main = loadout.equipmentIds.find((id) => id === 'walking-staff' || id === 'wayfarer-lantern');
     if (main) sessionStorage.setItem(MAIN_HAND_STORAGE_KEY, main);
@@ -47,7 +48,8 @@ function persist(loadout: Loadout) {
 function readLoadout(): Loadout {
   const base = defaultLoadout();
   try {
-    const raw = sessionStorage.getItem(LOADOUT_KEY);
+    // Prefer durable local preview state; migrate older session-only selections.
+    const raw = localStorage.getItem(LOADOUT_KEY) ?? sessionStorage.getItem(LOADOUT_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Loadout>;
       const equipmentIds = Array.isArray(parsed.equipmentIds)
@@ -68,7 +70,8 @@ function readLoadout(): Loadout {
   return base;
 }
 
-/** Sample look kept in sessionStorage so Home, Adventure, and Inventory match. */
+/** Preview-only appearance persists on this device across browser restarts.
+ * This is not authenticated ownership or server-synced equipment. */
 export function usePreviewAppearance() {
   const [loadout, setLoadout] = useState<Loadout>(defaultLoadout);
 
