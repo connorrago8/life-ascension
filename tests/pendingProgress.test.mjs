@@ -343,3 +343,15 @@ test('Home loads only owner-scoped older completed journals and renders retry se
   assert.match(home, /const completed=completedQuests\.length;/,
     'Older recovery records must not inflate today completion totals');
 });
+
+test('archived completed quest keeps pending retry metadata owner-scoped', async () => {
+  // Static integration contract: not an authenticated Supabase/browser test.
+  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /missingRecoveryQuestIds=\[\.\.\.new Set\(\(recoveries\|\|\[\]\)\.map\(row=>row\.quest_id\)\)\]/);
+  assert.match(home, /\.eq\('owner_id',user\.id\)\.in\('id',missingRecoveryQuestIds\)\.limit\(100\)/);
+  assert.match(home, /setRecoveryQuests\(missingRecoveryQuests\|\|\[\]\)/);
+  assert.match(home, /const quest=quests\.find\(q=>q\.id===i\.quest_id\)\|\|recoveryQuests\.find\(q=>q\.id===i\.quest_id\)/);
+  assert.match(home, /earlierRecoveries=instances\.filter\(i=>i\.status==='completed'&&i\.due_date!==today&&recoveryIds\.includes\(i\.id\)\)/);
+  assert.match(home, /const completed=completedQuests\.length;/,
+    'Recovered historical quests must not inflate today completion');
+});
