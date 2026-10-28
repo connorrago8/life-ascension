@@ -64,7 +64,7 @@ test('authenticated character hides sample progression level', () => {
   const character = readFileSync(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = readFileSync(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
   assert.match(character, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
-  assert.match(screen, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(screen, /gearView\.canChange && <p className="level-line">/);
 });
 
 test('quest metadata uses progressive disclosure', () => {

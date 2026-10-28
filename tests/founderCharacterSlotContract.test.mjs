@@ -74,7 +74,7 @@ test('signed-in Character route never substitutes sample Level 7 for trusted XP'
   assert.match(page, /client\.rpc\('get_lifetime_xp'\)/);
   assert.match(page, /const progress = levelFor\(state\.xp\)/);
   assert.match(page, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
-  assert.match(demo, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(demo, /gearView\.canChange && <p className="level-line">/);
   assert.doesNotMatch(page, /Level 7|level:\s*7/);
   assert.match(page, /Equipment below is a visual demo using starter items/);
   assert.match(page, /const verifiedXp = verifiedLifetimeXp\(xpResult\.data\)/);

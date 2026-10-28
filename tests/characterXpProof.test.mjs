@@ -25,7 +25,7 @@ test('authenticated Character uses verified XP and never mounts sample Level 7',
   assert.match(page, /if \(verifiedXp === null\)/);
   assert.match(page, /xp: verifiedXp/);
   assert.match(page, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
-  assert.match(preview, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(preview, /gearView\.canChange && <p className="level-line">/);
   assert.doesNotMatch(page, /xp:\s*coerceXp\(xpResult\.data\)|Level 7|level:\s*7/);
   assert.match(page, /Equipment below is a visual demo using starter items/);
   assert.match(page, /parseAuthenticatedGearSnapshot\(gearResult\.data\)/);
