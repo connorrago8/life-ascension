@@ -33,7 +33,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a7'
 set role authenticated;
 do $$
 declare
- r public.log_quest_progress%rowtype;
+ r record;
  receipt jsonb;
 begin
  -- Increment-2 quests must clear arbitrary accumulated 7/8 to zero atomically.
