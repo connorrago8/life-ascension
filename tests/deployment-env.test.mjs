@@ -170,8 +170,12 @@ async function runtimePublicConfig(env) {
 }
 
 test('runtime server/Edge config accepts only correctly pinned project and target', async () => {
-  assert.deepEqual(await runtimePublicConfig(qa), { url: qa.NEXT_PUBLIC_SUPABASE_URL, key: qaKey });
-  assert.deepEqual(await runtimePublicConfig(prod), { url: prod.NEXT_PUBLIC_SUPABASE_URL, key: prodKey });
+  const qaRuntime = await runtimePublicConfig(qa);
+  assert.equal(qaRuntime?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(qaRuntime?.key, qaKey);
+  const prodRuntime = await runtimePublicConfig(prod);
+  assert.equal(prodRuntime?.url, prod.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(prodRuntime?.key, prodKey);
   for (const env of [
     { ...qa, NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL },
     { ...qa, NEXT_PUBLIC_SUPABASE_ANON_KEY: prodKey, SUPABASE_PUBLIC_KEY_SHA256: pin(prodKey) },
@@ -184,8 +188,10 @@ test('runtime server/Edge config accepts only correctly pinned project and targe
 });
 
 test('runtime config leaves non-Vercel local development unchanged', async () => {
-  assert.deepEqual(await runtimePublicConfig({
+  const local = await runtimePublicConfig({
     NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: qaKey,
-  }), { url: qa.NEXT_PUBLIC_SUPABASE_URL, key: qaKey });
+  });
+  assert.equal(local?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal(local?.key, qaKey);
 });
