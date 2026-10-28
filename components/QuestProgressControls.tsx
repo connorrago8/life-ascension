@@ -5,9 +5,9 @@ import { nextProgressDelta } from '../lib/preview/progressDelta.mjs';
 
 export type ProgressQuest = { title: string; target_amount: number | null; progress_unit: string | null; progress_increment: number | null };
 export type ProgressInstance = { id: string; current_amount: number; status: 'available'|'completed'|'deferred' };
-type Props = { quest: ProgressQuest; instance: ProgressInstance; disabled: boolean; onLog: (id: string, requestId: string, delta: number) => Promise<'saved'|'retry'|'rejected'> };
+type Props = { quest: ProgressQuest; instance: ProgressInstance; disabled: boolean; onLog: (id: string, requestId: string, delta: number) => Promise<'saved'|'retry'|'rejected'>; onJournalResolved?: (instanceId: string) => void };
 
-export function QuestProgressControls({ quest, instance, disabled, onLog }: Props) {
+export function QuestProgressControls({ quest, instance, disabled, onLog, onJournalResolved }: Props) {
   const [custom, setCustom] = useState('');
   const [retrying, setRetrying] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,7 +54,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, operation.id, operation.delta).then(outcome => {
-      if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); setRetrying(false); } catch { setStorageError(true); } }
+      if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); setRetrying(false); onJournalResolved?.(instance.id); } catch { setStorageError(true); } }
       else setRetrying(true);
       if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
@@ -75,7 +75,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
     setSaving(true);
     void onLog(instance.id, pending.id, pending.delta).then(outcome => {
       if (outcome !== 'retry') {
-        try { localStorage.removeItem(storageKey); setRetrying(false); } catch { setStorageError(true); }
+        try { localStorage.removeItem(storageKey); setRetrying(false); onJournalResolved?.(instance.id); } catch { setStorageError(true); }
       } else setRetrying(true);
       if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
