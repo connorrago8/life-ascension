@@ -187,6 +187,19 @@ jobs:
           after="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -c "select md5(pg_get_functiondef('public.log_quest_progress(uuid,uuid,integer)'::regprocedure))")"
           test "$before" = "$after" || { echo "::error::Rejected QA delta changed function"; exit 1; }
           test "$(psql -At -d "$db" -c "select to_regprocedure('public.set_quest_instance_status_v2(uuid,text)') is null")" = "t"
+          # A failure AFTER a valid delta must roll back the entire function edit.
+          # This is a disposable database; never exercise this on hosted QA.
+          if PGOPTIONS="-c qa.expected_progress_md5=$before" \
+              psql --single-transaction -v ON_ERROR_STOP=1 -d "$db" \
+                -f tests/sql/qa_forward_only_delta_candidate.sql \
+                -c "select 1/0" >/tmp/qa-delta-rollback.log 2>&1; then
+            echo "::error::QA delta did not fail on injected transaction error"
+            exit 1
+          fi
+          rolled_back="$(psql -v ON_ERROR_STOP=1 -At -d "$db" -c "select md5(pg_get_functiondef('public.log_quest_progress(uuid,uuid,integer)'::regprocedure))")"
+          test "$before" = "$rolled_back" || { echo "::error::Failed QA delta transaction changed progress function"; exit 1; }
+          test "$(psql -At -d "$db" -c "select to_regprocedure('public.set_quest_instance_status_v2(uuid,text)') is null")" = "t" || { echo "::error::Failed QA delta unexpectedly installed v2"; exit 1; }
+          echo "PASS injected failure rolls back function replacement without v2"
           PGOPTIONS="-c qa.expected_progress_md5=$before" \
             psql --single-transaction -v ON_ERROR_STOP=1 -d "$db" \
               -f tests/sql/qa_forward_only_delta_candidate.sql \
