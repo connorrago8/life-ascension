@@ -18,6 +18,11 @@ export function parseAuthenticatedGearSnapshot(value: unknown): AuthenticatedGea
   const data = value as Record<string, unknown>;
   if (!Array.isArray(data.ownedItemIds) || !Array.isArray(data.equippedItemIds)) return null;
   if (![...data.ownedItemIds, ...data.equippedItemIds].every((id) => id === 'ashen-hood')) return null;
+  // Reject impossible or duplicated server snapshots rather than silently
+  // treating an inconsistent equipment state as authenticated evidence.
+  if (new Set(data.ownedItemIds).size !== data.ownedItemIds.length ||
+      new Set(data.equippedItemIds).size !== data.equippedItemIds.length ||
+      data.equippedItemIds.some((id) => !data.ownedItemIds.includes(id))) return null;
   return { ownedItemIds: [...data.ownedItemIds], equippedItemIds: [...data.equippedItemIds] };
 }
 
