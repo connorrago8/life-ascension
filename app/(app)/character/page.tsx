@@ -60,7 +60,8 @@ export default function CharacterPage() {
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
       });
     } catch {
-      setState({ status: 'signed-out', loginHref: loginHref() });
+      // A transient network failure is not evidence that the user signed out.
+      setState({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
     }
   }, []);
 
