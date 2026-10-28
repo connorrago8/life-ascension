@@ -309,3 +309,37 @@ test('Home exposes completed progress retry after refresh without creating anoth
   assert.match(home, /completedQuests\.map\(\(\{quest,instance\}\)=>/);
   assert.match(home, /<QuestProgressControls quest=\{quest\} instance=\{instance!\}/);
 });
+
+
+test('older pending request discovery is bounded, UUID-filtered and fails closed', async () => {
+  const { pendingProgressInstanceIds } = await loadParser();
+  const first = 'c1234567-1234-4123-8123-123456789abc';
+  const second = 'd1234567-1234-4123-8123-123456789abc';
+  const keys = [
+    'unrelated:' + first,
+    'life-progress-pending:not-a-uuid',
+    'life-progress-pending:' + first,
+    'life-progress-pending:' + first.toUpperCase(),
+    'life-progress-pending:' + second,
+  ];
+  const storage = { length: keys.length, key: i => keys[i] ?? null };
+  assert.deepEqual(pendingProgressInstanceIds(storage), [first, second],
+    'Only valid, distinct pending instance IDs may be queried');
+  assert.deepEqual(pendingProgressInstanceIds({ length: 1, key: () => { throw Error('denied'); } }), [],
+    'Unreadable storage must not trigger a broad history query');
+  const many = Array.from({ length: 150 }, (_, i) =>
+    'life-progress-pending:' + i.toString(16).padStart(8, '0') + '-1234-4123-8123-123456789abc');
+  assert.equal(pendingProgressInstanceIds({ length: many.length, key: i => many[i] }).length, 100,
+    'Do not exceed 100 owner-scoped recovery lookups');
+});
+
+test('Home loads only owner-scoped older completed journals and renders retry separately from daily completion', async () => {
+  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home, /const pendingIds=pendingProgressInstanceIds\\(localStorage\\)/);
+  assert.match(home, /pendingIds\\.length\\?s\\.from\\('quest_instances'\\)\\.select\\([^\\n]+\\)\\.eq\\('owner_id',user\\.id\\)\\.in\\('id',pendingIds\\)\\.eq\\('status','completed'\\)/);
+  assert.match(home, /earlierRecoveries=instances\\.filter\\(i=>i\\.status==='completed'&&i\\.due_date!==today&&recoveryIds\\.includes\\(i\\.id\\)\\)/);
+  assert.match(home, /Earlier completed quests with pending saves/);
+  assert.match(home, /earlierRecoveries\\.map\\(\\(\\{quest,instance\\}\\)=>[\\s\\S]*?<QuestProgressControls quest=\\{quest\\} instance=\\{instance\\}/);
+  assert.match(home, /const completed=completedQuests\\.length;/,
+    'Older recovery records must not inflate today completion totals');
+});
