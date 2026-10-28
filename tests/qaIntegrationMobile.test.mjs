@@ -21,3 +21,10 @@ test('authenticated character never displays sample level', () => {
   assert.match(character, /<CharacterScreen displayName=\{state\.name\} hideSampleStats hideSampleLevel \/>/);
   assert.match(screen, /!hideSampleLevel && <p className="level-line">/);
 });
+
+// Source-level regression only: real 200% browser UI zoom still requires
+// independent 320/375/390/430px screenshot and focus verification.
+test('quest actions stack at high browser zoom while preserving 48px targets', () => {
+  assert.match(css, /@media \(max-width: 280px\) \{\s*\.quest-card-actions \{ flex-direction: column; align-items: stretch; \}\s*\.quest-card-actions \.btn \{ width: 100%; flex: 0 0 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; \}\s*\}/);
+  assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px; flex: 1 1 0; \}/);
+});
