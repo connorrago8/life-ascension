@@ -57,7 +57,11 @@ function readLoadout(): Loadout {
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       // Stored preview data is untrusted and may be null or a primitive.
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return base;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        // Discard corrupt preview state so the next visit can recover normally.
+        sessionStorage.removeItem(LOADOUT_KEY);
+        return base;
+      }
       const saved = parsed as Partial<Loadout>;
       // Restore only catalog-backed selections, with at most one item per slot.
       // This is preview-only validation, never proof of earned ownership.
