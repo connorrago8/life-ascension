@@ -205,6 +205,6 @@ test('warning clue stays readable in the field journal after inscription Continu
   assert.equal(run.outcomeNote, null, 'Continue clears the temporary event result');
   assert.equal(run.hint, clue, 'the clue is retained for later inspection');
   const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
-  assert.match(view, /run\\.eventCleared \\? run\\.hint \\?\\? run\\.outcomeNote \\?\\?/);
+  assert.match(view, /run\.eventCleared \? run\.hint \?\? run\.outcomeNote \?\?/);
   assert.equal(Object.hasOwn(run, 'xp'), false);
 });
