@@ -28,6 +28,22 @@ test('new XP feedback requires the matching quest-scoped ledger receipt', () => 
   }
 });
 
+test('malformed or timezone-free ledger timestamps never justify XP feedback', () => {
+  const invalidTimes = ['not-a-timestamp', '2026-10-28', '2026-10-28T07:00:00',
+    '2026-10-28T07:00:00+99:99', '', 123];
+  for (const reward_awarded_at of invalidTimes) {
+    assert.doesNotMatch(completionFeedback({ ...awarded, reward_awarded_at }, instanceId), /\\+1 XP/,
+      'Malformed ledger timestamp cannot substantiate a new reward');
+    assert.equal(completionFeedback({ ...awarded, reward_status: 'already_awarded',
+      xp_awarded: 0, reward_awarded_at }, instanceId),
+      'Quest completion confirmed, but XP award could not be verified.');
+  }
+  assert.equal(completionFeedback({ ...awarded,
+    reward_awarded_at: '2026-10-28T07:00:00.123456+00:00' }, instanceId),
+    'Quest completed. +1 XP earned.',
+    'PostgreSQL timestamptz with fractional seconds and explicit offset is valid');
+});
+
 test('duplicate completion confirms previous reward without claiming a new award', () => {
   const duplicate = { ...awarded, reward_status: 'already_awarded', xp_awarded: 0 };
   assert.equal(completionFeedback(duplicate, instanceId),
