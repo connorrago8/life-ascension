@@ -13,7 +13,7 @@ values
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b1',false);
 set role authenticated;
 do $$
-declare r record; n integer;
+declare r record; n integer; v_inc2_quest uuid; v_inc2_instance uuid;
 begin
  begin
    perform public.set_quest_instance_status('00000000-0000-0000-0000-0000000000d1','complete');
@@ -79,6 +79,74 @@ begin
  end;
  select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000e3',-1);
  if r.current_amount <> 0 then raise exception 'Undo failed'; end if;
+ -- Clear 7/10 atomically, replay the same immutable request, and award no XP.
+ select * into r from public.log_quest_progress(
+   '00000000-0000-0000-0000-0000000000d1',
+   '00000000-0000-0000-0000-0000000000e4',7);
+ if r.current_amount <> 7 or r.completed_now then
+   raise exception 'Custom partial progress failed';
+ end if;
+ select * into r from public.log_quest_progress(
+   '00000000-0000-0000-0000-0000000000d1',
+   '00000000-0000-0000-0000-0000000000e5',-7);
+ if r.current_amount <> 0 or r.completed_now then
+   raise exception 'Atomic clear-to-zero failed';
+ end if;
+ select * into r from public.log_quest_progress(
+   '00000000-0000-0000-0000-0000000000d1',
+   '00000000-0000-0000-0000-0000000000e5',-7);
+ if r.current_amount <> 0 or r.completed_now then
+   raise exception 'Clear retry was not idempotent';
+ end if;
+ begin
+   perform public.log_quest_progress(
+     '00000000-0000-0000-0000-0000000000d1',
+     '00000000-0000-0000-0000-0000000000e5',-1);
+   raise exception 'Changed clear request accepted';
+ exception when others then
+   if sqlerrm <> 'Request ID reused with different payload' then raise; end if;
+ end;
+ if exists(select 1 from public.xp_ledger
+           where instance_id='00000000-0000-0000-0000-0000000000d1') then
+   raise exception 'Partial progress/clear awarded XP';
+ end if;
+ -- Non-unit increments must support 7->0, 1->0, ordinary undo, and reject
+ -- arbitrary negative edits. All operations use the authenticated owner RPC.
+ v_inc2_quest := public.create_tracked_quest('Clear increment two','home','daily',
+   (now() at time zone 'America/Chicago')::date,'scheduled',10,'units',2);
+ v_inc2_instance := public.ensure_quest_instance(
+   v_inc2_quest,(now() at time zone 'America/Chicago')::date);
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f1',7);
+ if r.current_amount <> 7 or r.completed_now then raise exception 'Increment-2 7 setup failed'; end if;
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f2',-7);
+ if r.current_amount <> 0 then raise exception 'Increment-2 7-to-zero clear failed'; end if;
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f3',1);
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f4',-1);
+ if r.current_amount <> 0 then raise exception 'Increment-2 1-to-zero clear failed'; end if;
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f5',4);
+ begin
+   perform public.log_quest_progress(
+     v_inc2_instance,'00000000-0000-0000-0000-0000000000f6',-3);
+   raise exception 'Arbitrary negative progress accepted';
+ exception when others then
+   if sqlerrm <> 'Undo must reverse one increment or clear current progress' then raise; end if;
+ end;
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f7',-2);
+ if r.current_amount <> 2 then raise exception 'Increment-2 ordinary undo failed'; end if;
+ select * into r from public.log_quest_progress(
+   v_inc2_instance,'00000000-0000-0000-0000-0000000000f8',-2);
+ if r.current_amount <> 0 or r.completed_now then
+   raise exception 'Increment-2 second undo failed';
+ end if;
+ if exists(select 1 from public.xp_ledger where instance_id=v_inc2_instance) then
+   raise exception 'Increment-2 partial/clear minted XP';
+ end if;
  for n in 1..8 loop
    select * into r from public.log_quest_progress('00000000-0000-0000-0000-0000000000d1',
      ('00000000-0000-0000-0000-' || lpad(to_hex(60000+n),12,'0'))::uuid,1);
@@ -131,6 +199,50 @@ begin
  end;
  raise notice 'PASS service-role wrapper cannot bypass progress target';
 end $$;
+reset role;
+
+-- Both owners now have real journal entries. A zero-row fixture cannot prove RLS.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b1',false);
+set role authenticated;
+do $
+begin
+ if not exists(select 1 from public.quest_progress_operations
+               where owner_id='00000000-0000-0000-0000-0000000000b1') then
+   raise exception 'Owner A journal fixture missing';
+ end if;
+ if exists(select 1 from public.quest_progress_operations
+           where owner_id='00000000-0000-0000-0000-0000000000b2') then
+   raise exception 'Owner B journal visible to A';
+ end if;
+ begin
+   perform public.log_quest_progress(
+     '00000000-0000-0000-0000-0000000000d2',
+     '00000000-0000-0000-0000-0000000000ef',1);
+   raise exception 'A mutated B instance';
+ exception when others then
+   if sqlerrm <> 'Quest not found' then raise; end if;
+ end;
+ begin
+   update public.quest_progress_operations set delta=2
+   where owner_id='00000000-0000-0000-0000-0000000000b1';
+   raise exception 'Authenticated direct journal UPDATE permitted';
+ exception when insufficient_privilege then null;
+ end;
+end $;
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b2',false);
+set role authenticated;
+do $
+begin
+ if not exists(select 1 from public.quest_progress_operations
+               where owner_id='00000000-0000-0000-0000-0000000000b2') then
+   raise exception 'Owner B journal fixture missing';
+ end if;
+ if exists(select 1 from public.quest_progress_operations
+           where owner_id='00000000-0000-0000-0000-0000000000b1') then
+   raise exception 'Owner A journal visible to B';
+ end if;
+end $;
 reset role;
 
 -- Verify ledger as migration-test owner; service_role lacks explicit SELECT in the isolated harness.
