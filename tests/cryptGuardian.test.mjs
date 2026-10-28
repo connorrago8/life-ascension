@@ -68,8 +68,11 @@ test('retreat restores pre-fight HP; retry replays the encounter', () => {
   }
   assert.equal(lost.battle?.status, 'lost');
   const retry = reduceRun(lost, { type: 'retry-fight' });
-  assert.equal(retry.hp, ready.hp);
-  assert.deepEqual(retry.battle, initial);
+  assert.equal(retry.hp, ready.maxHp);
+  assert.equal(retry.hpAtFightStart, ready.maxHp);
+  assert.equal(retry.battle?.player.hp, ready.maxHp);
+  assert.equal(retry.battle?.enemy.hp, initial.enemy.hp);
+  assert.deepEqual(retry.battle?.rng, initial.rng);
   assert.equal(retry.fightCleared, true, 'retrying the guardian must not reopen the rat');
   assert.equal(retry.eventCleared, true);
   assert.equal(retry.treasureCleared, true);
@@ -130,4 +133,39 @@ test('Ember Charm base bonus is doubled by Focus, matching visible combat guidan
   assert.match(focused.log.join(' '), /focused strike for 12/);
   assert.match(charmNote(2), /Focus doubles Attack/);
   assert.doesNotMatch(charmNote(2), /XP|permanent|owned/i);
+});
+
+test('low-HP guardian loss retries at full health without resetting prior clears or charm', () => {
+  let run = createRun(1);
+  run = reduceRun(reduceRun(run, { type: 'continue' }), { type: 'continue' });
+  run = reduceRun(run, { type: 'open', nodeId: FIGHT_ID });
+  for (let i = 0; i < 7; i++) run = reduceRun(run, { type: 'combat', action: 'defend' });
+  assert.equal(run.hp, 4, 'seeded rat defense path leaves 4 HP');
+  run = reduceRun(run, { type: 'combat', action: 'heavy' });
+  assert.equal(run.battle?.status, 'won');
+  run = reduceRun(run, { type: 'continue' });
+  run = reduceRun(run, { type: 'open', nodeId: EVENT_ID });
+  run = reduceRun(run, { type: 'choose', choiceId: 'warning' });
+  run = reduceRun(run, { type: 'continue' });
+  run = reduceRun(run, { type: 'open', nodeId: TREASURE_ID });
+  run = reduceRun(run, { type: 'continue' });
+  run = reduceRun(run, { type: 'open', nodeId: GUARDIAN_ID });
+  assert.equal(run.hp, 4);
+  assert.equal(run.attackBonus, 2);
+  run = reduceRun(run, { type: 'combat', action: 'heavy' });
+  assert.equal(run.battle?.status, 'lost', 'guardian survives the first blow and defeats the 4-HP player');
+  run = reduceRun(run, { type: 'retry-fight' });
+  assert.equal(run.hp, run.maxHp);
+  assert.equal(run.hpAtFightStart, run.maxHp);
+  assert.equal(run.battle?.player.hp, run.maxHp);
+  assert.equal(run.battle?.status, 'ongoing');
+  assert.equal(run.fightCleared, true);
+  assert.equal(run.eventCleared, true);
+  assert.equal(run.treasureCleared, true);
+  assert.equal(run.attackBonus, 2);
+  assert.equal(run.guardianCleared, false);
+  assert.equal(run.sigilCollected, false);
+  assert.equal(Object.hasOwn(run, 'xp'), false);
+  const retreated = reduceRun(run, { type: 'back' });
+  assert.equal(retreated.hp, run.maxHp, 'retreat after retry preserves the new full-HP checkpoint');
 });
