@@ -206,6 +206,20 @@ export const EVENT_ID = NODES[1].id;
 export const TREASURE_ID = NODES[2].id;
 export const GUARDIAN_ID = NODES[3].id;
 
+// Guide the current unsaved run; never imply account-level rewards.
+export function nextCryptObjective(progress: {
+  fightCleared: boolean;
+  eventCleared: boolean;
+  treasureCleared: boolean;
+  guardianCleared: boolean;
+}): string {
+  if (!progress.fightCleared) return 'Defeat the Crypt Rat';
+  if (!progress.eventCleared) return 'Read the ancient inscription';
+  if (!progress.treasureCleared) return 'Take the Ember Charm';
+  if (!progress.guardianCleared) return 'Defeat the Crypt Sentinel';
+  return 'Approach the sealed door';
+}
+
 /**
  * Relic named on the end card.
  * Swap `artifact` (for example to crown-key) and every {artifact} sentence follows.

@@ -16,6 +16,7 @@ import {
   charmNote,
   endCardParagraphs,
   eventNode,
+  nextCryptObjective,
   runStatus,
   treasureNode,
 } from '../../lib/crypt/content';
@@ -126,6 +127,7 @@ export function CryptRun() {
         <div className="floor-wrap">
           <p className="floor-kicker">{FLOOR.mapLabel}</p>
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
+          <p className="crypt-status">Next objective: {nextCryptObjective(run)}</p>
           <button type="button" className="btn ghost crypt-block" aria-expanded={showFieldNotes}
             onClick={() => setShowFieldNotes((value) => !value)}>
             {showFieldNotes ? 'Hide' : 'Open'} Wayfarer field journal

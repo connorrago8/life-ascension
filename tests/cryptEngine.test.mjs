@@ -18,6 +18,7 @@ import {
   TREASURE_ID,
   endCardParagraphs,
   eventNode,
+  nextCryptObjective,
   treasureNode,
 } from '../lib/crypt/content.ts';
 import {
@@ -219,6 +220,25 @@ test('the preview run has a rat, inscription, charm, and gated sentinel encounte
   assert.deepEqual(HUB.locations.map((location) => location.kind), ['preview', 'locked', 'locked']);
   const joined = JSON.stringify(NODES);
   assert.doesNotMatch(joined, /Bone King/);
+});
+
+test('the floor map names only the next available preview objective', () => {
+  const progress = {
+    fightCleared: false,
+    eventCleared: false,
+    treasureCleared: false,
+    guardianCleared: false,
+  };
+  assert.equal(nextCryptObjective(progress), 'Defeat the Crypt Rat');
+  progress.fightCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Read the ancient inscription');
+  progress.eventCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Take the Ember Charm');
+  progress.treasureCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Defeat the Crypt Sentinel');
+  progress.guardianCleared = true;
+  assert.equal(nextCryptObjective(progress), 'Approach the sealed door');
+  assert.doesNotMatch(nextCryptObjective(progress), /XP|permanent|owned/i);
 });
 
 test('event choices and the ember charm change only this run', () => {
