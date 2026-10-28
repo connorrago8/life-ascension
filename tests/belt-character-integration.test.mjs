@@ -143,3 +143,39 @@ test('unverified account full-character render has starter tie, no earned belt, 
   assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
   assert.doesNotMatch(html, /data-prop="(?:staff|lantern)"/);
 });
+
+
+test('first sword draws a single held weapon without staff or lantern', async () => {
+  const HomeCharacter = await loadCharacter();
+  const html = renderToStaticMarkup(React.createElement(HomeCharacter, {
+    model: { ...model, mainHand: 'sword', mainHandAccent: '#697D8A', mainHandAccentLight: '#E3EDF0' },
+    beltPreviewStage: 'starter',
+  }));
+  assert.match(html, /data-main-hand="sword"/);
+  assert.match(html, /data-prop="sword"/);
+  assert.match(html, /aria-label="Initiate Sword"/);
+  assert.equal((html.match(/data-prop="/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-prop="(?:staff|lantern)"/);
+  assert.match(html, /data-waist-part="starter-tie"/);
+  assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
+});
+
+test('first sword is selectable preview gear and appears in the adventure sprite', async () => {
+  const appearance = execute(compile(await readFile(new URL('../lib/preview/appearance.ts', import.meta.url), 'utf8')), require);
+  const catalog = execute(compile(await readFile(new URL('../lib/preview/catalog.ts', import.meta.url), 'utf8')),
+    (name) => name.includes('appearance') ? appearance : require(name));
+  const characterRender = execute(compile(await readFile(new URL('../lib/preview/characterRender.ts', import.meta.url), 'utf8')),
+    (name) => name.includes('appearance') ? appearance : require(name));
+  const sword = appearance.gearById('initiate-sword');
+  assert.equal(sword?.motif, 'sword');
+  assert.equal(catalog.catalogItem('initiate-sword')?.slot, 'main-hand');
+  const next = appearance.withEquippedItem(appearance.SAMPLE_APPEARANCE, sword);
+  assert.equal(next.equipment.filter((item) => item.slot === 'main-hand').length, 1);
+  const adventure = characterRender.adventureCharacterModel(next);
+  assert.equal(adventure.mainHand, 'sword');
+  const swordPixels = adventure.overlays['main-hand']?.join('') ?? '';
+  assert.match(swordPixels, /I/);
+  assert.match(swordPixels, /G/);
+  assert.match(swordPixels, /g/);
+  assert.equal(characterRender.pixelPalette(next).G, '#C6A66D');
+});
