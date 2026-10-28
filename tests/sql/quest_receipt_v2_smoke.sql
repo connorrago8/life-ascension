@@ -272,3 +272,68 @@ begin
 end
 $$;
 reset role;
+
+-- Isolated compatibility probe: the receipt migration also runs on legacy
+-- schema, but MUST enforce target gating when tracked columns are introduced.
+-- These ALTERs affect this disposable SQL smoke database only, never hosted QA.
+alter table public.quests add column target_amount integer;
+alter table public.quest_instances add column current_amount integer not null default 0;
+insert into public.quests(id,owner_id,title,domain,cadence,quest_type,target_amount)
+values ('00000000-0000-0000-0000-000000000f41',
+        '00000000-0000-0000-0000-0000000000b1',
+        'Tracked receipt target gate','personal_growth','once','scheduled',8);
+insert into public.quest_instances(id,owner_id,quest_id,due_date,current_amount)
+values ('00000000-0000-0000-0000-000000000f42',
+        '00000000-0000-0000-0000-0000000000b1',
+        '00000000-0000-0000-0000-000000000f41',
+        (now() at time zone 'America/Chicago')::date,2);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b1',false);
+set role authenticated;
+do $$
+begin
+ begin
+   perform public.set_quest_instance_status_v2(
+     '00000000-0000-0000-0000-000000000f42','complete');
+   raise exception 'Incomplete tracked quest awarded XP through v2';
+ exception when others then
+   if sqlerrm <> 'Tracked quest has not reached its target' then raise; end if;
+ end;
+ if (select status from public.quest_instances
+     where id='00000000-0000-0000-0000-000000000f42') <> 'available' then
+   raise exception 'Rejected tracked completion changed instance status';
+ end if;
+ if exists(select 1 from public.xp_ledger
+           where instance_id='00000000-0000-0000-0000-000000000f42')
+    or exists(select 1 from public.quest_events
+              where instance_id='00000000-0000-0000-0000-000000000f42') then
+   raise exception 'Rejected tracked completion left reward/event evidence';
+ end if;
+end $$;
+reset role;
+-- Simulate the authoritative progress RPC having reached its target; direct
+-- authenticated UPDATE is intentionally not used or granted.
+update public.quest_instances set current_amount=8
+where id='00000000-0000-0000-0000-000000000f42';
+set role authenticated;
+do $$
+declare r jsonb;
+begin
+ r := public.set_quest_instance_status_v2(
+   '00000000-0000-0000-0000-000000000f42','complete');
+ if r->>'reward_status' <> 'awarded' or r->>'xp_awarded' <> '1' then
+   raise exception 'Completed tracked quest did not award once: %',r;
+ end if;
+ r := public.set_quest_instance_status_v2(
+   '00000000-0000-0000-0000-000000000f42','complete');
+ if r->>'reward_status' <> 'already_awarded' or r->>'xp_awarded' <> '0' then
+   raise exception 'Tracked quest retry duplicated award: %',r;
+ end if;
+ if (select count(*) from public.xp_ledger
+     where instance_id='00000000-0000-0000-0000-000000000f42') <> 1
+    or (select count(*) from public.quest_events
+        where instance_id='00000000-0000-0000-0000-000000000f42'
+          and event_type='completed') <> 1 then
+   raise exception 'Tracked completion ledger/event duplicated';
+ end if;
+end $$;
+reset role;
