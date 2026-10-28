@@ -22,9 +22,9 @@ export function BeltWaistLayer({
       {visual.showTie ? (
         <g data-waist-part="starter-tie">
           <path d="M88 201 Q120 206 152 201 L152 207 Q120 212 88 207Z"
-            fill="#7D756A" stroke="#49423B" strokeWidth="1.5" />
+            fill="#A9A195" stroke="#38332D" strokeWidth="2" />
           <path d="M120 208 L117 220 121 231 125 221 124 208Z"
-            fill="#9B9181" stroke="#49423B" strokeWidth="1.5" />
+            fill="#C3B8A5" stroke="#38332D" strokeWidth="2" />
         </g>
       ) : null}
       {visual.showLeather ? (

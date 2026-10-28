@@ -7,13 +7,14 @@ import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
 import { coerceXp, levelFor, levelProgress } from '../../../lib/level';
 import { supabase } from '../../../lib/supabase';
+import { parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
 import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'signed-out'; loginHref: string }
   | { status: 'error'; message: string }
-  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; preview: boolean };
+  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; preview: boolean; gear: AuthenticatedGearSnapshot | null };
 
 function loginHref() {
   return '/login?next=%2Fcharacter';
@@ -21,13 +22,15 @@ function loginHref() {
 
 export default function CharacterPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [equipmentBusy, setEquipmentBusy] = useState(false);
+  const [equipmentError, setEquipmentError] = useState('');
 
   const load = useCallback(async () => {
     const preview = process.env.NODE_ENV === 'development'
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      setState({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, preview: true });
+      setState({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, preview: true, gear: null });
       return;
     }
     try {
@@ -38,9 +41,10 @@ export default function CharacterPage() {
         setState({ status: 'signed-out', loginHref: loginHref() });
         return;
       }
-      const [xpResult, profileResult] = await Promise.all([
+      const [xpResult, profileResult, gearResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        client.rpc('get_earned_gear'),
       ]);
       if (xpResult.error) {
         setState({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
@@ -53,11 +57,37 @@ export default function CharacterPage() {
         xp: coerceXp(xpResult.data),
         profile,
         preview: false,
+        gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
       });
     } catch {
-      setState({ status: 'signed-out', loginHref: loginHref() });
+      // A transient network failure is not evidence that the user signed out.
+      setState({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
     }
   }, []);
+
+  async function setArmorEquipped(equip: boolean) {
+    if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy) return;
+    setEquipmentBusy(true);
+    setEquipmentError('');
+    try {
+      const { error } = await supabase().rpc('equip_earned_armor', {
+        p_item_id: 'ashen-hood', p_equip: equip,
+      });
+      if (error) {
+        setEquipmentError('Could not update your armor. Your equipment is unchanged.');
+        return;
+      }
+      // Only the authoritative server read can change the visible equipment.
+      // If that read fails, do not leave the previous gear snapshot looking
+      // like a confirmed successful equip operation.
+      setState({ status: 'loading' });
+      await load();
+    } catch {
+      setEquipmentError('Could not update your armor. Try again.');
+    } finally {
+      setEquipmentBusy(false);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -100,8 +130,9 @@ export default function CharacterPage() {
         <p>Level {progress.level} · {progress.xpIntoLevel} / {progress.xpForNext} XP toward next level</p>
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
-      <p className="muted">Equipment below is a visual demo using starter items. Your real XP and attributes above and below are unchanged; equipment choices are not yet synced to your account.</p>
-      <CharacterScreen displayName={state.name} hideSampleStats />
+      <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified. Your XP and attributes remain account-derived.'}</p>
+      <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} onEquipArmor={(equip) => { void setArmorEquipped(equip); }} armorBusy={equipmentBusy} />
+      {equipmentError && <p className="message" role="status">{equipmentError}</p>}
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (
