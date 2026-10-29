@@ -201,6 +201,19 @@ try {
     'Explicit Leave Crypt navigation must exit the dungeon');
   await exitPage.close();
 
+  // The intro back arrow must offer the same explicit unsaved-progress warning.
+  const introExitPage = await context.newPage();
+  await introExitPage.goto(baseURL + '/play/crypt');
+  await introExitPage.locator('[data-phase="intro"]').waitFor();
+  const introExit = introExitPage.locator('.crypt-top > a.icon-btn');
+  await introExit.waitFor({ state: 'visible' });
+  assert.equal(await introExit.getAttribute('href'), '/play');
+  assert.equal(await introExit.getAttribute('aria-label'),
+    'Leave Crypt; unsaved dungeon progress will be lost');
+  await introExit.click();
+  await introExitPage.waitForURL(url => url.pathname === '/play');
+  await introExitPage.close();
+
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
   console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no unexpected network requests.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');
