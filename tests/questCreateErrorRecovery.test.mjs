@@ -35,3 +35,9 @@ test('confirmed quest creation is not misreported when board refresh fails', () 
  assert.match(handler, /Quest created, but board refresh failed\. Refresh to view it; do not add it again\./);
  assert.match(handler, /Quest creation not confirmed\. Refresh your board before trying again\./);
 });
+
+test('account changes invalidate a pending quest creation response', () => {
+ assert.match(handler, /const operationAccount=accountRef\.current/);
+ assert.match(handler, /if\(accountRef\.current!==operationAccount\)return/);
+ assert.match(handler, /if\(accountRef\.current===operationAccount\)setMessage/);
+});
