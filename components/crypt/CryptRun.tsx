@@ -219,7 +219,7 @@ export function CryptRun() {
           <p className="lock-kicker">{event.label}</p>
           <h2>{event.title}</h2>
           <p>{event.prose}</p>
-          {run.outcomeNote ? (
+          {run.eventCleared ? (
             <>
               <p className="ok">{run.outcomeNote}</p>
               <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' }, run.phase)}>
@@ -227,7 +227,9 @@ export function CryptRun() {
               </button>
             </>
           ) : (
-            <div className="choice-list">
+            <>
+              {run.outcomeNote && <p role="alert" className="muted">{run.outcomeNote}</p>}
+              <div className="choice-list">
               {event.choices.map((choice) => (
                 <button
                   key={choice.id}
@@ -238,7 +240,8 @@ export function CryptRun() {
                   {choice.label}
                 </button>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </article>
       )}
