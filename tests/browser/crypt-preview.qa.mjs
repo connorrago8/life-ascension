@@ -49,7 +49,10 @@ try {
       let origin = 'invalid-url';
       try { origin = new URL(request.url()).origin; } catch {}
       // Do not record query strings, tokens, or full request URLs.
-      unexpectedRequests.push(`${request.method()} ${origin} (${reason})`);
+      let safePath = '/';
+      try { safePath = new URL(request.url()).pathname; } catch {}
+      // Path only: never include query strings, tokens, or full request URLs.
+      unexpectedRequests.push(`${request.method()} ${origin}${safePath} (${reason})`);
     }
   });
 
