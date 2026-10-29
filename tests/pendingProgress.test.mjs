@@ -212,7 +212,7 @@ test('actual submit handler fails closed when journal is corrupt or storage pers
   let minted = 0;
   let sent = 0;
   function attempt(raw, denyWrite) {
-    const state = {
+    const state = { operationInFlight: { current: false },
       disabled: false, saving: false, storageError: false, retrying: false,
       amount: 0, target: 10, instance: { id: 'q1', status: 'available' },
       storageKey: 'life-progress-pending:q1', parsePendingProgress,
@@ -255,7 +255,7 @@ test('completed and deferred instances cannot mint new progress operations; comp
     const journal = new Map();
     let minted = 0;
     let sent = 0;
-    const state = {
+    const state = { operationInFlight: { current: false },
       disabled: false, saving: false, storageError: false, retrying: false,
       amount: 2, target: 10, instance: { id: 'q1', status }, storageKey: key,
       parsePendingProgress,
@@ -409,7 +409,7 @@ test('completed archived retry removes stale recovery row only after confirmed j
     [{ id: 'archived-quest', title: 'Archived quest' }], []);
   let recoveryIds = [id], resolved = 0, backendApplies = 0, attempts = 0;
   const seenRequests = new Set();
-  const state = {
+  const state = { operationInFlight: { current: false },
     disabled: false, saving: false, storageError: false, retrying: true,
     amount: 2, target: 2, instance, storageKey: key,
     parsePendingProgress, localStorage: storage,
@@ -472,7 +472,7 @@ test('late cross-tab progress responses cannot erase a newer pending journal', a
     const deferred = new Promise(resolve => { resolveResponse = resolve; });
     let resolvedNotifications = 0;
     const calls = [];
-    const state = {
+    const state = { operationInFlight: { current: false },
       disabled: false, saving: false, storageError: false, retrying: handlerName === 'retryPending',
       amount: 2, target: 10, instance: { id: 'q1', status: 'available' },
       storageKey: key, parsePendingProgress, localStorage: storage,
@@ -532,7 +532,7 @@ test('cross-tab stale progress response fails closed on same-ID delta mutation, 
     let finish;
     const deferred = new Promise(resolve => { finish = resolve; });
     let notifications = 0;
-    const state = {
+    const state = { operationInFlight: { current: false },
       disabled: false, saving: false, storageError: false,
       retrying: scenario.handler === 'retryPending',
       amount: 2, target: 10, instance: { id: 'q1', status: 'available' },
