@@ -156,3 +156,27 @@ test('Sentinel defeat and retry restore HP without duplicating the bargain or ch
   assert.equal(state.treasureCleared, true);
   assert.equal(Object.hasOwn(state, 'xp'), false);
 });
+
+test('failed offerings remain reversible across repeated attempts and Back', () => {
+  for (const hp of [1, 2]) {
+    let state = inscription(41 + hp, hp);
+    for (let i = 0; i < 3; i++) {
+      state = send(state, 'choose', { choiceId: 'bargain' });
+      assert.equal(state.phase, 'event');
+      assert.equal(state.eventCleared, false);
+      assert.equal(state.hp, hp);
+      assert.equal(state.attackBonus, 0);
+      assert.equal(state.eventChoiceId, null);
+    }
+    state = send(state, 'back');
+    assert.equal(state.phase, 'map');
+    assert.equal(nodeAccess(state, EVENT_ID), 'ready');
+    state = send(state, 'open', { nodeId: EVENT_ID });
+    assert.equal(state.outcomeNote, null);
+    state = send(state, 'choose', { choiceId: 'warning' });
+    assert.equal(state.eventCleared, true);
+    assert.equal(state.hp, hp);
+    assert.equal(state.attackBonus, 0);
+    assert.equal(state.eventChoiceId, 'warning');
+  }
+});
