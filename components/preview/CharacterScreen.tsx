@@ -19,7 +19,7 @@ const RIGHT_SLOTS: readonly { slot: VisibleSlot; label: string }[] = [
   { slot: 'feet', label: 'Boots' },
 ];
 
-export function CharacterScreen({ displayName, hideSampleStats = false }: { displayName?: string; hideSampleStats?: boolean } = {}) {
+export function CharacterScreen({ displayName, hideSampleStats = false, hideSampleLevel = false }: { displayName?: string; hideSampleStats?: boolean; hideSampleLevel?: boolean } = {}) {
   const { appearance, equipmentIds, equip, unequip } = usePreviewAppearance();
   const [selectedSlot, setSelectedSlot] = useState<VisibleSlot | null>(null);
   const pickerRef = useRef<HTMLElement>(null);
@@ -50,7 +50,7 @@ export function CharacterScreen({ displayName, hideSampleStats = false }: { disp
   return (
     <div className="preview-screen character-preview character-equipment-screen">
       <header className="character-header">
-        <div><h1 className="status-name">{displayName ?? appearance.name}</h1><p className="level-line">{levelTitle(base)}</p></div>
+        <div><h1 className="status-name">{displayName ?? appearance.name}</h1>{!hideSampleLevel && <p className="level-line">{levelTitle(base)}</p>}</div>
         <p className="character-header-note">EQUIPMENT</p>
       </header>
       <section className="character-loadout-stage" aria-label="Equipped character and gear">

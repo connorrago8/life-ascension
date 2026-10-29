@@ -457,3 +457,40 @@ code { font-family: ui-monospace, monospace; }
   .nav-link { font-size: 9px; padding-left: 0; padding-right: 0; }
   .nav-play-orb { width: 52px; height: 52px; }
 }
+
+/* Cycle 1: narrow-screen quest layout. Keep controls below readable quest metadata. */
+@media (max-width: 430px) {
+  .quest { flex-direction: column; align-items: stretch; gap: 10px; }
+  .quest-main { width: 100%; min-width: 0; }
+  .quest-title { max-width: 100%; overflow-wrap: anywhere; word-break: normal; }
+  .quest-progress-controls { width: 100%; min-width: 0; }
+  .quest-progress-controls .actions { display: flex; width: 100%; gap: 8px; align-items: stretch; }
+  .quest-progress-controls .actions .btn { flex: 1 1 auto; min-width: 0; }
+  .quest-progress-controls .actions input[type='number'] { flex: 1 1 90px; min-width: 64px; max-width: 110px !important; margin: 0; }
+  .quest > .actions { width: 100%; }
+}
+
+/* Quest Board: keep the primary action thumb-friendly at small widths. */
+@media (max-width: 430px) {
+  .quest-card-actions { display: flex; flex-direction: row; gap: 8px; }
+  .quest-card-actions .btn { min-height: 48px; flex: 1 1 0; }
+  .quest-card-actions .btn:not(.ghost) { order: -1; }
+}
+
+/* Quest details disclosure: comfortable touch target and visible keyboard focus. */
+.quest-card-details > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  width: fit-content;
+  max-width: 100%;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.quest-card-details > summary:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .quest-card-details > summary { transition: color 120ms ease; }
+}
