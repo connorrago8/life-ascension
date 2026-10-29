@@ -245,6 +245,7 @@ export const COMBAT = {
   guardianWin: 'The Crypt Sentinel crumbles. You recover its sigil for this run only.',
   guardianLose: 'The Crypt Sentinel drives you back. Retry with the same run-only charm.',
   retry: 'Retry',
+  retreat: 'Return to floor map',
   continue: 'Continue',
   victory: 'Victory',
   defeat: 'Defeat',

@@ -56,11 +56,13 @@ export function CombatView({
   onAction,
   onContinue,
   onRetry,
+  onRetreat,
 }: {
   battle: BattleState;
   onAction: (action: ActionId) => void;
   onContinue: () => void;
   onRetry: () => void;
+  onRetreat: () => void;
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const ready = availableActions(battle);
@@ -123,6 +125,7 @@ export function CombatView({
         <>
           <p className="combat-result">{guardian ? COMBAT.guardianLose : COMBAT.lose}</p>
           <button type="button" className="btn crypt-block" onClick={() => { setShowHistory(false); onRetry(); }}>{COMBAT.retry}</button>
+          <button type="button" className="btn ghost crypt-block" onClick={onRetreat}>{COMBAT.retreat}</button>
         </>
       )}
       {battle.status === 'ongoing' && (
