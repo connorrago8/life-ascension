@@ -128,6 +128,6 @@ test('clear and undo are separate actions using the verified atomic clear contra
   assert.match(controls, /disabled=\{disabled \|\| saving \|\| retrying \|\| storageError \|\| clearDelta === null\}/);
   assert.match(controls, /aria-label=\{`Clear progress for \$\{quest.title\}`\}/);
   assert.match(controls, /aria-label=\{`Undo \$\{quest.progress_increment\}/);
-  assert.match(controls, /if \(instance.status !== 'available' \|\| disabled \|\| saving \|\| storageError \|\| retrying/);
+  assert.match(controls, /if \(instance.status !== 'available' \|\| disabled \|\| saving \|\| operationInFlight\.current \|\| storageError \|\| retrying/);
   assert.match(controls, /const operation = \{id: crypto.randomUUID\(\), delta\}/);
 });
