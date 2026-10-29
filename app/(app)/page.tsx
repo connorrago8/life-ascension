@@ -19,6 +19,7 @@ export default function Home(){
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
  const questCreateInFlight=useRef(false);
+ const questActionInFlight=useRef(false);
  // A completed quest with an unconfirmed request must expose Retry after refresh.
  useEffect(()=>{
   if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
@@ -113,23 +114,31 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  }
  async function act(id:string,action:'complete'|'defer'|'resume'){
   if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}
-  if(busy)return;
+  if(busy||questActionInFlight.current)return;
   if(action==='complete'&&!window.confirm('Confirm you actually completed this quest?'))return;
+  // A second tap can fire before React commits the busy state.
+  questActionInFlight.current=true;
+  const operationAccount=accountRef.current;
   setBusy(true);
   try {
     if(action==='complete'){
       // Only the versioned, quest-scoped receipt may justify a new XP claim.
       // QA must include Alpha PR #31's reviewed v2 migration before this draft is deployed.
       const {data,error}=await supabase().rpc('set_quest_instance_status_v2',{p_instance_id:id,p_action:action});
+      if(accountRef.current!==operationAccount)return;
       setMessage(error?.message||completionFeedback(data,id));
     } else {
       const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});
+      if(accountRef.current!==operationAccount)return;
       setMessage(error?.message||(action==='defer'?'Quest deferred without penalty.':'Quest returned to your board.'));
     }
     await load();
   } catch {
-    setMessage('Quest update not confirmed. Refresh before retrying.');
-  } finally {setBusy(false)}
+    if(accountRef.current===operationAccount)setMessage('Quest update not confirmed. Refresh before retrying.');
+  } finally {
+    questActionInFlight.current=false;
+    setBusy(false);
+  }
  }
  async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
   if(layoutPreview||busy)return 'retry';
