@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 // Read-only metadata gate. This does NOT inspect/decrypt values, resolve effective
 // Vercel precedence, or attest browser/server/privileged runtime routing.
 export const PROTECTED_QA_BRANCH = 'audit/qa-isolation-and-reliability-20261027';
+export const APPROVED_QA_BRANCHES = new Set([PROTECTED_QA_BRANCH, 'beta/quest-ui-clean-review']);
 const REQUIRED = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -20,7 +21,7 @@ const PRIVILEGED = new Set([
 
 export function verifyQaPreviewEnvMetadata(snapshot, branch = PROTECTED_QA_BRANCH) {
   const blockers = [];
-  if (branch !== PROTECTED_QA_BRANCH) blockers.push('wrong-protected-qa-branch');
+  if (!APPROVED_QA_BRANCHES.has(branch)) blockers.push('wrong-protected-qa-branch');
   const envs = snapshot?.result?.envs ?? snapshot?.envs;
   if (!Array.isArray(envs)) {
     return { ok: false, metadata_only: true, runtime_verified: false, blockers: [...blockers, 'missing-env-metadata'] };
@@ -30,7 +31,7 @@ export function verifyQaPreviewEnvMetadata(snapshot, branch = PROTECTED_QA_BRANC
     blockers.push('invalid-env-metadata');
   }
   for (const key of REQUIRED) {
-    const scoped = envs.filter(e => e?.key === key && e.gitBranch === PROTECTED_QA_BRANCH);
+    const scoped = envs.filter(e => e?.key === key && e.gitBranch === branch);
     if (scoped.length !== 1 || scoped[0]?.target?.length !== 1 || scoped[0]?.target?.[0] !== 'preview') {
       blockers.push('missing-duplicate-or-mis-scoped-' + key);
     }
@@ -41,7 +42,7 @@ export function verifyQaPreviewEnvMetadata(snapshot, branch = PROTECTED_QA_BRANC
     blockers.push('privileged-preview-variable-present');
   }
   // Branch-scoped overrides for the protected branch must not target Production.
-  if (envs.some(e => e?.gitBranch === PROTECTED_QA_BRANCH && e?.target?.includes('production'))) {
+  if (envs.some(e => e?.gitBranch === branch && e?.target?.includes('production'))) {
     blockers.push('protected-branch-variable-targets-production');
   }
   return { ok: blockers.length === 0, metadata_only: true, runtime_verified: false, blockers };

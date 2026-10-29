@@ -1,0 +1,23 @@
+name: Alpha QA guard regression
+on:
+  push:
+    branches: ['alpha/qa-guard-alignment-20261029']
+  pull_request:
+    branches: ['beta/quest-ui-clean-review']
+permissions:
+  contents: read
+jobs:
+  qa-guard-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Focused deployment guard regressions
+        run: node --test tests/deployment-env.test.mjs tests/qa-preview-env-metadata.test.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
