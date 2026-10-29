@@ -450,3 +450,59 @@ test('completed archived retry removes stale recovery row only after confirmed j
   assert.equal(storage.getItem(key), null);
   assert.equal(recoverable().length, 0, 'Resolved archived recovery row disappears without manual refresh');
 });
+
+
+test('late cross-tab progress responses cannot erase a newer pending journal', async () => {
+  const { parsePendingProgress } = await loadParser();
+  const handlers = await loadProgressHandlers();
+  const key = 'life-progress-pending:q1';
+  const first = { id: 'original-request', delta: 2 };
+  const newer = { id: 'newer-request', delta: -2 };
+  const settle = () => new Promise(resolve => setImmediate(resolve));
+
+  for (const handlerName of ['submit', 'retryPending']) {
+    const values = new Map();
+    if (handlerName === 'retryPending') values.set(key, JSON.stringify(first));
+    const storage = {
+      getItem: name => values.get(name) ?? null,
+      setItem: (name, value) => values.set(name, value),
+      removeItem: name => values.delete(name),
+    };
+    let resolveResponse;
+    const deferred = new Promise(resolve => { resolveResponse = resolve; });
+    let resolvedNotifications = 0;
+    const calls = [];
+    const state = {
+      disabled: false, saving: false, storageError: false, retrying: handlerName === 'retryPending',
+      amount: 2, target: 10, instance: { id: 'q1', status: 'available' },
+      storageKey: key, parsePendingProgress, localStorage: storage,
+      crypto: { randomUUID: () => first.id },
+      onLog: async (instanceId, requestId, delta) => {
+        calls.push({ instanceId, requestId, delta });
+        return deferred;
+      },
+      onJournalResolved: () => { resolvedNotifications++; },
+      setRetrying: value => { state.retrying = value; },
+      setSaving: value => { state.saving = value; },
+      setStorageError: value => { state.storageError = value; },
+      setSaveState: value => { state.saveState = value; },
+      setCustom: () => {},
+    };
+    const handler = vm.runInNewContext(handlers.get(handlerName), state);
+    if (handlerName === 'submit') handler(2);
+    else handler();
+    assert.deepEqual(calls, [{ instanceId: 'q1', requestId: first.id, delta: first.delta }]);
+    assert.equal(state.saving, true);
+    // A second tab has already resolved A and journaled B while A's response is in flight.
+    storage.setItem(key, JSON.stringify(newer));
+    resolveResponse('saved');
+    await settle();
+    assert.deepEqual(parsePendingProgress(storage.getItem(key)), newer,
+      handlerName + ': stale response must not delete the newer operation');
+    assert.equal(state.retrying, true, handlerName + ': new operation remains recoverable');
+    assert.equal(state.saveState, 'failed', handlerName + ': do not falsely report the old save as current');
+    assert.equal(resolvedNotifications, 0, handlerName + ': parent cannot dismiss newer recovery');
+    assert.equal(state.storageError, false);
+    assert.equal(state.saving, false);
+  }
+});
