@@ -8,9 +8,9 @@ import {readFileSync} from 'node:fs';
 
 function extractLoad() {
  const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
- const marker='const load=useCallback(async()=>{',start=home.indexOf(marker),end=home.indexOf('},[]);',start);
+ const marker='const load=useCallback(async(expectedProgressInstanceId?:string)=>{',start=home.indexOf(marker),end=home.indexOf('},[]);',start);
  assert.ok(start>=0&&end>start,'Home load callback boundaries changed');
- const code=('async()=>{'+home.slice(start+marker.length,end)+'}')
+ const code=('async(expectedProgressInstanceId)=>{'+home.slice(start+marker.length,end)+'}')
    .replace('let pendingIds:string[]=[]','let pendingIds=[]')
    .replace(/\[\] as \w+\[\]/g,'[]').replace('new Map<string,Instance>()','new Map()');
  return new Function('supabase','setUser','setReady','setQuests','setRecoveryQuests',
@@ -47,4 +47,16 @@ test('successful reload commits all three refreshed values',async()=>{
  assert.deepEqual(state.quests.map(q=>q.id),['new']);
  assert.deepEqual(state.instances.map(i=>i.id),['new-instance']);
  assert.equal(state.xp,9);
+});
+
+
+test('owner-scoped refresh missing the just-saved instance preserves its pending retry',async()=>{
+ const {load,state}=setup(null);
+ assert.equal(await load('missing-instance'),false);
+ assert.deepEqual(state.instances.map(i=>i.id),['new-instance'],
+  'The refreshed snapshot still renders, but does not confirm an omitted save');
+});
+test('owner-scoped refresh containing the saved instance can confirm persistence',async()=>{
+ const {load}=setup(null);
+ assert.equal(await load('new-instance'),true);
 });

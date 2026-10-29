@@ -64,10 +64,12 @@ test('authenticated reload restores persisted progress from owner-scoped quest r
     'Reload must fetch current_amount from the signed-in user\'s persisted quest instances');
   assert.match(home, /setInstances\(\[\.\.\.rows\.values\(\)\]\)/,
     'The refreshed database rows must become the displayed quest instance state');
-  assert.match(home, /s\.rpc\('log_quest_progress'/,
+  assert.match(home, /supabase\(\)\.rpc\('log_quest_progress'/,
     'Progress writes must use the server-authoritative progress RPC');
-  assert.match(home, /if\(!\(await load\(\)\)\)\{[\s\S]*?return 'retry';[\s\S]*?\}/,
+  assert.match(home, /if\(!\(await load\(id\)\)\)\{[\s\S]*?return 'retry';[\s\S]*?\}/,
     'A failed refresh must preserve the original retry journal');
+  assert.match(home, /return !expectedProgressInstanceId\|\|rows\.has\(expectedProgressInstanceId\)/,
+    'Refresh must include the just-saved instance before clearing its retry journal');
   assert.match(home, /if\(accountRef\.current!==operationAccount\|\|loadEpoch\.current!==operationEpoch\+1\)return 'retry'/,
     'A successful refresh must still belong to the original account and operation epoch');
 });

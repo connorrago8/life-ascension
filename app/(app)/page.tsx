@@ -20,7 +20,7 @@ export default function Home(){
  useEffect(()=>{
   if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
  },[instances]);
- const load=useCallback(async()=>{const epoch=++loadEpoch.current;
+ const load=useCallback(async(expectedProgressInstanceId?:string)=>{const epoch=++loadEpoch.current;
   if(process.env.NODE_ENV==='development'&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='1'){
     setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setRecoveryQuests([]);setInstances([]);setXp(0);setMessage('');return false;
   }
@@ -50,7 +50,10 @@ if(epoch!==loadEpoch.current)return false;
 if(missingRecoveryError){setMessage(missingRecoveryError.message);return false}
 setQuests(all);setRecoveryQuests(missingRecoveryQuests||[]);
 const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(goals||[]),...(openOnce||[]),...(recoveries||[])])rows.set(row.id,row);
-setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(coerceXp(ledger));return true},[]);
+setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(coerceXp(ledger));
+// A successful page reload is not proof of this save if its instance was omitted.
+// Keep the original idempotent request until an owner-scoped refreshed row is visible.
+return !expectedProgressInstanceId||rows.has(expectedProgressInstanceId)},[]);
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const next=window.location.pathname+window.location.search+window.location.hash;
@@ -120,7 +123,7 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
     setMessage('Progress save response not verified. Retry the same operation.');
     return 'retry';
    }
-   if(!(await load())){
+   if(!(await load(id))){
     // Preserve the original idempotent request until refreshed server state is verified.
     if(accountRef.current===operationAccount)setMessage('Progress confirmed by server, but refresh was not verified. Retry the same operation.');
     return 'retry';
