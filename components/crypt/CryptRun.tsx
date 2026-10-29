@@ -158,7 +158,7 @@ export function CryptRun() {
             <aside className="crypt-journal" aria-label="Wayfarer field journal">
               <h2>Field journal</h2>
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
-              <p><strong>Inscription:</strong> {run.eventCleared ? run.hint ?? run.outcomeNote ?? (run.eventChoiceId === 'warning' ? 'A warning about the sealed door.' : 'Ancient restorative words.') : 'Its meaning remains hidden.'}</p>
+              <p><strong>Inscription:</strong> {run.eventCleared ? run.hint ?? (run.eventChoiceId === 'bargain' ? 'Ember bargain accepted: 2 HP exchanged for +1 run-only damage.' : run.eventChoiceId === 'mend' ? 'Mending words restored health.' : 'A warning about the sealed door.') : 'Its meaning remains hidden.'}</p>
               <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
               <p><strong>Guardian:</strong> {run.guardianCleared ? 'Crypt Sentinel defeated; the sealed door is reachable.' : run.treasureCleared ? 'An armored watcher blocks the final passage.' : 'Unexplored.'}</p>
               <p><strong>{SIGIL.name}:</strong> {run.sigilCollected ? SIGIL.description : 'Not yet recovered.'}</p>
@@ -219,7 +219,8 @@ export function CryptRun() {
           <p className="lock-kicker">{event.label}</p>
           <h2>{event.title}</h2>
           <p>{event.prose}</p>
-          {run.outcomeNote ? (
+          <p className="crypt-status" role="status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
+          {run.eventCleared ? (
             <>
               <p className="ok">{run.outcomeNote}</p>
               <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' }, run.phase)}>
@@ -227,7 +228,9 @@ export function CryptRun() {
               </button>
             </>
           ) : (
-            <div className="choice-list">
+            <>
+              {run.outcomeNote && <p role="alert" className="muted">{run.outcomeNote}</p>}
+              <div className="choice-list">
               {event.choices.map((choice) => (
                 <button
                   key={choice.id}
@@ -236,9 +239,11 @@ export function CryptRun() {
                   onClick={() => dispatch({ type: 'choose', choiceId: choice.id }, run.phase)}
                 >
                   {choice.label}
+                  {choice.hpCost ? ` (−${choice.hpCost} HP, +${choice.attackBonus ?? 0} damage)` : null}
                 </button>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </article>
       )}
