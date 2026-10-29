@@ -191,7 +191,7 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     if (state.phase !== 'event' || state.eventCleared) return state;
     const choice = eventNode().choices.find((item) => item.id === command.choiceId);
     if (!choice) return state;
-    // The optional ember bargain trades up to two HP for run-only damage.
+    // The optional ember bargain costs exactly two HP for run-only damage.
     // Never reduce the Wayfarer below one HP from a narrative choice.
     const canPay = !choice.hpCost || state.hp > choice.hpCost;
     if (!canPay) {
