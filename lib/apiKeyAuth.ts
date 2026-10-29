@@ -8,6 +8,7 @@ import {
   secureCompareHex,
 } from './apiKey';
 import { createServiceRoleClient } from './supabaseAdmin';
+import { readServerSupabaseConfig } from './supabaseRuntimeConfig';
 
 const REALM = 'Bearer realm="life-ascension"';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -115,9 +116,9 @@ async function authenticateApiKey(token: string): Promise<AuthResult> {
 }
 
 async function authenticateUserJwt(token: string): Promise<AuthResult> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return unavailable('Server not configured');
+  const config = await readServerSupabaseConfig();
+  if (!config) return unavailable('Server not configured');
+  const { url, key: anonKey } = config;
 
   try {
     const db = createClient(url, anonKey, {

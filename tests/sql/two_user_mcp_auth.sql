@@ -280,3 +280,115 @@ begin
   raise notice 'PASS two-user mcp auth smoke';
 end
 $$;
+
+
+-- Direct authenticated quest RLS regression (two real owners, non-vacuous).
+-- Migration 0003 deliberately REVOKES direct quest INSERT; legitimate writes
+-- go through create_scheduled_quest(). Assert owner reads, foreign invisibility,
+-- successful owner RPC writes, denied foreign RPC mutations and denied direct DML.
+-- Disposable CI database only; no hosted users or data.
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', false);
+do $$
+declare
+  alice uuid := '00000000-0000-0000-0000-0000000000e1';
+  bob uuid := '00000000-0000-0000-0000-0000000000e2';
+  own_quest uuid := (select quest_id from pair_ids where label = 'alice_goal');
+  foreign_quest uuid := (select quest_id from pair_ids where label = 'bob_goal');
+  own_instance uuid := (select instance_id from pair_ids where label = 'alice_goal');
+  foreign_instance uuid := (select instance_id from pair_ids where label = 'bob_goal');
+  created uuid;
+begin
+  if (select count(*) from public.quests where id = own_quest) <> 1
+     or (select count(*) from public.quests where id = foreign_quest) <> 0
+     or (select count(*) from public.quest_instances where id = own_instance) <> 1
+     or (select count(*) from public.quest_instances where id = foreign_instance) <> 0
+     or (select count(*) from public.xp_ledger where owner_id = alice) <> 1
+     or (select count(*) from public.xp_ledger where owner_id = bob) <> 0 then
+    raise exception 'Alice direct RLS reads are not owner-isolated/non-vacuous';
+  end if;
+  created := public.create_scheduled_quest('RLS Alice own RPC', 'home', 'once',
+    (now() at time zone 'America/Chicago')::date, 'goal');
+  if not exists (select 1 from public.quests where id = created and owner_id = alice)
+     or not exists (select 1 from public.quest_instances where quest_id = created and owner_id = alice) then
+    raise exception 'Alice authorized quest creation did not persist or is unreadable';
+  end if;
+  begin
+    perform public.rename_quest(foreign_quest, 'RLS forbidden rename');
+    raise exception 'Alice renamed Bob quest';
+  exception when others then
+    if sqlerrm <> 'Active quest not found' then raise; end if;
+  end;
+  begin
+    insert into public.quests (owner_id, title, domain, cadence)
+    values (alice, 'RLS forbidden direct Alice', 'home', 'once');
+    raise exception 'Alice direct INSERT bypassed validated creation RPC';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.quests (owner_id, title, domain, cadence)
+    values (bob, 'RLS forbidden Alice to Bob', 'home', 'once');
+    raise exception 'Alice inserted Bob-owned quest';
+  exception when insufficient_privilege then null;
+  end;
+end
+$$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e2', false);
+do $$
+declare
+  alice uuid := '00000000-0000-0000-0000-0000000000e1';
+  bob uuid := '00000000-0000-0000-0000-0000000000e2';
+  own_quest uuid := (select quest_id from pair_ids where label = 'bob_goal');
+  foreign_quest uuid := (select quest_id from pair_ids where label = 'alice_goal');
+  own_instance uuid := (select instance_id from pair_ids where label = 'bob_goal');
+  foreign_instance uuid := (select instance_id from pair_ids where label = 'alice_goal');
+  created uuid;
+begin
+  if (select count(*) from public.quests where id = own_quest) <> 1
+     or (select count(*) from public.quests where id = foreign_quest) <> 0
+     or (select count(*) from public.quest_instances where id = own_instance) <> 1
+     or (select count(*) from public.quest_instances where id = foreign_instance) <> 0
+     or (select count(*) from public.xp_ledger where owner_id = bob) <> 1
+     or (select count(*) from public.xp_ledger where owner_id = alice) <> 0 then
+    raise exception 'Bob direct RLS reads are not owner-isolated/non-vacuous';
+  end if;
+  created := public.create_scheduled_quest('RLS Bob own RPC', 'home', 'once',
+    (now() at time zone 'America/Chicago')::date, 'goal');
+  if not exists (select 1 from public.quests where id = created and owner_id = bob)
+     or not exists (select 1 from public.quest_instances where quest_id = created and owner_id = bob) then
+    raise exception 'Bob authorized quest creation did not persist or is unreadable';
+  end if;
+  begin
+    perform public.rename_quest(foreign_quest, 'RLS forbidden rename');
+    raise exception 'Bob renamed Alice quest';
+  exception when others then
+    if sqlerrm <> 'Active quest not found' then raise; end if;
+  end;
+  begin
+    insert into public.quests (owner_id, title, domain, cadence)
+    values (bob, 'RLS forbidden direct Bob', 'home', 'once');
+    raise exception 'Bob direct INSERT bypassed validated creation RPC';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.quests (owner_id, title, domain, cadence)
+    values (alice, 'RLS forbidden Bob to Alice', 'home', 'once');
+    raise exception 'Bob inserted Alice-owned quest';
+  exception when insufficient_privilege then null;
+  end;
+end
+$$;
+
+reset role;
+do $$
+begin
+  if (select count(*) from public.quests where title in ('RLS Alice own RPC', 'RLS Bob own RPC')) <> 2
+     or exists (select 1 from public.quests where title like 'RLS forbidden%')
+     or (select count(*) from public.xp_ledger where owner_id in
+       ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e2')) <> 2 then
+    raise exception 'RLS two-user regression leaked rows or changed XP';
+  end if;
+  raise notice 'PASS two-user direct RLS reads, owner RPC writes, foreign RPC denial and direct DML denial';
+end
+$$;

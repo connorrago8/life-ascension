@@ -21,11 +21,31 @@ jobs:
         run: npx tsc --noEmit
       - name: Unit tests
         run: npm test
-      - name: Production build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+      - name: Prepare synthetic QA build fixture (no hosted credentials)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const ref = 'njqwwimzrsunheehnnnt';
+          const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const key = [b64({ alg: 'HS256', typ: 'JWT' }),
+            b64({ iss: 'supabase', ref, role: 'anon' }),
+            'synthetic-invalid-signature'].join('.');
+          const pin = createHash('sha256').update(key).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, [
+            'VERCEL_ENV=preview',
+            'VERCEL_GIT_COMMIT_REF=audit/qa-isolation-and-reliability-20261027',
+            `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
+            `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
+            '',
+          ].join('\n'));
+          NODE
+      - name: Production build (isolated synthetic Preview configuration)
         run: npm run build
+      - name: Verify emitted QA browser routing (synthetic, no hosted credentials)
+        run: node scripts/verify-qa-browser-bundle.mjs
 
   sql-smoke:
     name: SQL smoke tests (isolated Postgres)
