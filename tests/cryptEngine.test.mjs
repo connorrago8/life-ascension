@@ -210,7 +210,8 @@ test('the preview run has a rat, inscription, charm, and gated sentinel encounte
   assert.match(INTRO.lines.join(' '), /Wayfarer/);
   assert.equal(INTRO.speaker, 'Mira');
   assert.equal(INTRO.place, 'Brackenlight');
-  assert.equal(eventNode().choices.length, 2);
+  assert.equal(eventNode().choices.length, 3);
+  assert.deepEqual(eventNode().choices.map((choice) => choice.id), ['mend', 'bargain', 'warning']);
   assert.equal(eventNode().choices[0].heal, 2);
   assert.equal(treasureNode().title, 'Ember Charm');
   assert.equal(treasureNode().attackBonus, 2);
