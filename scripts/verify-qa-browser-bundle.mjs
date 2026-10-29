@@ -48,7 +48,7 @@ export async function inspectQaBrowserBundle(root, { qaProject = QA_PROJECT } = 
       digest.update(relative(root, path)).update('\0').update(source).update('\0');
       const hosts = [...source.matchAll(SUPABASE_HOST)];
       if (hosts.some(match => match[1].toLowerCase() === qaProject)) {
-        qaMatches++
+        qaMatches++;
       }
       foreignHosts += hosts.filter(match => match[1].toLowerCase() !== qaProject).length;
       if (source.toLowerCase().includes(PRODUCTION_PROJECT)) productionReferences++;
