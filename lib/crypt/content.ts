@@ -115,6 +115,8 @@ export type EventChoice = {
   resultFull: string;
   heal?: number;
   hint?: boolean;
+  hpCost?: number;
+  attackBonus?: number;
 };
 
 export type FightNode = {
@@ -172,6 +174,14 @@ export const NODES: readonly CryptNode[] = [
         result: 'Warmth closes a scrape. You recover {heal} HP for this preview only.',
         resultFull: 'The warmth finds you already whole. The words dim, and your HP stays full.',
         heal: 2,
+      },
+      {
+        id: 'bargain',
+        label: 'Offer blood to the ember rune',
+        result: 'The rune takes {cost} HP and strengthens your strikes by +1 damage for this run.',
+        resultFull: 'The rune takes {cost} HP and strengthens your strikes by +1 damage for this run.',
+        hpCost: 2,
+        attackBonus: 1,
       },
       {
         id: 'warning',
