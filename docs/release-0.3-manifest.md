@@ -5,7 +5,7 @@
 **Last checked:** 2026-10-29  
 **Repository:** `connorrago8/life-ascension`  
 **Canonical draft PR:** [#32](https://github.com/connorrago8/life-ascension/pull/32)  
-**Current candidate at manifest creation:** `545da39436e72d83c575d6ee77ddd3ce568ab4aa` on `beta/quest-ui-clean-review`  
+**Candidate before current CI run:** `01a4093d5f3d88eb67f507fcbfba874b75c168eb` on `beta/quest-ui-clean-review` (superseded by the QA checklist commit; see current PR head before treating as release candidate)  
 **Release decision:** **NOT RELEASED — keep PR draft.**
 
 ## Evidence ledger
@@ -21,7 +21,7 @@
 | Hosted QA schema/migration compatibility | Blocked / incomplete | Alpha reports receipt-v2 and earned-armor migrations absent from QA ledger; earned-equipment tables absent | Review migration order/compatibility using disposable SQL; no hosted migration yet |
 | Recoverable QA backup + isolated restore | Unverified | Alpha reports no successful backup/restore evidence | Establish documented backup and restore proof before hosted migrations |
 | Exact-candidate QA Preview deployment | Not deployed | Alpha reports no Vercel deployment for candidate `545da394`; latest READY Preview cited is older `9c0ac7aa` | After safety gates and separate authorization, deploy QA Preview only |
-| Authenticated end-to-end player journey | Not verified | No accepted end-to-end evidence recorded | Verify quest completion → exactly-once XP → gear ownership/equip → Crypt → refresh/sign-in persistence |
+| Authenticated end-to-end player journey | Not verified | Acceptance script committed at `docs/qa-acceptance-0.3.md`; no executed acceptance evidence | Execute quest completion → exactly-once XP → gear ownership/equip → Crypt → refresh/sign-in persistence on one safe deployed SHA |
 | Physical iPhone Safari / accessibility | Not verified | No accepted device evidence recorded | QA + Founder test exact deployed candidate |
 | Production release | Not authorized / not released | PR #32 remains draft | Requires explicit Founder authorization after release gates |
 
@@ -44,7 +44,7 @@
 6. Dungeon replay must not grant permanent real-life quest XP.
 7. Player-facing releases should bundle substantial coherent gameplay; small internal commits remain acceptable.
 
-## Next release-gate actions
+## Latest coordination artifacts\n\n- QA acceptance checklist: [`docs/qa-acceptance-0.3.md`](./qa-acceptance-0.3.md). It is a test plan, not evidence that acceptance passed.\n- Current manifest update commit will supersede earlier candidate SHA; use live PR #32 head and its exact-head CI run as the authority.\n\n## Next release-gate actions
 
 1. Alpha: prove effective QA-only runtime routing; document recoverable backup and isolated restore; validate migration compatibility in disposable SQL.
 2. Architect/Work: maintain one candidate SHA and exact-head CI; prepare QA Preview only after the safety gate and explicit deployment authorization.
