@@ -46,7 +46,7 @@ test('protected QA post-build gate inspects real emitted JavaScript and rejects 
 });
 
 test('non-protected Preview cannot pass the post-build gate with a QA-only bundle', async () => {
-  const env = { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' };
+  const env = { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'untrusted/other-preview' };
   await assert.rejects(verifyQaBrowserBundleAfterBuild({ env, root: 'unused' }),
     /not the protected QA branch/);
 });
@@ -66,7 +66,8 @@ function syntheticQaEnv(branch = protectedBranch) {
 
 test('QA prebuild accepts only the protected branch with a pinned QA public key', () => {
   assert.equal(validateDeploymentEnv(syntheticQaEnv()), true);
-  assert.throws(() => validateDeploymentEnv(syntheticQaEnv('beta/quest-ui-clean-review')),
+  assert.equal(validateDeploymentEnv(syntheticQaEnv('beta/quest-ui-clean-review')), true);
+  assert.throws(() => validateDeploymentEnv(syntheticQaEnv('untrusted/other-preview')),
     /not the protected QA branch/);
 });
 
