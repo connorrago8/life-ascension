@@ -221,3 +221,14 @@ test('revisiting the sealed door resets the previous ending choice', () => {
   assert.match(view, /endingChoice === null \? \(/, 'both ending choices return on revisit');
   assert.equal(Object.hasOwn(run, 'xp'), false);
 });
+
+test('mending the inscription does not reveal the optional compass warning', () => {
+  const run = reachGuardian();
+  assert.equal(run.eventChoiceId, 'mend');
+  assert.equal(run.eventCleared, true);
+  assert.equal(run.hint, null, 'mending must not grant the warning-only clue');
+  assert.equal(run.outcomeNote, null, 'continuing from the inscription clears its transient result');
+  const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
+  assert.match(view, /<strong>Compass:<\/strong> \{run\.hint \?\? 'Its broken needle offers no clear direction yet\.'\}/);
+  assert.doesNotMatch(view, /<strong>Compass:<\/strong> \{run\.treasureCleared/);
+});
