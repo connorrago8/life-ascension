@@ -45,44 +45,7 @@ jobs:
       - name: Production build (isolated synthetic Preview configuration)
         run: npm run build
       - name: Verify emitted QA browser routing (synthetic, no hosted credentials)
-        shell: bash
-        run: |
-          node --input-type=module <<'NODE'
-          import { readdir, readFile } from 'node:fs/promises';
-          import { join } from 'node:path';
-          import { createHash } from 'node:crypto';
-          const qaRef = 'njqwwimzrsunheehnnnt';
-          const productionRef = 'ugcvhmrriazbbymjxvch';
-          const root = '.next/static'; // Only emitted browser assets, never server bundles.
-          let inspected = 0;
-          let qaMatches = 0;
-          let productionMatches = 0;
-          const digest = createHash('sha256');
-          async function scan(directory) {
-            for (const entry of await readdir(directory, { withFileTypes: true })) {
-              const path = join(directory, entry.name);
-              if (entry.isDirectory()) { await scan(path); continue; }
-              if (!entry.isFile() || !/\.(js|mjs)$/.test(entry.name)) continue;
-              const source = await readFile(path, 'utf8');
-              inspected++;
-              if (source.includes(productionRef)) productionMatches++;
-              if (source.includes(qaRef)) {
-                qaMatches++;
-                // Non-secret source fingerprint; detects drift between build artifacts.
-                digest.update(path).update('\0').update(source).update('\0');
-              }
-            }
-          }
-          await scan(root);
-          if (productionMatches) throw new Error(
-            'QA browser artifact contains Production Supabase project references');
-          if (!qaMatches) throw new Error(
-            'QA browser artifact contains no expected QA Supabase project reference');
-          console.log('QA browser bundle routing PASS:', {
-            inspected, qaMatches, productionMatches,
-            sourceFingerprint: digest.digest('hex').slice(0, 16),
-          });
-          NODE
+        run: node scripts/verify-qa-browser-bundle.mjs
 
   sql-smoke:
     name: SQL smoke tests (isolated Postgres)
