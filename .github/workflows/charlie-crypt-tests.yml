@@ -16,4 +16,4 @@ jobs:
         with:
           node-version: '22'
       - name: Crypt regression suite
-        run: node --experimental-strip-types --test tests/cryptInscriptionBargain.test.mjs tests/cryptInscriptionJournal.test.mjs
+        run: node --experimental-strip-types --test tests/crypt*.test.mjs
