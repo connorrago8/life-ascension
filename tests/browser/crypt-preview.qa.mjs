@@ -206,10 +206,24 @@ try {
   await introExitPage.goto(baseURL + '/play/crypt');
   await introExitPage.locator('[data-phase="intro"]').waitFor();
   const introExit = introExitPage.locator('.crypt-top > a.icon-btn');
+  const introRequests = [];
+  introExitPage.on('request', request => {
+    const reason = cryptPreviewRequestViolation(
+      { method: request.method(), url: request.url() }, baseURL);
+    if (reason) introRequests.push(reason);
+  });
   await introExit.waitFor({ state: 'visible' });
   assert.equal(await introExit.getAttribute('href'), '/play');
   assert.equal(await introExit.getAttribute('aria-label'),
     'Leave Crypt; unsaved dungeon progress will be lost');
+  assert.equal(await introExit.getAttribute('rel'), null,
+    'Intro exit should not require a special link relation');
+  await introExit.focus();
+  assert.equal(await introExit.evaluate(el => document.activeElement === el), true,
+    'Intro exit must be keyboard focusable');
+  await introExitPage.waitForTimeout(250);
+  assert.deepEqual(introRequests, [],
+    'Idle/focused intro exit must not prefetch or request disallowed resources');
   await introExit.click();
   await introExitPage.waitForURL(url => url.pathname === '/play');
   await introExitPage.close();
