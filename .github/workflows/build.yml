@@ -1,7 +1,7 @@
 name: Verify application build
 on:
   push:
-    branches: [main, 'beta/quest-ui-clean-review']
+    branches: [main, 'beta/quest-ui-clean-review', 'alpha/preview-qa-guard-3087ca33']
   pull_request:
     branches: [main, 'beta/quest-ui-clean-review']
 permissions:
@@ -155,7 +155,7 @@ jobs:
 
   quest-browser-qa:
     name: Quest progress browser QA (unprivileged, no backend)
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/beta/quest-ui-clean-review') || (github.event_name == 'pull_request' && github.base_ref == 'beta/quest-ui-clean-review')
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/beta/quest-ui-clean-review' || github.ref == 'refs/heads/alpha/preview-qa-guard-3087ca33')) || (github.event_name == 'pull_request' && github.base_ref == 'beta/quest-ui-clean-review')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
