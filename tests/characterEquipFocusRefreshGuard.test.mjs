@@ -21,14 +21,14 @@ test('mutation guard is acquired before equip RPC and released in finally', () =
  const released = equip.indexOf('equipmentMutationInFlight.current = false;', finallyBlock);
  assert.ok(acquired >= 0 && acquired < rpc, 'guard must be acquired before RPC');
  assert.ok(finallyBlock > rpc && released > finallyBlock, 'guard must clear even on failure');
- assert.match(equip, /equipmentBusy \\|\\| equipmentMutationInFlight\\.current\\) return/);
- assert.match(equip, /setState\\(\\{ status: 'loading' \\}\\);\\s*await load\\(\\)/);
+ assert.match(equip, /equipmentBusy \|\| equipmentMutationInFlight\.current\) return/);
+ assert.match(equip, /setState\(\{ status: 'loading' \}\);\s*await load\(\)/);
 });
 
 test('focus refresh is suppressed until the mutation completes', () => {
- const refresh = source.match(/const refreshOnFocus = \\(\\) => \\{([^\\n]+)\\};/);
+ const refresh = source.match(/const refreshOnFocus = \(\) => \{([^\n]+)\};/);
  assert.ok(refresh, 'focus callback must exist');
- assert.match(refresh[1], /document\\.visibilityState === 'visible' && !equipmentMutationInFlight\\.current/);
- assert.match(source, /window\\.addEventListener\\('focus', refreshOnFocus\\)/);
- assert.match(source, /document\\.addEventListener\\('visibilitychange', refreshOnFocus\\)/);
+ assert.match(refresh[1], /document\.visibilityState === 'visible' && !equipmentMutationInFlight\.current/);
+ assert.match(source, /window\.addEventListener\('focus', refreshOnFocus\)/);
+ assert.match(source, /document\.addEventListener\('visibilitychange', refreshOnFocus\)/);
 });
