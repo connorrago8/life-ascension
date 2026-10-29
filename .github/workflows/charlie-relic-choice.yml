@@ -21,3 +21,54 @@ jobs:
         run: npx tsc --noEmit
       - name: Full application unit regression suite
         run: npm test
+      - name: Prepare synthetic QA configuration (no hosted credentials)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const ref = 'njqwwimzrsunheehnnnt';
+          const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const key = [b64({ alg: 'HS256', typ: 'JWT' }),
+            b64({ iss: 'supabase', ref, role: 'anon' }),
+            'synthetic-invalid-signature'].join('.');
+          const pin = createHash('sha256').update(key).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, [
+            'VERCEL_ENV=preview',
+            'VERCEL_GIT_COMMIT_REF=audit/qa-isolation-and-reliability-20261027',
+            `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
+            `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
+            '',
+          ].join('\\n'));
+          NODE
+      - name: Build using synthetic configuration
+        run: npm run build
+      - name: Install isolated Chromium runner
+        run: |
+          npm install --no-save playwright --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run full Crypt journey in unprivileged Chromium
+        env:
+          QA_BASE_URL: http://127.0.0.1:3127
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=3127 npm run start > /tmp/crypt-preview.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 40); do
+            if curl --silent --fail http://127.0.0.1:3127/play/crypt >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --silent --show-error --fail http://127.0.0.1:3127/play/crypt >/dev/null
+          node tests/browser/crypt-preview.qa.mjs
+      - name: Upload Crypt browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypt-preview-browser-evidence
+          path: artifacts/crypt-preview/
+          if-no-files-found: ignore
