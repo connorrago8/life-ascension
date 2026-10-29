@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { EVENT_ID, GUARDIAN_ID, PLAYER, TREASURE_ID } from '../lib/crypt/content.ts';
+import { EVENT_ID, GUARDIAN_ID, PLAYER, TREASURE_ID, eventNode, charmNote } from '../lib/crypt/content.ts';
 import { createRun, nodeAccess, reduceRun } from '../lib/crypt/run.ts';
 
 const send = (state, type, extra = {}) => reduceRun(state, { type, ...extra });
@@ -124,4 +124,11 @@ test('bargain bonus reaches the actual Sentinel combatant and is not awarded twi
   assert.equal(state.fightAttempt, firstAttempt + 1);
   assert.equal(state.treasureCleared, true);
   assert.equal(state.eventCleared, true);
+});
+
+test('inscription copy advertises three choices and final bonus credits both sources', () => {
+  assert.equal(eventNode().choices.length, 3);
+  assert.match(eventNode().prose, /Three lines/);
+  assert.match(charmNote(3), /run-only damage bonus is \+3/);
+  assert.doesNotMatch(charmNote(3), /Ember Charm adds \+3/);
 });
