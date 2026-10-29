@@ -27,11 +27,11 @@ const browser = await chromium.launch({
 });
 
 async function winBattle(page) {
-  // Heavy does at least 8 damage, and Attack finishes either existing enemy.
+  // Heavy Strike opens the fight; repeat Attack until the actual victory state.
   await page.getByRole('button', { name: /^Heavy Strike/ }).click();
-  await page.waitForFunction(() => /Victory|Turn 2/.test(document.querySelector('.turn-line')?.textContent ?? ''));
-  if (await page.getByText('Victory', { exact: true }).count() === 0) {
+  for (let turn = 0; turn < 6 && await page.getByText('Victory', { exact: true }).count() === 0; turn++) {
     await page.getByRole('button', { name: /^Attack/ }).click();
+    await page.waitForFunction(() => /Victory|Turn \d+/.test(document.querySelector('.turn-line')?.textContent ?? ''));
   }
   await page.getByText('Victory', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
@@ -49,7 +49,10 @@ try {
       let origin = 'invalid-url';
       try { origin = new URL(request.url()).origin; } catch {}
       // Do not record query strings, tokens, or full request URLs.
-      unexpectedRequests.push(`${request.method()} ${origin} (${reason})`);
+      let safePath = '/';
+      try { safePath = new URL(request.url()).pathname; } catch {}
+      // Path only: never include query strings, tokens, or full request URLs.
+      unexpectedRequests.push(`${request.method()} ${origin}${safePath} (${reason})`);
     }
   });
 
@@ -81,7 +84,7 @@ try {
 
   await page.getByRole('button', { name: /^Treasure: Ember Charm/ }).click();
   await page.locator('[data-phase="treasure"]').waitFor();
-  await page.getByRole('button', { name: 'Take the charm' }).click();
+  await page.getByRole('button', { name: /^Take the Ember Charm/ }).click();
   await page.locator('[data-phase="map"]').waitFor();
   await page.getByText(/Run damage \+2/).first().waitFor();
   await page.screenshot({ path: join(output, 'crypt-map-390.png'), fullPage: true });
@@ -133,6 +136,71 @@ try {
   await restart.scrollIntoViewIfNeeded();
   await restart.click();
   await page.locator('[data-phase="intro"]').waitFor();
+  // Independently exercise the Leave branch through Sentinel victory and the unsaved ending.
+  const leavePage = await context.newPage();
+  const leaveRequests = [];
+  leavePage.on('request', request => {
+    const reason = cryptPreviewRequestViolation(
+      { method: request.method(), url: request.url() }, baseURL);
+    if (reason) {
+      let origin = 'invalid-url';
+      try { origin = new URL(request.url()).origin; } catch {}
+      leaveRequests.push(`${request.method()} ${origin} (${reason})`);
+    }
+  });
+  await leavePage.goto(baseURL + '/play/crypt');
+  await leavePage.locator('[data-phase="intro"]').waitFor();
+  await leavePage.getByRole('button', { name: 'Walk to the gate' }).click();
+  await leavePage.getByRole('button', { name: 'Enter the crypt' }).click();
+  await leavePage.locator('[data-phase="map"]').waitFor();
+  await leavePage.getByRole('button', { name: /^Fight: Crypt Rat\./ }).click();
+  await leavePage.locator('[data-phase="fight"]').waitFor();
+  await winBattle(leavePage);
+  // winBattle already advanced the victory screen back to the map.
+  await leavePage.getByRole('button', { name: /^Event: Ancient inscription/ }).click();
+  await leavePage.getByRole('button', { name: 'Read the warning' }).click();
+  await leavePage.getByRole('button', { name: 'Continue', exact: true }).click();
+  await leavePage.getByRole('button', { name: /^Treasure: Ember Charm/ }).click();
+  await leavePage.locator('[data-phase="treasure"]').waitFor();
+  await leavePage.getByRole('button', { name: /^Leave the Ember Charm/ }).click();
+  await leavePage.locator('[data-phase="map"]').waitFor();
+  await leavePage.getByText(/Sentinel will be harder/i).waitFor();
+  assert.equal(await leavePage.getByText(/Run damage \+2/).count(), 0,
+    'Leaving the Ember Charm must not grant the run-only bonus');
+  await leavePage.getByRole('button', { name: /^Guardian: Crypt Sentinel/ }).click();
+  await leavePage.locator('[data-phase="fight"]').waitFor();
+  const wayfarer = leavePage.locator('.fighter').filter({ has: leavePage.getByRole('heading', { name: 'Wayfarer', exact: true }) });
+  await wayfarer.locator('.hp-readout').filter({ hasText: /^\d+\/\d+$/ }).waitFor();
+  assert.equal(await leavePage.locator('.crypt-status').filter({ hasText: /Run damage \+2/ }).count(), 0,
+    'Sentinel fight status must not show the unchosen charm bonus');
+  await winBattle(leavePage);
+  await leavePage.getByRole('button', { name: 'Approach the sealed door' }).click();
+  await leavePage.locator('[data-phase="end"]').waitFor();
+  await leavePage.getByText(/You recovered the Sentinel Sigil/).waitFor();
+  assert.deepEqual(leaveRequests, [], 'Leave branch must remain an unsaved, backend-free preview');
+  await leavePage.close();
+
+  // Explicit header exit is separate from the unsaved run's passive network policy.
+  // Navigation to /play is deliberately initiated by the player, not prefetch.
+  const exitPage = await context.newPage();
+  await exitPage.goto(baseURL + '/play/crypt');
+  await exitPage.locator('[data-phase="intro"]').waitFor();
+  await exitPage.getByRole('button', { name: 'Walk to the gate' }).click();
+  await exitPage.getByRole('button', { name: 'Enter the crypt' }).click();
+  await exitPage.locator('[data-phase="map"]').waitFor();
+  const exitLink = exitPage.getByRole('link', { name: 'Leave Crypt; unsaved dungeon progress will be lost' });
+  await exitLink.waitFor({ state: 'visible' });
+  assert.equal(await exitLink.getAttribute('href'), '/play',
+    'Explicit Leave Crypt control must return to the Play hub');
+  assert.equal(await exitLink.getAttribute('aria-label'),
+    'Leave Crypt; unsaved dungeon progress will be lost',
+    'Exit must explain unsaved dungeon progress to assistive technology');
+  await exitLink.click();
+  await exitPage.waitForURL(url => url.pathname === '/play');
+  assert.notEqual(new URL(exitPage.url()).pathname, '/play/crypt',
+    'Explicit Leave Crypt navigation must exit the dungeon');
+  await exitPage.close();
+
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
   console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no unexpected network requests.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');

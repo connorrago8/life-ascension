@@ -60,8 +60,8 @@ test('rapid combat taps still resolve sequentially from current state', () => {
   assert.equal(queue.reduce((current, update) => update(current), { phase: 'fight', seed: 17, turns: 0 }).turns, 2);
 });
 
-test('all six Continue controls carry their rendered-phase guard', () => {
-  assert.equal(screen.split("dispatch({ type: 'continue' }, run.phase)").length - 1, 6);
+test('all five remaining Continue controls carry their rendered-phase guard', () => {
+  assert.equal(screen.split("dispatch({ type: 'continue' }, run.phase)").length - 1, 5);
 });
 
 

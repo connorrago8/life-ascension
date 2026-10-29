@@ -1,10 +1,5 @@
-import { AppNav } from '../components/AppNav';
+import { AppShell } from '../components/AppShell';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="shell">
-      <AppNav />
-      <div className="shell-main">{children}</div>
-    </div>
-  );
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return <AppShell>{children}</AppShell>;
 }

@@ -23,9 +23,17 @@ test('rejects duplicated QA branch override', () => {
   const s = good(); s.result.envs.push(item('NEXT_PUBLIC_SUPABASE_URL', ['preview'], PROTECTED_QA_BRANCH));
   assert.equal(check(s).ok, false);
 });
-test('rejects privileged Preview service-role key on QA branch', () => {
-  const s = good(); s.result.envs.push(item('SUPABASE_SERVICE_ROLE_KEY', ['preview'], PROTECTED_QA_BRANCH));
-  assert.equal(check(s).ok, false);
+test('rejects every privileged credential/database variable targeting Preview, even with empty value metadata', () => {
+  const names = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
+    'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD'];
+  for (const name of names) {
+    for (const value of ['synthetic-secret', '']) {
+      const s = good();
+      s.result.envs.push(item(name, ['preview'], PROTECTED_QA_BRANCH));
+      s.result.envs.at(-1).value = value;
+      assert.equal(check(s).ok, false, `${name} targeting Preview must be rejected`);
+    }
+  }
 });
 test('rejects privileged unscoped Preview key', () => {
   const s = good(); s.result.envs.push(item('SUPABASE_SECRET_KEY', ['preview']));
@@ -39,8 +47,16 @@ test('rejects protected branch overrides targeting Production', () => {
   const s = good(); s.result.envs[0].target = ['production', 'preview'];
   assert.equal(check(s).ok, false);
 });
-test('rejects wrong branch even when QA overrides exist', () => {
-  assert.equal(verifyQaPreviewEnvMetadata(good(), 'beta/quest-ui-clean-review').ok, false);
+test('accepts candidate branch only with its own exact Preview-scoped URL, key and pin', () => {
+  const candidate = 'beta/quest-ui-clean-review';
+  const s = good();
+  for (const entry of s.result.envs) {
+    if (entry.gitBranch === PROTECTED_QA_BRANCH) entry.gitBranch = candidate;
+  }
+  assert.deepEqual(verifyQaPreviewEnvMetadata(s, candidate),
+    { ok: true, metadata_only: true, runtime_verified: false, blockers: [] });
+  assert.equal(verifyQaPreviewEnvMetadata(good(), candidate).ok, false);
+  assert.equal(verifyQaPreviewEnvMetadata(s, 'main').ok, false);
 });
 test('rejects malformed metadata', () => {
   assert.equal(check({ envs: 'not an array' }).ok, false);

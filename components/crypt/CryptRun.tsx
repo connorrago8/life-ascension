@@ -104,7 +104,7 @@ export function CryptRun() {
       <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
       <header className="crypt-top">
         {run.phase === 'intro' ? (
-          <Link href="/play" className="icon-btn" aria-label={FLOOR.back}><BackIcon /></Link>
+          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => window.location.assign('/play')}><BackIcon /></button>
         ) : (
           <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
             // Returning to the sealed door should offer both endings again.
@@ -118,7 +118,12 @@ export function CryptRun() {
           <h1>{head.title}</h1>
           {head.subtitle ? <p>{head.subtitle}</p> : null}
         </div>
-        <button type="button" className="btn ghost crypt-restart" onClick={restart}>{FLOOR.restart}</button>
+        <div className="crypt-header-actions">
+          <Link href="/play" prefetch={false} className="btn ghost crypt-leave" aria-label="Leave Crypt; unsaved dungeon progress will be lost">
+            Leave Crypt
+          </Link>
+          <button type="button" className="btn ghost crypt-restart" onClick={restart}>{FLOOR.restart}</button>
+        </div>
       </header>
 
       {run.phase === 'intro' && (
@@ -150,6 +155,9 @@ export function CryptRun() {
           <p className="floor-kicker">{FLOOR.mapLabel}</p>
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           <p className="crypt-status">Next objective: {nextCryptObjective(run)}</p>
+          {run.relicChoice && run.outcomeNote && (
+            <p className="crypt-status" role="status">{run.outcomeNote}</p>
+          )}
           <button type="button" className="btn ghost crypt-block" aria-expanded={fieldNotesOpen}
             onClick={() => setShowFieldNotes((current) => toggleScopedRunFlag(current, run.seed))}>
             {fieldNotesOpen ? 'Hide' : 'Open'} Wayfarer field journal
@@ -159,7 +167,7 @@ export function CryptRun() {
               <h2>Field journal</h2>
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
               <p><strong>Inscription:</strong> {run.eventCleared ? run.hint ?? (run.eventChoiceId === 'bargain' ? 'Ember bargain accepted: 2 HP exchanged for +1 run-only damage.' : run.eventChoiceId === 'mend' ? 'Mending words restored health.' : 'A warning about the sealed door.') : 'Its meaning remains hidden.'}</p>
-              <p><strong>Ember Charm:</strong> {run.treasureCleared ? 'Recovered. +2 attack for this preview only.' : 'Not yet discovered.'}</p>
+              <p><strong>Ember Charm:</strong> {run.relicChoice === 'take' ? `Recovered. +${treasure.attackBonus} attack for this preview only.` : run.relicChoice === 'leave' ? 'Left on the plinth; no attack bonus.' : 'Not yet discovered.'}</p>
               <p><strong>Guardian:</strong> {run.guardianCleared ? 'Crypt Sentinel defeated; the sealed door is reachable.' : run.treasureCleared ? 'An armored watcher blocks the final passage.' : 'Unexplored.'}</p>
               <p><strong>{SIGIL.name}:</strong> {run.sigilCollected ? SIGIL.description : 'Not yet recovered.'}</p>
               <p><strong>Compass:</strong> {run.hint ?? 'Its broken needle offers no clear direction yet.'}</p>
@@ -254,9 +262,14 @@ export function CryptRun() {
           <p className="lock-kicker">{treasure.label}</p>
           <h2>{treasure.title}</h2>
           <p>{treasure.prose}</p>
-          <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'continue' }, run.phase)}>
-            {treasure.take}
-          </button>
+          <div className="crypt-choice-list">
+            <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'choose-relic', choice: 'take' }, run.phase)}>
+              Take the Ember Charm (+{treasure.attackBonus} run-only damage)
+            </button>
+            <button type="button" className="btn crypt-block" onClick={() => dispatch({ type: 'choose-relic', choice: 'leave' }, run.phase)}>
+              Leave the Ember Charm (no damage bonus)
+            </button>
+          </div>
         </article>
       )}
 

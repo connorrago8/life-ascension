@@ -219,6 +219,21 @@ test('runtime server/Edge config accepts only correctly pinned project and targe
   ]) assert.equal(await runtimePublicConfig(env), null);
 });
 
+test('build guard rejects every privileged credential/database variable in nonproduction, including empty values', () => {
+  const names = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
+    'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD'];
+  for (const target of ['preview', 'development']) {
+    for (const name of names) {
+      for (const value of ['synthetic-secret', '']) {
+        assert.throws(() => validateDeploymentEnv({ ...qa, VERCEL_ENV: target, [name]: value }),
+          /privileged credential\/database variable/);
+      }
+    }
+  }
+  // Production semantics are intentionally unchanged for legitimate credentials.
+  for (const name of names) assert.equal(validateDeploymentEnv({ ...prod, [name]: 'synthetic-production-value' }), true);
+});
+
 test('runtime server/Edge refuses privileged key injected after Preview build', async () => {
   // The build guard rejects this too; runtime drift must not re-enable
   // public-key authentication with a privileged credential present.
@@ -229,17 +244,30 @@ test('runtime server/Edge refuses privileged key injected after Preview build', 
     });
     assert.equal(config, null);
   }
-  // Production is not blocked merely because its legitimate service key exists.
+  // Every privileged/database variable is rejected by presence, even empty.
+  const names = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
+    'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD'];
+  for (const name of names) {
+    for (const value of ['synthetic-secret', '']) {
+      for (const target of ['preview', 'development']) {
+        assert.equal(await runtimePublicConfig({ ...qa, VERCEL_ENV: target, VERCEL: '1', [name]: value }), null,
+          `${name} must be rejected for ${target} when present`);
+      }
+    }
+  }
+  // Production semantics remain unchanged for legitimate credentials.
   const productionConfig = await runtimePublicConfig({
     ...prod, VERCEL: '1', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-privileged-key',
   });
   assert.equal(productionConfig?.url, prod.NEXT_PUBLIC_SUPABASE_URL);
 });
 
-test('runtime server/Edge denies unprotected Preview branches after build', async () => {
+test('runtime server/Edge accepts both approved QA Preview branches and denies unprotected branches', async () => {
   // Build-time enforcement alone cannot defend against post-build branch drift.
   assert.equal((await runtimePublicConfig(qa))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
-  for (const ref of [undefined, '', 'main', 'beta/quest-ui-clean-review',
+  assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' }))?.url,
+    qa.NEXT_PUBLIC_SUPABASE_URL);
+  for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {
     assert.equal(await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: ref }), null);
   }

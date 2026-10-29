@@ -20,6 +20,7 @@ export type RunState = {
   encounterId: typeof FIGHT_ID | typeof GUARDIAN_ID | null;
   eventCleared: boolean;
   treasureCleared: boolean;
+  relicChoice: 'take' | 'leave' | null;
   hpAtFightStart: number | null;
   /** Increments on encounter entry and retry; not a reward or XP receipt. */
   fightAttempt: number;
@@ -32,6 +33,7 @@ export type RunCommand =
   | { type: 'combat'; action: ActionId }
   | { type: 'retry-fight' }
   | { type: 'choose'; choiceId: string }
+  | { type: 'choose-relic'; choice: 'take' | 'leave' }
   | { type: 'restart'; seed: number };
 
 export type NodeAccess = 'done' | 'ready' | 'locked';
@@ -58,6 +60,7 @@ export function createRun(seed: number): RunState {
     encounterId: null,
     eventCleared: false,
     treasureCleared: false,
+    relicChoice: null,
     hpAtFightStart: null,
     fightAttempt: 0,
   };
@@ -116,14 +119,11 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     }
     if (state.phase === 'event' && state.eventCleared) return { ...state, phase: 'map', outcomeNote: null };
     if (state.phase === 'treasure' && !state.treasureCleared) {
+      // Preserve legacy Continue semantics for existing reducer callers; the UI presents explicit take/leave choices.
       const charm = treasureNode();
-      return {
-        ...state,
-        phase: 'map',
-        treasureCleared: true,
-        attackBonus: state.attackBonus + charm.attackBonus,
-      };
+      return { ...state, phase: 'map', treasureCleared: true, relicChoice: 'take', attackBonus: state.attackBonus + charm.attackBonus };
     }
+    if (state.phase === 'treasure' && state.treasureCleared) return { ...state, phase: 'map' };
     if (state.phase === 'map' && state.guardianCleared) return { ...state, phase: 'end' };
     return state;
   }
@@ -185,6 +185,21 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     const hp = state.maxHp;
     const next = { ...state, hp, hpAtFightStart: hp, fightCleared: state.encounterId === FIGHT_ID ? false : state.fightCleared, fightAttempt: state.fightAttempt + 1, battle: null };
     return { ...next, battle: startBattle(next) };
+  }
+
+  if (command.type === 'choose-relic') {
+    if (state.phase !== 'treasure' || state.treasureCleared) return state;
+    const charm = treasureNode();
+    return {
+      ...state,
+      phase: 'map',
+      treasureCleared: true,
+      relicChoice: command.choice,
+      attackBonus: state.attackBonus + (command.choice === 'take' ? charm.attackBonus : 0),
+      outcomeNote: command.choice === 'take'
+        ? `You take the Ember Charm. Its +${charm.attackBonus} damage lasts only for this preview run.`
+        : 'You leave the Ember Charm on the plinth. The Sentinel will be harder to defeat, but the relic remains undisturbed.',
+    };
   }
 
   if (command.type === 'choose') {
