@@ -85,12 +85,15 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
   if(!title.trim()||busy||!user||questCreateInFlight.current)return;
   // Lock synchronously: a second tap can arrive before React commits busy state.
   questCreateInFlight.current=true;
+  const operationAccount=accountRef.current;
   setBusy(true);
   try {
    const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
    const {error}=trackProgress
     ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
     : await supabase().rpc('create_scheduled_quest',payload);
+   // An old account's response must not update the newly signed-in account's UI.
+   if(accountRef.current!==operationAccount)return;
    if(error){setMessage(error.message);return}
    setMessage('Quest scheduled.');
    setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);
@@ -98,11 +101,11 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
     await load();
    } catch {
     // The create RPC succeeded. A subsequent failed refresh must not imply creation failed.
-    setMessage('Quest created, but board refresh failed. Refresh to view it; do not add it again.');
+    if(accountRef.current===operationAccount)setMessage('Quest created, but board refresh failed. Refresh to view it; do not add it again.');
    }
   } catch {
    // A lost response may follow a successful server commit; never auto-repeat creation.
-   setMessage('Quest creation not confirmed. Refresh your board before trying again.');
+   if(accountRef.current===operationAccount)setMessage('Quest creation not confirmed. Refresh your board before trying again.');
   } finally {
    questCreateInFlight.current=false;
    setBusy(false);
