@@ -165,7 +165,9 @@ try {
     'Leaving the Ember Charm must not grant the run-only bonus');
   await leavePage.getByRole('button', { name: /^Guardian: Crypt Sentinel/ }).click();
   await leavePage.locator('[data-phase="fight"]').waitFor();
-  await leavePage.getByText(/No run-only damage bonus/i).waitFor();
+  await leavePage.locator('.crypt-status').filter({ hasText: /Wayfarer \d+\/\d+/ }).first().waitFor();
+  assert.equal(await leavePage.locator('.crypt-status').filter({ hasText: /Run damage \+2/ }).count(), 0,
+    'Sentinel fight status must not show the unchosen charm bonus');
   await winBattle(leavePage);
   await leavePage.getByRole('button', { name: 'Approach the sealed door' }).click();
   await leavePage.locator('[data-phase="end"]').waitFor();
