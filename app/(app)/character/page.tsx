@@ -154,6 +154,7 @@ export default function CharacterPage() {
       <section className="panel" aria-label="Your character progress">
         <h1>{state.name}</h1>
         <p>Level {progress.level} · {progress.xpIntoLevel} / {progress.xpForNext} XP toward next level</p>
+        <p className="character-lifetime-xp" aria-label={`Lifetime XP: ${state.xp}`}>Lifetime XP: {state.xp}</p>
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
       <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified. Your XP and attributes remain account-derived.'}</p>
