@@ -18,6 +18,7 @@ export default function Home(){
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
+ const questCreateInFlight=useRef(false);
  // A completed quest with an unconfirmed request must expose Retry after refresh.
  useEffect(()=>{
   if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
@@ -81,7 +82,9 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  async function add(e:React.FormEvent){
   e.preventDefault();
   if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}
-  if(!title.trim()||busy||!user)return;
+  if(!title.trim()||busy||!user||questCreateInFlight.current)return;
+  // Lock synchronously: a second tap can arrive before React commits busy state.
+  questCreateInFlight.current=true;
   setBusy(true);
   try {
    const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
@@ -96,6 +99,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
    // A lost response may follow a successful server commit; never auto-repeat creation.
    setMessage('Quest creation not confirmed. Refresh your board before trying again.');
   } finally {
+   questCreateInFlight.current=false;
    setBusy(false);
   }
  }
