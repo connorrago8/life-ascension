@@ -121,10 +121,17 @@ jobs:
             supabase/migrations/202610260010_progress_completion_guard.sql \
             supabase/migrations/202610260011_atomic_tracked_creation.sql \
             supabase/migrations/202610260012_api_progress_wrapper.sql \
-            supabase/migrations/202610270001_quest_receipt_v2.sql \
-            supabase/migrations/202610280001_earned_armor.sql; do
+            supabase/migrations/202610270001_quest_receipt_v2.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
+          # Prove historical XP backfill in a disposable PRE-armor clone.
+          # Never run this fixture against hosted QA or Production.
+          createdb --template="$db" life_ascension_backfill_test
+          psql -v ON_ERROR_STOP=1 -d life_ascension_backfill_test -f tests/sql/earned_armor_backfill_pre.sql
+          psql -v ON_ERROR_STOP=1 -d life_ascension_backfill_test -f supabase/migrations/202610280001_earned_armor.sql
+          psql -v ON_ERROR_STOP=1 -d life_ascension_backfill_test -f tests/sql/earned_armor_backfill_post.sql
+          # Existing post-migration suites still use their original isolated clones.
+          psql -v ON_ERROR_STOP=1 -d "$db" -f supabase/migrations/202610280001_earned_armor.sql
           # Run the combined v2 contract against an isolated clone of the
           # migrated disposable database; the legacy suites use overlapping
           # fixture IDs and must not share their test data.
