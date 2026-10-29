@@ -4,7 +4,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-const PROTECTED_QA_BRANCH = 'audit/qa-isolation-and-reliability-20261027';
+const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review']);
 
 const PROJECTS = Object.freeze({
   production: 'ugcvhmrriazbbymjxvch',
@@ -46,7 +46,7 @@ export function validateDeploymentEnv(env) {
   // Only the founder-designated protected QA branch may build against the
   // QA Supabase project. Do not trust a Preview URL/key/pin alone: an
   // incorrectly scoped environment override could expose QA to other branches.
-  if (target === 'preview' && env.VERCEL_GIT_COMMIT_REF !== PROTECTED_QA_BRANCH) {
+  if (target === 'preview' && !PROTECTED_QA_BRANCHES.has(env.VERCEL_GIT_COMMIT_REF)) {
     throw new Error('Blocked preview build: not the protected QA branch');
   }
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
