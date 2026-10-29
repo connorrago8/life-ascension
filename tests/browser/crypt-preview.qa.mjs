@@ -207,7 +207,16 @@ try {
   await introExitPage.locator('[data-phase="intro"]').waitFor();
   const introExit = introExitPage.locator('.crypt-top > a.icon-btn');
   const introRequests = [];
+  const prematurePlayRequests = [];
+  let exitClicked = false;
   introExitPage.on('request', request => {
+    const requestURL = new URL(request.url());
+    const expectedURL = new URL('/play', baseURL);
+    if (!exitClicked && requestURL.origin === expectedURL.origin &&
+        (requestURL.pathname === '/play' || requestURL.pathname.startsWith('/play/')) &&
+        requestURL.pathname !== '/play/crypt') {
+      prematurePlayRequests.push({ method: request.method(), url: request.url() });
+    }
     const reason = cryptPreviewRequestViolation(
       { method: request.method(), url: request.url() }, baseURL);
     if (reason) introRequests.push(reason);
@@ -223,7 +232,10 @@ try {
     'Intro exit must be keyboard focusable');
   await introExitPage.waitForTimeout(250);
   assert.deepEqual(introRequests, [],
-    'Idle/focused intro exit must not prefetch or request disallowed resources');
+    'Idle/focused intro exit must not request disallowed resources');
+  assert.deepEqual(prematurePlayRequests, [],
+    'Idle/focused intro exit must not request /play before activation');
+  exitClicked = true;
   await introExit.click();
   await introExitPage.waitForURL(url => url.pathname === '/play');
   await introExitPage.close();
