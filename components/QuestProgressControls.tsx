@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { parsePendingProgress } from '../lib/preview/pendingProgress';
 import { nextProgressDelta } from '../lib/preview/progressDelta.mjs';
 
@@ -13,6 +13,8 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<'idle'|'saved'|'failed'>('idle');
   const [storageError, setStorageError] = useState(false);
+  // React state updates are asynchronous: lock before writing a new retry-journal UUID.
+  const operationInFlight = useRef(false);
   const storageKey = `life-progress-pending:${instance.id}`;
   useEffect(() => {
     const refresh = () => {
@@ -39,7 +41,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
   const undoDelta = nextProgressDelta(progressBounds, 'undo');
   const clearDelta = nextProgressDelta(progressBounds, 'clear');
   const submit = (delta: number) => {
-    if (instance.status !== 'available' || disabled || saving || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
+    if (instance.status !== 'available' || disabled || saving || operationInFlight.current || storageError || retrying || !Number.isInteger(delta) || !delta || amount + delta < 0 || amount + delta > target) return;
     // One UUID per user action; the RPC journal deduplicates network retries.
     let pending: { id: string; delta: number } | null = null;
     try { pending = parsePendingProgress(localStorage.getItem(storageKey)); }
@@ -49,8 +51,9 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
     }
     // Never create a new ID while the previous operation outcome is unknown.
     if (pending) { setRetrying(true); return; }
+    operationInFlight.current = true;
     const operation = {id: crypto.randomUUID(), delta};
-    try { localStorage.setItem(storageKey, JSON.stringify(operation)); } catch { setStorageError(true); return; }
+    try { localStorage.setItem(storageKey, JSON.stringify(operation)); } catch { operationInFlight.current = false; setStorageError(true); return; }
     setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, operation.id, operation.delta).then(outcome => {
@@ -75,10 +78,10 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
       else setRetrying(true);
       if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
-    }).catch(() => { setRetrying(true); setSaveState('failed'); }).finally(() => setSaving(false));
+    }).catch(() => { setRetrying(true); setSaveState('failed'); }).finally(() => { operationInFlight.current = false; setSaving(false); });
   };
   const retryPending = () => {
-    if (disabled || saving || storageError) return;
+    if (disabled || saving || operationInFlight.current || storageError) return;
     let pending: { id: string; delta: number } | null;
     try { pending = parsePendingProgress(localStorage.getItem(storageKey)); }
     catch {
@@ -88,6 +91,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
       return;
     }
     if (!pending) { setRetrying(false); setSaveState('failed'); return; }
+    operationInFlight.current = true;
     setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, pending.id, pending.delta).then(outcome => {
@@ -115,7 +119,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
       // Network failures must preserve the original operation ID for retry.
       setRetrying(true);
       setSaveState('failed');
-    }).finally(() => setSaving(false));
+    }).finally(() => { operationInFlight.current = false; setSaving(false); });
   };
   return <div className="quest-progress-controls">
     <label className="muted" htmlFor={`progress-${instance.id}`}>{quest.title}: {amount} / {target} {quest.progress_unit}</label>
