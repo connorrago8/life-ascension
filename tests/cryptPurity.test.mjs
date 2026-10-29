@@ -62,7 +62,7 @@ test('the level chip is a read of lifetime XP and nothing else', () => {
 test('field journal and epilogue remain UI-only and provide accessible choices', () => {
   const screen = readFileSync(join(root, 'components/crypt/CryptRun.tsx'), 'utf8');
   assert.match(screen, /Wayfarer field journal/);
-  assert.match(screen, /aria-expanded=\{showFieldNotes\}/);
+  assert.match(screen, /aria-expanded=\{fieldNotesOpen\}/);
   assert.match(screen, /aria-label="Wayfarer field journal"/);
   assert.match(screen, /run\.fightCleared/);
   assert.match(screen, /run\.eventCleared/);
@@ -71,7 +71,7 @@ test('field journal and epilogue remain UI-only and provide accessible choices',
   assert.match(screen, /Inspect the compass/);
   assert.match(screen, /Return to Brackenlight/);
   assert.match(screen, /Choose another ending/);
-  assert.match(screen, /setShowFieldNotes\(false\)/);
+  assert.match(screen, /setShowFieldNotes\(null\)/);
   assert.match(screen, /setEndingChoice\(null\)/);
 });
 

@@ -217,8 +217,8 @@ test('revisiting the sealed door resets the previous ending choice', () => {
   run = reduceRun(run, { type: 'continue' });
   assert.equal(run.phase, 'end', 'the sealed door remains reachable without replaying combat');
   const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
-  assert.match(view, /if \(run\.phase === 'end'\) setEndingChoice\(null\)/, 'Back clears stale epilogue selection');
-  assert.match(view, /endingChoice === null \? \(/, 'both ending choices return on revisit');
+  assert.match(view, /if \(run\.phase === 'end'\) setEndingChoice\(\(current\) => current\?\.seed === run\.seed \? null : current\)/, 'Back clears only the current run ending choice');
+  assert.match(view, /activeEndingChoice === null \? \(/, 'both ending choices return on revisit');
   assert.equal(Object.hasOwn(run, 'xp'), false);
 });
 
