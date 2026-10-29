@@ -26,8 +26,8 @@ const dispatcherSource = balancedBlock(screen, 'function dispatch(')
 
 function twoRapidTaps(state, command, phase) {
   const queue = [];
-  const dispatch = new Function('setRun', 'reduceRun', dispatcherSource + '\nreturn dispatch;')(
-    (update) => queue.push(update), reducer,
+  const dispatch = new Function('setRun', 'reduceRun', 'run', dispatcherSource + '\nreturn dispatch;')(
+    (update) => queue.push(update), reducer, state,
   );
   dispatch(command, phase);
   dispatch(command, phase);
@@ -49,16 +49,41 @@ test('double Back from map does not skip the gate', () => {
 
 test('rapid combat taps still resolve sequentially from current state', () => {
   const queue = [];
-  const dispatch = new Function('setRun', 'reduceRun', dispatcherSource + '\nreturn dispatch;')(
+  const dispatch = new Function('setRun', 'reduceRun', 'run', dispatcherSource + '\nreturn dispatch;')(
     (update) => queue.push(update),
     (current, command) => command.type === 'combat' ? { ...current, turns: current.turns + 1 } : current,
+    { phase: 'fight', seed: 17, turns: 0 },
   );
   assert.match(screen, /onAction=\{\(action\) => dispatch\(\{ type: 'combat', action \}\)\}/);
   dispatch({ type: 'combat', action: 'attack' });
   dispatch({ type: 'combat', action: 'attack' });
-  assert.equal(queue.reduce((current, update) => update(current), { phase: 'fight', turns: 0 }).turns, 2);
+  assert.equal(queue.reduce((current, update) => update(current), { phase: 'fight', seed: 17, turns: 0 }).turns, 2);
 });
 
 test('all six Continue controls carry their rendered-phase guard', () => {
   assert.equal(screen.split("dispatch({ type: 'continue' }, run.phase)").length - 1, 6);
+});
+
+
+test('stale Continue from the old intro cannot advance a newly restarted run', () => {
+  const original = { phase: 'intro', seed: 101, guardianCleared: false };
+  const fresh = { ...original, seed: 202 };
+  const queue = [fresh]; // Restart was queued before the old button callback.
+  const dispatch = new Function('setRun', 'reduceRun', 'run', dispatcherSource + '\nreturn dispatch;')(
+    (update) => queue.push(update), reducer, original,
+  );
+  dispatch({ type: 'continue' }, 'intro');
+  const next = queue.reduce((current, update) => typeof update === 'function' ? update(current) : update, original);
+  assert.equal(next.seed, fresh.seed);
+  assert.equal(next.phase, 'intro');
+});
+
+test('Continue on the current run still opens the gate', () => {
+  const original = { phase: 'intro', seed: 101, guardianCleared: false };
+  const queue = [];
+  const dispatch = new Function('setRun', 'reduceRun', 'run', dispatcherSource + '\nreturn dispatch;')(
+    (update) => queue.push(update), reducer, original,
+  );
+  dispatch({ type: 'continue' }, 'intro');
+  assert.equal(queue.reduce((current, update) => update(current), original).phase, 'gate');
 });

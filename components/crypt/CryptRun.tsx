@@ -62,8 +62,9 @@ export function CryptRun() {
 
   // Keep rapid combat actions sequential, but reject duplicate navigation from a stale screen.
   function dispatch(command: RunCommand, expectedPhase?: Phase) {
+    const originSeed = run?.seed;
     setRun((current) => {
-      if (!current || (expectedPhase && current.phase !== expectedPhase)) return current;
+      if (!current || current.seed !== originSeed || (expectedPhase && current.phase !== expectedPhase)) return current;
       return reduceRun(current, command);
     });
   }
