@@ -30,6 +30,25 @@ export function parseAuthenticatedGearSnapshot(value: unknown): AuthenticatedGea
   return { ownedItemIds: [...ownedItemIds], equippedItemIds: [...equippedItemIds] };
 }
 
+/** XP milestone is guidance only; the owner-scoped server ledger grants gear. */
+export const ASHEN_HOOD_XP_MILESTONE = 10;
+export type EarnedArmorMilestone = Readonly<{
+  status: 'unverified' | 'earning' | 'eligible-unconfirmed' | 'owned';
+  remainingXp: number;
+}>;
+
+/** Never infer an armor entitlement from XP alone or from preview storage. */
+export function earnedArmorMilestone(
+  verifiedXp: number,
+  gear: AuthenticatedGearSnapshot | null,
+): EarnedArmorMilestone {
+  const remainingXp = Math.max(0, ASHEN_HOOD_XP_MILESTONE - verifiedXp);
+  if (!gear) return { status: 'unverified', remainingXp };
+  if (gear.ownedItemIds.includes('ashen-hood')) return { status: 'owned', remainingXp: 0 };
+  if (remainingXp > 0) return { status: 'earning', remainingXp };
+  return { status: 'eligible-unconfirmed', remainingXp: 0 };
+}
+
 export type CharacterEquipmentMode = 'preview' | 'unverified' | 'verified';
 export type CharacterGearView = Readonly<{
   appearance: Appearance;
