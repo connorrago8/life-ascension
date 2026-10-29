@@ -27,10 +27,9 @@ const browser = await chromium.launch({
 });
 
 async function winBattle(page) {
-  // Heavy does at least 8 damage, and Attack finishes either existing enemy.
+  // Heavy Strike opens the fight; repeat Attack until the actual victory state.
   await page.getByRole('button', { name: /^Heavy Strike/ }).click();
-  await page.waitForFunction(() => /Victory|Turn 2/.test(document.querySelector('.turn-line')?.textContent ?? ''));
-  if (await page.getByText('Victory', { exact: true }).count() === 0) {
+  for (let turn = 0; turn < 6 && await page.getByText('Victory', { exact: true }).count() === 0; turn++) {
     await page.getByRole('button', { name: /^Attack/ }).click();
   }
   await page.getByText('Victory', { exact: true }).waitFor();
@@ -81,7 +80,7 @@ try {
 
   await page.getByRole('button', { name: /^Treasure: Ember Charm/ }).click();
   await page.locator('[data-phase="treasure"]').waitFor();
-  await page.getByRole('button', { name: 'Take the charm' }).click();
+  await page.getByRole('button', { name: /^Take the Ember Charm/ }).click();
   await page.locator('[data-phase="map"]').waitFor();
   await page.getByText(/Run damage \+2/).first().waitFor();
   await page.screenshot({ path: join(output, 'crypt-map-390.png'), fullPage: true });
@@ -133,6 +132,47 @@ try {
   await restart.scrollIntoViewIfNeeded();
   await restart.click();
   await page.locator('[data-phase="intro"]').waitFor();
+  // Independently exercise the Leave branch through Sentinel victory and the unsaved ending.
+  const leavePage = await context.newPage();
+  const leaveRequests = [];
+  leavePage.on('request', request => {
+    const reason = cryptPreviewRequestViolation(
+      { method: request.method(), url: request.url() }, baseURL);
+    if (reason) {
+      let origin = 'invalid-url';
+      try { origin = new URL(request.url()).origin; } catch {}
+      leaveRequests.push(`${request.method()} ${origin} (${reason})`);
+    }
+  });
+  await leavePage.goto(baseURL + '/play/crypt');
+  await leavePage.locator('[data-phase="intro"]').waitFor();
+  await leavePage.getByRole('button', { name: 'Walk to the gate' }).click();
+  await leavePage.getByRole('button', { name: 'Enter the crypt' }).click();
+  await leavePage.locator('[data-phase="map"]').waitFor();
+  await leavePage.getByRole('button', { name: /^Fight: Crypt Rat\./ }).click();
+  await leavePage.locator('[data-phase="fight"]').waitFor();
+  await winBattle(leavePage);
+  await leavePage.getByRole('button', { name: 'Continue', exact: true }).click();
+  await leavePage.getByRole('button', { name: /^Event: Ancient inscription/ }).click();
+  await leavePage.getByRole('button', { name: 'Read the warning' }).click();
+  await leavePage.getByRole('button', { name: 'Continue', exact: true }).click();
+  await leavePage.getByRole('button', { name: /^Treasure: Ember Charm/ }).click();
+  await leavePage.locator('[data-phase="treasure"]').waitFor();
+  await leavePage.getByRole('button', { name: /^Leave the Ember Charm/ }).click();
+  await leavePage.locator('[data-phase="map"]').waitFor();
+  await leavePage.getByText(/Sentinel will be harder/i).waitFor();
+  assert.equal(await leavePage.getByText(/Run damage \+2/).count(), 0,
+    'Leaving the Ember Charm must not grant the run-only bonus');
+  await leavePage.getByRole('button', { name: /^Guardian: Crypt Sentinel/ }).click();
+  await leavePage.locator('[data-phase="fight"]').waitFor();
+  await leavePage.getByText(/No run-only damage bonus/i).waitFor();
+  await winBattle(leavePage);
+  await leavePage.getByRole('button', { name: 'Approach the sealed door' }).click();
+  await leavePage.locator('[data-phase="end"]').waitFor();
+  await leavePage.getByText(/You recovered the Sentinel Sigil/).waitFor();
+  assert.deepEqual(leaveRequests, [], 'Leave branch must remain an unsaved, backend-free preview');
+  await leavePage.close();
+
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
   console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no unexpected network requests.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');
