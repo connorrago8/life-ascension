@@ -179,7 +179,7 @@ export const NODES: readonly CryptNode[] = [
         id: 'bargain',
         label: 'Offer blood to the ember rune',
         result: 'The rune takes {cost} HP and strengthens your strikes by +1 damage for this run.',
-        resultFull: 'The rune takes {cost} HP and strengthens your strikes by +1 damage for this run.',
+        resultFull: 'The ember rune falls silent. You need more than 2 HP to survive its price.',
         hpCost: 2,
         attackBonus: 1,
       },
