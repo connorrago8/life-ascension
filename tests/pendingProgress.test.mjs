@@ -143,7 +143,7 @@ test('actual QuestProgressControls handlers preserve request IDs across ambiguou
   }
   let generated = 0;
   function mount(amount) {
-    const state = { disabled: false, saving: false, storageError: false,
+    const state = { operationInFlight: { current: false }, disabled: false, saving: false, storageError: false,
       retrying: parsePendingProgress(storage.getItem('life-progress-pending:q1')) !== null,
       amount, target: 10, instance: { id: 'q1', status: 'available' }, storageKey: 'life-progress-pending:q1',
       parsePendingProgress, localStorage: storage, onLog, onJournalResolved: () => {},
