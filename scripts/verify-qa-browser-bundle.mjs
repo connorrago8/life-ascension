@@ -38,6 +38,7 @@ export async function inspectQaBrowserBundle(root, { qaProject = QA_PROJECT } = 
     }
   }
   await scan(root);
+  if (!inspected) throw new Error('QA browser bundle contains no emitted JavaScript files');
   // Do not print matched URLs, tokens or file contents in CI logs.
   if (foreignHosts || productionReferences || privilegedMarkers) {
     throw new Error('QA browser bundle contains a foreign Supabase target or privileged marker');
