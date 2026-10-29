@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { EVENT_ID, GUARDIAN_ID, PLAYER, TREASURE_ID, eventNode, charmNote } from '../lib/crypt/content.ts';
+import { EVENT_ID, GUARDIAN_ID, PLAYER, TREASURE_ID, eventNode, charmNote, runStatus } from '../lib/crypt/content.ts';
 import { createRun, nodeAccess, reduceRun } from '../lib/crypt/run.ts';
 
 const send = (state, type, extra = {}) => reduceRun(state, { type, ...extra });
@@ -179,4 +179,11 @@ test('failed offerings remain reversible across repeated attempts and Back', () 
     assert.equal(state.attackBonus, 0);
     assert.equal(state.eventChoiceId, 'warning');
   }
+});
+
+test('status attributes combined bargain and charm damage to the run, not the charm alone', () => {
+  assert.match(runStatus(18, 20, 1), /Run damage \+1/);
+  assert.match(runStatus(18, 20, 3), /Run damage \+3/);
+  assert.doesNotMatch(runStatus(18, 20, 3), /Ember Charm \+3/);
+  assert.doesNotMatch(runStatus(20, 20, 0), /Run damage/);
 });
