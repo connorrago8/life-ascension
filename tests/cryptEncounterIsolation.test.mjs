@@ -35,7 +35,7 @@ function reducer(state, command) {
 
 function fight(encounterId, status = 'ongoing') {
   return {
-    seed: 77, phase: 'fight', encounterId, maxHp: 20, hp: 20, hpAtFightStart: 20,
+    seed: 77, phase: 'fight', encounterId, fightAttempt: 1, maxHp: 20, hp: 20, hpAtFightStart: 20,
     fightCleared: encounterId === 'fight-sentinel', guardianCleared: false,
     sigilCollected: false,
     battle: { status, turn: 1, player: { hp: 20 } },
@@ -89,4 +89,28 @@ test('dispatcher binds fight actions to their originating encounter', () => {
   assert.ok(screen.includes('const originEncounterId = run?.encounterId;'));
   assert.ok(screen.includes("command.type === 'combat' || command.type === 'retry-fight'"));
   assert.ok(screen.includes('current.encounterId !== originEncounterId'));
+});
+
+test('stale combat callback cannot act after Retry of the same Rat encounter', () => {
+  const previous = fight('fight-rat', 'lost');
+  const retried = { ...fight('fight-rat'), fightAttempt: 2 };
+  const after = queued(previous, retried, [[{ type: 'combat', action: 'attack' }]]);
+  assert.equal(after.battle.turn, retried.battle.turn);
+  assert.equal(after.fightAttempt, 2);
+});
+
+test('stale defeat Back cannot dismiss a newer retry of the same encounter', () => {
+  const previous = fight('fight-sentinel', 'lost');
+  const retried = { ...fight('fight-sentinel'), fightAttempt: 2 };
+  const after = queued(previous, retried, [[{ type: 'back' }, 'fight']]);
+  assert.equal(after.phase, 'fight');
+  assert.equal(after.fightAttempt, 2);
+});
+
+test('stale victory Continue cannot dismiss a newer attempt of the same encounter', () => {
+  const previous = fight('fight-rat', 'won');
+  const retried = { ...fight('fight-rat'), fightAttempt: 2 };
+  const after = queued(previous, retried, [[{ type: 'continue' }, 'fight']]);
+  assert.equal(after.phase, 'fight');
+  assert.equal(after.fightAttempt, 2);
 });
