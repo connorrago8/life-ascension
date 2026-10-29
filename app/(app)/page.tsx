@@ -94,7 +94,12 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
    if(error){setMessage(error.message);return}
    setMessage('Quest scheduled.');
    setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);
-   await load();
+   try {
+    await load();
+   } catch {
+    // The create RPC succeeded. A subsequent failed refresh must not imply creation failed.
+    setMessage('Quest created, but board refresh failed. Refresh to view it; do not add it again.');
+   }
   } catch {
    // A lost response may follow a successful server commit; never auto-repeat creation.
    setMessage('Quest creation not confirmed. Refresh your board before trying again.');
