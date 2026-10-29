@@ -191,13 +191,19 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     if (state.phase !== 'event' || state.eventCleared) return state;
     const choice = eventNode().choices.find((item) => item.id === command.choiceId);
     if (!choice) return state;
-    const healed = Math.min(state.maxHp, state.hp + (choice.heal ?? 0)) - state.hp;
-    const note = healed > 0
-      ? fillTemplate(choice.result, { heal: String(healed) })
-      : fillTemplate(choice.resultFull);
+    // The optional ember bargain trades up to two HP for run-only damage.
+    // Never reduce the Wayfarer below one HP from a narrative choice.
+    const cost = Math.min(choice.hpCost ?? 0, Math.max(0, state.hp - 1));
+    const healed = Math.min(state.maxHp, state.hp - cost + (choice.heal ?? 0)) - (state.hp - cost);
+    const note = choice.hpCost
+      ? fillTemplate(choice.result, { cost: String(cost) })
+      : healed > 0
+        ? fillTemplate(choice.result, { heal: String(healed) })
+        : fillTemplate(choice.resultFull);
     return {
       ...state,
-      hp: state.hp + healed,
+      hp: state.hp - cost + healed,
+      attackBonus: state.attackBonus + (choice.attackBonus ?? 0),
       hint: choice.hint ? note : state.hint,
       eventChoiceId: choice.id,
       eventCleared: true,
