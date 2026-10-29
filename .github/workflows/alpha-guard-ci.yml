@@ -1,7 +1,7 @@
 name: Alpha QA guard regression
 on:
   push:
-    branches: ['alpha/qa-guard-alignment-20261029']
+    branches: ['alpha/qa-guard-alignment-20261029', 'alpha/preview-qa-guard-3087ca33']
   pull_request:
     branches: ['beta/quest-ui-clean-review']
 permissions:
