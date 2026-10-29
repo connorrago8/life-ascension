@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { SPRITES } from '../../lib/crypt/art';
 import {
@@ -117,7 +118,12 @@ export function CryptRun() {
           <h1>{head.title}</h1>
           {head.subtitle ? <p>{head.subtitle}</p> : null}
         </div>
-        <button type="button" className="btn ghost crypt-restart" onClick={restart}>{FLOOR.restart}</button>
+        <div className="crypt-header-actions">
+          <Link href="/play" prefetch={false} className="btn ghost crypt-leave" aria-label="Leave Crypt; unsaved dungeon progress will be lost">
+            Leave Crypt
+          </Link>
+          <button type="button" className="btn ghost crypt-restart" onClick={restart}>{FLOOR.restart}</button>
+        </div>
       </header>
 
       {run.phase === 'intro' && (
