@@ -74,6 +74,7 @@ test('Clear 7/10 → lost acknowledgement → refresh → original-ID retry stay
   };
   function mount(amount) {
     const state = {
+      operationInFlight: { current: false },
       instance: { id: 'quest-1', status: 'available' },
       amount, target: 10, disabled: false, saving: false, storageError: false,
       retrying: parsePendingProgress(localStorage.getItem(storageKey)) !== null,
