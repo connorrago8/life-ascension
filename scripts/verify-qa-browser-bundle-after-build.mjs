@@ -3,7 +3,7 @@
 import { pathToFileURL } from 'node:url';
 import { inspectQaBrowserBundle } from './verify-qa-browser-bundle.mjs';
 
-const PROTECTED_QA_BRANCH = 'audit/qa-isolation-and-reliability-20261027';
+const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review']);
 
 export async function verifyQaBrowserBundleAfterBuild({
   env = process.env,
@@ -14,7 +14,7 @@ export async function verifyQaBrowserBundleAfterBuild({
   if (env.VERCEL_ENV !== 'preview') return { skipped: true };
   // Repeat the protected-branch condition here so this gate fails closed if
   // the prebuild guard is accidentally removed or its invocation changes.
-  if (env.VERCEL_GIT_COMMIT_REF !== PROTECTED_QA_BRANCH) {
+  if (!PROTECTED_QA_BRANCHES.has(env.VERCEL_GIT_COMMIT_REF)) {
     throw new Error('QA browser bundle scan blocked: not the protected QA branch');
   }
   const result = await inspect(root);
