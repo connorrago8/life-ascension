@@ -21,6 +21,7 @@ import {
   treasureNode,
 } from '../../lib/crypt/content';
 import { createRun, nodeAccess, reduceRun, type Phase, type RunCommand, type RunState } from '../../lib/crypt/run';
+import { readScopedRunValue, scopeRunValue, toggleScopedRunFlag, type RunScopedValue } from '../../lib/crypt/runScopedUi';
 import { CombatView } from './CombatView';
 import { PixelArt } from './PixelArt';
 
@@ -49,8 +50,8 @@ function heading(phase: Phase): { title: string; subtitle?: string } {
 
 export function CryptRun() {
   const [run, setRun] = useState<RunState | null>(null);
-  const [endingChoice, setEndingChoice] = useState<'leave' | 'inspect' | null>(null);
-  const [showFieldNotes, setShowFieldNotes] = useState(false);
+  const [endingChoice, setEndingChoice] = useState<RunScopedValue<'leave' | 'inspect'>>(null);
+  const [showFieldNotes, setShowFieldNotes] = useState<RunScopedValue<boolean>>(null);
 
   useEffect(() => {
     setRun(createRun(freshSeed()));
@@ -71,7 +72,7 @@ export function CryptRun() {
 
   function restart() {
     setEndingChoice(null);
-    setShowFieldNotes(false);
+    setShowFieldNotes(null);
     setRun(createRun(freshSeed()));
   }
 
@@ -88,6 +89,8 @@ export function CryptRun() {
   const head = heading(run.phase);
   const event = eventNode();
   const treasure = treasureNode();
+  const activeEndingChoice = readScopedRunValue(endingChoice, run.seed);
+  const fieldNotesOpen = readScopedRunValue(showFieldNotes, run.seed) === true;
 
   return (
     <main className="screen crypt-screen" data-phase={run.phase}>
@@ -99,7 +102,7 @@ export function CryptRun() {
         ) : (
           <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
             // Returning to the sealed door should offer both endings again.
-            if (run.phase === 'end') setEndingChoice(null);
+            if (run.phase === 'end') setEndingChoice((current) => current?.seed === run.seed ? null : current);
             dispatch({ type: 'back' }, run.phase);
           }}>
             <BackIcon />
@@ -141,11 +144,11 @@ export function CryptRun() {
           <p className="floor-kicker">{FLOOR.mapLabel}</p>
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           <p className="crypt-status">Next objective: {nextCryptObjective(run)}</p>
-          <button type="button" className="btn ghost crypt-block" aria-expanded={showFieldNotes}
-            onClick={() => setShowFieldNotes((value) => !value)}>
-            {showFieldNotes ? 'Hide' : 'Open'} Wayfarer field journal
+          <button type="button" className="btn ghost crypt-block" aria-expanded={fieldNotesOpen}
+            onClick={() => setShowFieldNotes((current) => toggleScopedRunFlag(current, run.seed))}>
+            {fieldNotesOpen ? 'Hide' : 'Open'} Wayfarer field journal
           </button>
-          {showFieldNotes && (
+          {fieldNotesOpen && (
             <aside className="crypt-journal" aria-label="Wayfarer field journal">
               <h2>Field journal</h2>
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
@@ -260,18 +263,18 @@ export function CryptRun() {
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           <section className="crypt-epilogue" aria-label="Sealed door choices">
             <h3>What will the Wayfarer do?</h3>
-            {endingChoice === null ? (
+            {activeEndingChoice === null ? (
               <div className="choice-list">
-                <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice('inspect')}>Inspect the compass</button>
-                <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice('leave')}>Return to Brackenlight</button>
+                <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice(scopeRunValue(run.seed, 'inspect'))}>Inspect the compass</button>
+                <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice(scopeRunValue(run.seed, 'leave'))}>Return to Brackenlight</button>
               </div>
-            ) : endingChoice === 'inspect' ? (
+            ) : activeEndingChoice === 'inspect' ? (
               <p role="status">Beneath the cracked glass, the needle points downward—not north. The sealed sanctuary waits below. The compass cannot open it yet.</p>
             ) : (
               <p role="status">You mark the entrance with a small cairn and return to Mira. The crypt will be here when your journey continues.</p>
             )}
-            {endingChoice !== null ? (
-              <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice(null)}>Choose another ending</button>
+            {activeEndingChoice !== null ? (
+              <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice((current) => current?.seed === run.seed ? null : current)}>Choose another ending</button>
             ) : null}
           </section>
           <button type="button" className="btn crypt-block" onClick={restart}>{END_CARD.restart}</button>
