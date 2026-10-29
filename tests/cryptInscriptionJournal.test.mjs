@@ -12,3 +12,8 @@ test('field journal preserves the mending and warning descriptions', () => {
   assert.match(source, /run\.eventChoiceId === 'mend' \? 'Mending words restored health\.'/);
   assert.match(source, /'A warning about the sealed door\.'/);
 });
+
+test('inscription shows current HP and previews the blood bargain cost before choosing', () => {
+  assert.match(source, /<p className="crypt-status" role="status">\{runStatus\(run\.hp, run\.maxHp, run\.attackBonus\)\}<\/p>/);
+  assert.match(source, /choice\.hpCost \? ` \(−\$\{choice\.hpCost\} HP, \+\$\{choice\.attackBonus \?\? 0\} damage\)` : null/);
+});
