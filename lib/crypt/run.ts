@@ -197,7 +197,7 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
       relicChoice: command.choice,
       attackBonus: state.attackBonus + (command.choice === 'take' ? charm.attackBonus : 0),
       outcomeNote: command.choice === 'take'
-        ? 'You take the Ember Charm. Its +2 damage lasts only for this preview run.'
+        ? `You take the Ember Charm. Its +${charm.attackBonus} damage lasts only for this preview run.`
         : 'You leave the Ember Charm on the plinth. The Sentinel will be harder to defeat, but the relic remains undisturbed.',
     };
   }

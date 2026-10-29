@@ -207,7 +207,7 @@ export const NODES: readonly CryptNode[] = [
     kind: 'fight',
     label: 'Guardian',
     title: SENTINEL.name,
-    detail: 'The charm wakes an armored watcher at the sealed door.',
+    detail: 'An armored watcher guards the sealed door.',
   },
 ];
 
