@@ -137,6 +137,7 @@ jobs:
           # fixture IDs and must not share their test data.
           createdb --template="$db" life_ascension_armor_test
           psql -v ON_ERROR_STOP=1 -d life_ascension_armor_test -f tests/sql/earned_armor_smoke.sql
+          psql -v ON_ERROR_STOP=1 -d life_ascension_armor_test -f tests/sql/earned_armor_role_denials.sql
           createdb --template="$db" life_ascension_combined_test
           psql -v ON_ERROR_STOP=1 -d life_ascension_combined_test -f tests/sql/quest_receipt_v2_combined_smoke.sql
           for file in \
