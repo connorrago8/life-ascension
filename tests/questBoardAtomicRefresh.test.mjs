@@ -15,7 +15,7 @@ function extractLoad() {
    .replace(/\[\] as \w+\[\]/g,'[]').replace('new Map<string,Instance>()','new Map()');
  return new Function('supabase','setUser','setReady','setQuests','setRecoveryQuests',
   'setInstances','setXp','setMessage','setRecoveryIds','setLayoutPreview',
-  'todayLocal','coerceXp','pendingProgressInstanceIds','localStorage','process',
+  'todayLocal','verifiedLifetimeXp','pendingProgressInstanceIds','localStorage','process',
   'loadEpoch','accountRef','return ('+code+');');
 }
 
