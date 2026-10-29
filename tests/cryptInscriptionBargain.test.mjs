@@ -56,3 +56,31 @@ test('bargain is unsaved and resets on restart', () => {
   assert.equal(restarted.eventCleared, false);
   assert.equal(restarted.eventChoiceId, null);
 });
+
+test('the ember bargain has an exact survivable HP boundary', () => {
+  for (const hp of [1, 2]) {
+    const declined = send(inscription(7, hp), 'choose', { choiceId: 'bargain' });
+    assert.equal(declined.hp, hp);
+    assert.equal(declined.attackBonus, 0);
+    assert.match(declined.outcomeNote, /need more than 2 HP/);
+  }
+  const accepted = send(inscription(7, 3), 'choose', { choiceId: 'bargain' });
+  assert.equal(accepted.hp, 1);
+  assert.equal(accepted.attackBonus, 1);
+  assert.match(accepted.outcomeNote, /takes 2 HP/);
+});
+
+test('ember bargain progression and bonus remain deterministic across 32 seeds', () => {
+  for (let seed = 1; seed <= 32; seed++) {
+    let state = send(inscription(seed, 12), 'choose', { choiceId: 'bargain' });
+    assert.equal(state.hp, 10, 'seed ' + seed);
+    assert.equal(state.attackBonus, 1, 'seed ' + seed);
+    state = send(state, 'continue');
+    state = send(state, 'open', { nodeId: TREASURE_ID });
+    state = send(state, 'continue');
+    assert.equal(state.attackBonus, 3, 'seed ' + seed);
+    assert.equal(nodeAccess(state, GUARDIAN_ID), 'ready', 'seed ' + seed);
+    assert.equal(Object.hasOwn(state, 'xp'), false);
+    assert.equal(Object.hasOwn(state, 'inventory'), false);
+  }
+});
