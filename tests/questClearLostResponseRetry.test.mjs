@@ -78,6 +78,7 @@ test('Clear 7/10 → lost acknowledgement → refresh → original-ID retry stay
       amount, target: 10, disabled: false, saving: false, storageError: false,
       retrying: parsePendingProgress(localStorage.getItem(storageKey)) !== null,
       storageKey, localStorage, parsePendingProgress, onLog,
+      operationInFlight: { current: false },
       onJournalResolved: () => {},
       crypto: { randomUUID: () => 'request-' + ++generated },
       setRetrying: value => { state.retrying = value; },
