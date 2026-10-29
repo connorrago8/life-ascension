@@ -31,7 +31,7 @@ async function winBattle(page) {
   await page.getByRole('button', { name: /^Heavy Strike/ }).click();
   for (let turn = 0; turn < 6 && await page.getByText('Victory', { exact: true }).count() === 0; turn++) {
     await page.getByRole('button', { name: /^Attack/ }).click();
-    await page.waitForFunction(() => /Victory|Turn \\d+/.test(document.querySelector('.turn-line')?.textContent ?? ''));
+    await page.waitForFunction(() => /Victory|Turn \d+/.test(document.querySelector('.turn-line')?.textContent ?? ''));
   }
   await page.getByText('Victory', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
