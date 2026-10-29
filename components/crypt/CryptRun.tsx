@@ -219,6 +219,7 @@ export function CryptRun() {
           <p className="lock-kicker">{event.label}</p>
           <h2>{event.title}</h2>
           <p>{event.prose}</p>
+          <p className="crypt-status" role="status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           {run.eventCleared ? (
             <>
               <p className="ok">{run.outcomeNote}</p>
@@ -238,6 +239,7 @@ export function CryptRun() {
                   onClick={() => dispatch({ type: 'choose', choiceId: choice.id }, run.phase)}
                 >
                   {choice.label}
+                  {choice.hpCost ? ` (−${choice.hpCost} HP, +${choice.attackBonus ?? 0} damage)` : null}
                 </button>
               ))}
               </div>
