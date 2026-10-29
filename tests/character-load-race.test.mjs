@@ -145,3 +145,21 @@ test('rapid equip double-tap sends one mutation and releases the lock after conf
   await app.equip(true);
   assert.equal(app.equipCalls, 2, 'completed operation must release its synchronous lock');
 });
+
+test('failed equip releases singleflight lock without claiming equipment ownership', async () => {
+  const failedEquip = deferred();
+  const gear = Promise.resolve({
+    data: { ownedItemIds: ['ashen-hood'], equippedItemIds: [] }, error: null,
+  });
+  const app = scenario(gear, failedEquip.promise);
+  const first = app.equip(true);
+  const second = app.equip(true);
+  assert.equal(app.equipCalls, 1, 'pending failed request must still block duplicate taps');
+  failedEquip.resolve({ error: { message: 'not authorized' } });
+  await Promise.all([first, second]);
+  assert.equal(app.equipCalls, 1);
+  assert.equal(app.gearCalls, 0, 'failed mutation must not refresh as a success');
+  assert.deepEqual(app.state.gear.equippedItemIds, [], 'failed equip cannot invent owned gear');
+  await app.equip(true);
+  assert.equal(app.equipCalls, 2, 'failure must release synchronous lock for a new attempt');
+});
