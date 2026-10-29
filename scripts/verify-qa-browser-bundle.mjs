@@ -1,4 +1,4 @@
-// Inspect emitted browser JavaScript only. This is a source-build check,
+// Inspect emitted browser JavaScript and public JavaScript source maps. This is a source-build check,
 // NOT proof of hosted Preview routing or permission to deploy/migrate.
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
@@ -7,7 +7,8 @@ import { pathToFileURL } from 'node:url';
 
 const QA_PROJECT = 'njqwwimzrsunheehnnnt';
 const PRODUCTION_PROJECT = 'ugcvhmrriazbbymjxvch';
-const SUPABASE_HOST = /\b([a-z0-9]{20})\.supabase\.co\b/gi;
+// Require exact DNS-label boundaries for QA hostname evidence.
+const SUPABASE_HOST = /(?<![a-z0-9_.-])([a-z0-9]{20})\.supabase\.co(?![a-z0-9_.-])/gi;
 // Scan complete JWTs without logging their contents. An embedded service_role
 // token is privileged even if it has no recognizable variable name.
 const JWT = /\beyJ[A-Za-z0-9_-]{5,}\.(eyJ[A-Za-z0-9_-]{5,})\.[A-Za-z0-9_-]{8,}\b/g;
@@ -40,14 +41,17 @@ export async function inspectQaBrowserBundle(root, { qaProject = QA_PROJECT } = 
     for (const entry of entries) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) { await scan(path); continue; }
-      if (!entry.isFile() || !/\.(?:js|mjs)$/.test(entry.name)) continue;
+      if (!entry.isFile()) continue;
+      const isJavaScript = /\.(?:js|mjs)$/.test(entry.name);
+      const isPublicSourceMap = /\.(?:js|mjs)\.map$/.test(entry.name);
+      if (!isJavaScript && !isPublicSourceMap) continue;
       const source = await readFile(path, 'utf8');
-      inspected++;
-      // Fingerprint every emitted browser JS asset, not only QA-bearing chunks.
+      if (isJavaScript) inspected++;
+      // Fingerprint every public JS asset and matching source map.
       // A changed unrelated chunk must invalidate deployment provenance.
       digest.update(relative(root, path)).update('\0').update(source).update('\0');
       const hosts = [...source.matchAll(SUPABASE_HOST)];
-      if (hosts.some(match => match[1].toLowerCase() === qaProject)) {
+      if (isJavaScript && hosts.some(match => match[1].toLowerCase() === qaProject)) {
         qaMatches++;
       }
       foreignHosts += hosts.filter(match => match[1].toLowerCase() !== qaProject).length;

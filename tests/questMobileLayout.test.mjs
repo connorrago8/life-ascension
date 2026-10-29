@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import ts from 'typescript';
 
 const css = readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
 const controls = readFileSync(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
@@ -68,7 +72,23 @@ test('authenticated character hides sample progression level', () => {
 
 test('quest metadata uses progressive disclosure', () => {
   const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
-  assert.match(home, /<details className="quest-card-details"><summary aria-label=\{\"Quest details for \" \+ quest\.title\}>Quest details<\/summary>/);
+  assert.match(home, /<QuestDetails quest=\{quest\} instance=\{instance!\}\/>/);
+  const componentUrl = new URL('../components/QuestDetails.tsx', import.meta.url);
+  const source = readFileSync(componentUrl, 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: {
+    jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
+  } });
+  const componentModule = { exports: {} };
+  new Function('require', 'module', 'exports', compiled.outputText)(
+    createRequire(componentUrl), componentModule, componentModule.exports);
+  const html = renderToStaticMarkup(createElement(componentModule.exports.QuestDetails, {
+    quest: { title: 'Drink water', domain: 'physical_health', cadence: 'daily', quest_type: 'scheduled',
+      target_amount: 8, progress_increment: 2, progress_unit: 'glasses' },
+    instance: { due_date: '2026-10-29', status: 'available', current_amount: 3 },
+  }));
+  assert.match(html, /<details class="quest-card-details"><summary aria-label="Quest details for Drink water">Quest details<\/summary>/);
+  assert.match(html, /<dt>Recorded progress<\/dt><dd>3 of 8 glasses<\/dd>/);
+  assert.doesNotMatch(html, /<details[^>]* open(?:[ =>])/);
 });
 
 test('quest details disclosure has a touch target and visible keyboard focus', () => {
