@@ -66,6 +66,6 @@ test('authenticated reload restores persisted progress from owner-scoped quest r
     'The refreshed database rows must become the displayed quest instance state');
   assert.match(home, /s\.rpc\('log_quest_progress'/,
     'Progress writes must use the server-authoritative progress RPC');
-  assert.match(home, /await load\(\);\s*return 'saved'/,
+  assert.match(home, /if\(!\(await load\(\)\)\)\{[\s\S]*?return 'retry';[\s\S]*?\}\s*return 'saved'/,
     'After a confirmed save, reload persisted state rather than trusting only local UI state');
 });

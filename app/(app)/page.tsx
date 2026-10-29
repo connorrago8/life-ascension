@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {supabase} from '../../lib/supabase';
 import {ADVENTURER_CLASS} from '../../lib/character';
 import {coerceXp,levelFor} from '../../lib/level';
@@ -15,19 +15,20 @@ export default function Home(){
  const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState(0),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2F');
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
+ const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
  // A completed quest with an unconfirmed request must expose Retry after refresh.
  useEffect(()=>{
   if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
  },[instances]);
- const load=useCallback(async()=>{
+ const load=useCallback(async()=>{const epoch=++loadEpoch.current;
   if(process.env.NODE_ENV==='development'&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='1'){
-    setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setRecoveryQuests([]);setInstances([]);setXp(0);setMessage('');return;
+    setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setRecoveryQuests([]);setInstances([]);setXp(0);setMessage('');return false;
   }
-  setLayoutPreview(false);const s=supabase();const {data:{user},error:authError}=await s.auth.getUser();setUser(user?.id||null);setReady(true);if(authError||!user)return;
+  setLayoutPreview(false);const s=supabase();const {data:{user},error:authError}=await s.auth.getUser();if(epoch!==loadEpoch.current)return false;const nextAccount=authError?null:(user?.id||null);if(accountRef.current!==nextAccount){accountRef.current=nextAccount;setQuests([]);setInstances([]);setRecoveryQuests([]);setRecoveryIds([]);setXp(0);}setUser(nextAccount);setReady(true);if(authError||!user)return false;
  // Recover only journal-backed older completed instances owned by this signed-in user.
  // Never query arbitrary history or trust a browser key without server owner filtering.
  let pendingIds:string[]=[];try{pendingIds=pendingProgressInstanceIds(localStorage)}catch{/* Storage getter denied; never query broad history. */}
- const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(qe){setMessage(qe.message);return}const all=q||[];setQuests(all);const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return}const today=todayLocal();
+ const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(epoch!==loadEpoch.current)return false;if(qe){setMessage(qe.message);return false}const all=q||[];setQuests(all);const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));if(epoch!==loadEpoch.current)return false;const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return false}const today=todayLocal();
 const goalIds=all.filter(q=>q.quest_type==='goal').map(q=>q.id);
 const onceIds=all.filter(q=>q.quest_type==='scheduled'&&q.cadence==='once').map(q=>q.id);
 const [{data:todayRows,error:te},{data:goals,error:ge},{data:openOnce,error:oe},{data:ledger,error:le},{data:recoveries,error:re}]=await Promise.all([
@@ -37,17 +38,19 @@ const [{data:todayRows,error:te},{data:goals,error:ge},{data:openOnce,error:oe},
  s.rpc('get_lifetime_xp'),
  pendingIds.length?s.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id',user.id).in('id',pendingIds).eq('status','completed').limit(100):Promise.resolve({data:[] as Instance[],error:null})
 ]);
-if(te||ge||oe||le||re){setMessage(te?.message||ge?.message||oe?.message||le?.message||re?.message||'Unable to load');return}
+if(epoch!==loadEpoch.current)return false;
+if(te||ge||oe||le||re){setMessage(te?.message||ge?.message||oe?.message||le?.message||re?.message||'Unable to load');return false}
 // A pending retry must remain visible if its quest was archived after completion.
 // Fetch metadata only for server-confirmed, owner-scoped recovered instances.
 const missingRecoveryQuestIds=[...new Set((recoveries||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
 const {data:missingRecoveryQuests,error:missingRecoveryError}=missingRecoveryQuestIds.length
  ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
  :{data:[] as Quest[],error:null};
-if(missingRecoveryError){setMessage(missingRecoveryError.message);return}
+if(epoch!==loadEpoch.current)return false;
+if(missingRecoveryError){setMessage(missingRecoveryError.message);return false}
 setRecoveryQuests(missingRecoveryQuests||[]);
 const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(goals||[]),...(openOnce||[]),...(recoveries||[])])rows.set(row.id,row);
-setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(coerceXp(ledger))},[]);
+setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(coerceXp(ledger));return true},[]);
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const next=window.location.pathname+window.location.search+window.location.hash;
@@ -112,7 +115,11 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
    setMessage(confirmation.status === 'completed'
     ? 'Quest completion confirmed. XP is displayed from your account ledger.'
     : 'Progress saved.');
-   await load();
+   if(!(await load())){
+    // Preserve the original idempotent request until refreshed server state is verified.
+    setMessage('Progress confirmed by server, but refresh was not verified. Retry the same operation.');
+    return 'retry';
+   }
    return 'saved';
   } catch {
    setMessage('Connection lost. Retry the pending operation; do not log again.');
