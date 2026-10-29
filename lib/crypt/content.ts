@@ -302,7 +302,7 @@ export function wayfarerLabel(level: number | null): string {
 
 export function runStatus(hp: number, maxHp: number, bonus: number): string {
   const base = `${PLAYER.name} ${hp}/${maxHp}`;
-  if (bonus > 0) return `${base} · Ember Charm +${bonus}`;
+  if (bonus > 0) return `${base} · Run damage +${bonus}`;
   return base;
 }
 
