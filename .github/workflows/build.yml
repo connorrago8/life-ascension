@@ -35,6 +35,8 @@ jobs:
           const pin = createHash('sha256').update(key).digest('hex');
           appendFileSync(process.env.GITHUB_ENV, [
             'VERCEL_ENV=preview',
+            // Synthetic CI-only protected-branch identity; never changes hosted routing.
+            'VERCEL_GIT_COMMIT_REF=audit/qa-isolation-and-reliability-20261027',
             `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
             `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
             `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
