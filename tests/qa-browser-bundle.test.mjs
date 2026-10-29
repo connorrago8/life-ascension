@@ -68,3 +68,16 @@ test('source fingerprint changes when the QA-bearing browser asset changes', asy
     assert.notEqual(before.sourceFingerprint, after.sourceFingerprint);
   });
 });
+
+
+test('fails closed on an empty emitted browser directory', async () => {
+  await fixture({}, async root => {
+    await assert.rejects(inspectQaBrowserBundle(root), /no emitted JavaScript files/);
+  });
+});
+
+test('fails closed when only non-JavaScript assets are emitted', async () => {
+  await fixture({ 'metadata.txt': qa }, async root => {
+    await assert.rejects(inspectQaBrowserBundle(root), /no emitted JavaScript files/);
+  });
+});
