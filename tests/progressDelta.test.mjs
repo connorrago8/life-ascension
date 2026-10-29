@@ -56,3 +56,16 @@ test('Home retains original progress request on unverified RPC response', () => 
   assert.doesNotMatch(home, /Quest completed\. \+1 XP/,
     'Tracked progress cannot claim a new XP award without a v2 ledger receipt');
 });
+
+test('authenticated reload restores persisted progress from owner-scoped quest rows', () => {
+  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  assert.match(home,
+    /s\.from\('quest_instances'\)\.select\('id,quest_id,due_date,status,current_amount'\)\.eq\('owner_id',user\.id\)/,
+    'Reload must fetch current_amount from the signed-in user\'s persisted quest instances');
+  assert.match(home, /setInstances\(\[\.\.\.rows\.values\(\)\]\)/,
+    'The refreshed database rows must become the displayed quest instance state');
+  assert.match(home, /s\.rpc\('log_quest_progress'/,
+    'Progress writes must use the server-authoritative progress RPC');
+  assert.match(home, /await load\(\);\s*return 'saved'/,
+    'After a confirmed save, reload persisted state rather than trusting only local UI state');
+});
