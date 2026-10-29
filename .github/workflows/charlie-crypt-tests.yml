@@ -15,5 +15,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Crypt regression suite
-        run: node --experimental-strip-types --test tests/crypt*.test.mjs
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Full application unit regression suite
+        run: npm test
