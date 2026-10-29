@@ -79,6 +79,8 @@ export default function CharacterPage() {
 
   async function setArmorEquipped(equip: boolean) {
     if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy) return;
+    // An older focus refresh must not repaint stale gear during an equip RPC.
+    loadGate.current.invalidate();
     setEquipmentBusy(true);
     setEquipmentError('');
     try {
