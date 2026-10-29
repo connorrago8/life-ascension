@@ -132,3 +132,27 @@ test('inscription copy advertises three choices and final bonus credits both sou
   assert.match(charmNote(3), /run-only damage bonus is \+3/);
   assert.doesNotMatch(charmNote(3), /Ember Charm adds \+3/);
 });
+
+test('Sentinel defeat and retry restore HP without duplicating the bargain or charm', () => {
+  let state = send(inscription(23, 3), 'choose', { choiceId: 'bargain' });
+  assert.equal(state.hp, 1);
+  state = send(state, 'continue');
+  state = send(state, 'open', { nodeId: TREASURE_ID });
+  state = send(state, 'continue');
+  state = send(state, 'open', { nodeId: GUARDIAN_ID });
+  assert.equal(state.battle.player.hp, 1);
+  assert.equal(state.battle.player.attackBonus, 3);
+  state = send(state, 'combat', { action: 'defend' });
+  assert.equal(state.battle.status, 'lost');
+  const attempt = state.fightAttempt;
+  state = send(state, 'retry-fight');
+  assert.equal(state.phase, 'fight');
+  assert.equal(state.hp, PLAYER.maxHp);
+  assert.equal(state.battle.player.hp, PLAYER.maxHp);
+  assert.equal(state.attackBonus, 3);
+  assert.equal(state.battle.player.attackBonus, 3);
+  assert.equal(state.fightAttempt, attempt + 1);
+  assert.equal(state.eventChoiceId, 'bargain');
+  assert.equal(state.treasureCleared, true);
+  assert.equal(Object.hasOwn(state, 'xp'), false);
+});
