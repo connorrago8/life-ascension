@@ -47,14 +47,27 @@ test('failed request releases lock so a later retry is allowed',async()=>{
  assert.equal(x.lock.current,false);
  const retry=x.action('instance-1','defer');
  assert.equal(x.state.calls,2);
- x.pending.resolve({error:null});
  await retry;
+ assert.equal(x.state.loads,0);
+ assert.equal(x.lock.current,false);
+ assert.equal(x.state.busy,false);
 });
 test('old account completion cannot update new account message or reload',async()=>{
  const x=scenario();
  const pending=x.action('instance-1','complete');
  x.state.account='B';
  x.pending.resolve({data:{},error:null});
+ await pending;
+ assert.deepEqual(x.state.messages,[]);
+ assert.equal(x.state.loads,0);
+ assert.equal(x.lock.current,false);
+});
+
+test('old account failure cannot show an error on the new account',async()=>{
+ const x=scenario();
+ const pending=x.action('instance-1','resume');
+ x.state.account='B';
+ x.pending.reject(new Error('network unavailable'));
  await pending;
  assert.deepEqual(x.state.messages,[]);
  assert.equal(x.state.loads,0);
