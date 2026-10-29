@@ -57,6 +57,29 @@ BEGIN
 
   denied := false;
   BEGIN
+    DELETE FROM public.owned_equipment WHERE owner_id = auth.uid();
+  EXCEPTION WHEN insufficient_privilege THEN denied := true;
+  END;
+  IF NOT denied THEN RAISE EXCEPTION 'Authenticated direct ownership DELETE was allowed'; END IF;
+
+  denied := false;
+  BEGIN
+    UPDATE public.equipped_equipment SET item_id = 'ashen-hood'
+      WHERE owner_id = auth.uid();
+  EXCEPTION WHEN insufficient_privilege THEN denied := true;
+  END;
+  IF NOT denied THEN RAISE EXCEPTION 'Authenticated direct equipped UPDATE was allowed'; END IF;
+
+  denied := false;
+  BEGIN
+    INSERT INTO public.equipped_equipment(owner_id, slot, item_id)
+      VALUES (auth.uid(), 'head', 'ashen-hood') ON CONFLICT DO NOTHING;
+  EXCEPTION WHEN insufficient_privilege THEN denied := true;
+  END;
+  IF NOT denied THEN RAISE EXCEPTION 'Authenticated direct equipped INSERT was allowed'; END IF;
+
+  denied := false;
+  BEGIN
     INSERT INTO public.owned_equipment(owner_id, item_id)
       VALUES (auth.uid(), 'ashen-hood') ON CONFLICT DO NOTHING;
   EXCEPTION WHEN insufficient_privilege THEN denied := true;
