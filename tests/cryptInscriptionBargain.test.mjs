@@ -104,3 +104,24 @@ test('declined offering keeps alternate mending choice available', () => {
   state = send(state, 'continue');
   assert.equal(nodeAccess(state, TREASURE_ID), 'ready');
 });
+
+test('bargain bonus reaches the actual Sentinel combatant and is not awarded twice', () => {
+  let state = send(inscription(19, 12), 'choose', { choiceId: 'bargain' });
+  state = send(state, 'continue');
+  state = send(state, 'open', { nodeId: TREASURE_ID });
+  state = send(state, 'continue');
+  assert.equal(state.attackBonus, 3);
+  state = send(state, 'open', { nodeId: GUARDIAN_ID });
+  assert.equal(state.phase, 'fight');
+  assert.equal(state.battle.player.attackBonus, 3);
+  assert.equal(state.battle.player.hp, 10);
+  assert.equal(state.battle.enemy.id, 'crypt-sentinel');
+  const firstAttempt = state.fightAttempt;
+  const retreated = send(state, 'back');
+  assert.equal(retreated.attackBonus, 3);
+  state = send(retreated, 'open', { nodeId: GUARDIAN_ID });
+  assert.equal(state.battle.player.attackBonus, 3);
+  assert.equal(state.fightAttempt, firstAttempt + 1);
+  assert.equal(state.treasureCleared, true);
+  assert.equal(state.eventCleared, true);
+});
