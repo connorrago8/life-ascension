@@ -27,11 +27,11 @@ test('ember bargain trades exactly two HP for one run-only attack bonus', () => 
   assert.equal(Object.hasOwn(state, 'inventory'), false);
 });
 
-test('bargain cannot reduce HP below one and cannot be collected twice', () => {
+test('bargain refuses an unaffordable offering and cannot be collected twice', () => {
   let state = send(inscription(9, 1), 'choose', { choiceId: 'bargain' });
   assert.equal(state.hp, 1);
-  assert.match(state.outcomeNote, /takes 0 HP/);
-  assert.equal(state.attackBonus, 1);
+  assert.match(state.outcomeNote, /need more than 2 HP/);
+  assert.equal(state.attackBonus, 0);
   assert.strictEqual(send(state, 'choose', { choiceId: 'bargain' }), state);
   state = send(state, 'continue');
   assert.equal(nodeAccess(state, EVENT_ID), 'done');
