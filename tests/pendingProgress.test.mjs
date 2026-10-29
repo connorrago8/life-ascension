@@ -506,3 +506,59 @@ test('late cross-tab progress responses cannot erase a newer pending journal', a
     assert.equal(state.saving, false);
   }
 });
+
+
+test('cross-tab stale progress response fails closed on same-ID delta mutation, corrupt replacement, and rejection', async () => {
+  const { parsePendingProgress } = await loadParser();
+  const handlers = await loadProgressHandlers();
+  const key = 'life-progress-pending:q1';
+  const original = { id: 'original-request', delta: 2 };
+  const scenarios = [
+    { name: 'same request ID but different delta', handler: 'submit', response: 'saved',
+      replacement: JSON.stringify({ id: original.id, delta: -2 }), corrupt: false },
+    { name: 'malformed newer journal', handler: 'retryPending', response: 'saved',
+      replacement: '{malformed', corrupt: true },
+    { name: 'rejected older request with newer valid journal', handler: 'retryPending', response: 'rejected',
+      replacement: JSON.stringify({ id: 'newer-request', delta: 1 }), corrupt: false },
+  ];
+  for (const scenario of scenarios) {
+    const values = new Map();
+    if (scenario.handler === 'retryPending') values.set(key, JSON.stringify(original));
+    const storage = {
+      getItem: name => values.get(name) ?? null,
+      setItem: (name, value) => values.set(name, value),
+      removeItem: name => values.delete(name),
+    };
+    let finish;
+    const deferred = new Promise(resolve => { finish = resolve; });
+    let notifications = 0;
+    const state = {
+      disabled: false, saving: false, storageError: false,
+      retrying: scenario.handler === 'retryPending',
+      amount: 2, target: 10, instance: { id: 'q1', status: 'available' },
+      storageKey: key, parsePendingProgress, localStorage: storage,
+      crypto: { randomUUID: () => original.id },
+      onLog: () => deferred,
+      onJournalResolved: () => { notifications++; },
+      setRetrying: value => { state.retrying = value; },
+      setSaving: value => { state.saving = value; },
+      setStorageError: value => { state.storageError = value; },
+      setSaveState: value => { state.saveState = value; },
+      setCustom: () => {},
+    };
+    const handler = vm.runInNewContext(handlers.get(scenario.handler), state);
+    if (scenario.handler === 'submit') handler(original.delta);
+    else handler();
+    assert.equal(state.saving, true, scenario.name);
+    storage.setItem(key, scenario.replacement);
+    finish(scenario.response);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(storage.getItem(key), scenario.replacement,
+      scenario.name + ': older response must not delete or replace the newer journal');
+    assert.equal(notifications, 0, scenario.name + ': parent recovery row must remain visible');
+    assert.equal(state.saveState, 'failed', scenario.name + ': no false saved status');
+    assert.equal(state.storageError, scenario.corrupt, scenario.name + ': fail closed on malformed storage');
+    if (!scenario.corrupt) assert.equal(state.retrying, true, scenario.name + ': newer request remains retryable');
+    assert.equal(state.saving, false, scenario.name);
+  }
+});
