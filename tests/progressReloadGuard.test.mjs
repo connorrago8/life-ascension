@@ -57,6 +57,6 @@ test('account-scoped loads invalidate stale requests and fail closed on auth err
  assert.match(home,/const epoch=\+\+loadEpoch\.current/);
  assert.match(home,/if\(epoch!==loadEpoch\.current\)return false/);
  assert.match(home,/const nextAccount=authError\?null:\(user\?\.id\|\|null\)/);
- assert.match(home,/setQuests\(\[\]\);setInstances\(\[\]\);setRecoveryQuests\(\[\]\);setRecoveryIds\(\[\]\);setXp\(0\)/);
+ assert.match(home,/setQuests\(\[\]\);setInstances\(\[\]\);setRecoveryQuests\(\[\]\);setRecoveryIds\(\[\]\);setXp\(null\)/);
  assert.match(home,/return !expectedProgressInstanceId\|\|rows\.get\(expectedProgressInstanceId\)\|\|false/);
 });
