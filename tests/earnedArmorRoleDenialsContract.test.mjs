@@ -16,14 +16,17 @@ test('role-denial SQL is explicitly disposable and verifies the nonempty two-own
 test('anonymous gear read and equip RPC calls must fail with insufficient_privilege', () => {
   assert.match(sql, /SET ROLE anon;[\s\S]*?PERFORM public\.get_earned_gear\(\)/);
   assert.match(sql, /PERFORM public\.equip_earned_armor\('ashen-hood', true\)/);
-  assert.equal((sql.match(/EXCEPTION WHEN insufficient_privilege THEN denied := true;/g) || []).length, 5);
+  assert.equal((sql.match(/EXCEPTION WHEN insufficient_privilege THEN denied := true;/g) || []).length, 8);
 });
 
-test('authenticated direct ownership UPDATE/INSERT and equipped DELETE must be denied', () => {
+test('authenticated direct INSERT/UPDATE/DELETE on both armor tables must be denied', () => {
   assert.match(sql, /SET ROLE authenticated;[\s\S]*?UPDATE public\.owned_equipment/);
   assert.match(sql, /DELETE FROM public\.equipped_equipment/);
   assert.match(sql, /INSERT INTO public\.owned_equipment/);
-  assert.equal((sql.match(/IF NOT denied THEN RAISE EXCEPTION/g) || []).length, 5);
+  assert.match(sql, /DELETE FROM public\.owned_equipment/);
+  assert.match(sql, /UPDATE public\.equipped_equipment/);
+  assert.match(sql, /INSERT INTO public\.equipped_equipment/);
+  assert.equal((sql.match(/IF NOT denied THEN RAISE EXCEPTION/g) || []).length, 8);
 });
 
 test('CI invokes denials on disposable armor clone only after the existing smoke', () => {
