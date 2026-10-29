@@ -115,6 +115,8 @@ export type EventChoice = {
   resultFull: string;
   heal?: number;
   hint?: boolean;
+  hpCost?: number;
+  attackBonus?: number;
 };
 
 export type FightNode = {
@@ -163,7 +165,7 @@ export const NODES: readonly CryptNode[] = [
     label: 'Event',
     title: 'Ancient inscription',
     detail: 'Words cut into the wall still hold a little warmth.',
-    prose: 'Letters older than Brackenlight are cut into the wall. Two lines still answer to a touch.',
+    prose: 'Letters older than Brackenlight are cut into the wall. Three lines still answer to a touch.',
     continue: 'Continue',
     choices: [
       {
@@ -172,6 +174,14 @@ export const NODES: readonly CryptNode[] = [
         result: 'Warmth closes a scrape. You recover {heal} HP for this preview only.',
         resultFull: 'The warmth finds you already whole. The words dim, and your HP stays full.',
         heal: 2,
+      },
+      {
+        id: 'bargain',
+        label: 'Offer blood to the ember rune',
+        result: 'The rune takes {cost} HP and strengthens your strikes by +1 damage for this run.',
+        resultFull: 'The ember rune falls silent. You need more than 2 HP to survive its price.',
+        hpCost: 2,
+        attackBonus: 1,
       },
       {
         id: 'warning',
@@ -232,7 +242,7 @@ export const END_CARD = {
   twitch: 'Your {artifact} twitches once, then goes still.',
   kicker: 'To be continued.',
   restart: 'Restart preview',
-  charm: 'Ember Charm adds +{bonus} base damage (Focus doubles Attack), this run only.',
+  charm: 'Your run-only damage bonus is +{bonus} (Focus doubles Attack).',
   sigil: 'You recovered the Sentinel Sigil. It vanishes when this preview ends.',
 };
 
@@ -292,7 +302,7 @@ export function wayfarerLabel(level: number | null): string {
 
 export function runStatus(hp: number, maxHp: number, bonus: number): string {
   const base = `${PLAYER.name} ${hp}/${maxHp}`;
-  if (bonus > 0) return `${base} · Ember Charm +${bonus}`;
+  if (bonus > 0) return `${base} · Run damage +${bonus}`;
   return base;
 }
 
