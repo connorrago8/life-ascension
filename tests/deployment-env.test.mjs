@@ -236,10 +236,12 @@ test('runtime server/Edge refuses privileged key injected after Preview build', 
   assert.equal(productionConfig?.url, prod.NEXT_PUBLIC_SUPABASE_URL);
 });
 
-test('runtime server/Edge denies unprotected Preview branches after build', async () => {
+test('runtime server/Edge accepts both approved QA Preview branches and denies unprotected branches', async () => {
   // Build-time enforcement alone cannot defend against post-build branch drift.
   assert.equal((await runtimePublicConfig(qa))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
-  for (const ref of [undefined, '', 'main', 'beta/quest-ui-clean-review',
+  assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' }))?.url,
+    qa.NEXT_PUBLIC_SUPABASE_URL);
+  for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {
     assert.equal(await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: ref }), null);
   }

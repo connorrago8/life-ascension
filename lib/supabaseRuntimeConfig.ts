@@ -1,7 +1,10 @@
 // Runtime defense-in-depth for server and Edge auth routes. The build guard
 // remains authoritative; this rejects post-build Preview configuration drift.
 // The operator must independently pin the intended project's public key.
-const PROTECTED_QA_BRANCH = 'audit/qa-isolation-and-reliability-20261027';
+const PROTECTED_QA_BRANCHES = new Set([
+  'audit/qa-isolation-and-reliability-20261027',
+  'beta/quest-ui-clean-review',
+]);
 
 const PROJECTS: Record<string, string> = {
   production: 'ugcvhmrriazbbymjxvch',
@@ -19,7 +22,7 @@ export async function readServerSupabaseConfig(): Promise<{ url: string; key: st
   const ref = target ? PROJECTS[target] : undefined;
   if (!ref) return null; // Unknown or missing Vercel target: fail closed.
   // Runtime defense if branch metadata drifts after the build-time guard ran.
-  if (target === 'preview' && process.env.VERCEL_GIT_COMMIT_REF !== PROTECTED_QA_BRANCH) return null;
+  if (target === 'preview' && !PROTECTED_QA_BRANCHES.has(process.env.VERCEL_GIT_COMMIT_REF ?? '')) return null;
   // A Preview may receive an injected privileged key after the build. Deny
   // server/Edge public-key clients too, so the QA probe cannot report PASS
   // while a privileged credential is present in this runtime.

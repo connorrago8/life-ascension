@@ -39,8 +39,16 @@ test('rejects protected branch overrides targeting Production', () => {
   const s = good(); s.result.envs[0].target = ['production', 'preview'];
   assert.equal(check(s).ok, false);
 });
-test('rejects wrong branch even when QA overrides exist', () => {
-  assert.equal(verifyQaPreviewEnvMetadata(good(), 'beta/quest-ui-clean-review').ok, false);
+test('accepts candidate branch only with its own exact Preview-scoped URL, key and pin', () => {
+  const candidate = 'beta/quest-ui-clean-review';
+  const s = good();
+  for (const entry of s.result.envs) {
+    if (entry.gitBranch === PROTECTED_QA_BRANCH) entry.gitBranch = candidate;
+  }
+  assert.deepEqual(verifyQaPreviewEnvMetadata(s, candidate),
+    { ok: true, metadata_only: true, runtime_verified: false, blockers: [] });
+  assert.equal(verifyQaPreviewEnvMetadata(good(), candidate).ok, false);
+  assert.equal(verifyQaPreviewEnvMetadata(s, 'main').ok, false);
 });
 test('rejects malformed metadata', () => {
   assert.equal(check({ envs: 'not an array' }).ok, false);
