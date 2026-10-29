@@ -153,7 +153,7 @@ try {
   await leavePage.getByRole('button', { name: /^Fight: Crypt Rat\./ }).click();
   await leavePage.locator('[data-phase="fight"]').waitFor();
   await winBattle(leavePage);
-  await leavePage.getByRole('button', { name: 'Continue', exact: true }).click();
+  // winBattle already advanced the victory screen back to the map.
   await leavePage.getByRole('button', { name: /^Event: Ancient inscription/ }).click();
   await leavePage.getByRole('button', { name: 'Read the warning' }).click();
   await leavePage.getByRole('button', { name: 'Continue', exact: true }).click();
