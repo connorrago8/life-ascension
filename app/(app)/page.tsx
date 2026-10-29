@@ -78,11 +78,27 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
   }
  },[user]);
  useEffect(()=>{void load();const {data:{subscription}}=supabase().auth.onAuthStateChange(()=>{void load()});return()=>subscription.unsubscribe()},[load]);
- async function add(e:React.FormEvent){e.preventDefault();if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}if(!title.trim()||busy||!user)return;setBusy(true);const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
- const {error}=trackProgress
-   ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
-   : await supabase().rpc('create_scheduled_quest',payload);
- setMessage(error?.message||'Quest scheduled.');if(!error){setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);}await load();setBusy(false)}
+ async function add(e:React.FormEvent){
+  e.preventDefault();
+  if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}
+  if(!title.trim()||busy||!user)return;
+  setBusy(true);
+  try {
+   const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
+   const {error}=trackProgress
+    ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
+    : await supabase().rpc('create_scheduled_quest',payload);
+   if(error){setMessage(error.message);return}
+   setMessage('Quest scheduled.');
+   setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);
+   await load();
+  } catch {
+   // A lost response may follow a successful server commit; never auto-repeat creation.
+   setMessage('Quest creation not confirmed. Refresh your board before trying again.');
+  } finally {
+   setBusy(false);
+  }
+ }
  async function act(id:string,action:'complete'|'defer'|'resume'){
   if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}
   if(busy)return;
