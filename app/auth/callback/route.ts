@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
 import { requestOrigin } from '../../../lib/requestOrigin';
 import { safeNext } from '../../../lib/safeNext';
+import { readServerSupabaseConfig } from '../../../lib/supabaseRuntimeConfig';
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
@@ -17,11 +18,13 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get('code');
   if (!code) return loginAgain(origin, url.searchParams.get('next'));
 
+  const config = await readServerSupabaseConfig();
+  if (!config) return loginAgain(origin, url.searchParams.get('next'));
   const destination = safeNext(url.searchParams.get('next'), origin);
   const response = NextResponse.redirect(new URL(destination, origin));
   const client = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    config.url,
+    config.key,
     {
       cookies: {
         getAll() {

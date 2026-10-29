@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { User } from '@supabase/supabase-js';
+import { readServerSupabaseConfig } from './supabaseRuntimeConfig';
 
 type PendingCookie = { name: string; value: string; options: CookieOptions };
 
@@ -9,9 +10,9 @@ export async function readSessionUser(request: NextRequest): Promise<{
   pendingCookies: PendingCookie[];
   configured: boolean;
 }> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return { user: null, pendingCookies: [], configured: false };
+  const config = await readServerSupabaseConfig();
+  if (!config) return { user: null, pendingCookies: [], configured: false };
+  const { url, key: anonKey } = config;
 
   const pendingCookies: PendingCookie[] = [];
   const client = createServerClient(url, anonKey, {
@@ -48,9 +49,9 @@ export async function refreshSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   if (isPrefetch(request)) return response;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return response;
+  const config = await readServerSupabaseConfig();
+  if (!config) return response;
+  const { url, key: anonKey } = config;
 
   const client = createServerClient(url, anonKey, {
     cookies: {

@@ -1,11 +1,13 @@
 import { homeAriaLabel, type HomeCharacterModel } from '../../lib/preview/characterRender';
+import { BeltWaistLayer } from './BeltWaistLayer';
+import type { BeltStage } from '../../lib/preview/beltProgression';
 
 /**
  * Front-facing, full-body game avatar. The palette and visible gear come from
  * the shared appearance model, so Character and Home stay in sync.
  * Flat material planes deliberately avoid the old puppet-like face and limbs.
  */
-export function HomeCharacter({ model, idPrefix = 'home' }: { model: HomeCharacterModel; idPrefix?: string }) {
+export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { model: HomeCharacterModel; idPrefix?: string; beltPreviewStage?: BeltStage }) {
   const shirt = `${idPrefix}-shirt`;
   const skin = `${idPrefix}-skin`;
   const hair = `${idPrefix}-hair`;
@@ -53,13 +55,19 @@ export function HomeCharacter({ model, idPrefix = 'home' }: { model: HomeCharact
         <path d="M153 118 L135 122 122 161 135 220 151 222 163 176Z" fill={model.tunic} opacity=".8" />
         <path d="M111 105 L120 126 129 105 136 120 120 158 104 120Z" fill={model.skinShadow} opacity=".8" />
         <path d="M120 158 L120 222" stroke={model.tunicLight} strokeWidth="2" opacity=".7" />
-        <path d="M86 198 L153 198 151 210 88 210Z" fill={model.belt} stroke="#251b15" strokeWidth="2" />
-        <rect x="111" y="196" width="18" height="17" rx="2" fill="#b9a07a" stroke="#4b3a29" strokeWidth="2" />
-        <rect x="117" y="201" width="6" height="7" rx="1" fill={model.belt} />
-        <path d="M92 210 L90 243 108 244 108 213 M134 213 L134 244 151 243 149 210"
-          fill={model.belt} stroke="#2c211a" strokeWidth="2" />
-        <path d="M96 111 L141 216" stroke={model.belt} strokeWidth="10" opacity=".9" />
-        <path d="M98 115 L144 217" stroke="#b59b75" strokeWidth="2" opacity=".65" />
+        {beltPreviewStage ? (
+          <BeltWaistLayer stage={beltPreviewStage} color={model.belt} />
+        ) : (
+          <>
+            <path d="M86 198 L153 198 151 210 88 210Z" fill={model.belt} stroke="#251b15" strokeWidth="2" />
+            <rect x="111" y="196" width="18" height="17" rx="2" fill="#b9a07a" stroke="#4b3a29" strokeWidth="2" />
+            <rect x="117" y="201" width="6" height="7" rx="1" fill={model.belt} />
+            <path d="M92 210 L90 243 108 244 108 213 M134 213 L134 244 151 243 149 210"
+              fill={model.belt} stroke="#2c211a" strokeWidth="2" />
+            <path d="M96 111 L141 216" stroke={model.belt} strokeWidth="10" opacity=".9" />
+            <path d="M98 115 L144 217" stroke="#b59b75" strokeWidth="2" opacity=".65" />
+          </>
+        )}
         {/* Arms and fitted bracers; no separate circular puppet joints. */}
         <path d="M85 115 Q69 119 64 142 L55 201 73 206 90 156Z" fill={`url(#${shirt})`} stroke="#343333" strokeWidth="2" />
         <path d="M155 115 Q171 119 176 142 L185 201 167 206 150 156Z" fill={`url(#${shirt})`} stroke="#343333" strokeWidth="2" />
@@ -90,13 +98,13 @@ export function HomeCharacter({ model, idPrefix = 'home' }: { model: HomeCharact
             <rect x="48" y="281" width="18" height="20" rx="2" fill={model.mainHandAccentLight} />
             <path d="M42 309 L72 309" stroke={model.mainHandAccent} strokeWidth="4" />
           </g>
-        ) : (
+        ) : model.mainHand === 'staff' ? (
           <g data-prop="staff">
             <path d="M55 40 L58 352" stroke={model.mainHandAccent} strokeWidth="7" />
             <path d="M53 40 L56 352" stroke={model.mainHandAccentLight} strokeWidth="2" />
             <path d="M48 43 L55 29 62 43Z" fill={model.mainHandAccentLight} />
           </g>
-        )}
+        ) : null}
       </g>
     </svg>
   );

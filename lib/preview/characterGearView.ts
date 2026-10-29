@@ -1,0 +1,73 @@
+/** A visual boundary, not an ownership or reward authority. */
+import { appearanceFromLoadout, type Appearance } from './appearance';
+import type { BeltStage } from './beltProgression';
+
+/**
+ * This value must eventually come from a signed-in, owner-scoped server RPC.
+ * It is NOT an entitlement token: the database must separately authorize
+ * claims and equip writes. Preview/sessionStorage and XP totals are excluded.
+ */
+export type AuthenticatedGearSnapshot = Readonly<{
+  ownedItemIds: readonly string[];
+  equippedItemIds: readonly string[];
+}>;
+
+/** Fail closed on malformed or unknown RPC data; never substitute preview storage. */
+export function parseAuthenticatedGearSnapshot(value: unknown): AuthenticatedGearSnapshot | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const data = value as Record<string, unknown>;
+  // Capture narrowed arrays in locals so the ownership check remains type-safe
+  // inside callbacks (and cannot be confused with a later property mutation).
+  const ownedItemIds = data.ownedItemIds;
+  const equippedItemIds = data.equippedItemIds;
+  if (!Array.isArray(ownedItemIds) || !Array.isArray(equippedItemIds)) return null;
+  if (![...ownedItemIds, ...equippedItemIds].every((id) => id === 'ashen-hood')) return null;
+  // Reject impossible or duplicated server snapshots rather than silently
+  // treating an inconsistent equipment state as authenticated evidence.
+  if (new Set(ownedItemIds).size !== ownedItemIds.length ||
+      new Set(equippedItemIds).size !== equippedItemIds.length ||
+      equippedItemIds.some((id) => !ownedItemIds.includes(id))) return null;
+  return { ownedItemIds: [...ownedItemIds], equippedItemIds: [...equippedItemIds] };
+}
+
+export type CharacterEquipmentMode = 'preview' | 'unverified' | 'verified';
+export type CharacterGearView = Readonly<{
+  appearance: Appearance;
+  beltStage: BeltStage | undefined;
+  canChange: boolean;
+  source: CharacterEquipmentMode;
+}>;
+
+/**
+ * Render only the first approved armor from an authenticated ownership AND
+ * equipped-state snapshot. Even a valid XP total cannot unlock this display.
+ * No local equip action is exposed until the server equip RPC is integrated.
+ */
+export function characterGearView(
+  mode: CharacterEquipmentMode,
+  previewAppearance: Appearance,
+  snapshot?: AuthenticatedGearSnapshot | null,
+): CharacterGearView {
+  if (mode === 'preview') {
+    return { appearance: previewAppearance, beltStage: undefined, canChange: true, source: 'preview' };
+  }
+  if (mode === 'verified' &&
+      Array.isArray(snapshot?.ownedItemIds) &&
+      Array.isArray(snapshot?.equippedItemIds)) {
+    const hasOwnedArmor = snapshot.ownedItemIds.includes('ashen-hood');
+    const isEquipped = hasOwnedArmor && snapshot.equippedItemIds.includes('ashen-hood');
+    return {
+      appearance: appearanceFromLoadout({ equipmentIds: isEquipped ? ['ashen-hood'] : [] }),
+      beltStage: 'starter',
+      canChange: false,
+      source: 'verified',
+    };
+  }
+  // Missing/malformed server data fails closed. Never fall back to preview.
+  return {
+    appearance: appearanceFromLoadout({ equipmentIds: [] }),
+    beltStage: 'starter',
+    canChange: false,
+    source: 'unverified',
+  };
+}

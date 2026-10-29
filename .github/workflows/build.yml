@@ -1,7 +1,7 @@
 name: Verify application build
 on:
   push:
-    branches: [main]
+    branches: [main, 'beta/quest-ui-clean-review']
   pull_request:
     branches: [main]
 permissions:
@@ -21,11 +21,62 @@ jobs:
         run: npx tsc --noEmit
       - name: Unit tests
         run: npm test
-      - name: Production build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+      - name: Prepare synthetic QA build fixture (no hosted credentials)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const ref = 'njqwwimzrsunheehnnnt';
+          const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const key = [b64({ alg: 'HS256', typ: 'JWT' }),
+            b64({ iss: 'supabase', ref, role: 'anon' }),
+            'synthetic-invalid-signature'].join('.');
+          const pin = createHash('sha256').update(key).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, [
+            'VERCEL_ENV=preview',
+            // Synthetic CI-only protected-branch identity; never changes hosted routing.
+            'VERCEL_GIT_COMMIT_REF=audit/qa-isolation-and-reliability-20261027',
+            `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
+            `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
+            '',
+          ].join('\n'));
+          NODE
+      - name: Production build (isolated synthetic Preview configuration)
         run: npm run build
+      - name: Production QA route must return 404
+        # Local production server only; no authenticated requests or hosted DB calls.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=3127 npm run start > /tmp/quest-progress-prod.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 40); do
+            status=$(curl --silent --show-error --max-time 2 --output /tmp/quest-progress-prod-body --write-out '%{http_code}' http://127.0.0.1:3127/qa/quest-progress 2>/dev/null || true)
+            if [ "$status" = "404" ]; then
+              gear_status=$(curl --silent --show-error --max-time 2 --output /tmp/character-gear-prod-body --write-out '%{http_code}' http://127.0.0.1:3127/qa/character-gear)
+              if [ "$gear_status" != "404" ]; then
+                echo "FAIL: production /qa/character-gear returned HTTP $gear_status (expected 404)"
+                exit 1
+              fi
+              echo 'PASS: both /qa/quest-progress and /qa/character-gear are 404 in the production build'
+              exit 0
+            fi
+            if [ "$status" != "000" ] && [ -n "$status" ]; then
+              echo "FAIL: production QA route returned HTTP $status (expected 404)"
+              cat /tmp/quest-progress-prod.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo 'FAIL: production server did not return 404 within 40 seconds'
+          cat /tmp/quest-progress-prod.log
+          exit 1
 
   sql-smoke:
     name: SQL smoke tests (isolated Postgres)
@@ -50,7 +101,7 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migrations 0001–0007 and run all five SQL smoke tests
+      - name: Apply migrations 0001–0012, six SQL suites and concurrency test
         shell: bash
         run: |
           set -euo pipefail
@@ -64,15 +115,99 @@ jobs:
             supabase/migrations/202610230004_lifetime_xp.sql \
             supabase/migrations/202610240005_api_key_user_context.sql \
             supabase/migrations/202610240006_quest_edit_archive.sql \
-            supabase/migrations/202610240007_daily_late_window.sql; do
+            supabase/migrations/202610240007_daily_late_window.sql \
+            supabase/migrations/202610260008_partial_progress.sql \
+            supabase/migrations/202610260009_progress_configuration.sql \
+            supabase/migrations/202610260010_progress_completion_guard.sql \
+            supabase/migrations/202610260011_atomic_tracked_creation.sql \
+            supabase/migrations/202610260012_api_progress_wrapper.sql \
+            supabase/migrations/202610270001_quest_receipt_v2.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
+          # Prove historical XP backfill in a disposable PRE-armor clone.
+          # Never run this fixture against hosted QA or Production.
+          createdb --template="$db" life_ascension_backfill_test
+          psql -v ON_ERROR_STOP=1 -d life_ascension_backfill_test -f tests/sql/earned_armor_backfill_pre.sql
+          psql -v ON_ERROR_STOP=1 -d life_ascension_backfill_test -f supabase/migrations/202610280001_earned_armor.sql
+          psql -v ON_ERROR_STOP=1 -d life_ascension_backfill_test -f tests/sql/earned_armor_backfill_post.sql
+          # Existing post-migration suites still use their original isolated clones.
+          psql -v ON_ERROR_STOP=1 -d "$db" -f supabase/migrations/202610280001_earned_armor.sql
+          # Run the combined v2 contract against an isolated clone of the
+          # migrated disposable database; the legacy suites use overlapping
+          # fixture IDs and must not share their test data.
+          createdb --template="$db" life_ascension_armor_test
+          psql -v ON_ERROR_STOP=1 -d life_ascension_armor_test -f tests/sql/earned_armor_smoke.sql
+          psql -v ON_ERROR_STOP=1 -d life_ascension_armor_test -f tests/sql/earned_armor_role_denials.sql
+          createdb --template="$db" life_ascension_combined_test
+          psql -v ON_ERROR_STOP=1 -d life_ascension_combined_test -f tests/sql/quest_receipt_v2_combined_smoke.sql
           for file in \
             tests/sql/api_keys_progress_smoke.sql \
             tests/sql/scheduling_auth_smoke.sql \
             tests/sql/two_user_mcp_auth.sql \
             tests/sql/archive_compat_smoke.sql \
-            tests/sql/daily_late_window_smoke.sql; do
+            tests/sql/daily_late_window_smoke.sql \
+            tests/sql/partial_progress_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
-          echo "All five SQL smoke tests passed"
+          bash tests/sql/parallel_progress.sh "$db"
+          bash tests/sql/quest_receipt_v2_concurrency.sh
+          echo "All six SQL smoke tests, armor ownership smoke, combined v2 contract and both concurrency tests passed"
+
+  quest-browser-qa:
+    name: Quest progress browser QA (unprivileged, no backend)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/beta/quest-ui-clean-review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app and ephemeral browser driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright
+      - name: Run local real-component browser interactions with Chromium sandbox
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+          QA_BASE_URL: http://127.0.0.1:3128
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0 || { echo "ERROR: refusing root Chromium browser QA"; exit 1; }
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$browser" || { echo "ERROR: no system Chrome/Chromium for sandboxed browser QA"; exit 1; }
+          npm run dev -- --hostname 127.0.0.1 --port 3128 > /tmp/quest-progress-dev.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail --max-time 3 http://127.0.0.1:3128/qa/quest-progress > /dev/null 2>&1; then
+              echo 'Local development-only QA fixture responded HTTP 200'
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              echo 'ERROR: local QA fixture did not become ready'
+              cat /tmp/quest-progress-dev.log
+              exit 1
+            fi
+            sleep 2
+          done
+          CHROMIUM_BIN="$browser" node tests/browser/quest-progress.qa.mjs
+          CHROMIUM_BIN="$browser" node tests/browser/crypt-preview.qa.mjs
+          CHROMIUM_BIN="$browser" node tests/browser/character-gear.qa.mjs
+      - name: Upload Quest and Crypt browser screenshots for CEO review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quest-progress-browser-${{ github.sha }}
+          path: |
+            artifacts/quest-progress/
+            artifacts/crypt-preview/
+            artifacts/character-gear/
+          if-no-files-found: warn
+          retention-days: 7

@@ -9,6 +9,7 @@ import {
 import { readBearerToken } from '../../../lib/apiKey';
 import { mcpDomains, runMcpTool } from '../../../lib/mcpTools';
 import { createServiceRoleClient } from '../../../lib/supabaseAdmin';
+import { readServerSupabaseConfig } from '../../../lib/supabaseRuntimeConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,19 @@ const tools = [
         source: { type: 'string', enum: ['web', 'chatgpt', 'grok', 'api'] },
       },
       required: ['quest_id', 'note'],
+    },
+  },
+  {
+    name: 'log_quest_progress',
+    description: 'Record a confirmed numeric increment for an opt-in tracked quest instance. Reuse the SAME request_id UUID when retrying an uncertain result. The target awards 1 XP once; partial updates award no XP. Never invent progress.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        instance_id: { type: 'string', description: 'Quest instance UUID from list_quests' },
+        request_id: { type: 'string', description: 'Unique UUID for this operation. Reuse exactly on retries.' },
+        delta: { type: 'integer', description: 'Positive amount to log; negative default increment to undo.' },
+      },
+      required: ['instance_id','request_id','delta'],
     },
   },
   {
@@ -86,7 +100,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const auth = await authenticateRequest(req);
   if (!auth.ok) return authenticationErrorResponse(auth);
-  const opened = openActor(auth, readBearerToken(req.headers.get('authorization')) ?? '');
+  const opened = await openActor(auth, readBearerToken(req.headers.get('authorization')) ?? '');
   if ('ok' in opened) return authenticationErrorResponse(opened);
   const actor: Actor = { auth, db: opened.db };
 
@@ -107,7 +121,7 @@ export async function POST(req: NextRequest) {
 
   const name = body.params?.name ?? '';
   const args = body.params?.arguments ?? {};
-  if (name === 'create_quest' || name === 'update_progress' || name === 'submit_completion') {
+  if (name === 'create_quest' || name === 'update_progress' || name === 'submit_completion' || name === 'log_quest_progress') {
     if (!hasScope(auth, 'quests:write')) return NextResponse.json({ error: 'Missing quests:write scope' }, { status: 403 });
   } else if (name === 'list_quests' || name === 'get_character_progress') {
     if (!hasScope(auth, 'quests:read')) return NextResponse.json({ error: 'Missing quests:read scope' }, { status: 403 });
@@ -125,10 +139,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(outcome.result) }] } });
 }
 
-function openActor(auth: AuthSuccess, token: string): { db: SupabaseClient } | { ok: false; status: 503; error: string } {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return { ok: false, status: 503, error: 'Server not configured' };
+async function openActor(auth: AuthSuccess, token: string): Promise<{ db: SupabaseClient } | { ok: false; status: 503; error: string }> {
+  const config = await readServerSupabaseConfig();
+  if (!config) return { ok: false, status: 503, error: 'Server not configured' };
+  const { url, key: anonKey } = config;
   if (auth.method === 'supabase_jwt') {
     return {
       db: createClient(url, anonKey, {
