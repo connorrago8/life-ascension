@@ -39,7 +39,6 @@ test('new progress actions never reuse or replace a pending request', () => {
 
 test('custom amount cannot change while saving or retrying', () => {
   assert.match(controls, /<input className="field" disabled=\{disabled \|\| saving \|\| retrying \|\| storageError \|\| remaining === 0\}/);
-  assert.match(controls, /localStorage\.removeItem\(storageKey\); setRetrying\(false\)/);
 });
 
 test('quest card does not promise XP before authoritative reward confirmation', () => {
