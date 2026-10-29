@@ -154,3 +154,28 @@ test('authenticated gear parser rejects equipped-but-unowned and duplicate items
     ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'],
   }), { ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'] });
 });
+
+test('Ashen Hood milestone never promotes XP or unavailable gear into ownership', async () => {
+  const { view } = await viewModule();
+  const empty = { ownedItemIds: [], equippedItemIds: [] };
+  const owned = { ownedItemIds: ['ashen-hood'], equippedItemIds: [] };
+  assert.equal(view.ASHEN_HOOD_XP_MILESTONE, 10);
+  assert.deepEqual(view.earnedArmorMilestone(9, empty),
+    { status: 'earning', remainingXp: 1 });
+  assert.deepEqual(view.earnedArmorMilestone(10, empty),
+    { status: 'eligible-unconfirmed', remainingXp: 0 });
+  assert.deepEqual(view.earnedArmorMilestone(100, null),
+    { status: 'unverified', remainingXp: 0 });
+  assert.deepEqual(view.earnedArmorMilestone(10, owned),
+    { status: 'owned', remainingXp: 0 });
+});
+
+test('authenticated Character offers truthful milestone guidance and Crypt entry', async () => {
+  const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
+  assert.match(route, /state\.preview \? null : earnedArmorMilestone\(state\.xp, state\.gear\)/);
+  assert.match(route, /armorMilestone\.status === 'eligible-unconfirmed'/);
+  assert.match(route, /armorMilestone\.status === 'unverified'/);
+  assert.match(route, /armorMilestone\.status === 'owned'/);
+  assert.match(route, /armorMilestone\.status === 'earning'/);
+  assert.match(route, /href="\/play\/crypt">Enter Forgotten Crypt<\/a>/);
+});
