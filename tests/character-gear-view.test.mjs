@@ -46,6 +46,8 @@ test('authenticated character route opts out of preview loadout even when previe
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
   assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(route, /Lifetime XP: \{state\.xp\}/, 'authenticated Character should show the verified lifetime XP value');
+  assert.match(route, /aria-label=\{`Lifetime XP: \$\{state\.xp\}`\}/, 'lifetime XP should have an accessible label');
   assert.match(screen, /characterGearView\(equipmentMode, appearance, verifiedGear\)/);
   assert.match(screen, /visibleAppearance = displayName \? \{ \.\.\.gearView\.appearance, name: displayName \}/);
   assert.match(screen, /homeCharacterModel\(visibleAppearance\)/);
