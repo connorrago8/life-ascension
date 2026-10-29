@@ -27,6 +27,7 @@ export default function CharacterPage() {
   const [equipmentBusy, setEquipmentBusy] = useState(false);
   const [equipmentError, setEquipmentError] = useState('');
   const loadGate = useRef(createLatestCharacterLoadGate());
+  const equipmentMutationInFlight = useRef(false);
 
   const load = useCallback(async () => {
     // Focus/visibility refreshes and post-equip reads may overlap. Only the
@@ -78,7 +79,8 @@ export default function CharacterPage() {
   }, []);
 
   async function setArmorEquipped(equip: boolean) {
-    if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy) return;
+    if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy || equipmentMutationInFlight.current) return;
+    equipmentMutationInFlight.current = true;
     // An older focus refresh must not repaint stale gear during an equip RPC.
     loadGate.current.invalidate();
     setEquipmentBusy(true);
@@ -99,6 +101,7 @@ export default function CharacterPage() {
     } catch {
       setEquipmentError('Could not update your armor. Try again.');
     } finally {
+      equipmentMutationInFlight.current = false;
       setEquipmentBusy(false);
     }
   }
@@ -106,7 +109,7 @@ export default function CharacterPage() {
   useEffect(() => {
     void load();
     // Refresh verified XP and equipment when returning from Quest Board or another tab.
-    const refreshOnFocus = () => { if (document.visibilityState === 'visible') void load(); };
+    const refreshOnFocus = () => { if (document.visibilityState === 'visible' && !equipmentMutationInFlight.current) void load(); };
     document.addEventListener('visibilitychange', refreshOnFocus);
     window.addEventListener('focus', refreshOnFocus);
     return () => {
