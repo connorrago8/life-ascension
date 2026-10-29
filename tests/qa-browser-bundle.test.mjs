@@ -106,3 +106,23 @@ test('does not crash on a malformed JWT-like payload', async () => {
     assert.equal((await inspectQaBrowserBundle(root)).qaMatches, 1);
   });
 });
+
+test('source fingerprint changes when a QA-free emitted JS chunk changes', async () => {
+  await fixture({ 'a.js': `const endpoint='${qa}'`, 'nested/chunk.js': 'export const version=1' }, async root => {
+    const before = await inspectQaBrowserBundle(root);
+    await writeFile(join(root, 'nested/chunk.js'), 'export const version=2');
+    const after = await inspectQaBrowserBundle(root);
+    assert.equal(before.inspected, 2);
+    assert.equal(before.qaMatches, 1);
+    assert.notEqual(before.sourceFingerprint, after.sourceFingerprint);
+  });
+});
+
+test('source fingerprint is deterministic across repeated scans', async () => {
+  await fixture({ 'z.js': `const endpoint='${qa}'`, 'nested/a.mjs': 'export const version=1' }, async root => {
+    const first = await inspectQaBrowserBundle(root);
+    const second = await inspectQaBrowserBundle(root);
+    assert.equal(first.sourceFingerprint, second.sourceFingerprint);
+    assert.equal(first.inspected, 2);
+  });
+});

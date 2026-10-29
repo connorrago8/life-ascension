@@ -43,10 +43,12 @@ export async function inspectQaBrowserBundle(root, { qaProject = QA_PROJECT } = 
       if (!entry.isFile() || !/\.(?:js|mjs)$/.test(entry.name)) continue;
       const source = await readFile(path, 'utf8');
       inspected++;
+      // Fingerprint every emitted browser JS asset, not only QA-bearing chunks.
+      // A changed unrelated chunk must invalidate deployment provenance.
+      digest.update(relative(root, path)).update('\0').update(source).update('\0');
       const hosts = [...source.matchAll(SUPABASE_HOST)];
       if (hosts.some(match => match[1].toLowerCase() === qaProject)) {
-        qaMatches++;
-        digest.update(relative(root, path)).update('\0').update(source).update('\0');
+        qaMatches++
       }
       foreignHosts += hosts.filter(match => match[1].toLowerCase() !== qaProject).length;
       if (source.toLowerCase().includes(PRODUCTION_PROJECT)) productionReferences++;
