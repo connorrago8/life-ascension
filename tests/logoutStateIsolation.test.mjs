@@ -42,7 +42,7 @@ test('confirmed signout invalidates pending loads and clears all private state',
   assert.deepEqual(state.instances, []);
   assert.deepEqual(state.recoveryQuests, []);
   assert.deepEqual(state.recoveryIds, []);
-  assert.equal(state.xp, 0);
+  assert.equal(state.xp, null);
   assert.equal(state.signouts, 1);
 });
 
