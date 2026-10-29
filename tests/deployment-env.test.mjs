@@ -31,7 +31,8 @@ test('accepts independently pinned QA preview/development and Production fixture
 
 test('Preview builds reject non-protected branches even with valid QA URL/key/pin', () => {
   assert.equal(validateDeploymentEnv(qa), true);
-  for (const ref of [undefined, '', 'main', 'beta/quest-ui-clean-review',
+  assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'beta/quest-ui-clean-review'}), true);
+  for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {
     assert.throws(() => validateDeploymentEnv({ ...qa, VERCEL_GIT_COMMIT_REF: ref }),
       /protected QA branch/);
