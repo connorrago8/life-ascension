@@ -32,7 +32,13 @@ test('bargain refuses an unaffordable offering and cannot be collected twice', (
   assert.equal(state.hp, 1);
   assert.match(state.outcomeNote, /need more than 2 HP/);
   assert.equal(state.attackBonus, 0);
-  assert.strictEqual(send(state, 'choose', { choiceId: 'bargain' }), state);
+  assert.equal(state.eventCleared, false);
+  assert.equal(state.eventChoiceId, null);
+  assert.strictEqual(send(state, 'continue'), state, 'cannot advance without choosing');
+  state = send(state, 'choose', { choiceId: 'warning' });
+  assert.equal(state.eventCleared, true);
+  assert.equal(state.eventChoiceId, 'warning');
+  assert.match(state.hint, /door is sealed/);
   state = send(state, 'continue');
   assert.equal(nodeAccess(state, EVENT_ID), 'done');
   assert.strictEqual(send(state, 'open', { nodeId: EVENT_ID }), state);
@@ -62,6 +68,7 @@ test('the ember bargain has an exact survivable HP boundary', () => {
     const declined = send(inscription(7, hp), 'choose', { choiceId: 'bargain' });
     assert.equal(declined.hp, hp);
     assert.equal(declined.attackBonus, 0);
+    assert.equal(declined.eventCleared, false);
     assert.match(declined.outcomeNote, /need more than 2 HP/);
   }
   const accepted = send(inscription(7, 3), 'choose', { choiceId: 'bargain' });
@@ -83,4 +90,17 @@ test('ember bargain progression and bonus remain deterministic across 32 seeds',
     assert.equal(Object.hasOwn(state, 'xp'), false);
     assert.equal(Object.hasOwn(state, 'inventory'), false);
   }
+});
+
+test('declined offering keeps alternate mending choice available', () => {
+  let state = send(inscription(13, 2), 'choose', { choiceId: 'bargain' });
+  assert.equal(state.eventCleared, false);
+  state = send(state, 'choose', { choiceId: 'mend' });
+  assert.equal(state.hp, 4);
+  assert.equal(state.attackBonus, 0);
+  assert.equal(state.eventChoiceId, 'mend');
+  assert.equal(state.eventCleared, true);
+  assert.match(state.outcomeNote, /recover 2 HP/);
+  state = send(state, 'continue');
+  assert.equal(nodeAccess(state, TREASURE_ID), 'ready');
 });
