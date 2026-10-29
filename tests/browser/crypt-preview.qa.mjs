@@ -83,7 +83,9 @@ try {
   await page.locator('[data-phase="treasure"]').waitFor();
   await page.getByRole('button', { name: 'Take the charm' }).click();
   await page.locator('[data-phase="map"]').waitFor();
-  await page.getByText(/Ember Charm \+2/).first().waitFor();
+  // The map renders the run-only bonus via charmNote(), not the treasure title.
+  // Verify the actual damage bonus instead of matching an obsolete label.
+  await page.getByText(/run-only damage bonus is \+2/i).first().waitFor();
   await page.screenshot({ path: join(output, 'crypt-map-390.png'), fullPage: true });
 
   await page.getByRole('button', { name: /^Guardian: Crypt Sentinel/ }).click();
