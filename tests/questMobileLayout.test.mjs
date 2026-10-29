@@ -110,8 +110,8 @@ test('custom progress amount clears only after confirmed save or retry', () => {
 
 test('progress save never sends a new operation when browser storage fails', () => {
   const source = readFileSync(new URL('../components/QuestProgressControls.tsx', import.meta.url), 'utf8');
-  assert.match(source, /if \(instance\.status !== 'available' \|\| disabled \|\| saving \|\| storageError \|\| retrying/);
-  assert.match(source, /localStorage\.setItem\(storageKey, JSON\.stringify\(operation\)\); \} catch \{ setStorageError\(true\); return; \}/);
+  assert.match(source, /if \(instance\.status !== 'available' \|\| disabled \|\| saving \|\| operationInFlight\.current \|\| storageError \|\| retrying/);
+  assert.match(source, /localStorage\.setItem\(storageKey, JSON\.stringify\(operation\)\); \} catch \{ operationInFlight\.current = false; setStorageError\(true\); return; \}/);
   assert.ok(source.indexOf('localStorage.setItem(storageKey, JSON.stringify(operation))') < source.indexOf('void onLog(instance.id, operation.id, operation.delta)'));
 });
 
