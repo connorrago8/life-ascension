@@ -199,7 +199,7 @@ test('warning clue stays readable in the field journal after inscription Continu
   assert.equal(run.hint, clue, 'the clue is retained for later inspection');
   const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
   assert.match(view, /run\.eventCleared \? run\.hint \?\?/);
-  assert.match(view, /run\.eventChoiceId === 'warning'/);
+  assert.match(view, /'A warning about the sealed door'/);
   assert.equal(Object.hasOwn(run, 'xp'), false);
 });
 
