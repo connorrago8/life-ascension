@@ -28,3 +28,10 @@ test('quest creation synchronously prevents double-tap requests', () => {
  assert.ok(acquire >= 0 && firstRpc > acquire, 'lock acquired before create RPC');
  assert.match(handler, /finally\s*\{\s*questCreateInFlight\.current=false;/);
 });
+
+test('confirmed quest creation is not misreported when board refresh fails', () => {
+ assert.match(handler, /if\(error\)\{setMessage\(error\.message\);return\}/);
+ assert.match(handler, /setMessage\('Quest scheduled\.'\);[\s\S]*try\s*\{\s*await load\(\);\s*\}\s*catch\s*\{/);
+ assert.match(handler, /Quest created, but board refresh failed\. Refresh to view it; do not add it again\./);
+ assert.match(handler, /Quest creation not confirmed\. Refresh your board before trying again\./);
+});
