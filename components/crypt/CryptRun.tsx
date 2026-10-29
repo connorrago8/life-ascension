@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { SPRITES } from '../../lib/crypt/art';
 import {
@@ -104,7 +103,7 @@ export function CryptRun() {
       <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
       <header className="crypt-top">
         {run.phase === 'intro' ? (
-          <Link href="/play" prefetch={false} className="icon-btn" aria-label={FLOOR.back}><BackIcon /></Link>
+          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => window.location.assign('/play')}><BackIcon /></button>
         ) : (
           <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
             // Returning to the sealed door should offer both endings again.
