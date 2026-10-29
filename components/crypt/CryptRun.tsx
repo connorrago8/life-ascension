@@ -64,8 +64,12 @@ export function CryptRun() {
   // Keep rapid combat actions sequential, but reject duplicate navigation from a stale screen.
   function dispatch(command: RunCommand, expectedPhase?: Phase) {
     const originSeed = run?.seed;
+    const originEncounterId = run?.encounterId;
+    const fightAction = command.type === 'combat' || command.type === 'retry-fight'
+      || (command.type === 'continue' && expectedPhase === 'fight');
     setRun((current) => {
-      if (!current || current.seed !== originSeed || (expectedPhase && current.phase !== expectedPhase)) return current;
+      if (!current || current.seed !== originSeed || (expectedPhase && current.phase !== expectedPhase)
+        || (fightAction && current.encounterId !== originEncounterId)) return current;
       return reduceRun(current, command);
     });
   }
