@@ -58,5 +58,8 @@ test('owner-scoped refresh missing the just-saved instance preserves its pending
 });
 test('owner-scoped refresh containing the saved instance can confirm persistence',async()=>{
  const {load}=setup(null);
- assert.equal(await load('new-instance'),true);
+ const refreshed=await load('new-instance');
+ assert.equal(refreshed.id,'new-instance');
+ assert.equal(refreshed.current_amount,7);
+ assert.equal(refreshed.status,'available');
 });

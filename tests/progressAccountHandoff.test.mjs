@@ -28,14 +28,14 @@ function setup(loadOverride) {
     loadEpoch.current++;
     if (loadOverride) return loadOverride();
     loadCalls++;
-    return true;
+    return {current_amount:3,status:'available'};
   };
   const action = factory(false, false, () => ({ rpc: async (name, args) => {
     calls.push({ name, ...args });
     await rpc.promise;
     return { data: [{ current_amount: 3, status: 'available', completed_now: false }], error: null };
   }}), () => {}, m => messages.push(m), load,
-  data => Array.isArray(data) && data.length === 1 ? { status: data[0].status } : null,
+  data => Array.isArray(data) && data.length === 1 ? { status: data[0].status, currentAmount: data[0].current_amount } : null,
   accountRef, loadEpoch);
   return { action, rpc, accountRef, loadEpoch, messages, calls, getLoadCalls: () => loadCalls };
 }

@@ -17,7 +17,7 @@ const makeAction=(load,rows=[{current_amount:3,status:'available',completed_now:
  const action=fn(false,false,()=>({rpc:async(_name,args)=>{
   requestIds.push(args.p_request_id);return {data:rows,error:null};
  }}),()=>{},m=>messages.push(m),verifiedLoad,
- data=>Array.isArray(data)&&data.length===1&&data[0].status==='available'?{status:'available'}:null,
+ data=>Array.isArray(data)&&data.length===1&&data[0].status==='available'?{status:'available',currentAmount:data[0].current_amount}:null,
  accountRef,loadEpoch);
  return {action,requestIds,messages};
 };
@@ -28,12 +28,25 @@ test('confirmed RPC but failed reload keeps same-ID retry',async()=>{
  assert.match(h.messages.join(' '),/refresh|retry/i);
 });
 test('confirmed RPC and verified reload returns saved',async()=>{
- const h=makeAction(async()=>true);
+ const h=makeAction(async()=>({current_amount:3,status:'available'}));
  assert.equal(await h.action('instance-1','original-id',2),'saved');
  assert.deepEqual(h.requestIds,['original-id']);
 });
 test('undefined reload cannot clear pending request journal',async()=>{
  const h=makeAction(async()=>undefined);
+ assert.equal(await h.action('instance-1','original-id',2),'retry');
+});
+test('stale refreshed amount preserves the original retry ID',async()=>{
+ const h=makeAction(async()=>({current_amount:2,status:'available'}));
+ assert.equal(await h.action('instance-1','original-id',2),'retry');
+ assert.deepEqual(h.requestIds,['original-id']);
+});
+test('mismatched refreshed status cannot falsely confirm progress',async()=>{
+ const h=makeAction(async()=>({current_amount:3,status:'completed'}));
+ assert.equal(await h.action('instance-1','original-id',2),'retry');
+});
+test('truthy reload without an instance row cannot confirm progress',async()=>{
+ const h=makeAction(async()=>true);
  assert.equal(await h.action('instance-1','original-id',2),'retry');
 });
 test('malformed server confirmation does not report saved',async()=>{
@@ -45,5 +58,5 @@ test('account-scoped loads invalidate stale requests and fail closed on auth err
  assert.match(home,/if\(epoch!==loadEpoch\.current\)return false/);
  assert.match(home,/const nextAccount=authError\?null:\(user\?\.id\|\|null\)/);
  assert.match(home,/setQuests\(\[\]\);setInstances\(\[\]\);setRecoveryQuests\(\[\]\);setRecoveryIds\(\[\]\);setXp\(0\)/);
- assert.match(home,/setXp\(coerceXp\(ledger\)\);return true/);
+ assert.match(home,/return !expectedProgressInstanceId\|\|rows\.get\(expectedProgressInstanceId\)\|\|false/);
 });

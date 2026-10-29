@@ -53,7 +53,7 @@ const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(g
 setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(coerceXp(ledger));
 // A successful page reload is not proof of this save if its instance was omitted.
 // Keep the original idempotent request until an owner-scoped refreshed row is visible.
-return !expectedProgressInstanceId||rows.has(expectedProgressInstanceId)},[]);
+return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false},[]);
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const next=window.location.pathname+window.location.search+window.location.hash;
@@ -123,7 +123,8 @@ return !expectedProgressInstanceId||rows.has(expectedProgressInstanceId)},[]);
     setMessage('Progress save response not verified. Retry the same operation.');
     return 'retry';
    }
-   if(!(await load(id))){
+   const refreshed=await load(id);
+   if(!refreshed||typeof refreshed!=='object'||refreshed.current_amount!==confirmation.currentAmount||refreshed.status!==confirmation.status){
     // Preserve the original idempotent request until refreshed server state is verified.
     if(accountRef.current===operationAccount)setMessage('Progress confirmed by server, but refresh was not verified. Retry the same operation.');
     return 'retry';
