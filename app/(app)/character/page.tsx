@@ -9,7 +9,7 @@ import { levelFor, levelProgress } from '../../../lib/level';
 import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
 import { supabase } from '../../../lib/supabase';
-import { parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
+import { earnedArmorMilestone, parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
 import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
 
 type LoadState =
@@ -146,6 +146,7 @@ export default function CharacterPage() {
   const attributes = attributeEntries(state.profile);
   const pendingAttributes = attributes.some((attribute) => attribute.pending);
   const wellness = wellnessSnapshot(state.profile);
+  const armorMilestone = state.preview ? null : earnedArmorMilestone(state.xp, state.gear);
 
   return (
     <main className="screen character-screen">
@@ -160,10 +161,28 @@ export default function CharacterPage() {
       <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified. Your XP and attributes remain account-derived.'}</p>
       <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} onEquipArmor={(equip) => { void setArmorEquipped(equip); }} armorBusy={equipmentBusy} />
       {equipmentError && <p className="message" role="status">{equipmentError}</p>}
+      {armorMilestone && (
+        <section className="panel" aria-label="Ashen Hood unlock progress">
+          <h2>Ashen Hood</h2>
+          {armorMilestone.status === 'earning' && (
+            <p>{armorMilestone.remainingXp} more verified quest XP to reach the 10 XP armor milestone. Ownership is granted by your account, not this screen.</p>
+          )}
+          {armorMilestone.status === 'owned' && (
+            <p>Ashen Hood earned and verified. Use the equipment control above to equip or remove it.</p>
+          )}
+          {armorMilestone.status === 'eligible-unconfirmed' && (
+            <p>You have reached the 10 XP milestone, but armor ownership has not been confirmed by your account. Refresh to check again.</p>
+          )}
+          {armorMilestone.status === 'unverified' && (
+            <p>Armor ownership is unavailable right now. Your lifetime XP is verified, but this screen cannot confirm an unlock. Refresh to try again.</p>
+          )}
+        </section>
+      )}
       <section className="panel" aria-label="Earn your next reward">
         <h2>Continue your adventure</h2>
         <p className="muted">Complete real-world quests for verified XP. Ashen Hood is earned only through your account's XP ledger and appears after a server-confirmed equip.</p>
         <a className="btn" href="/">Go to Quest Board</a>
+        <a className="btn" href="/play/crypt">Enter Forgotten Crypt</a>
       </section>
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
