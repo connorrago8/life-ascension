@@ -23,7 +23,7 @@ test('local development does not invoke QA-only bundle scanner', async () => {
 test('Preview from any other branch fails closed before inspecting assets', async () => {
   let called = false;
   await assert.rejects(verifyQaBrowserBundleAfterBuild({
-    env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' },
+    env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'untrusted/other-preview' },
     inspect: () => { called = true; },
   }), /not the protected QA branch/);
   assert.equal(called, false);
