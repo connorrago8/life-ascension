@@ -19,3 +19,12 @@ test('quest creation does not automatically retry ambiguous network failures', (
  assert.match(handler, /await supabase\(\)\.rpc\('create_tracked_quest'/);
  assert.doesNotMatch(handler, /catch\s*\{[\s\S]*?await supabase\(\)\.rpc/);
 });
+
+test('quest creation synchronously prevents double-tap requests', () => {
+ assert.match(page, /const questCreateInFlight=useRef\(false\)/);
+ assert.match(handler, /if\(!title\.trim\(\)\|\|busy\|\|!user\|\|questCreateInFlight\.current\)return/);
+ const acquire = handler.indexOf('questCreateInFlight.current=true;');
+ const firstRpc = handler.indexOf("rpc('create_tracked_quest'");
+ assert.ok(acquire >= 0 && firstRpc > acquire, 'lock acquired before create RPC');
+ assert.match(handler, /finally\s*\{\s*questCreateInFlight\.current=false;/);
+});
