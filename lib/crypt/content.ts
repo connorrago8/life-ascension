@@ -165,7 +165,7 @@ export const NODES: readonly CryptNode[] = [
     label: 'Event',
     title: 'Ancient inscription',
     detail: 'Words cut into the wall still hold a little warmth.',
-    prose: 'Letters older than Brackenlight are cut into the wall. Two lines still answer to a touch.',
+    prose: 'Letters older than Brackenlight are cut into the wall. Three lines still answer to a touch.',
     continue: 'Continue',
     choices: [
       {
@@ -242,7 +242,7 @@ export const END_CARD = {
   twitch: 'Your {artifact} twitches once, then goes still.',
   kicker: 'To be continued.',
   restart: 'Restart preview',
-  charm: 'Ember Charm adds +{bonus} base damage (Focus doubles Attack), this run only.',
+  charm: 'Your run-only damage bonus is +{bonus} (Focus doubles Attack).',
   sigil: 'You recovered the Sentinel Sigil. It vanishes when this preview ends.',
 };
 
