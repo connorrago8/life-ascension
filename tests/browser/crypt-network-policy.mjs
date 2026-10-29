@@ -30,6 +30,11 @@ export function cryptPreviewRequestViolation(request, baseURL) {
   } catch {
     return 'invalid encoded path';
   }
+  // A decoded static-prefix lookalike must never authorize traversals or separator aliases.
+  if (path.includes('\\') || path.includes('//') ||
+      path.split('/').some(part => part === '.' || part === '..')) {
+    return 'invalid path segments';
+  }
   if (path === '/play/crypt' || path === '/play/crypt/' ||
       path.startsWith('/_next/static/') || path === '/_next/image' ||
       path === '/favicon.ico' || path === '/robots.txt' ||
