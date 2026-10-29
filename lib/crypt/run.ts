@@ -21,6 +21,8 @@ export type RunState = {
   eventCleared: boolean;
   treasureCleared: boolean;
   hpAtFightStart: number | null;
+  /** Increments on encounter entry and retry; not a reward or XP receipt. */
+  fightAttempt: number;
 };
 
 export type RunCommand =
@@ -57,6 +59,7 @@ export function createRun(seed: number): RunState {
     eventCleared: false,
     treasureCleared: false,
     hpAtFightStart: null,
+    fightAttempt: 0,
   };
 }
 
@@ -143,11 +146,11 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
   if (command.type === 'open') {
     if (state.phase !== 'map') return state;
     if (command.nodeId === FIGHT_ID && nodeAccess(state, FIGHT_ID) === 'ready') {
-      const next = { ...state, phase: 'fight' as const, encounterId: FIGHT_ID, hpAtFightStart: state.hp };
+      const next = { ...state, phase: 'fight' as const, encounterId: FIGHT_ID, hpAtFightStart: state.hp, fightAttempt: state.fightAttempt + 1 };
       return { ...next, battle: startBattle(next) };
     }
     if (command.nodeId === GUARDIAN_ID && nodeAccess(state, GUARDIAN_ID) === 'ready') {
-      const next = { ...state, phase: 'fight' as const, encounterId: GUARDIAN_ID, hpAtFightStart: state.hp };
+      const next = { ...state, phase: 'fight' as const, encounterId: GUARDIAN_ID, hpAtFightStart: state.hp, fightAttempt: state.fightAttempt + 1 };
       return { ...next, battle: startBattle(next) };
     }
     if (command.nodeId === EVENT_ID && nodeAccess(state, EVENT_ID) === 'ready') {
@@ -180,7 +183,7 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     // A guardian entered at critically low HP can be impossible to win, even on retry.
     // Restore full HP at this fight checkpoint without resetting earlier run progress.
     const hp = state.maxHp;
-    const next = { ...state, hp, hpAtFightStart: hp, fightCleared: state.encounterId === FIGHT_ID ? false : state.fightCleared, battle: null };
+    const next = { ...state, hp, hpAtFightStart: hp, fightCleared: state.encounterId === FIGHT_ID ? false : state.fightCleared, fightAttempt: state.fightAttempt + 1, battle: null };
     return { ...next, battle: startBattle(next) };
   }
 

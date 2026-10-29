@@ -65,11 +65,13 @@ export function CryptRun() {
   function dispatch(command: RunCommand, expectedPhase?: Phase) {
     const originSeed = run?.seed;
     const originEncounterId = run?.encounterId;
+    const originFightAttempt = run?.fightAttempt;
     const fightAction = command.type === 'combat' || command.type === 'retry-fight'
       || (command.type === 'continue' && expectedPhase === 'fight');
     setRun((current) => {
       if (!current || current.seed !== originSeed || (expectedPhase && current.phase !== expectedPhase)
-        || (fightAction && current.encounterId !== originEncounterId)) return current;
+        || (fightAction && (current.encounterId !== originEncounterId
+          || current.fightAttempt !== originFightAttempt))) return current;
       return reduceRun(current, command);
     });
   }
