@@ -180,6 +180,27 @@ try {
   assert.deepEqual(leaveRequests, [], 'Leave branch must remain an unsaved, backend-free preview');
   await leavePage.close();
 
+  // Explicit header exit is separate from the unsaved run's passive network policy.
+  // Navigation to /play is deliberately initiated by the player, not prefetch.
+  const exitPage = await context.newPage();
+  await exitPage.goto(baseURL + '/play/crypt');
+  await exitPage.locator('[data-phase="intro"]').waitFor();
+  await exitPage.getByRole('button', { name: 'Walk to the gate' }).click();
+  await exitPage.getByRole('button', { name: 'Enter the crypt' }).click();
+  await exitPage.locator('[data-phase="map"]').waitFor();
+  const exitLink = exitPage.getByRole('link', { name: 'Leave Crypt; unsaved dungeon progress will be lost' });
+  await exitLink.waitFor({ state: 'visible' });
+  assert.equal(await exitLink.getAttribute('href'), '/play',
+    'Explicit Leave Crypt control must return to the Play hub');
+  assert.equal(await exitLink.getAttribute('aria-label'),
+    'Leave Crypt; unsaved dungeon progress will be lost',
+    'Exit must explain unsaved dungeon progress to assistive technology');
+  await exitLink.click();
+  await exitPage.waitForURL(url => url.pathname === '/play');
+  assert.notEqual(new URL(exitPage.url()).pathname, '/play/crypt',
+    'Explicit Leave Crypt navigation must exit the dungeon');
+  await exitPage.close();
+
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
   console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no unexpected network requests.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');
