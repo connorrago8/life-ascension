@@ -15,7 +15,7 @@ function extractLoad() {
    .replace(/\[\] as \w+\[\]/g,'[]').replace('new Map<string,Instance>()','new Map()');
  return new Function('supabase','setUser','setReady','setQuests','setRecoveryQuests',
   'setInstances','setXp','setMessage','setRecoveryIds','setLayoutPreview',
-  'todayLocal','coerceXp','pendingProgressInstanceIds','localStorage','process',
+  'todayLocal','coerceXp','verifiedLifetimeXp','pendingProgressInstanceIds','localStorage','process',
   'loadEpoch','accountRef','return ('+code+');');
 }
 
@@ -29,7 +29,7 @@ function setup(failure) {
   rpc:async name=>name==='get_lifetime_xp'?{data:9,error:failure==='xp'?{message:'XP unavailable'}:null}:{data:null,error:null}});
  const load=extractLoad()(supabase,v=>{state.user=v},()=>{},v=>{state.quests=v},()=>{},
   v=>{state.instances=v},v=>{state.xp=v},v=>{state.message=v},()=>{},()=>{},
-  ()=>'2026-10-29',v=>v,()=>[],{length:0,key:()=>null},{env:{NODE_ENV:'test'}},
+  ()=>'2026-10-29',v=>v,v=>v,()=>[],{length:0,key:()=>null},{env:{NODE_ENV:'test'}},
   {current:0},{current:'account-1'});
  return {load,state};
 }
