@@ -95,15 +95,23 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
  }
  async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
   if(layoutPreview||busy)return 'retry';
+  const operationAccount=accountRef.current;
+  const operationEpoch=loadEpoch.current;
+  if(!operationAccount)return 'retry';
+  const operationIsCurrent=()=>accountRef.current===operationAccount&&loadEpoch.current===operationEpoch;
   setBusy(true);
   try {
    const {data,error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
+   if(!operationIsCurrent())return 'retry';
    if(error){
     // Transport/server errors may have committed before the response was lost.
     const definite=/^(22|23|P0001)/.test(error.code ?? '');
     const ambiguous=!definite;
+    if(!ambiguous){
+     const refreshed=await load();
+     if(!refreshed||accountRef.current!==operationAccount||loadEpoch.current!==operationEpoch+1)return 'retry';
+    }
     setMessage(ambiguous?'Save not confirmed. Retry the pending operation.':error.message);
-    if(!ambiguous)await load();
     return ambiguous?'retry':'rejected';
    }
    const confirmation=confirmedProgressResult(data);
@@ -112,17 +120,18 @@ setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()
     setMessage('Progress save response not verified. Retry the same operation.');
     return 'retry';
    }
+   if(!(await load())){
+    // Preserve the original idempotent request until refreshed server state is verified.
+    if(accountRef.current===operationAccount)setMessage('Progress confirmed by server, but refresh was not verified. Retry the same operation.');
+    return 'retry';
+   }
+   if(accountRef.current!==operationAccount||loadEpoch.current!==operationEpoch+1)return 'retry';
    setMessage(confirmation.status === 'completed'
     ? 'Quest completion confirmed. XP is displayed from your account ledger.'
     : 'Progress saved.');
-   if(!(await load())){
-    // Preserve the original idempotent request until refreshed server state is verified.
-    setMessage('Progress confirmed by server, but refresh was not verified. Retry the same operation.');
-    return 'retry';
-   }
    return 'saved';
   } catch {
-   setMessage('Connection lost. Retry the pending operation; do not log again.');
+   if(operationIsCurrent())setMessage('Connection lost. Retry the pending operation; do not log again.');
    return 'retry';
   } finally {setBusy(false);}
  }

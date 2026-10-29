@@ -23,7 +23,13 @@ function setup(loadOverride) {
   const loadEpoch = { current: 7 };
   const messages = [], calls = [];
   let loadCalls = 0;
-  const load = loadOverride ?? (async () => { loadCalls++; return true; });
+  // Real Home.load increments the epoch before each authenticated refresh.
+  const load = async () => {
+    loadEpoch.current++;
+    if (loadOverride) return loadOverride();
+    loadCalls++;
+    return true;
+  };
   const action = factory(false, false, () => ({ rpc: async (name, args) => {
     calls.push({ name, ...args });
     await rpc.promise;
@@ -74,6 +80,15 @@ test('account change while refresh is pending cannot resolve old operation', asy
   await entered.promise;
   h.accountRef.current = 'account-b'; h.loadEpoch.current++;
   loadGate.resolve();
+  assert.equal(await pending, 'retry');
+  assert.deepEqual(h.calls.map(c => c.p_request_id), ['stable-request-a']);
+});
+
+test('overlapping same-account reload cannot confirm an older progress request', async () => {
+  const h = setup();
+  const pending = h.action('instance-a', 'stable-request-a', 2);
+  await tick(); h.loadEpoch.current++;
+  h.rpc.resolve();
   assert.equal(await pending, 'retry');
   assert.deepEqual(h.calls.map(c => c.p_request_id), ['stable-request-a']);
 });

@@ -10,12 +10,15 @@ assert.ok(start>=0&&end>start,'Home progress callback boundaries changed');
 const runnable=home.slice(start,end).replace(signature,'async function logProgress(id,requestId,delta){');
 const makeAction=(load,rows=[{current_amount:3,status:'available',completed_now:false}])=>{
  const requestIds=[],messages=[];
+ const accountRef={current:'account-a'},loadEpoch={current:7};
  const fn=new Function('layoutPreview','busy','supabase','setBusy','setMessage','load',
-  'confirmedProgressResult','return ('+runnable+');');
+  'confirmedProgressResult','accountRef','loadEpoch','return ('+runnable+');');
+ const verifiedLoad=async()=>{loadEpoch.current++;return load()};
  const action=fn(false,false,()=>({rpc:async(_name,args)=>{
   requestIds.push(args.p_request_id);return {data:rows,error:null};
- }}),()=>{},m=>messages.push(m),load,
- data=>Array.isArray(data)&&data.length===1&&data[0].status==='available'?{status:'available'}:null);
+ }}),()=>{},m=>messages.push(m),verifiedLoad,
+ data=>Array.isArray(data)&&data.length===1&&data[0].status==='available'?{status:'available'}:null,
+ accountRef,loadEpoch);
  return {action,requestIds,messages};
 };
 test('confirmed RPC but failed reload keeps same-ID retry',async()=>{
