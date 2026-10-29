@@ -64,6 +64,7 @@ function scenario(oldGearPromise) {
   };
   const setState = (next) => { state = next; history.push(next); };
   const loadGate = { current: createLatestCharacterLoadGate() };
+  const equipmentMutationInFlight = { current: false };
   const load = routeHandler('load', {
     loadGate, process, window: undefined, setState, supabase: () => client,
     verifiedLifetimeXp: (value) => value,
@@ -71,7 +72,7 @@ function scenario(oldGearPromise) {
     adventurerName: () => 'Adventurer', loginHref: () => '/login',
   });
   const equip = routeHandler('setArmorEquipped', {
-    state, equipmentBusy: false, setEquipmentBusy: () => {},
+    state, equipmentBusy: false, equipmentMutationInFlight, loadGate, setEquipmentBusy: () => {},
     setEquipmentError: () => {}, supabase: () => client, setState, load,
   });
   return { load, equip, loadGate, history, get state() { return state; },
