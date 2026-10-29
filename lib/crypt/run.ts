@@ -118,6 +118,11 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
       return { ...state, phase: 'map', battle: null, encounterId: null, outcomeNote: null };
     }
     if (state.phase === 'event' && state.eventCleared) return { ...state, phase: 'map', outcomeNote: null };
+    if (state.phase === 'treasure' && !state.treasureCleared) {
+      // Preserve legacy Continue semantics for existing reducer callers; the UI presents explicit take/leave choices.
+      const charm = treasureNode();
+      return { ...state, phase: 'map', treasureCleared: true, relicChoice: 'take', attackBonus: state.attackBonus + charm.attackBonus };
+    }
     if (state.phase === 'treasure' && state.treasureCleared) return { ...state, phase: 'map' };
     if (state.phase === 'map' && state.guardianCleared) return { ...state, phase: 'end' };
     return state;
