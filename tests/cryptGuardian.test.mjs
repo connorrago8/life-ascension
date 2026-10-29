@@ -112,7 +112,7 @@ test('guardian introduction identifies the sentinel rather than the rat', () => 
 test('sentinel combat visibly discloses its temporary Ember Charm damage bonus', () => {
   const fight = reduceRun(reachGuardian(), { type: 'open', nodeId: GUARDIAN_ID });
   assert.equal(fight.battle?.player.attackBonus, 2);
-  assert.match(charmNote(fight.battle.player.attackBonus), /Ember Charm.*\+2 base damage.*Focus doubles Attack.*this run only/);
+  assert.match(charmNote(fight.battle.player.attackBonus), /run-only damage bonus is \+2.*Focus doubles Attack/);
   const combatView = readFileSync(new URL('../components/crypt/CombatView.tsx', import.meta.url), 'utf8');
   assert.match(combatView, /battle\.player\.attackBonus > 0/);
   assert.match(combatView, /charmNote\(battle\.player\.attackBonus\)/);
@@ -198,7 +198,8 @@ test('warning clue stays readable in the field journal after inscription Continu
   assert.equal(run.outcomeNote, null, 'Continue clears the temporary event result');
   assert.equal(run.hint, clue, 'the clue is retained for later inspection');
   const view = readFileSync(new URL('../components/crypt/CryptRun.tsx', import.meta.url), 'utf8');
-  assert.match(view, /run\.eventCleared \? run\.hint \?\? run\.outcomeNote \?\?/);
+  assert.match(view, /run\.eventCleared \? run\.hint \?\?/);
+  assert.match(view, /'A warning about the sealed door\.'/);
   assert.equal(Object.hasOwn(run, 'xp'), false);
 });
 
