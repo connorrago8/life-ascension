@@ -122,7 +122,7 @@ export function CombatView({
       {battle.status === 'lost' && (
         <>
           <p className="combat-result">{guardian ? COMBAT.guardianLose : COMBAT.lose}</p>
-          <button type="button" className="btn crypt-block" onClick={onRetry}>{COMBAT.retry}</button>
+          <button type="button" className="btn crypt-block" onClick={() => { setShowHistory(false); onRetry(); }}>{COMBAT.retry}</button>
         </>
       )}
       {battle.status === 'ongoing' && (

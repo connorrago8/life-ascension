@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cryptPreviewRequestViolation } from './crypt-network-policy.mjs';
 
 if (typeof process.getuid === 'function' && process.getuid() === 0) {
   throw new Error('Refusing to run Chromium as root.');
@@ -40,11 +41,15 @@ async function winBattle(page) {
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
-  const accountWrites = [];
+  const unexpectedRequests = [];
   page.on('request', request => {
-    if (request.method() !== 'GET' &&
-        /supabase\.co|\/api\/(?:quests?|progress|xp|equipment|inventory)/i.test(request.url())) {
-      accountWrites.push(request.method() + ' ' + request.url());
+    const reason = cryptPreviewRequestViolation(
+      { method: request.method(), url: request.url() }, baseURL);
+    if (reason) {
+      let origin = 'invalid-url';
+      try { origin = new URL(request.url()).origin; } catch {}
+      // Do not record query strings, tokens, or full request URLs.
+      unexpectedRequests.push(`${request.method()} ${origin} (${reason})`);
     }
   });
 
@@ -123,13 +128,13 @@ try {
   await chooseAgain.click();
   assert.equal(await inspect.count(), 1, 'Both ending choices must be reachable again at 320px');
   assert.equal(await leave.count(), 1, 'Alternate ending must remain reachable at 320px');
-  assert.deepEqual(accountWrites, [], 'Unsaved Crypt preview must not send account progress writes');
+  assert.deepEqual(unexpectedRequests, [], 'Unsaved Crypt preview must not request backend or off-origin resources');
   const restart = page.getByRole('button', { name: 'Restart preview' });
   await restart.scrollIntoViewIfNeeded();
   await restart.click();
   await page.locator('[data-phase="intro"]').waitFor();
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
-  console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no account writes.');
+  console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no unexpected network requests.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');
 } finally {
   await browser.close();
