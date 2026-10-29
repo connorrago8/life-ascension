@@ -40,9 +40,10 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function scenario(oldGearPromise) {
+function scenario(oldGearPromise, equipPromise = null) {
   const owned = ['ashen-hood'];
   let gearCalls = 0;
+  let equipCalls = 0;
   const history = [];
   let state = { status: 'ready', preview: false,
     gear: { ownedItemIds: owned, equippedItemIds: [] } };
@@ -53,7 +54,10 @@ function scenario(oldGearPromise) {
     }) }) }),
     rpc: async (name) => {
       if (name === 'get_lifetime_xp') return { data: 10, error: null };
-      if (name === 'equip_earned_armor') return { error: null };
+      if (name === 'equip_earned_armor') {
+        equipCalls += 1;
+        return equipPromise ?? { error: null };
+      }
       if (name === 'get_earned_gear') {
         gearCalls += 1;
         return gearCalls === 1 ? oldGearPromise
@@ -75,7 +79,7 @@ function scenario(oldGearPromise) {
     setEquipmentError: () => {}, supabase: () => client, setState, load,
   });
   return { load, equip, loadGate, history, get state() { return state; },
-    get gearCalls() { return gearCalls; } };
+    get gearCalls() { return gearCalls; }, get equipCalls() { return equipCalls; } };
 }
 
 test('late focus snapshot cannot visually unequip armor after successful server equip and fresh read', async () => {
@@ -121,4 +125,23 @@ test('unmounted Character invalidates pending response and all load commits use 
   assert.equal((loadSource.match(/setState\(/g) ?? []).length, 1,
     'only guarded commit closure may call setState inside load');
   assert.match(loadSource, /if \(isCurrent\(\)\) setState\(next\)/);
+});
+
+
+test('rapid equip double-tap sends one mutation and releases the lock after confirmation', async () => {
+  const pendingEquip = deferred();
+  const confirmedGear = Promise.resolve({
+    data: { ownedItemIds: ['ashen-hood'], equippedItemIds: ['ashen-hood'] }, error: null,
+  });
+  const app = scenario(confirmedGear, pendingEquip.promise);
+  const first = app.equip(true);
+  const second = app.equip(true);
+  assert.equal(app.equipCalls, 1, 'second tap must not issue a concurrent armor RPC');
+  pendingEquip.resolve({ error: null });
+  await Promise.all([first, second]);
+  assert.equal(app.equipCalls, 1);
+  assert.equal(app.gearCalls, 1, 'successful equip must refresh authoritative gear once');
+  assert.deepEqual(app.state.gear.equippedItemIds, ['ashen-hood']);
+  await app.equip(true);
+  assert.equal(app.equipCalls, 2, 'completed operation must release its synchronous lock');
 });
