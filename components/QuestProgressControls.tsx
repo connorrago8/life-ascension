@@ -54,7 +54,24 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
     setSaveState('idle');
     setSaving(true);
     void onLog(instance.id, operation.id, operation.delta).then(outcome => {
-      if(outcome !== 'retry') { try { localStorage.removeItem(storageKey); setRetrying(false); onJournalResolved?.(instance.id); } catch { setStorageError(true); } }
+      if (outcome !== 'retry') {
+        try {
+          // A slower response must not erase a newer operation from another tab.
+          const current = parsePendingProgress(localStorage.getItem(storageKey));
+          if (current && (current.id !== operation.id || current.delta !== operation.delta)) {
+            setRetrying(true);
+            setSaveState('failed');
+            return;
+          }
+          localStorage.removeItem(storageKey);
+          setRetrying(false);
+          onJournalResolved?.(instance.id);
+        } catch {
+          setStorageError(true);
+          setSaveState('failed');
+          return;
+        }
+      }
       else setRetrying(true);
       if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
@@ -75,7 +92,22 @@ export function QuestProgressControls({ quest, instance, disabled, onLog, onJour
     setSaving(true);
     void onLog(instance.id, pending.id, pending.delta).then(outcome => {
       if (outcome !== 'retry') {
-        try { localStorage.removeItem(storageKey); setRetrying(false); onJournalResolved?.(instance.id); } catch { setStorageError(true); }
+        try {
+          // Another tab may have resolved this retry and started a new operation.
+          const current = parsePendingProgress(localStorage.getItem(storageKey));
+          if (current && (current.id !== pending.id || current.delta !== pending.delta)) {
+            setRetrying(true);
+            setSaveState('failed');
+            return;
+          }
+          localStorage.removeItem(storageKey);
+          setRetrying(false);
+          onJournalResolved?.(instance.id);
+        } catch {
+          setStorageError(true);
+          setSaveState('failed');
+          return;
+        }
       } else setRetrying(true);
       if (outcome === 'saved') setCustom('');
       setSaveState(outcome === 'saved' ? 'saved' : 'failed');
