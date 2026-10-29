@@ -83,12 +83,12 @@ try {
   await page.locator('[data-phase="treasure"]').waitFor();
   await page.getByRole('button', { name: 'Take the charm' }).click();
   await page.locator('[data-phase="map"]').waitFor();
-  await page.getByText(/Ember Charm \+2/).first().waitFor();
+  await page.getByText(/run-only damage bonus is \+2/).first().waitFor();
   await page.screenshot({ path: join(output, 'crypt-map-390.png'), fullPage: true });
 
   await page.getByRole('button', { name: /^Guardian: Crypt Sentinel/ }).click();
   await page.locator('[data-phase="fight"]').waitFor();
-  await page.getByText(/Ember Charm adds \+2 base damage/).waitFor();
+  await page.getByText(/run-only damage bonus is \+2/).waitFor();
   await winBattle(page);
   await page.getByRole('button', { name: 'Approach the sealed door' }).click();
   await page.locator('[data-phase="end"]').waitFor();
