@@ -23,9 +23,17 @@ test('rejects duplicated QA branch override', () => {
   const s = good(); s.result.envs.push(item('NEXT_PUBLIC_SUPABASE_URL', ['preview'], PROTECTED_QA_BRANCH));
   assert.equal(check(s).ok, false);
 });
-test('rejects privileged Preview service-role key on QA branch', () => {
-  const s = good(); s.result.envs.push(item('SUPABASE_SERVICE_ROLE_KEY', ['preview'], PROTECTED_QA_BRANCH));
-  assert.equal(check(s).ok, false);
+test('rejects every privileged credential/database variable targeting Preview, even with empty value metadata', () => {
+  const names = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
+    'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD'];
+  for (const name of names) {
+    for (const value of ['synthetic-secret', '']) {
+      const s = good();
+      s.result.envs.push(item(name, ['preview'], PROTECTED_QA_BRANCH));
+      s.result.envs.at(-1).value = value;
+      assert.equal(check(s).ok, false, `${name} targeting Preview must be rejected`);
+    }
+  }
 });
 test('rejects privileged unscoped Preview key', () => {
   const s = good(); s.result.envs.push(item('SUPABASE_SECRET_KEY', ['preview']));

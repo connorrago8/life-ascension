@@ -5,6 +5,10 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review']);
+const PRIVILEGED_NONPRODUCTION_KEYS = Object.freeze([
+  'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
+  'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD',
+]);
 
 const PROJECTS = Object.freeze({
   production: 'ugcvhmrriazbbymjxvch',
@@ -63,8 +67,9 @@ export function validateDeploymentEnv(env) {
   if (!keyMatchesProject(key, PROJECTS[target], env.SUPABASE_PUBLIC_KEY_SHA256)) {
     throw new Error(`Blocked ${target} build: public key/project pairing not verified`);
   }
-  if (target !== 'production' && env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Blocked nonproduction build: privileged Supabase service key is present');
+  if (target !== 'production' && PRIVILEGED_NONPRODUCTION_KEYS.some(name =>
+    Object.prototype.hasOwnProperty.call(env, name))) {
+    throw new Error('Blocked nonproduction build: privileged credential/database variable is present');
   }
   return true;
 }

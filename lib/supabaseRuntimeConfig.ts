@@ -5,6 +5,10 @@ const PROTECTED_QA_BRANCHES = new Set([
   'audit/qa-isolation-and-reliability-20261027',
   'beta/quest-ui-clean-review',
 ]);
+const PRIVILEGED_NONPRODUCTION_KEYS = [
+  'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
+  'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD',
+] as const;
 
 const PROJECTS: Record<string, string> = {
   production: 'ugcvhmrriazbbymjxvch',
@@ -26,7 +30,8 @@ export async function readServerSupabaseConfig(): Promise<{ url: string; key: st
   // A Preview may receive an injected privileged key after the build. Deny
   // server/Edge public-key clients too, so the QA probe cannot report PASS
   // while a privileged credential is present in this runtime.
-  if (target !== 'production' && process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  if (target !== 'production' && PRIVILEGED_NONPRODUCTION_KEYS.some(name =>
+      Object.prototype.hasOwnProperty.call(process.env, name))) return null;
 
   try {
     const parsed = new URL(url);
