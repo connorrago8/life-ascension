@@ -29,7 +29,8 @@ test('rapid complete taps send only one RPC and release the lock',async()=>{
  const first=x.action('instance-1','complete');
  const second=x.action('instance-1','complete');
  assert.equal(x.state.calls,1);
- assert.equal(x.state.confirms,1);
+ // The native window.confirm sheet was replaced by the in-app two-tap ConfirmCompleteButton.
+ assert.equal(x.state.confirms,0);
  x.pending.resolve({data:{},error:null});
  await Promise.all([first,second]);
  assert.equal(x.state.loads,1);
