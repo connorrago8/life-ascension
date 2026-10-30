@@ -167,7 +167,7 @@ export function CharacterScreen({
     <div className="preview-screen character-preview character-equipment-screen">
       <header className="character-header">
         {/* The signed-in route already titles the page with the player's name; show it once. */}
-        <div>{displayName ? null : <h1 className="status-name">{gearView.appearance.name}</h1>}{gearView.canChange && <p className="level-line">{levelTitle(base)}</p>}</div>
+        <div>{displayName ? null : <h1 className="status-name">{gearView.appearance.name}</h1>}{/* Sample level title belongs to the standalone demo only; the Character route shows the real Lv bar. */}{!displayName && gearView.canChange && <p className="level-line">{levelTitle(base)}</p>}</div>
         <h2 className="character-header-note">EQUIPMENT</h2>
       </header>
       <section className="character-loadout-stage" aria-label={gearView.canChange ? 'Equipped character and gear preview' : gearView.source === 'verified' ? 'Server-verified equipped character' : 'Character with unverified equipment hidden'}>

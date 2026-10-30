@@ -9,6 +9,13 @@ import { SPRITES } from '../../lib/crypt/art';
 import { HUB, PLAYER, PREVIEW_BANNER } from '../../lib/crypt/content';
 import { WayfarerMark } from './WayfarerMark';
 
+/**
+ * Every Forgotten Crypt entry opens the playable delve (Room 1 of 12, path
+ * choices, five-stat card combat). The legacy /play/crypt prologue is no longer
+ * linked from the map; it stays reachable only for its existing browser QA.
+ */
+export const CRYPT_ENTRY_HREF = '/play/delve';
+
 function Star() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -24,7 +31,7 @@ export function AdventureHub() {
 
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
-    if (location.kind === 'preview') router.push('/play/crypt');
+    if (location.kind === 'preview') router.push(CRYPT_ENTRY_HREF);
   }
 
   return (
@@ -76,10 +83,7 @@ export function AdventureHub() {
 
       <p className="adv-blurb">{selected.blurb}</p>
       {selected.kind === 'preview' ? (
-        <>
-          <Link className="btn adv-enter" href="/play/delve">Delve: card battles, gear &amp; boss (beta)</Link>
-          <Link className="btn ghost adv-enter" href="/play/crypt">{HUB.enter}</Link>
-        </>
+        <Link className="btn adv-enter" href={CRYPT_ENTRY_HREF}>{HUB.enter}</Link>
       ) : (
         <button type="button" className="btn adv-enter" disabled>{HUB.enter}</button>
       )}
