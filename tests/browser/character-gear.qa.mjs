@@ -67,10 +67,11 @@ try {
     await page.getByRole('group', { name: `${label}: locked. Unlocks at Lv ${level}` }).waitFor();
     assert.equal(await page.getByRole('button', { name: new RegExp(`^${label}: `) }).count(), 0, `${label} locked`);
   }
-  // Unlocked slot with nothing owned shows the empty state; Escape returns focus to the slot.
-  const weaponSlot = page.getByRole('button', { name: /^Weapon: .*Choose equipment$/ });
+  // Unlocked Weapon slot with nothing owned wears the default Rusty Sword (no stats); Escape returns focus.
+  const weaponSlot = page.getByRole('button', { name: /^Weapon: Rusty Sword\. Choose equipment$/ });
   await weaponSlot.click();
-  await page.getByRole('dialog', { name: 'Choose weapon' }).getByText('No items for this slot yet').waitFor();
+  await page.getByRole('dialog', { name: 'Choose weapon' }).getByText('Rusty Sword equipped by default · No stat boosts').waitFor();
+  await page.getByRole('dialog', { name: 'Choose weapon' }).getByText('No other items for this slot yet').waitFor();
   await page.keyboard.press('Escape');
   await page.getByRole('dialog').waitFor({ state: 'detached' });
   assert.equal(await weaponSlot.evaluate((node) => node === document.activeElement), true, 'focus returns to slot');
