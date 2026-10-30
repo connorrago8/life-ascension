@@ -18,6 +18,7 @@ import {
   type GearSlotKey,
 } from '../../lib/gearSlots';
 import { HomeCharacter } from './HomeCharacter';
+import { starterItemForSlot } from '../../lib/starterLook';
 import { usePreviewAppearance } from './usePreviewAppearance';
 
 type SheetItem = { id: string; name: string; boosts: string; equipped: boolean };
@@ -126,7 +127,10 @@ export function CharacterScreen({
   function slotTile(slot: GearSlot) {
     const item = equippedInSlot(slot);
     const unlocked = isSlotUnlocked(level, slot.key);
-    const itemName = item?.name ?? 'Empty';
+    // An empty Weapon/Armor slot wears its default Rusty item (0 stats), never "Empty".
+    const starter = item ? null : starterItemForSlot(slot.key);
+    const itemName = item?.name ?? starter?.name ?? 'Empty';
+    const shown = Boolean(item || starter);
     if (!unlocked) {
       return (
         <div key={slot.key} className="character-gear-slot character-slot-locked" role="group"
@@ -141,7 +145,7 @@ export function CharacterScreen({
         <div key={slot.key} className="character-gear-slot character-slot-readonly" role="group"
           aria-label={`${slot.label}: ${itemName}`} data-slot={slot.key}>
           <span className="character-slot-label">{slot.label}</span>
-          <span className={item ? 'character-slot-item' : 'character-slot-item character-slot-empty'}>{itemName}</span>
+          <span className={shown ? 'character-slot-item' : 'character-slot-item character-slot-empty'}>{itemName}</span>
         </div>
       );
     }
@@ -153,7 +157,7 @@ export function CharacterScreen({
         disabled={armorBusy}
         onClick={(event) => { returnFocusRef.current = event.currentTarget; setSelectedSlot(slot.key); }}>
         <span className="character-slot-label">{slot.label}</span>
-        <span className={item ? 'character-slot-item' : 'character-slot-item character-slot-empty'}>{itemName}</span>
+        <span className={shown ? 'character-slot-item' : 'character-slot-item character-slot-empty'}>{itemName}</span>
         <span className="character-slot-hint" aria-hidden="true">Change ›</span>
       </button>
     );
@@ -162,6 +166,7 @@ export function CharacterScreen({
   const selected = selectedSlot ? gearSlot(selectedSlot) : null;
   const items = selected ? sheetItems(selected.key) : [];
   const wornItem = items.find((item) => item.equipped) ?? null;
+  const selectedStarter = selected && !wornItem ? starterItemForSlot(selected.key) : null;
 
   return (
     <div className="preview-screen character-preview character-equipment-screen">
@@ -191,8 +196,9 @@ export function CharacterScreen({
             <div className="sheet-handle" aria-hidden="true" />
             <p className="sheet-kicker">{selected.label}</p>
             <h2 id="gear-sheet-title">Choose {selected.label.toLowerCase()}</h2>
+            {selectedStarter ? <p className="sheet-area gear-sheet-default" data-starter-item={selectedStarter.id}>{selectedStarter.name} equipped by default · No stat boosts</p> : null}
             {items.length === 0 ? (
-              <p className="sheet-area gear-sheet-empty">No items for this slot yet</p>
+              <p className="sheet-area gear-sheet-empty">{selectedStarter ? 'No other items for this slot yet' : 'No items for this slot yet'}</p>
             ) : (
               <ul className="gear-sheet-list">
                 {items.map((item) => (

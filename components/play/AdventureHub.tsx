@@ -4,10 +4,16 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdventurerSprite } from '../AdventurerSprite';
+import { PALETTE } from '../spriteArt';
+import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
 import { PixelArt } from '../crypt/PixelArt';
 import { SPRITES } from '../../lib/crypt/art';
 import { HUB, PLAYER, PREVIEW_BANNER } from '../../lib/crypt/content';
 import { WayfarerMark } from './WayfarerMark';
+
+// Default Rusty Sword / Rusty Armor (0 stats) on the hero sprite.
+const STARTER_OVERLAYS = gearOverlays({});
+const HERO_PALETTE = { ...PALETTE, ...GEAR_INKS };
 
 /**
  * Every Forgotten Crypt entry opens the playable delve (Room 1 of 12, path
@@ -77,7 +83,7 @@ export function AdventureHub() {
           );
         })}
         <div className="adv-hero">
-          <AdventurerSprite label={PLAYER.name} />
+          <AdventurerSprite label={PLAYER.name} overlays={STARTER_OVERLAYS} palette={HERO_PALETTE} />
         </div>
       </div>
 

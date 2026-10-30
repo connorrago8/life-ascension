@@ -15,6 +15,7 @@ import { verifiedLifetimeXp } from '../../lib/characterXpProof';
 import { GEAR_SLOTS, SERVER_EQUIPPABLE_ITEMS } from '../../lib/gearSlots';
 import { chicagoToday, todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
 import { supabase } from '../../lib/supabase';
+import { starterSlots } from '../../lib/starterLook';
 
 type HomeState =
   | { status: 'loading' }
@@ -128,7 +129,13 @@ export default function Home() {
   const model = homeCharacterModel({ ...gearView.appearance, name: state.name });
   const equipped = (state.gear?.equippedItemIds ?? [])
     .filter((id) => SERVER_EQUIPPABLE_ITEMS[id])
-    .map((id) => ({ id, name: catalogItem(id)?.name ?? id, slot: GEAR_SLOTS.find((slot) => slot.key === SERVER_EQUIPPABLE_ITEMS[id])?.label ?? '' }));
+    .map((id) => ({ id, key: SERVER_EQUIPPABLE_ITEMS[id] as string, name: catalogItem(id)?.name ?? id, slot: GEAR_SLOTS.find((slot) => slot.key === SERVER_EQUIPPABLE_ITEMS[id])?.label ?? '' }));
+  // Empty Weapon/Armor slots wear the default Rusty Sword / Rusty Armor (0 stats).
+  const starter = starterSlots({ armor: equipped.some((item) => item.key === 'armor'), weapon: equipped.some((item) => item.key === 'weapon') });
+  const worn = [
+    ...[starter.weapon, starter.armor].flatMap((item) => (item ? [{ id: item.id, key: item.slot as string, name: item.name, slot: item.slotLabel }] : [])),
+    ...equipped,
+  ];
 
   return (
     <main className="wrap home-hub">
@@ -169,10 +176,8 @@ export default function Home() {
           <span className="hub-gear-label">Gear</span>
           {state.gear === null && !state.preview ? (
             <span className="hub-gear-empty">Unavailable right now</span>
-          ) : equipped.length === 0 ? (
-            <span className="hub-gear-empty">Starter clothes</span>
           ) : (
-            <span className="hub-gear-items">{equipped.map((item) => <span key={item.id} className="hub-gear-chip">{item.name}{item.slot ? <small> · {item.slot}</small> : null}</span>)}</span>
+            <span className="hub-gear-items">{worn.map((item) => <span key={item.id} className="hub-gear-chip">{item.name}{item.slot ? <small> · {item.slot}</small> : null}</span>)}</span>
           )}
         </div>
       </section>

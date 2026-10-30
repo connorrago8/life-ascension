@@ -12,7 +12,7 @@ import {
   type CardDef, type DeckCard,
 } from '../../lib/crypt/delve/cards';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
-import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
+import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/gearArt';
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
 import {
@@ -213,6 +213,7 @@ function Camp(props: {
         <div>
           <p className="delve-level">Level {props.level}</p>
           <p className="muted delve-small">Only real quests level you up. Each level gives 3 more points.</p>
+          <p className="delve-small delve-worn">Wearing {wornGearLabels(loadout).join(' · ')}</p>
           <p className="delve-small">Max HP {maxHpFor(preview, props.level)} · Crit {Math.round(critChance(preview) * 100)}% · Dodge {Math.round(dodgeChance(preview) * 100)}%</p>
         </div>
       </section>

@@ -1,4 +1,5 @@
 import { lootById, type Loadout, type Rarity } from './loot.ts';
+import { starterSlots } from '../../starterLook.ts';
 
 /**
  * Pixel overlays so equipped Crypt gear shows on the adventurer sprite.
@@ -17,6 +18,9 @@ export const GEAR_INKS: Record<string, string> = {
   '6': '#4a86e8',
   '7': '#a56be0',
   '8': '#e2b23a',
+  // Rusty starter items (0-stat defaults): dark rust and rust.
+  '9': '#6e4a35',
+  '0': '#a3683f',
 };
 
 const RARITY_INK: Record<Rarity, string> = { common: '4', uncommon: '5', rare: '6', epic: '7' };
@@ -91,8 +95,32 @@ function shield(rarity: Rarity): string[] {
   return rows(g);
 }
 
-/** Overlays keyed by AdventurerSprite layer id. Empty slots add nothing. */
-export function gearOverlays(loadout: Loadout): Partial<Record<'head' | 'chest' | 'main-hand' | 'off-hand', string[]>> {
+/** Rusty Armor: a dull, rust-streaked breastplate over the tunic. Visual of a 0-stat default item. */
+export function rustyArmorOverlay(): string[] {
+  const g = blank();
+  paint(g, 10, 17, 21, 22, '9');
+  paint(g, 11, 17, 20, 17, '0');
+  paint(g, 15, 18, 16, 22, '0');
+  for (const [x, y] of [[11, 19], [20, 19], [12, 21], [19, 21]]) paint(g, x, y, x, y, '0');
+  return rows(g);
+}
+
+/** Rusty Sword: short, rust-brown blade and a plain grip. Visual of a 0-stat default item. */
+export function rustySwordOverlay(): string[] {
+  const g = blank();
+  paint(g, 26, 11, 26, 21, '0');
+  paint(g, 27, 13, 27, 20, '9');
+  paint(g, 24, 22, 29, 22, '9');
+  paint(g, 26, 23, 27, 25, '1');
+  return rows(g);
+}
+
+/**
+ * Overlays keyed by AdventurerSprite layer id. An empty Weapon or Armor slot shows
+ * its default Rusty Sword / Rusty Armor (pass { starter: false } to disable);
+ * real gear in a slot always replaces it. Helm and shield add nothing when empty.
+ */
+export function gearOverlays(loadout: Loadout, options: { starter?: boolean } = {}): Partial<Record<'head' | 'chest' | 'main-hand' | 'off-hand', string[]>> {
   const result: Partial<Record<'head' | 'chest' | 'main-hand' | 'off-hand', string[]>> = {};
   const w = loadout.weapon ? lootById(loadout.weapon) : null;
   const h = loadout.helm ? lootById(loadout.helm) : null;
@@ -102,5 +130,22 @@ export function gearOverlays(loadout: Loadout): Partial<Record<'head' | 'chest' 
   if (h) result.head = helm(h.rarity, h.id === 'hollow-crown');
   if (a) result.chest = armor(a.rarity);
   if (s) result['off-hand'] = shield(s.rarity);
+  if (options.starter !== false) {
+    const starter = starterSlots({ armor: Boolean(a), weapon: Boolean(w) });
+    if (starter.armor) result.chest = rustyArmorOverlay();
+    if (starter.weapon) result['main-hand'] = rustySwordOverlay();
+  }
   return result;
+}
+
+/** Names of what the hero wears: real gear, or the default Rusty Sword / Rusty Armor in empty slots. */
+export function wornGearLabels(loadout: Loadout): string[] {
+  const name = (id: string | undefined) => (id ? lootById(id)?.name ?? null : null);
+  const starter = starterSlots({ armor: Boolean(name(loadout.armor)), weapon: Boolean(name(loadout.weapon)) });
+  return [
+    name(loadout.weapon) ?? starter.weapon?.name ?? null,
+    name(loadout.armor) ?? starter.armor?.name ?? null,
+    name(loadout.helm),
+    name(loadout.shield),
+  ].filter((label): label is string => Boolean(label));
 }
