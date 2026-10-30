@@ -50,9 +50,12 @@ function scenario(oldGearPromise, equipPromise = null) {
     gear: { ownedItemIds: owned, equippedItemIds: [] } };
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: 'account-a', email: 'a@example.test' } }, error: null }) },
-    from: () => ({ select: () => ({ eq: () => ({
-      maybeSingle: async () => ({ data: null, error: null }),
-    }) }) }),
+    from: (table) => table === 'wellness_readings'
+      // Read-only latest wellness reading (absent on databases without the wellness migration).
+      ? { select: () => ({ order: () => ({ limit: async () => ({ data: null, error: { message: 'not available' } }) }) }) }
+      : { select: () => ({ eq: () => ({
+        maybeSingle: async () => ({ data: null, error: null }),
+      }) }) },
     rpc: async (name) => {
       if (name === 'get_lifetime_xp') return { data: 10, error: null };
       // Read-only Crypt stat allocation; absent on databases without the Crypt migration.
@@ -77,6 +80,8 @@ function scenario(oldGearPromise, equipPromise = null) {
     parseAuthenticatedGearSnapshot: (value) => value,
     parseCryptProfile: (value) => ({ attributes: value?.attributes ?? null }),
     adventurerName: () => 'Adventurer', loginHref: () => '/login',
+    WELLNESS_READING_COLUMNS: 'reading_date,sleep_hours,steps,source,updated_at',
+    wellnessSnapshot: () => ({ connected: false }),
   });
   const equipItem = routeHandler('setItemEquipped', {
     levelForVerifiedXp, canRequestEquip, isSlotUnlocked, slotLockText, SERVER_EQUIPPABLE_ITEMS,

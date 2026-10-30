@@ -59,8 +59,11 @@ test('wellness stays disconnected unless real readings exist', () => {
   assert.equal(WELLNESS_EMPTY, 'Not connected yet');
   assert.deepEqual(wellnessSnapshot(null), { connected: false });
   assert.deepEqual(wellnessSnapshot({ display_name: 'Ada' }), { connected: false });
-  assert.deepEqual(wellnessSnapshot({ sleep_hours: 7.2, steps: 6400 }), {
+  // Readings come from wellness_readings rows (dated), not profile fields.
+  assert.deepEqual(wellnessSnapshot({ sleep_hours: 7.2, steps: 6400 }), { connected: false });
+  assert.deepEqual(wellnessSnapshot([{ reading_date: '2026-10-29', sleep_hours: 7.2, steps: 6400 }]), {
     connected: true,
+    date: '2026-10-29',
     sleepHours: 7.2,
     steps: 6400,
   });

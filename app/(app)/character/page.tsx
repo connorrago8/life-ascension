@@ -11,13 +11,13 @@ import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharac
 import { supabase } from '../../../lib/supabase';
 import { earnedArmorMilestone, parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
 import { SERVER_EQUIPPABLE_ITEMS, canRequestEquip, isSlotUnlocked, levelForVerifiedXp, slotLockText, type GearSlotKey } from '../../../lib/gearSlots';
-import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
+import { WELLNESS_EMPTY, WELLNESS_HELP_HREF, WELLNESS_READING_COLUMNS, formatSleep, formatSteps, formatWellnessDate, wellnessSnapshot, type WellnessSnapshot } from '../../../lib/wellness';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'signed-out'; loginHref: string }
   | { status: 'error'; message: string }
-  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; stats: Record<string, unknown> | null; preview: boolean; gear: AuthenticatedGearSnapshot | null };
+  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; wellness: WellnessSnapshot; stats: Record<string, unknown> | null; preview: boolean; gear: AuthenticatedGearSnapshot | null };
 
 function loginHref() {
   return '/login?next=%2Fcharacter';
@@ -39,7 +39,7 @@ export default function CharacterPage() {
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      commit({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, stats: null, preview: true, gear: null });
+      commit({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, wellness: { connected: false }, stats: null, preview: true, gear: null });
       return;
     }
     try {
@@ -50,12 +50,14 @@ export default function CharacterPage() {
         commit({ status: 'signed-out', loginHref: loginHref() });
         return;
       }
-      const [xpResult, profileResult, gearResult, statsResult] = await Promise.all([
+      const [xpResult, profileResult, gearResult, statsResult, wellnessResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
         // Read-only: your STR/AGI/INT/END/LCK allocation (set in the Crypt camp, capped by level server-side).
         client.rpc('get_crypt_profile'),
+        // Read-only: your latest Apple Health Shortcut reading (RLS: your own rows only).
+        client.from('wellness_readings').select(WELLNESS_READING_COLUMNS).order('reading_date', { ascending: false }).limit(1),
       ]);
       if (xpResult.error) {
         commit({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
@@ -72,6 +74,7 @@ export default function CharacterPage() {
         name: adventurerName(user.email, profile?.display_name),
         xp: verifiedXp,
         profile,
+        wellness: wellnessResult.error ? { connected: false } : wellnessSnapshot(wellnessResult.data),
         stats: statsResult.error ? null : parseCryptProfile(statsResult.data).attributes,
         preview: false,
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
@@ -159,7 +162,7 @@ export default function CharacterPage() {
   const fraction = levelProgress(state.xp);
   // Allocated stats when the account has them; otherwise the placeholder dash.
   const attributes = attributeEntries(state.stats);
-  const wellness = wellnessSnapshot(state.profile);
+  const wellness = state.wellness;
   const armorMilestone = state.preview ? null : earnedArmorMilestone(state.xp, state.gear);
 
   return (
@@ -197,19 +200,18 @@ export default function CharacterPage() {
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
         <h2 id="wellness-heading">Wellness</h2>
         {wellness.connected ? (
-          <div className="wellness-readings">
-            {wellness.sleepHours != null && <p>Sleep {formatReading(wellness.sleepHours)} h</p>}
-            {wellness.steps != null && <p>Steps {formatReading(wellness.steps)}</p>}
-          </div>
+          <>
+            <div className="wellness-readings" role="list" aria-label={`Latest reading, ${formatWellnessDate(wellness.date)}`}>
+              {wellness.sleepHours != null && <div className="wellness-reading" role="listitem"><span>Sleep</span><strong>{formatSleep(wellness.sleepHours)}</strong></div>}
+              {wellness.steps != null && <div className="wellness-reading" role="listitem"><span>Steps</span><strong>{formatSteps(wellness.steps)}</strong></div>}
+            </div>
+            <p className="wellness-date">Apple Health · {formatWellnessDate(wellness.date)}</p>
+          </>
         ) : (
-          <p className="wellness-empty">{WELLNESS_EMPTY}</p>
+          <p className="wellness-empty">{WELLNESS_EMPTY} · <a className="wellness-help" href={WELLNESS_HELP_HREF}>How to connect</a></p>
         )}
       </section>
 
     </main>
   );
-}
-
-function formatReading(value: number): string {
-  return Number.isInteger(value) ? value.toLocaleString('en-US') : String(value);
 }
