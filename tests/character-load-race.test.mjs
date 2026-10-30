@@ -55,6 +55,8 @@ function scenario(oldGearPromise, equipPromise = null) {
     }) }) }),
     rpc: async (name) => {
       if (name === 'get_lifetime_xp') return { data: 10, error: null };
+      // Read-only Crypt stat allocation; absent on databases without the Crypt migration.
+      if (name === 'get_crypt_profile') return { data: null, error: { message: 'not available' } };
       if (name === 'equip_earned_armor') {
         equipCalls += 1;
         return equipPromise ?? { error: null };
@@ -73,6 +75,7 @@ function scenario(oldGearPromise, equipPromise = null) {
     loadGate, process, window: undefined, setState, supabase: () => client,
     verifiedLifetimeXp: (value) => value,
     parseAuthenticatedGearSnapshot: (value) => value,
+    parseCryptProfile: (value) => ({ attributes: value?.attributes ?? null }),
     adventurerName: () => 'Adventurer', loginHref: () => '/login',
   });
   const equipItem = routeHandler('setItemEquipped', {

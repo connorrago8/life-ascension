@@ -76,7 +76,10 @@ export function AdventureHub() {
 
       <p className="adv-blurb">{selected.blurb}</p>
       {selected.kind === 'preview' ? (
-        <Link className="btn adv-enter" href="/play/crypt">{HUB.enter}</Link>
+        <>
+          <Link className="btn adv-enter" href="/play/delve">Delve: card battles, gear &amp; boss (beta)</Link>
+          <Link className="btn ghost adv-enter" href="/play/crypt">{HUB.enter}</Link>
+        </>
       ) : (
         <button type="button" className="btn adv-enter" disabled>{HUB.enter}</button>
       )}

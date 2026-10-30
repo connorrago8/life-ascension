@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
-import { ATTRIBUTE_PREVIEW } from '../../../lib/character';
+import { parseCryptProfile } from '../../../lib/cryptVault';
 import { levelFor, levelProgress } from '../../../lib/level';
 import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
@@ -18,7 +17,7 @@ type LoadState =
   | { status: 'loading' }
   | { status: 'signed-out'; loginHref: string }
   | { status: 'error'; message: string }
-  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; preview: boolean; gear: AuthenticatedGearSnapshot | null };
+  | { status: 'ready'; name: string; xp: number; profile: Record<string, unknown> | null; stats: Record<string, unknown> | null; preview: boolean; gear: AuthenticatedGearSnapshot | null };
 
 function loginHref() {
   return '/login?next=%2Fcharacter';
@@ -32,13 +31,15 @@ export default function CharacterPage() {
   const equipmentMutationInFlight = useRef(false);
 
   const load = useCallback(async () => {
+    // Focus/visibility refreshes and post-equip reads may overlap. Only the
+    // latest request may commit a verified XP/equipment snapshot or error.
     const isCurrent = loadGate.current.begin();
     const commit = (next: LoadState) => { if (isCurrent()) setState(next); };
     const preview = process.env.NODE_ENV === 'development'
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      commit({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, preview: true, gear: null });
+      commit({ status: 'ready', name: 'Adventurer', xp: 2, profile: null, stats: null, preview: true, gear: null });
       return;
     }
     try {
@@ -49,10 +50,12 @@ export default function CharacterPage() {
         commit({ status: 'signed-out', loginHref: loginHref() });
         return;
       }
-      const [xpResult, profileResult, gearResult] = await Promise.all([
+      const [xpResult, profileResult, gearResult, statsResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
+        // Read-only: your STR/AGI/INT/END/LCK allocation (set in the Crypt camp, capped by level server-side).
+        client.rpc('get_crypt_profile'),
       ]);
       if (xpResult.error) {
         commit({ status: 'error', message: 'Could not read lifetime XP. Your quests are unchanged.' });
@@ -69,16 +72,20 @@ export default function CharacterPage() {
         name: adventurerName(user.email, profile?.display_name),
         xp: verifiedXp,
         profile,
+        stats: statsResult.error ? null : parseCryptProfile(statsResult.data).attributes,
         preview: false,
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
       });
     } catch {
+      // A transient network failure is not evidence that the user signed out.
       commit({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
     }
   }, []);
 
   async function setItemEquipped(slot: GearSlotKey, itemId: string, equip: boolean) {
     if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy || equipmentMutationInFlight.current) return;
+    // Client pre-check only (owned + fits slot + level unlocked). The server RPC
+    // independently enforces ownership and the level gate; it never grants items.
     const verifiedLevel = levelForVerifiedXp(state.xp);
     if (equip && !canRequestEquip(verifiedLevel, state.gear.ownedItemIds, slot, itemId)) {
       setEquipmentError(isSlotUnlocked(verifiedLevel, slot) ? 'That item is not available for this slot.' : `${slotLockText(slot)}.`);
@@ -86,6 +93,7 @@ export default function CharacterPage() {
     }
     if (!equip && SERVER_EQUIPPABLE_ITEMS[itemId] !== slot) return;
     equipmentMutationInFlight.current = true;
+    // An older focus refresh must not repaint stale gear during an equip RPC.
     loadGate.current.invalidate();
     setEquipmentBusy(true);
     setEquipmentError('');
@@ -99,6 +107,9 @@ export default function CharacterPage() {
           : 'Could not update your equipment. Your equipment is unchanged.');
         return;
       }
+      // Only the authoritative server read can change the visible equipment.
+      // If that read fails, do not leave the previous gear snapshot looking
+      // like a confirmed successful equip operation.
       setState({ status: 'loading' });
       await load();
     } catch {
@@ -111,6 +122,7 @@ export default function CharacterPage() {
 
   useEffect(() => {
     void load();
+    // Refresh verified XP and equipment when returning from Quest Board or another tab.
     const refreshOnFocus = () => { if (document.visibilityState === 'visible' && !equipmentMutationInFlight.current) void load(); };
     document.addEventListener('visibilitychange', refreshOnFocus);
     window.addEventListener('focus', refreshOnFocus);
@@ -145,56 +157,41 @@ export default function CharacterPage() {
 
   const progress = levelFor(state.xp);
   const fraction = levelProgress(state.xp);
-  const attributes = attributeEntries(state.profile);
-  const pendingAttributes = attributes.some((attribute) => attribute.pending);
+  // Allocated stats when the account has them; otherwise the placeholder dash.
+  const attributes = attributeEntries(state.stats);
   const wellness = wellnessSnapshot(state.profile);
   const armorMilestone = state.preview ? null : earnedArmorMilestone(state.xp, state.gear);
 
   return (
     <main className="screen character-screen">
-      <p className="page-brand">LIFE ASCENSION</p>
+      <h1 className="sr-only">{state.name}</h1>
       {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
-
-      <section className="panel" aria-label="Your character progress">
-        <div className="slim-level">
-          <span>Level {progress.level}</span>
-          <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level">
-            <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
-          </div>
-        </div>
-      </section>
-
-      <section className="stat-block" aria-label="Attributes">
-        <div className="stat-grid">
+      <section className="character-summary" aria-label="Level and stats">
+        <div className="character-stat-row" role="list" aria-label="Stats">
           {attributes.map((attribute) => (
-            <div key={attribute.key} className="stat">
-              <span className="stat-label">{attribute.short}</span>
-              <span className="stat-value" aria-label={attribute.pending ? `${attribute.label}, not recorded` : `${attribute.label} ${attribute.value}`}>
-                {attribute.value}
-              </span>
+            <div key={attribute.key} className="character-stat" role="listitem" aria-label={attribute.pending ? `${attribute.label}, not set` : `${attribute.label} ${attribute.value}`}>
+              <span className="character-stat-label" aria-hidden="true">{attribute.short}</span>
+              <span className="character-stat-value" aria-hidden="true">{attribute.value}</span>
             </div>
           ))}
         </div>
-        {pendingAttributes && (
-          <p className="soon-note">
-            Coming soon
-            <span className="sr-only">. {ATTRIBUTE_PREVIEW}</span>
-          </p>
-        )}
+        <div className="character-level-line">
+          <span className="character-level">Lv {progress.level}</span>
+          <div className="xp-track character-xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label={`Level ${progress.level}: ${progress.xpIntoLevel} of ${progress.xpForNext} XP to next level`}><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
+          <span className="character-level-xp" aria-hidden="true">{progress.xpIntoLevel}/{progress.xpForNext}</span>
+        </div>
       </section>
-
-      <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified.'}</p>
+      {state.preview && <p className="muted">Equipment below is a visual demo using starter items.</p>}
+      {!state.preview && !state.gear && <p className="muted">Equipment unavailable right now. Refresh to retry.</p>}
       <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} playerLevel={state.preview ? null : levelForVerifiedXp(state.xp)} onEquipItem={(slot, itemId, equip) => { void setItemEquipped(slot, itemId, equip); }} armorBusy={equipmentBusy} />
       {equipmentError && <p className="message" role="status">{equipmentError}</p>}
-
       {armorMilestone && (
-        <section className="panel" aria-label="Ashen Hood unlock progress">
-          <h2>Ashen Hood</h2>
-          {armorMilestone.status === 'earning' && <p>{armorMilestone.remainingXp} more verified quest XP to unlock.</p>}
-          {armorMilestone.status === 'owned' && <p>{isSlotUnlocked(progress.level, 'headwear') ? 'Earned. Tap Headwear slot to equip.' : `Earned. ${slotLockText('headwear')}.`}</p>}
-          {armorMilestone.status === 'eligible-unconfirmed' && <p>Milestone reached. Refresh to confirm ownership.</p>}
-          {armorMilestone.status === 'unverified' && <p>Ownership unverified. Refresh to check.</p>}
-        </section>
+        <p className="muted character-milestone" aria-label="Ashen Hood progress">
+          {armorMilestone.status === 'earning' && `Ashen Hood: ${armorMilestone.remainingXp} XP to go`}
+          {armorMilestone.status === 'owned' && (isSlotUnlocked(progress.level, 'headwear') ? 'Ashen Hood earned. Tap Headwear to equip.' : `Ashen Hood earned. Headwear ${slotLockText('headwear').toLowerCase()}.`)}
+          {armorMilestone.status === 'eligible-unconfirmed' && 'Ashen Hood: reached 10 XP, confirming. Refresh to check.'}
+          {armorMilestone.status === 'unverified' && 'Ashen Hood status unavailable. Refresh to retry.'}
+        </p>
       )}
 
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
@@ -208,6 +205,7 @@ export default function CharacterPage() {
           <p className="wellness-empty">{WELLNESS_EMPTY}</p>
         )}
       </section>
+
     </main>
   );
 }

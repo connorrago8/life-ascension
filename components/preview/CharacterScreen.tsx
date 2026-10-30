@@ -181,7 +181,7 @@ export function CharacterScreen({
         {gearView.canChange
           ? 'Tap an equipment slot to see what you can equip. Gear changes update your character.'
           : serverEquip
-            ? (armorBusy ? 'Saving equipment…' : 'Tap an unlocked slot to equip items you own. Changes are saved to your account.')
+            ? (armorBusy ? 'Saving equipment…' : 'Tap a slot to equip.')
             : 'Equipment is not yet verified for this account. Preview items are hidden and cannot be equipped.'}
       </p>
       {interactive && selected ? (

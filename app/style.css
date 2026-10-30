@@ -724,3 +724,164 @@ code { font-family: ui-monospace, monospace; }
 .board-completed { margin-top: 20px; border-top: 1px solid var(--border, #38404b); padding-top: 16px; }
 .completed-board-toggle { min-height: 44px; }
 .quest-create-form { scroll-margin-top: calc(12px + env(safe-area-inset-top)); scroll-margin-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+/* Crypt header stack (iPhone): keep the preview banner and the run header in
+   normal flow, one above the other, below the Dynamic Island / notch. The
+   header actions get their own row so the title never collides with them. */
+.crypt-screen, .delve {
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  padding-left: calc(12px + env(safe-area-inset-left, 0px));
+  padding-right: calc(12px + env(safe-area-inset-right, 0px));
+}
+.crypt-screen > .page-brand, .crypt-screen > .preview-banner, .crypt-screen > .crypt-top {
+  position: relative;
+  z-index: auto;
+  transform: none;
+}
+.crypt-screen > .preview-banner { display: block; margin: 0 0 10px; }
+.crypt-top {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-areas: "back title" "actions actions";
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.crypt-top > .icon-btn { grid-area: back; }
+.crypt-top > .crypt-heading { grid-area: title; text-align: left; overflow-wrap: anywhere; }
+.crypt-top > .crypt-header-actions { grid-area: actions; justify-content: stretch; }
+.crypt-top > .crypt-header-actions > * { flex: 1; text-align: center; }
+@media (min-width: 560px) {
+  .crypt-top { grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "back title actions"; }
+  .crypt-top > .crypt-header-actions > * { flex: none; }
+}
+
+/* ---------- Crypt delve (card combat) ---------- */
+.delve { max-width: 560px; padding-bottom: 28px; }
+.delve-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.delve-title { flex: 1; margin: 0; font-size: 1.2rem; }
+.delve-heading { flex: 1; min-width: 0; }
+.delve-floor { margin: 0; font-weight: 650; }
+.delve-leave { min-height: 44px; padding: 8px 12px; font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
+.delve-confirm { display: flex; gap: 6px; }
+.delve-small { font-size: 0.82rem; margin: 0 0 4px; }
+.delve-note { border-left: 3px solid var(--mint); padding: 6px 10px; margin: 8px 0; }
+.delve-panel { border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 12px 0; }
+.delve-camp-hero { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.delve-hero-sprite { position: relative; width: 96px; margin: 0 auto; }
+.delve-hero-sprite .pixel-sprite { width: 96px; height: auto; display: block; }
+.delve-hero-sprite.small, .delve-hero-sprite.small .pixel-sprite { width: 72px; }
+.delve-level { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.delve-points { float: right; font-size: 0.82rem; color: var(--mint); font-weight: 500; }
+.delve-attrs, .delve-vault { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.delve-attr { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.delve-attr-text { display: flex; flex-direction: column; min-width: 0; }
+.delve-attr-value { font-variant-numeric: tabular-nums; }
+.delve-gear-bonus { color: var(--mint); }
+.delve-stepper { display: flex; gap: 6px; flex: none; }
+.delve-stepper .btn { min-width: 44px; min-height: 44px; padding: 0; }
+.delve-start, .delve-end-turn { width: 100%; min-height: 52px; margin: 10px 0 6px; font-size: 1.05rem; }
+.delve-hp { position: relative; height: 22px; border-radius: 11px; background: var(--track); overflow: hidden; margin: 4px 0; }
+.delve-hp-fill { position: absolute; inset: 0 auto 0 0; background: #d9534f; transition: width 0.25s ease; }
+.delve-hp-text { position: relative; display: block; text-align: center; font-size: 0.78rem; line-height: 22px; font-weight: 650; }
+.delve-choices { display: grid; gap: 10px; margin: 8px 0 14px; }
+.delve-room { display: flex; align-items: center; gap: 12px; text-align: left; min-height: 64px; padding: 10px 12px; border-radius: 14px;
+  border: 1px solid var(--border); background: #232830; color: var(--text); cursor: pointer; }
+.delve-room-text { display: flex; flex-direction: column; min-width: 0; }
+.delve-room-glyph { font-size: 1.5rem; width: 32px; text-align: center; flex: none; }
+.room-elite { border-color: #c0504d; }
+.room-treasure { border-color: #e2b23a; }
+.room-rest { border-color: #e3843a; }
+.room-event { border-color: #7a8cff; }
+.delve-path { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; }
+.delve-path li { display: flex; gap: 14px; font-size: 0.9rem; opacity: 0.45; }
+.delve-path li.now { opacity: 1; }
+.delve-path li.done { opacity: 0.3; }
+.delve-path span.taken { color: var(--mint); opacity: 1; }
+.delve-combat { display: grid; gap: 10px; }
+.delve-foe { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; align-items: center; border: 1px solid var(--border);
+  border-radius: 14px; padding: 10px; }
+.delve-foe.rank-elite { border-color: #c0504d; }
+.delve-foe.rank-boss { border-color: #a56be0; box-shadow: 0 0 0 1px #a56be055; }
+.delve-foe-name { margin: 0; font-weight: 700; }
+.delve-type { font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; margin-left: 4px; vertical-align: middle; }
+.type-bone { background: #6b6656; }
+.type-shadow { background: #3a2f52; }
+.type-flame { background: #8a3a1e; }
+.type-stone { background: #4b5160; }
+.type-spirit { background: #3d4f7a; }
+.type-rot { background: #4a5a2b; }
+.delve-monster { position: relative; }
+.delve-monster-svg { width: 110px; height: auto; display: block; }
+.delve-intent { margin: 6px 0 0; padding: 6px 8px; border-radius: 8px; font-size: 0.9rem; }
+.intent-attack { background: #4a2020; }
+.intent-guard { background: #1f3346; }
+.intent-roar { background: #4a3a14; }
+.delve-hero { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: center; }
+.delve-energy { margin: 2px 0; font-size: 1.1rem; color: #4a5160; }
+.delve-energy .on { color: #f2c46d; }
+.delve-focus { color: #f2c46d; }
+.delve-log { min-height: 3.6em; color: var(--muted); }
+.delve-hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.delve-card { position: relative; display: flex; flex-direction: column; gap: 4px; min-height: 128px; padding: 22px 8px 8px; text-align: left;
+  border-radius: 12px; border: 1px solid var(--border); background: #262b33; color: var(--text); cursor: pointer; font-size: 0.8rem; }
+.delve-card:disabled { opacity: 0.45; cursor: not-allowed; }
+.delve-card.kind-attack { border-color: #a5584f; }
+.delve-card.kind-skill { border-color: #4f7aa5; }
+.delve-card.el-holy { background: #2e2c22; }
+.delve-card.el-fire { background: #33251f; }
+.delve-card.el-arcane { background: #28243a; }
+.delve-card.el-frost { background: #1f2c36; }
+.delve-card-cost { position: absolute; top: 4px; left: 6px; width: 20px; height: 20px; border-radius: 50%; background: #f2c46d; color: var(--ink);
+  font-weight: 800; display: grid; place-items: center; font-size: 0.78rem; }
+.delve-card-name { font-weight: 700; font-size: 0.9rem; }
+.delve-card-text { color: var(--muted); line-height: 1.25; }
+.delve-card-dmg { margin-top: auto; font-weight: 800; font-size: 1rem; }
+.eff-super { color: #f2c46d; }
+.eff-resisted { color: var(--muted); }
+.delve-options { display: grid; gap: 8px; margin: 10px 0; }
+.delve-option { text-align: left; min-height: 48px; }
+.delve-loot-drop { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin: 8px 0; }
+.rarity-common { border-color: #b8a58a; }
+.rarity-uncommon { border-color: #4fae6a; }
+.rarity-rare { border-color: #4a86e8; }
+.rarity-epic { border-color: #a56be0; box-shadow: 0 0 0 1px #a56be055; }
+.delve-vault .delve-loot { border-left: 3px solid; padding-left: 8px; }
+.delve-pop { position: absolute; top: 0; right: 0; font-weight: 800; font-size: 1.2rem; pointer-events: none; text-shadow: 0 1px 0 #000; }
+.pop-dealt { color: #fff; }
+.pop-dealt.crit { color: #f2c46d; font-size: 1.45rem; }
+.pop-taken { color: #ff6b6b; }
+.pop-heal { color: #7ed9b8; top: auto; bottom: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .delve-pop { animation: delve-pop 0.7s ease-out both; }
+  .delve-monster:has(.pop-dealt) .delve-monster-svg { animation: delve-shake 0.3s ease-out; }
+}
+@keyframes delve-pop { from { transform: translateY(6px); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(-14px); opacity: 0.9; } }
+@keyframes delve-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+/* Collapsible quest sections (Journal "Done today" / "Completed", Home preview). */
+.collapsible-heading { margin: 0; font-size: inherit; }
+.collapsible-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 44px; padding: 8px 4px; border: 0; background: none;
+  color: inherit; font: inherit; font-weight: 700; font-size: 1.1rem; text-align: left; cursor: pointer;
+}
+.collapsible-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 6px; }
+.collapsible-chevron { display: inline-block; transition: transform 150ms ease; }
+.collapsible-chevron.is-open { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .collapsible-chevron { transition: none; } }
+
+/* Character: compact STR/AGI/INT/END/LCK row and one slim level bar at the top. */
+.character-summary { display: grid; gap: 8px; margin: 0 0 12px; }
+.character-stat-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.character-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px;
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; background: rgba(255, 255, 255, 0.04);
+}
+.character-stat-label { font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.75; }
+.character-stat-value { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.character-level-line { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.character-level { font-weight: 700; white-space: nowrap; }
+.character-level-xp { opacity: 0.7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.character-xp-track { flex: 1; height: 6px; margin: 0; }
+.character-milestone { font-size: 0.85rem; margin: 8px 0 0; }

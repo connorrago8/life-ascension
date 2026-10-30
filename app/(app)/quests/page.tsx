@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { CollapsibleSection } from '../../../components/CollapsibleSection';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
@@ -103,6 +104,9 @@ export default function QuestNotesIndex() {
 
   const activeQuests = quests.filter((quest) => quest.active && !doneQuestIds.has(quest.id));
   const doneQuests = quests.filter((quest) => quest.active && doneQuestIds.has(quest.id));
+  // Daily quests done today reopen tomorrow; one-time quests stay completed.
+  const doneTodayQuests = doneQuests.filter((quest) => quest.cadence === 'daily');
+  const completedQuests = doneQuests.filter((quest) => quest.cadence !== 'daily');
   const inactiveQuests = quests.filter((quest) => !quest.active);
   const renderQuest = (quest: Quest) => {
     const latest = notes.find((note) => note.quest_id === quest.id);
@@ -121,7 +125,8 @@ export default function QuestNotesIndex() {
         <a className="btn ghost" href="/">Quest board</a>
       </header>
       <section className="panel" aria-label="Active quest journal"><h2>Active quests ({activeQuests.length})</h2>{activeQuests.length === 0 && <p className="muted">{doneQuests.length > 0 ? 'All caught up for today.' : 'No active quests. Add one from Home.'}</p>}{activeQuests.map(renderQuest)}</section>
-      {doneQuests.length > 0 && <section className="panel" aria-label="Done today journal"><h2>Done today &amp; completed ({doneQuests.length})</h2><p className="muted">Daily quests reopen tomorrow on the quest board.</p>{doneQuests.map(renderQuest)}</section>}
+      {doneTodayQuests.length > 0 && <CollapsibleSection title="Done today" count={doneTodayQuests.length} label="Done today journal"><p className="muted">Daily quests reopen tomorrow on the quest board.</p>{doneTodayQuests.map(renderQuest)}</CollapsibleSection>}
+      {completedQuests.length > 0 && <CollapsibleSection title="Completed" count={completedQuests.length} label="Completed journal">{completedQuests.map(renderQuest)}</CollapsibleSection>}
       {inactiveQuests.length > 0 && <section className="panel"><button type="button" className="btn ghost" aria-expanded={showInactive} onClick={() => setShowInactive(value => !value)}>{showInactive ? '▾' : '▸'} Archived quests ({inactiveQuests.length})</button>{showInactive && inactiveQuests.map(renderQuest)}</section>}
       <p className="message" role="status" aria-live="polite">{message}</p>
     </main>
