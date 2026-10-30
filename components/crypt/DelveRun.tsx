@@ -3,14 +3,21 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
-import { canPlay, ENERGY_PER_TURN, foeIntent, intentText, previewDamage, type Battle } from '../../lib/crypt/delve/battle';
-import { CARDS, effectiveness, ELEMENT_LABEL, resistancesOf, TYPE_LABEL, weaknessesOf, type CardId } from '../../lib/crypt/delve/cards';
+import {
+  bigHitComing, canPlay, cardCritChance, comboReady, ENERGY_PER_TURN, foeIntent, incomingDamage, INTENT_ICON, intentText,
+  PASSIVE_TEXT, previewDamage, previewHits, upcomingIntent, describeIntent, type Battle,
+} from '../../lib/crypt/delve/battle';
+import {
+  CARDS, cardDef, COMBO_AT, comboBonus, effectiveness, ELEMENT_LABEL, isUpgraded, resistancesOf, TYPE_LABEL, upgradeDef, weaknessesOf,
+  type CardDef, type DeckCard,
+} from '../../lib/crypt/delve/cards';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
 import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
-import { bonusLabel, lootById, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
+import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
 import {
-  createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, runLoadout, type DelveCommand, type DelveState,
+  canRemoveCard, canUpgradeCard, createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, runLoadout, type DelveCommand,
+  type DelveState,
 } from '../../lib/crypt/delve/run';
 import {
   adjustAttribute, ATTRIBUTE_INFO, ATTRIBUTE_KEYS, clampAllocation, critChance, dodgeChance, maxHpFor, pointsForLevel, spentPoints,
@@ -251,6 +258,7 @@ function Camp(props: {
               return (
                 <li key={id} className={`delve-loot rarity-${entry.rarity}`}>
                   <strong>{entry.name}</strong> <span className="delve-small">{bonusLabel(entry)}</span>
+                  {passiveLabel(entry) ? <span className="delve-small delve-passive">✦ {passiveLabel(entry)}</span> : null}
                   {entry.earnedOnly ? <span className="soon-pill">Quest-earned</span> : null}
                   {worn ? <span className="soon-pill">Worn</span> : null}
                   <button type="button" className="btn ghost delve-wear" aria-pressed={worn}
@@ -368,15 +376,112 @@ function MapView({ state, onChoose }: { state: DelveState; onChoose: (index: num
 
 /* ---------- Combat ---------- */
 
+/** Tap-to-explain status chips. Short, readable on a phone. */
+type Chip = { key: string; icon: string; label: string; explain: string };
+
+const STATUS_HELP = {
+  block: 'Block soaks damage, then resets at the start of your turn.',
+  exposed: 'Exposed: takes 50% more damage from attacks.',
+  weak: 'Weakened: its attacks deal 25% less.',
+  burn: 'Burn: takes Burn damage at the start of its turn, then Burn −1. (INT)',
+  bleed: 'Bleed: loses Bleed HP at the start of every turn, for the whole fight. (STR)',
+  rage: 'Rage: every attack hits this much harder.',
+  hexed: 'Hexed: your attacks deal 25% less this turn.',
+  thorns: 'Thorns: each enemy hit on you deals this much back. (END)',
+  retain: 'Entrenched: your Block is kept into next turn. (END)',
+  haste: 'Haste: extra energy next turn. (AGI)',
+  combo: `Combo: your ${COMBO_AT}rd card each turn gets bonus damage or Block. (AGI)`,
+  crit: 'Crit: chance for an attack hit to deal double. (LCK)',
+  dodge: 'Dodge ready: the next enemy hit misses.',
+  focus: 'Focused: your next attack deals double.',
+  might: 'Might: every attack hit deals extra damage this fight.',
+} as const;
+
+function StatusChips({ chips, label }: { chips: Chip[]; label: string }) {
+  const [open, setOpen] = useState<string | null>(null);
+  if (chips.length === 0) return null;
+  const active = chips.find((chip) => chip.key === open) ?? null;
+  return (
+    <div className="delve-status" aria-label={label}>
+      <div className="delve-chips">
+        {chips.map((chip) => (
+          <button key={chip.key} type="button" className={`delve-chip chip-${chip.key}`} aria-expanded={open === chip.key}
+            aria-label={`${chip.label}. ${chip.explain}`} onClick={() => setOpen(open === chip.key ? null : chip.key)}>
+            <span aria-hidden="true">{chip.icon}</span> {chip.label}
+          </button>
+        ))}
+      </div>
+      {active ? <p className="delve-small delve-explain" role="status">{active.explain}</p> : null}
+    </div>
+  );
+}
+
+function foeChips(battle: Battle): Chip[] {
+  const foe = battle.foe;
+  const chips: Chip[] = [];
+  if (foe.block > 0) chips.push({ key: 'block', icon: '🛡', label: `${foe.block}`, explain: STATUS_HELP.block });
+  if (foe.vulnerable > 0) chips.push({ key: 'exposed', icon: '🎯', label: `Exposed ${foe.vulnerable}`, explain: STATUS_HELP.exposed });
+  if (foe.weak > 0) chips.push({ key: 'weak', icon: '↓', label: `Weak ${foe.weak}`, explain: STATUS_HELP.weak });
+  if (foe.burn > 0) chips.push({ key: 'burn', icon: '🔥', label: `Burn ${foe.burn}`, explain: STATUS_HELP.burn });
+  if (foe.bleed > 0) chips.push({ key: 'bleed', icon: '🩸', label: `Bleed ${foe.bleed}`, explain: STATUS_HELP.bleed });
+  if (foe.strength > 0) chips.push({ key: 'rage', icon: '💪', label: `Rage +${foe.strength}`, explain: STATUS_HELP.rage });
+  return chips;
+}
+
+function heroChips(battle: Battle): Chip[] {
+  const chips: Chip[] = [];
+  if (battle.block > 0) chips.push({ key: 'block', icon: '🛡', label: `${battle.block}`, explain: STATUS_HELP.block });
+  if (battle.weak > 0) chips.push({ key: 'hexed', icon: '☠', label: 'Hexed', explain: STATUS_HELP.hexed });
+  if (battle.thorns > 0) chips.push({ key: 'thorns', icon: '🌵', label: `Thorns ${battle.thorns}`, explain: STATUS_HELP.thorns });
+  if (battle.retain) chips.push({ key: 'retain', icon: '🧱', label: 'Keep Block', explain: STATUS_HELP.retain });
+  if (battle.haste > 0) chips.push({ key: 'haste', icon: '✨', label: `Haste +${battle.haste}`, explain: STATUS_HELP.haste });
+  chips.push({
+    key: 'combo', icon: '⛓', label: comboReady(battle) ? `Combo ready +${comboBonus(battle.attributes)}` : `Combo ${Math.min(battle.played, COMBO_AT - 1)}/${COMBO_AT - 1}`,
+    explain: STATUS_HELP.combo,
+  });
+  const crit = Math.round(cardCritChance(battle, CARDS.strike) * 100);
+  if (crit > 0 || battle.critNext) chips.push({ key: 'crit', icon: '🍀', label: battle.critNext ? 'Next hit crits' : `Crit ${crit}%`, explain: STATUS_HELP.crit });
+  if (battle.dodgeNext) chips.push({ key: 'dodge', icon: '💨', label: 'Dodge ready', explain: STATUS_HELP.dodge });
+  if (battle.focused) chips.push({ key: 'focus', icon: '🎯', label: 'Focused ×2', explain: STATUS_HELP.focus });
+  if (battle.might > 0) chips.push({ key: 'might', icon: '⚔', label: `Might +${battle.might}`, explain: STATUS_HELP.might });
+  for (const passive of battle.passives) {
+    chips.push({ key: `gear-${passive}`, icon: '✦', label: 'Gear', explain: PASSIVE_TEXT[passive] });
+  }
+  return chips;
+}
+
+function IntentPanel({ battle }: { battle: Battle }) {
+  const intent = foeIntent(battle);
+  const then = upcomingIntent(battle);
+  const incoming = incomingDamage(battle);
+  const telegraph = bigHitComing(battle);
+  const kindClass = intent.kind === 'attack' ? 'attack' : intent.kind === 'guard' ? 'guard' : intent.kind === 'charge' ? 'charge' : 'roar';
+  return (
+    <div className={`delve-intent intent-${kindClass}`} aria-label={`Next move: ${intentText(battle)}`}>
+      <p>
+        <span aria-hidden="true">{INTENT_ICON[intent.kind]} </span>Next: <strong>{intentText(battle)}</strong>
+        {incoming ? (
+          <span className="delve-incoming">
+            {' '}· You take <strong>{incoming.afterBlock}</strong>{incoming.total !== incoming.afterBlock ? ` (${incoming.total} − Block)` : ''}
+          </span>
+        ) : null}
+      </p>
+      {telegraph ? (
+        <p className="delve-small delve-telegraph" role="status">⚡ Big hit next turn: {describeIntent(then, battle.foe)}. Block up or finish it now.</p>
+      ) : (
+        <p className="delve-small muted">Then: <span aria-hidden="true">{INTENT_ICON[then.kind]} </span>{describeIntent(then, battle.foe)}</p>
+      )}
+    </div>
+  );
+}
+
 function CombatScreen({ state, battle, send }: { state: DelveState; battle: Battle; send: (command: DelveCommand) => void }) {
   const foe = battle.foe;
-  const intent = foeIntent(battle);
   const fb = battle.feedback;
   const lastLog = battle.log.slice(-3);
   const typeLabel = TYPE_LABEL[foe.type];
   const weakTo = weaknessesOf(foe.type).map((element) => ELEMENT_LABEL[element]).join('/');
   const resists = resistancesOf(foe.type).map((element) => ELEMENT_LABEL[element]).join('/');
-  const intentClass = intent.kind === 'attack' ? 'attack' : intent.kind === 'guard' ? 'guard' : 'roar';
   return (
     <section className="delve-combat" aria-label={`Fight: ${foe.name}`}>
       <div className={`delve-foe rank-${foe.rank}`}>
@@ -384,14 +489,10 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
           <p className="delve-foe-name">{foe.name} <span className={`delve-type type-${foe.type}`}>{typeLabel}</span></p>
           <HpBar hp={foe.hp} max={foe.maxHp} label={`${foe.name} HP`} block={foe.block} />
           <p className="delve-small muted">
-            Weak to {weakTo}{resists ? ` · Resists ${resists}` : ''}
-            {foe.vulnerable > 0 ? ` · Exposed ${foe.vulnerable}` : ''}{foe.weak > 0 ? ` · Weakened ${foe.weak}` : ''}
-            {foe.poison > 0 ? ` · Poison ${foe.poison}` : ''}{foe.strength > 0 ? ` · Rage +${foe.strength}` : ''}
-            {battle.enraged ? ' · ENRAGED' : ''}
+            Weak to {weakTo}{resists ? ` · Resists ${resists}` : ''}{battle.enraged ? ' · ENRAGED' : ''}
           </p>
-          <p className={`delve-intent intent-${intentClass}`} aria-label={`Next move: ${intentText(battle)}`}>
-            Next: <strong>{intentText(battle)}</strong>
-          </p>
+          <StatusChips chips={foeChips(battle)} label={`${foe.name} statuses`} />
+          <IntentPanel battle={battle} />
         </div>
         <div className="delve-monster" key={`foe-${fb.seq}`}>
           <MonsterSprite sprite={foe.sprite} label={foe.name} />
@@ -416,13 +517,7 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
             {battle.energy > ENERGY_PER_TURN ? <span className="on" aria-hidden="true">+{battle.energy - ENERGY_PER_TURN}</span> : null}
             <span className="delve-small muted"> Turn {battle.turn} · Draw {battle.drawPile.length} · Discard {battle.discard.length}</span>
           </p>
-          {battle.focused ? <p className="delve-small delve-focus">Focused: next attack ×2</p> : null}
-          {battle.might > 0 || battle.dodgeNext || battle.critNext ? (
-            <p className="delve-small delve-focus">
-              {[battle.might > 0 ? `Attacks +${battle.might}` : '', battle.dodgeNext ? 'Dodge ready' : '', battle.critNext ? 'Next hit crits' : '']
-                .filter(Boolean).join(' · ')}
-            </p>
-          ) : null}
+          <StatusChips chips={heroChips(battle)} label="Your statuses" />
         </div>
       </div>
 
@@ -444,22 +539,32 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
   );
 }
 
-function CardButton({ id, battle, disabled, onPlay }: { id: CardId; battle: Battle; disabled: boolean; onPlay: () => void }) {
-  const def = CARDS[id];
+function CardFace({ def, upgraded }: { def: CardDef; upgraded?: boolean }) {
+  return (
+    <>
+      <span className="delve-card-cost" aria-hidden="true">{def.cost}</span>
+      <span className={`delve-card-name${upgraded ? ' upgraded' : ''}`}>{def.name}</span>
+      <span className="delve-card-text">{def.text}</span>
+    </>
+  );
+}
+
+function CardButton({ id, battle, disabled, onPlay }: { id: DeckCard; battle: Battle; disabled: boolean; onPlay: () => void }) {
+  const def = cardDef(id);
   const intent = foeIntent(battle);
   let damage = previewDamage(battle, id);
   if (def.counter !== undefined && !def.damage && intent.kind !== 'attack') damage = null;
   const effect = def.element ? effectiveness(def.element, battle.foe.type) : 'normal';
-  const hits = def.hits && def.hits > 1 ? `×${def.hits}` : '';
+  const count = previewHits(battle, id);
+  const hits = count > 1 ? `×${count}` : '';
+  const combo = comboReady(battle) && (damage !== null || !!def.block);
   return (
-    <button type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}`} disabled={disabled} onClick={onPlay}
-      aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}`}>
-      <span className="delve-card-cost" aria-hidden="true">{def.cost}</span>
-      <span className="delve-card-name">{def.name}</span>
-      <span className="delve-card-text">{def.text}</span>
+    <button type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}${combo ? ' combo' : ''}`} disabled={disabled} onClick={onPlay}
+      aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}${combo ? ' Combo bonus.' : ''}`}>
+      <CardFace def={def} upgraded={isUpgraded(id)} />
       {damage !== null ? (
         <span className={`delve-card-dmg eff-${effect}`}>
-          {damage}{hits}{effect === 'super' ? ' ★' : effect === 'resisted' ? ' ↓' : ''}
+          {damage}{hits}{effect === 'super' ? ' ★' : effect === 'resisted' ? ' ↓' : ''}{combo ? ' ⛓' : ''}
         </span>
       ) : null}
     </button>
@@ -475,6 +580,7 @@ function LootLine({ itemId, equipped }: { itemId: string | null; equipped: boole
   return (
     <div className={`delve-loot-drop rarity-${entry.rarity}`} role="status">
       <p><strong>{RARITY_LABEL[entry.rarity]} gear: {entry.name}</strong> · {bonusLabel(entry)}</p>
+      {passiveLabel(entry) ? <p className="delve-small delve-passive">✦ {passiveLabel(entry)}</p> : null}
       <p className="delve-small muted">{entry.flavor} {equipped ? 'Equipped — look at your adventurer.' : 'Sent to your vault.'}</p>
     </div>
   );
@@ -494,9 +600,7 @@ function RewardView({ state, send }: { state: DelveState; send: (command: DelveC
           return (
             <button key={id} type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}`}
               onClick={() => send({ type: 'pick-card', cardId: id })}>
-              <span className="delve-card-cost" aria-hidden="true">{def.cost}</span>
-              <span className="delve-card-name">{def.name}</span>
-              <span className="delve-card-text">{def.text}</span>
+              <CardFace def={def} />
             </button>
           );
         })}
@@ -530,10 +634,39 @@ function EventView({ state, send }: { state: DelveState; send: (command: DelveCo
         <>
           <p className="delve-note" role="status">{ev.outcome}</p>
           {state.reward ? <LootLine itemId={state.reward.loot} equipped={state.reward.equipped} /> : null}
+          <UpgradePicker state={state} send={send} />
           <button type="button" className="btn" onClick={() => send({ type: 'continue' })}>Continue</button>
         </>
       )}
     </section>
+  );
+}
+
+/** Pick one card to upgrade into its "+" version. */
+function UpgradePicker({ state, send }: { state: DelveState; send: (command: DelveCommand) => void }) {
+  if (state.upgrades <= 0) {
+    return state.note && (state.phase === 'treasure' || state.phase === 'event') && state.note.includes('Upgraded')
+      ? <p className="delve-note" role="status">{state.note}</p> : null;
+  }
+  return (
+    <div className="delve-upgrade" aria-labelledby="delve-upgrade-title">
+      <h3 id="delve-upgrade-title">Upgrade a card</h3>
+      <p className="delve-small muted">Pick one card to make stronger for this run (it gets a “+”).</p>
+      <div className="delve-deck-list">
+        {state.deck.map((key, index) => {
+          if (!canUpgradeCard(state, index)) return null;
+          const next = upgradeDef(CARDS[key as keyof typeof CARDS]);
+          return (
+            <button key={`${key}-${index}`} type="button" className="btn ghost delve-deck-card"
+              aria-label={`Upgrade ${cardDef(key).name} to ${next.name}. ${next.text}`}
+              onClick={() => send({ type: 'upgrade-card', index })}>
+              <strong>{cardDef(key).name} → {next.name}</strong>
+              <span className="delve-small muted">{next.text.split(' Upgraded: ')[1] ?? ''}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -543,23 +676,41 @@ function TreasureView({ state, send }: { state: DelveState; send: (command: Delv
       <h2 id="delve-treasure-title">Old chest</h2>
       <div className="delve-hero-sprite"><HeroSprite loadout={state.loadout} label="Your adventurer" /></div>
       <LootLine itemId={state.reward?.loot ?? null} equipped={state.reward?.equipped ?? false} />
-      <button type="button" className="btn" onClick={() => send({ type: 'continue' })}>Continue</button>
+      <UpgradePicker state={state} send={send} />
+      <button type="button" className="btn" onClick={() => send({ type: 'continue' })}>{state.upgrades > 0 ? 'Skip upgrade' : 'Continue'}</button>
     </section>
   );
 }
 
 function RestView({ state, send }: { state: DelveState; send: (command: DelveCommand) => void }) {
-  const canTrim = state.deck.length > 6 && (state.deck.includes('strike') || state.deck.includes('guard'));
+  const [removing, setRemoving] = useState(false);
+  const canRemove = canRemoveCard(state);
   return (
     <section aria-labelledby="delve-rest-title">
       <h2 id="delve-rest-title">Campfire</h2>
-      <p>The fire is low but warm. Choose one.</p>
-      <div className="delve-options">
-        <button type="button" className="btn" onClick={() => send({ type: 'rest', choice: 'heal' })}>Rest (heal 35%)</button>
-        <button type="button" className="btn ghost" disabled={!canTrim} onClick={() => send({ type: 'rest', choice: 'trim' })}>
-          Sharpen your deck (remove a Strike or Guard)
-        </button>
-      </div>
+      <p>The fire is low but warm. Choose one: heal, or remove a card.</p>
+      {removing ? (
+        <div className="delve-upgrade">
+          <h3>Remove which card?</h3>
+          <div className="delve-deck-list">
+            {state.deck.map((key, index) => (
+              <button key={`${key}-${index}`} type="button" className="btn ghost delve-deck-card"
+                aria-label={`Remove ${cardDef(key).name}`} onClick={() => send({ type: 'rest', choice: 'remove', index })}>
+                <strong>{cardDef(key).name}</strong>
+                <span className="delve-small muted">{cardDef(key).cost} energy · {CARDS[cardDef(key).id].text}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn ghost" onClick={() => setRemoving(false)}>Back</button>
+        </div>
+      ) : (
+        <div className="delve-options">
+          <button type="button" className="btn" onClick={() => send({ type: 'rest', choice: 'heal' })}>Rest (heal 35%)</button>
+          <button type="button" className="btn ghost" disabled={!canRemove} onClick={() => setRemoving(true)}>
+            Remove a card (deck {state.deck.length})
+          </button>
+        </div>
+      )}
     </section>
   );
 }

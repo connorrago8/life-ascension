@@ -1,11 +1,11 @@
 // Balance check for the Crypt delve. Plays many seeded runs with a simple greedy policy.
 // Usage: node --experimental-strip-types scripts/simulate-crypt-delve.mjs
-import { CARDS, cardBlock, cardPoison } from '../lib/crypt/delve/cards.ts';
+import { CARDS, cardBlock, cardBleed, cardBurn, cardDef, cardThorns } from '../lib/crypt/delve/cards.ts';
 import { foeIntent, intentDamage, previewDamage } from '../lib/crypt/delve/battle.ts';
-import { createDelve, currentRoomChoices, reduceDelve } from '../lib/crypt/delve/run.ts';
+import { canUpgradeCard, createDelve, currentRoomChoices, reduceDelve } from '../lib/crypt/delve/run.ts';
 
 const ARCHETYPE_FOR = { strength: 'bruiser', agility: 'combo', intelligence: 'caster', endurance: 'tank', luck: 'luck' };
-const GENERAL_RANK = ['adrenaline', 'heavy-blow', 'bash', 'flurry', 'arcane-bolt', 'expose', 'shield-bash', 'iron-skin', 'smite', 'ember', 'frost-shard', 'poison-cloud', 'lucky-strike', 'battle-cry', 'bulwark', 'insight', 'cleaver', 'riposte', 'second-wind', 'hex', 'sidestep', 'quick-jab', 'momentum', 'gamble', 'jackpot', 'loaded-dice', 'reckless-swing', 'body-slam'];
+const GENERAL_RANK = ['adrenaline', 'heavy-blow', 'bash', 'flurry', 'arcane-bolt', 'expose', 'shield-bash', 'iron-skin', 'smite', 'ember', 'frost-shard', 'kindle', 'lucky-strike', 'battle-cry', 'bulwark', 'insight', 'cleaver', 'riposte', 'second-wind', 'hex', 'sidestep', 'quick-jab', 'momentum', 'gamble', 'jackpot', 'loaded-dice', 'reckless-swing', 'body-slam', 'rend', 'haste', 'spiked-guard', 'entrench'];
 function pickRank(attributes) {
   const top = Object.entries(attributes).sort((a, b) => b[1] - a[1])[0][0];
   const arch = ARCHETYPE_FOR[top];
@@ -18,12 +18,12 @@ function playTurn(state) {
     if (!b || b.status !== 'ongoing' || state.phase !== 'combat') return state;
     const incoming = intentDamage(b);
     const need = incoming ? incoming.value * incoming.hits - b.block : 0;
-    const playable = b.hand.filter((c) => CARDS[c.id].cost <= b.energy);
+    const playable = b.hand.filter((c) => cardDef(c.id).cost <= b.energy);
     if (playable.length === 0) break;
     const score = (c) => {
-      const def = CARDS[c.id];
-      if (def.energy || def.draw) return 100;
-      if (def.focus) return b.hand.some((h) => CARDS[h.id].kind === 'attack' && CARDS[h.id].cost <= b.energy) ? 90 : -1;
+      const def = cardDef(c.id);
+      if (def.energy || def.draw || def.haste) return 100;
+      if (def.focus) return b.hand.some((h) => cardDef(h.id).kind === 'attack' && cardDef(h.id).cost <= b.energy) ? 90 : -1;
       if (def.heal) return b.hp < b.maxHp * 0.6 ? 80 : -1;
       if (def.critNext) return b.critNext ? -1 : 95;
       if (def.might) return 85;
@@ -31,11 +31,13 @@ function playTurn(state) {
       if (dmg >= b.foe.hp + b.foe.block) return 200;
       const block = cardBlock(def, b.attributes);
       const blockValue = need > 0 ? Math.min(block, need) * 1.1 : 0;
-      const poison = cardPoison(def, b.attributes) * 2;
+      const poison = cardBurn(def, b.attributes) * 2 + cardBleed(def, b.attributes) * 3;
+      const thorns = cardThorns(def, b.attributes) * (incoming ? incoming.hits * 2 : 1);
+      const retain = def.retain && !b.retain ? 4 : 0;
       const weak = def.weak && incoming ? incoming.value * incoming.hits * 0.25 * 2 : 0;
       const dodge = def.dodgeNext && incoming && !b.dodgeNext ? incoming.value : 0;
       const self = def.selfDamage ? -def.selfDamage : 0;
-      return (dmg * (def.hits ?? 1) + blockValue + poison + weak + dodge + self + (def.vulnerable ? 6 : 0)) / Math.max(1, def.cost);
+      return (dmg * (def.hits ?? 1) + blockValue + thorns + retain + poison + weak + dodge + self + (def.vulnerable ? 6 : 0)) / Math.max(1, def.cost);
     };
     const best = playable.map((c) => [c, score(c)]).sort((x, y) => y[1] - x[1])[0];
     if (!best || best[1] <= 0) break;
@@ -69,12 +71,23 @@ function runOnce(seed, level, allocated) {
       const pick = rank.find((id) => s.reward.cards.includes(id)) ?? null;
       s = reduceDelve(s, { type: 'pick-card', cardId: pick });
     } else if (s.phase === 'event') {
-      if (s.event.outcome) s = reduceDelve(s, { type: 'continue' });
+      if (s.event.outcome) s = reduceDelve(upgradeBest(s, rank), { type: 'continue' });
       else s = reduceDelve(s, { type: 'event-option', optionId: (s.hp > s.maxHp * 0.5 ? 0 : 0) === 0 ? requireFirst(s) : '' });
-    } else if (s.phase === 'treasure') s = reduceDelve(s, { type: 'continue' });
-    else if (s.phase === 'rest') s = reduceDelve(s, { type: 'rest', choice: s.hp < s.maxHp * 0.8 ? 'heal' : 'trim' });
+    } else if (s.phase === 'treasure') s = reduceDelve(upgradeBest(s, rank), { type: 'continue' });
+    else if (s.phase === 'rest') {
+      const idx = s.deck.lastIndexOf('strike') >= 0 ? s.deck.lastIndexOf('strike') : s.deck.lastIndexOf('guard');
+      s = s.hp < s.maxHp * 0.8 || idx < 0 ? reduceDelve(s, { type: 'rest', choice: 'heal' }) : reduceDelve(s, { type: 'rest', choice: 'remove', index: idx });
+    }
   }
   return { won: s.phase === 'floor-clear', row: s.row, turns, rooms, fights, found: s.found.length, hp: s.hp };
+}
+function upgradeBest(s, rank) {
+  if (s.upgrades <= 0) return s;
+  for (const id of [...rank, 'bash', 'strike', 'guard']) {
+    const index = s.deck.indexOf(id);
+    if (index >= 0 && canUpgradeCard(s, index)) return reduceDelve(s, { type: 'upgrade-card', index });
+  }
+  return s;
 }
 function requireFirst(s) {
   return s.event.eventId === 'whispering-shrine' && s.hp < s.maxHp * 0.6 ? 'pray' : ({ 'collapsed-passage': 'heave', 'whispering-shrine': 'blood', 'riddle-door': 'answer', 'tripwire-hall': 'careful', 'still-pool': 'drink', 'bone-dice': 'roll' })[s.event.eventId];

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createDelve, reduceDelve, effectiveAttributes, currentRoomChoices } from '../lib/crypt/delve/run.ts';
 import { startBattle, playCard, endTurn, canPlay, foeIntent, intentText, previewDamage, extraDrawChance, energyForTurn, ENERGY_PER_TURN, foeHitValue } from '../lib/crypt/delve/battle.ts';
-import { CARDS, CARD_IDS, MONSTER_TYPES, REWARD_POOL, STARTER_DECK, SUPER_EFFECTIVE, RESISTED, effectiveness, cardBlock, cardHeal, cardHitDamage, cardPoison, cardWeak, weaknessesOf } from '../lib/crypt/delve/cards.ts';
+import { CARDS, CARD_IDS, MONSTER_TYPES, REWARD_POOL, STARTER_DECK, SUPER_EFFECTIVE, RESISTED, effectiveness, cardBlock, cardHeal, cardHitDamage, cardBurn, cardWeak, weaknessesOf } from '../lib/crypt/delve/cards.ts';
 import { spawnFoe, BOSS, FLOOR_ROWS, EVENTS, FOES, ENCOUNTERS_PER_RUN, generateFloor } from '../lib/crypt/delve/floor.ts';
 import { LOOT, LOOT_IDS, EARNED_GEAR, bestLoadout, bonusLabel, dropChance, gearAttributes, lootById, ownedEarnedGear, rarityUpChance, rollLoot } from '../lib/crypt/delve/loot.ts';
 import { gearOverlays, GEAR_INKS, GEAR_WIDTH, GEAR_HEIGHT } from '../lib/crypt/delve/gearArt.ts';
@@ -123,7 +123,7 @@ test('each stat does its job: STR hits, AGI dodges and acts first, INT casts, EN
   assert.ok(cardBlock(CARDS.guard, int9) > cardBlock(CARDS.guard, ZERO));
   assert.ok(cardHeal(CARDS['second-wind'], int9) > cardHeal(CARDS['second-wind'], ZERO));
   // INT strengthens statuses
-  assert.ok(cardPoison(CARDS['poison-cloud'], int9) > cardPoison(CARDS['poison-cloud'], ZERO));
+  assert.ok(cardBurn(CARDS['kindle'], int9) > cardBurn(CARDS['kindle'], ZERO));
   assert.ok(cardWeak(CARDS.hex, int9) > cardWeak(CARDS.hex, ZERO));
   // END raises max HP and Block
   assert.equal(maxHpFor({ ...ZERO, endurance: 10 }, 1), maxHpFor(ZERO, 1) + 25);
@@ -277,8 +277,8 @@ test('Crypt header stacks under the preview banner below the iPhone safe area', 
   assert.ok(run.indexOf('preview-banner') < run.indexOf('crypt-top'), 'banner renders before the header');
 });
 
-test('about 30 cards with a synergy set for every stat archetype', () => {
-  assert.ok(CARD_IDS.length >= 28 && CARD_IDS.length <= 34, `${CARD_IDS.length} cards`);
+test('30–38 cards with a synergy set for every stat archetype', () => {
+  assert.ok(CARD_IDS.length >= 28 && CARD_IDS.length <= 38, `${CARD_IDS.length} cards`);
   const byArchetype = {};
   for (const id of CARD_IDS) {
     assert.equal(CARDS[id].id, id);
@@ -302,12 +302,12 @@ test('type chart: six monster types, each with a weakness, and every foe uses on
   assert.ok(new Set(FOES.map((foe) => foe.type)).size === MONSTER_TYPES.length, 'every type appears on Floor 1');
 });
 
-test('statuses and combo cards work: poison ticks, weaken softens hits, dodge, crit and momentum', () => {
+test('statuses and combo cards work: burn ticks, weaken softens hits, dodge, crit and momentum', () => {
   const foe = spawnFoe('ghoul', 0);
-  let battle = startBattle({ rng: seedRng(4), deck: ['poison-cloud', 'hex', 'sidestep', 'loaded-dice', 'momentum'], attributes: ZERO, hp: 60, maxHp: 60, foe });
+  let battle = startBattle({ rng: seedRng(4), deck: ['kindle', 'hex', 'sidestep', 'loaded-dice', 'momentum'], attributes: ZERO, hp: 60, maxHp: 60, foe });
   const play = (id) => { battle = playCard(battle, battle.hand.find((c) => c.id === id).uid); };
-  play('poison-cloud');
-  assert.equal(battle.foe.poison, 4);
+  play('kindle');
+  assert.equal(battle.foe.burn, 4);
   play('hex');
   assert.ok(battle.foe.weak >= 2);
   assert.equal(foeHitValue({ strength: 0, weak: 1 }, 12), 9);
@@ -322,8 +322,8 @@ test('statuses and combo cards work: poison ticks, weaken softens hits, dodge, c
   assert.ok(hp - battle.foe.hp >= momentum * 2 - 1, 'loaded dice made it crit');
   const before = battle.foe.hp;
   const after = endTurn(battle);
-  assert.equal(after.foe.hp, before - 4, 'poison ticks for its stacks');
-  assert.equal(after.foe.poison, 3);
+  assert.equal(after.foe.hp, before - 4, 'burn ticks for its stacks');
+  assert.equal(after.foe.burn, 3);
 });
 
 test('Floor 1 has 10–15 encounters on any path, at least 60% fights, 1–2 elites, a rest and the boss', () => {

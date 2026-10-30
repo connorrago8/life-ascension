@@ -1,6 +1,6 @@
 import {
-  CARDS, strengthBonus, luckBonus, EFFECTIVE_MULTIPLIER, RESISTED_MULTIPLIER, cardBlock, cardHeal, cardHitDamage, cardPoison,
-  cardWeak, effectiveness, type CardDef, type CardId, type MonsterType,
+  strengthBonus, luckBonus, EFFECTIVE_MULTIPLIER, RESISTED_MULTIPLIER, COMBO_AT, cardBlock, cardBleed, cardBurn, cardDef, cardHeal,
+  cardHitDamage, cardThorns, cardWeak, comboBonus, effectiveness, type CardDef, type DeckCard, type MonsterType,
 } from './cards.ts';
 import { nextIndex, nextRoll, type Rng } from './rng.ts';
 import { critChance, dodgeChance, type Attributes } from './stats.ts';
@@ -20,7 +20,22 @@ export const MAX_HAND = 10;
 export type Intent =
   | { kind: 'attack'; value: number; hits?: number; label?: string }
   | { kind: 'guard'; value: number }
-  | { kind: 'roar'; value: number };
+  | { kind: 'roar'; value: number }
+  /** Telegraph: the foe winds up (gaining `value` Block). Its next move is the big hit. */
+  | { kind: 'charge'; value: number }
+  /** Debuff: you are Weakened for `value` turns (your attacks deal 25% less). */
+  | { kind: 'hex'; value: number };
+
+/** Passives from Rare+ gear. Shown on the gear tooltip. */
+export type GearPassive = 'twin-strike' | 'start-block' | 'burn-plus' | 'start-thorns' | 'first-dodge' | 'keen-eye';
+export const PASSIVE_TEXT: Record<GearPassive, string> = {
+  'twin-strike': 'Your first attack each turn hits one extra time.',
+  'start-block': 'Start every fight with 4 Block.',
+  'burn-plus': 'Burn ticks +1.',
+  'start-thorns': 'Start every fight with 3 Thorns.',
+  'first-dodge': 'Dodge the first enemy hit of every fight.',
+  'keen-eye': '+10% crit chance.',
+};
 
 export type Foe = {
   id: string;
@@ -35,9 +50,15 @@ export type Foe = {
   enragedIntents?: readonly Intent[];
 };
 
-export type CardInstance = { uid: number; id: CardId };
+export type CardInstance = { uid: number; id: DeckCard };
 
-export type FoeState = Foe & { block: number; strength: number; vulnerable: number; weak: number; poison: number };
+export type FoeState = Foe & {
+  block: number; strength: number; vulnerable: number; weak: number;
+  /** Burn (INT): ticks at the start of its turn, then fades by 1. */
+  burn: number;
+  /** Bleed (STR): ticks at the start of its turn and lasts the fight. */
+  bleed: number;
+};
 
 export type Feedback = {
   /** Increments every resolved card or enemy turn so the UI can replay its animation. */
@@ -67,8 +88,20 @@ export type Battle = {
   dodgeNext: boolean;
   /** Loaded Dice: the next attack hit crits. */
   critNext: boolean;
-  /** Cards played this turn (Momentum). */
+  /** Cards played this turn (Momentum, combo). */
   played: number;
+  /** Thorns (END): the foe takes this much each time it hits you. Lasts the fight. */
+  thorns: number;
+  /** Entrench: keep your Block into the next turn. */
+  retain: boolean;
+  /** Haste: extra energy next turn. */
+  haste: number;
+  /** Hexed: your attacks deal 25% less for this many turns. */
+  weak: number;
+  /** Rare+ gear passives in effect. */
+  passives: readonly GearPassive[];
+  /** Twin strike already used this turn. */
+  firstAttackDone: boolean;
   drawPile: CardInstance[];
   hand: CardInstance[];
   discard: CardInstance[];
@@ -124,18 +157,22 @@ function drawCards(battle: Battle, count: number): Battle {
 }
 
 export function startBattle(input: {
-  rng: Rng; deck: readonly CardId[]; attributes: Attributes; hp: number; maxHp: number; foe: Foe;
+  rng: Rng; deck: readonly DeckCard[]; attributes: Attributes; hp: number; maxHp: number; foe: Foe;
+  passives?: readonly GearPassive[];
 }): Battle {
+  const passives = input.passives ?? [];
   const cards = input.deck.map((id, uid) => ({ uid, id }));
   const [drawPile, rng] = shuffle(cards, input.rng);
   const battle: Battle = {
     rng, turn: 1, step: 0, enraged: false, attributes: input.attributes,
     hp: input.hp, maxHp: input.maxHp, block: 0, energy: energyForTurn(input.attributes, 1), focused: false,
-    might: 0, dodgeNext: false, critNext: false, played: 0,
+    might: 0, dodgeNext: passives.includes('first-dodge'), critNext: false, played: 0,
+    thorns: passives.includes('start-thorns') ? 3 : 0, retain: false, haste: 0, weak: 0, passives, firstAttackDone: false,
     drawPile, hand: [], discard: [], exhausted: [],
-    foe: { ...input.foe, block: 0, strength: 0, vulnerable: 0, weak: 0, poison: 0 },
+    foe: { ...input.foe, block: 0, strength: 0, vulnerable: 0, weak: 0, burn: 0, bleed: 0 },
     status: 'ongoing', log: [], feedback: emptyFeedback(0),
   };
+  if (passives.includes('start-block')) battle.block = 4;
   if (input.attributes.agility >= 3) battle.log.push('You act first: +1 energy this turn.');
   const [count, rng2] = rollDrawCount(battle);
   return drawCards({ ...battle, rng: rng2 }, count);
@@ -145,9 +182,27 @@ function emptyFeedback(seq: number): Feedback {
   return { seq, dealt: null, taken: null, blocked: null, healed: null, crit: false, effect: null };
 }
 
-export function foeIntent(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>): Intent {
+export function foeIntent(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>, ahead = 0): Intent {
   const list = battle.enraged && battle.foe.enragedIntents ? battle.foe.enragedIntents : battle.foe.intents;
-  return list[battle.step % list.length] ?? { kind: 'attack', value: 1 };
+  return list[(battle.step + ahead) % list.length] ?? { kind: 'attack', value: 1 };
+}
+
+/** The move after the next one (so a wind-up shows what is coming). */
+export function upcomingIntent(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>): Intent {
+  return foeIntent(battle, 1);
+}
+
+/**
+ * Exactly what the foe's next move will do to you, after its Rage, Weaken and your Block.
+ * Dodge (AGI) is a chance, so it is not counted here.
+ */
+export function incomingDamage(battle: Pick<Battle, 'foe' | 'step' | 'enraged' | 'block'>): {
+  perHit: number; hits: number; total: number; afterBlock: number;
+} | null {
+  const hit = intentDamage(battle);
+  if (!hit) return null;
+  const total = hit.value * hit.hits;
+  return { perHit: hit.value, hits: hit.hits, total, afterBlock: Math.max(0, total - battle.block) };
 }
 
 /** Per-hit damage the foe will deal with its current intent, after its Roar stacks. */
@@ -166,33 +221,55 @@ export function foeHitValue(foe: Pick<FoeState, 'strength' | 'weak'>, value: num
 export function canPlay(battle: Battle, uid: number): boolean {
   if (battle.status !== 'ongoing') return false;
   const instance = battle.hand.find((entry) => entry.uid === uid);
-  return !!instance && CARDS[instance.id].cost <= battle.energy;
+  return !!instance && cardDef(instance.id).cost <= battle.energy;
 }
 
-/** Damage preview for a card in hand, before crits. */
-export function previewDamage(battle: Battle, id: CardId): number | null {
-  const def = CARDS[id];
+/** True when the next card you play is your combo card (the 3rd this turn). */
+export function comboReady(battle: Pick<Battle, 'played'>): boolean {
+  return battle.played === COMBO_AT - 1;
+}
+
+/** Damage preview (per hit) for a card in hand, before crits. */
+export function previewDamage(battle: Battle, id: DeckCard): number | null {
+  const def = cardDef(id);
   const base = baseHit(def, battle);
   if (!base) return null;
   return hitAfterModifiers(base, def.element, battle, def.kind === 'attack' && battle.focused);
+}
+
+/** Number of hits a card will land this turn (twin strike adds one to the first attack). */
+export function previewHits(battle: Battle, id: DeckCard): number {
+  const def = cardDef(id);
+  return (def.hits ?? 1) + (twinReady(battle, def) ? 1 : 0);
+}
+
+function twinReady(battle: Battle, def: CardDef): boolean {
+  return def.kind === 'attack' && !battle.firstAttackDone && battle.passives.includes('twin-strike');
+}
+
+/** Crit chance for a card, including gear. */
+export function cardCritChance(battle: Battle, def: CardDef): number {
+  return Math.min(1, critChance(battle.attributes) + (def.critBonus ?? 0) + (battle.passives.includes('keen-eye') ? 0.1 : 0));
 }
 
 /** Per-hit damage from the card, attributes and battle effects (Battle Cry, Momentum, Body Slam). */
 function baseHit(def: CardDef, battle: Battle): number {
   const attributes = battle.attributes;
   let base = 0;
-  if (def.bodySlam) base = battle.block + luckBonus(attributes);
+  if (def.bodySlam) base = battle.block + luckBonus(attributes) + (def.upgradedSlam ?? 0);
   else if (def.damage) base = cardHitDamage(def, attributes);
   else if (def.counter) base = def.counter + strengthBonus(attributes) + luckBonus(attributes);
   if (!base) return 0;
   if (def.momentum) base += def.momentum * battle.played;
   if (def.kind === 'attack') base += battle.might;
+  if (comboReady(battle)) base += comboBonus(attributes);
   return base;
 }
 
 function hitAfterModifiers(base: number, element: CardDefElement, battle: Battle, focused: boolean): number {
   let damage = base;
   if (focused) damage *= 2;
+  if (battle.weak > 0) damage = Math.floor(damage * WEAK_MULTIPLIER);
   const effect = effectiveness(element, battle.foe.type);
   if (effect === 'super') damage = Math.ceil(damage * EFFECTIVE_MULTIPLIER);
   if (effect === 'resisted') damage = Math.floor(damage * RESISTED_MULTIPLIER);
@@ -204,7 +281,7 @@ type CardDefElement = CardDef['element'];
 function hitFoe(battle: Battle, base: number, def: CardDef, focused: boolean): { battle: Battle; dealt: number; crit: boolean } {
   const [roll, rng] = nextRoll(battle.rng);
   const forced = battle.critNext && def.kind === 'attack';
-  const crit = forced || roll < critChance(battle.attributes) + (def.critBonus ?? 0);
+  const crit = forced || roll < cardCritChance(battle, def);
   let damage = hitAfterModifiers(base, def.element, battle, focused);
   if (crit) damage = Math.ceil(damage * (def.critMultiplier ?? CRIT_MULTIPLIER));
   if (forced) battle = { ...battle, critNext: false };
@@ -221,7 +298,8 @@ function hitFoe(battle: Battle, base: number, def: CardDef, focused: boolean): {
 export function playCard(state: Battle, uid: number): Battle {
   if (!canPlay(state, uid)) return state;
   const instance = state.hand.find((entry) => entry.uid === uid) as CardInstance;
-  const def = CARDS[instance.id];
+  const def = cardDef(instance.id);
+  const combo = comboReady(state);
   let battle: Battle = {
     ...state,
     energy: state.energy - def.cost,
@@ -243,9 +321,11 @@ export function playCard(state: Battle, uid: number): Battle {
     }
     const useFocus = def.kind === 'attack' && battle.focused;
     if (useFocus) battle.focused = false;
+    const hits = (def.hits ?? 1) + (twinReady(battle, def) ? 1 : 0);
+    if (def.kind === 'attack') battle.firstAttackDone = true;
     let total = 0;
     let anyCrit = false;
-    for (let hit = 0; hit < (def.hits ?? 1) && battle.foe.hp > 0; hit += 1) {
+    for (let hit = 0; hit < hits && battle.foe.hp > 0; hit += 1) {
       const result = hitFoe(battle, base, def, useFocus);
       battle = result.battle;
       total += result.dealt;
@@ -254,11 +334,12 @@ export function playCard(state: Battle, uid: number): Battle {
     feedback.dealt = total;
     feedback.crit = anyCrit;
     feedback.effect = effectiveness(def.element, battle.foe.type);
-    parts.push(`${def.name} deals ${total}${anyCrit ? ' — critical!' : ''}`);
+    parts.push(`${def.name} deals ${total}${anyCrit ? ' — critical!' : ''}${combo ? ' (combo!)' : ''}`);
     if (feedback.effect === 'super') parts.push("It's super effective!");
     if (feedback.effect === 'resisted') parts.push("It's not very effective…");
   }
-  const block = cardBlock(def, attributes);
+  let block = cardBlock(def, attributes);
+  if (block > 0 && combo && !def.damage && !def.bodySlam) block += comboBonus(attributes);
   if (block > 0) {
     battle.block += block;
     feedback.blocked = block;
@@ -280,10 +361,28 @@ export function playCard(state: Battle, uid: number): Battle {
     battle.foe = { ...battle.foe, weak: battle.foe.weak + weak };
     parts.push(`${battle.foe.name} is weakened`);
   }
-  const poison = cardPoison(def, attributes);
-  if (poison > 0) {
-    battle.foe = { ...battle.foe, poison: battle.foe.poison + poison };
-    parts.push(`poison ${battle.foe.poison}`);
+  const burn = cardBurn(def, attributes);
+  if (burn > 0) {
+    battle.foe = { ...battle.foe, burn: battle.foe.burn + burn };
+    parts.push(`Burn ${battle.foe.burn}`);
+  }
+  const bleed = cardBleed(def, attributes);
+  if (bleed > 0) {
+    battle.foe = { ...battle.foe, bleed: battle.foe.bleed + bleed };
+    parts.push(`Bleed ${battle.foe.bleed}`);
+  }
+  const thorns = cardThorns(def, attributes);
+  if (thorns > 0) {
+    battle.thorns += thorns;
+    parts.push(`Thorns ${battle.thorns}`);
+  }
+  if (def.retain) {
+    battle.retain = true;
+    parts.push('Block kept next turn');
+  }
+  if (def.haste) {
+    battle.haste += def.haste;
+    parts.push(`+${battle.haste} energy next turn`);
   }
   if (def.might) {
     battle.might += def.might;
@@ -336,13 +435,17 @@ export function endTurn(state: Battle): Battle {
   const feedback = emptyFeedback(state.feedback.seq + 1);
   const intent = foeIntent(state);
   const name = battle.foe.name;
+  // Your Hex wears off as your turn ends.
+  battle.weak = Math.max(0, battle.weak - 1);
 
-  if (battle.foe.poison > 0) {
-    const tick = battle.foe.poison;
+  const burnTick = battle.foe.burn > 0 ? battle.foe.burn + (battle.passives.includes('burn-plus') ? 1 : 0) : 0;
+  const tick = burnTick + battle.foe.bleed;
+  if (tick > 0) {
     const hp = Math.max(0, battle.foe.hp - tick);
-    battle.foe = { ...battle.foe, hp, poison: tick - 1 };
+    battle.foe = { ...battle.foe, hp, burn: Math.max(0, battle.foe.burn - 1) };
     feedback.dealt = tick;
-    battle.log.push(`Poison hits ${name} for ${tick}.`);
+    const what = [burnTick ? `Burn ${burnTick}` : '', battle.foe.bleed ? `Bleed ${battle.foe.bleed}` : ''].filter(Boolean).join(' + ');
+    battle.log.push(`${what} hits ${name} for ${tick}.`);
     if (hp <= 0) {
       return { ...battle, status: 'won', feedback, log: [...battle.log, `${name} is defeated!`] };
     }
@@ -354,9 +457,9 @@ export function endTurn(state: Battle): Battle {
     let taken = 0;
     let blocked = 0;
     let dodged = 0;
+    let thorned = 0;
     for (let hit = 0; hit < hits; hit += 1) {
-      const [roll, rng] = nextRoll(battle.rng);
-      const [dodgeRoll, afterDodge] = nextRoll(rng);
+      const [dodgeRoll, afterDodge] = nextRoll(battle.rng);
       battle.rng = afterDodge;
       if (battle.dodgeNext) {
         battle.dodgeNext = false;
@@ -367,7 +470,8 @@ export function endTurn(state: Battle): Battle {
         dodged += 1;
         continue;
       }
-      const damage = perHit + (roll < 0.25 ? 1 : 0);
+      if (battle.thorns > 0) thorned += battle.thorns;
+      const damage = perHit;
       const absorbed = Math.min(battle.block, damage);
       battle.block -= absorbed;
       blocked += absorbed;
@@ -379,6 +483,21 @@ export function endTurn(state: Battle): Battle {
     const label = intent.label ?? (hits > 1 ? `strikes ${hits} times` : 'attacks');
     const extras = [blocked > 0 ? `${blocked} blocked` : '', dodged > 0 ? `dodged ${dodged}` : ''].filter(Boolean).join(', ');
     battle.log.push(`${name} ${label}: ${taken} damage${extras ? ` (${extras})` : ''}.`);
+    if (thorned > 0) {
+      const hp = Math.max(0, battle.foe.hp - thorned);
+      battle.foe = { ...battle.foe, hp };
+      battle.log.push(`Thorns hit ${name} for ${thorned}.`);
+      if (hp <= 0 && battle.hp > 0) {
+        return { ...battle, status: 'won', feedback, log: [...battle.log, `${name} is defeated!`] };
+      }
+    }
+  } else if (intent.kind === 'charge') {
+    if (intent.value > 0) battle.foe = { ...battle.foe, block: intent.value };
+    const next = upcomingIntent(state);
+    battle.log.push(`${name} winds up${intent.value > 0 ? ` behind ${intent.value} Block` : ''}. ${next.kind === 'attack' ? `${intentLabel(next)} is coming!` : ''}`.trim());
+  } else if (intent.kind === 'hex') {
+    battle.weak += intent.value;
+    battle.log.push(`${name} hexes you: your attacks deal 25% less for ${intent.value} turn${intent.value > 1 ? 's' : ''}.`);
   } else if (intent.kind === 'guard') {
     battle.foe = { ...battle.foe, block: intent.value };
     battle.log.push(`${name} braces behind ${intent.value} Block.`);
@@ -398,19 +517,39 @@ export function endTurn(state: Battle): Battle {
     battle.log.push(`${name} howls with fury. Its pattern changes!`);
   }
   battle.foe = { ...battle.foe, vulnerable: Math.max(0, battle.foe.vulnerable - 1), weak: Math.max(0, battle.foe.weak - 1) };
-  battle = { ...battle, turn: battle.turn + 1, energy: energyForTurn(battle.attributes, battle.turn + 1), block: 0, played: 0, feedback };
+  battle = {
+    ...battle, turn: battle.turn + 1, energy: energyForTurn(battle.attributes, battle.turn + 1) + battle.haste, haste: 0,
+    block: battle.retain ? battle.block : 0, retain: false, played: 0, firstAttackDone: false, feedback,
+  };
   const [count, rng] = rollDrawCount(battle);
   return drawCards({ ...battle, rng }, count);
 }
 
-export function intentText(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>): string {
-  const intent = foeIntent(battle);
+function intentLabel(intent: Intent): string {
+  return intent.kind === 'attack' ? intent.label ?? 'Attack' : '';
+}
+
+export const INTENT_ICON: Record<Intent['kind'], string> = { attack: '⚔', guard: '🛡', roar: '💪', charge: '⚡', hex: '☠' };
+
+/** Short text for a foe move with exact numbers (after Rage and Weaken). */
+export function describeIntent(intent: Intent, foe: Pick<FoeState, 'strength' | 'weak'>): string {
   if (intent.kind === 'attack') {
-    const value = foeHitValue(battle.foe, intent.value);
+    const value = foeHitValue(foe, intent.value);
     const hits = intent.hits ?? 1;
-    const label = intent.label ?? 'Attack';
+    const label = intentLabel(intent);
     return hits > 1 ? `${label} ${value}×${hits}` : `${label} ${value}`;
   }
   if (intent.kind === 'guard') return `Guard ${intent.value}`;
+  if (intent.kind === 'charge') return `Winding up${intent.value > 0 ? ` (Block ${intent.value})` : ''}`;
+  if (intent.kind === 'hex') return `Hex: Weaken you ${intent.value}`;
   return `Roar +${intent.value}`;
+}
+
+export function intentText(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>, ahead = 0): string {
+  return describeIntent(foeIntent(battle, ahead), battle.foe);
+}
+
+/** A telegraphed big hit: the move after a wind-up. */
+export function bigHitComing(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>): boolean {
+  return foeIntent(battle).kind === 'charge' && upcomingIntent(battle).kind === 'attack';
 }

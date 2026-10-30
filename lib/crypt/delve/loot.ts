@@ -1,3 +1,5 @@
+import { PASSIVE_TEXT, type GearPassive } from './battle.ts';
+import { CARDS, type CardId } from './cards.ts';
 import { nextRoll, nextWeighted, type Rng } from './rng.ts';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_INFO, ZERO_ATTRIBUTES, addAttributes, type Attributes } from './stats.ts';
 
@@ -19,30 +21,37 @@ export type LootItem = {
   flavor: string;
   /** Earned outside the Crypt (real-quest armor). Never drops and is never claimed here. */
   earnedOnly?: boolean;
+  /** Rare+ gear changes how you play: a passive... */
+  passive?: GearPassive;
+  /** ...or a card added to your deck in every fight while it is worn. */
+  grantsCard?: CardId;
 };
 
-function item(id: string, name: string, slot: LootSlot, rarity: Rarity, bonus: Partial<Attributes>, flavor: string): LootItem {
-  return { id, name, slot, rarity, bonus, flavor };
+function item(
+  id: string, name: string, slot: LootSlot, rarity: Rarity, bonus: Partial<Attributes>, flavor: string,
+  extra: { passive?: GearPassive; grantsCard?: CardId } = {},
+): LootItem {
+  return { id, name, slot, rarity, bonus, flavor, ...extra };
 }
 
 /** Crypt drops. Rarity budget: common 1, uncommon 2, rare 4, epic 6 points. */
 export const LOOT: readonly LootItem[] = [
   item('rusty-shortsword', 'Rusty Shortsword', 'weapon', 'common', { strength: 1 }, 'Still sharp where it counts.'),
   item('bone-cleaver', 'Bone Cleaver', 'weapon', 'uncommon', { strength: 2 }, 'Heavy, honest, and a little grim.'),
-  item('ember-blade', 'Ember Blade', 'weapon', 'rare', { strength: 2, intelligence: 2 }, 'The edge glows when you breathe on it.'),
-  item('warden-glaive', "Warden's Glaive", 'weapon', 'epic', { strength: 3, agility: 1, luck: 2 }, 'Taken from the Hollow Warden itself.'),
+  item('ember-blade', 'Ember Blade', 'weapon', 'rare', { strength: 2, intelligence: 2 }, 'The edge glows when you breathe on it.', { passive: 'burn-plus' }),
+  item('warden-glaive', "Warden's Glaive", 'weapon', 'epic', { strength: 3, agility: 1, luck: 2 }, 'Taken from the Hollow Warden itself.', { passive: 'twin-strike' }),
   item('leather-cap', 'Leather Cap', 'helm', 'common', { luck: 1 }, 'Smells of old rain. Lucky, somehow.'),
   item('scholar-circlet', "Scholar's Circlet", 'helm', 'uncommon', { intelligence: 2 }, 'Thoughts come a little quicker.'),
-  item('sentinel-helm', 'Sentinel Helm', 'helm', 'rare', { intelligence: 2, luck: 2 }, 'The visor sees weak points.'),
-  item('hollow-crown', 'Hollow Crown', 'helm', 'epic', { intelligence: 3, luck: 3 }, 'The Warden wore it. Now it listens to you.'),
+  item('sentinel-helm', 'Sentinel Helm', 'helm', 'rare', { intelligence: 2, luck: 2 }, 'The visor sees weak points.', { passive: 'keen-eye' }),
+  item('hollow-crown', 'Hollow Crown', 'helm', 'epic', { intelligence: 3, luck: 3 }, 'The Warden wore it. Now it listens to you.', { grantsCard: 'insight' }),
   item('tattered-gambeson', 'Tattered Gambeson', 'armor', 'common', { endurance: 1 }, 'Patched more than it was ever stitched.'),
   item('grave-mail', 'Grave Mail', 'armor', 'uncommon', { endurance: 2 }, 'Cold rings that remember an older war.'),
-  item('sentinel-plate', 'Sentinel Plate', 'armor', 'rare', { endurance: 3, strength: 1 }, 'Heavy, but nothing gets through easily.'),
-  item('warden-mantle', "Warden's Mantle", 'armor', 'epic', { endurance: 4, agility: 2 }, 'Black stone woven like cloth.'),
+  item('sentinel-plate', 'Sentinel Plate', 'armor', 'rare', { endurance: 3, strength: 1 }, 'Heavy, but nothing gets through easily.', { passive: 'start-block' }),
+  item('warden-mantle', "Warden's Mantle", 'armor', 'epic', { endurance: 4, agility: 2 }, 'Black stone woven like cloth.', { passive: 'start-thorns' }),
   item('plank-buckler', 'Plank Buckler', 'shield', 'common', { endurance: 1 }, 'A door, once.'),
   item('iron-heater', 'Iron Heater Shield', 'shield', 'uncommon', { endurance: 1, agility: 1 }, 'Dented in all the right places.'),
-  item('moth-ward', 'Moth Ward', 'shield', 'rare', { agility: 3, luck: 1 }, 'It flutters when danger is near.'),
-  item('warden-aegis', "Warden's Aegis", 'shield', 'epic', { endurance: 3, agility: 3 }, 'A shield of black stone that hums faintly.'),
+  item('moth-ward', 'Moth Ward', 'shield', 'rare', { agility: 3, luck: 1 }, 'It flutters when danger is near.', { passive: 'first-dodge' }),
+  item('warden-aegis', "Warden's Aegis", 'shield', 'epic', { endurance: 3, agility: 3 }, 'A shield of black stone that hums faintly.', { grantsCard: 'entrench' }),
 ];
 
 /**
@@ -109,6 +118,7 @@ export function rollLoot(rng: Rng, source: LootSource, luck = 0): [LootItem | nu
 export function itemScore(entry: LootItem): number {
   let total = 0;
   for (const key of ATTRIBUTE_KEYS) total += entry.bonus[key] ?? 0;
+  if (entry.passive || entry.grantsCard) total += 1;
   return total;
 }
 
@@ -146,4 +156,36 @@ export function bonusLabel(entry: LootItem): string {
     if (amount) parts.push(`+${amount} ${ATTRIBUTE_INFO[key].short}`);
   }
   return parts.join(' · ');
+}
+
+/** What a Rare+ item does in a fight, in one short line (empty for plain stat gear). */
+export function passiveLabel(entry: LootItem): string {
+  if (entry.passive) return PASSIVE_TEXT[entry.passive];
+  if (entry.grantsCard) return `Adds ${CARDS[entry.grantsCard].name} to your deck in every fight.`;
+  return '';
+}
+
+/** Full gear tooltip: stats, then the passive. */
+export function gearTooltip(entry: LootItem): string {
+  const passive = passiveLabel(entry);
+  return passive ? `${bonusLabel(entry)} · ${passive}` : bonusLabel(entry);
+}
+
+/** Passives and bonus cards from what you are wearing. */
+export function loadoutPassives(loadout: Loadout): GearPassive[] {
+  const result: GearPassive[] = [];
+  for (const slot of LOOT_SLOTS) {
+    const entry = loadout[slot] ? lootById(loadout[slot] as string) : null;
+    if (entry?.passive && !result.includes(entry.passive)) result.push(entry.passive);
+  }
+  return result;
+}
+
+export function loadoutCards(loadout: Loadout): CardId[] {
+  const result: CardId[] = [];
+  for (const slot of LOOT_SLOTS) {
+    const entry = loadout[slot] ? lootById(loadout[slot] as string) : null;
+    if (entry?.grantsCard) result.push(entry.grantsCard);
+  }
+  return result;
 }

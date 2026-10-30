@@ -25,35 +25,42 @@ export const ROW_PLAN: readonly RowPlan[] = [
 ];
 
 /** Global tuning knobs, checked by scripts/simulate-crypt-delve.mjs. */
-export const HP_SCALE = 1.55;
-export const ATTACK_SCALE = 1;
+export const HP_SCALE = 1.76;
+export const ATTACK_SCALE = 1.34;
 /** Extra foe HP per row deeper into the floor. */
 export const ROW_HP_GROWTH = 0.04;
 const atk = (value: number, label?: string, hits?: number): Intent => ({ kind: 'attack', value: Math.round(value * ATTACK_SCALE), label, hits });
 const guard = (value: number): Intent => ({ kind: 'guard', value });
 const roar = (value: number): Intent => ({ kind: 'roar', value });
+/** Telegraph: winds up this turn; the next move is its big hit. */
+const charge = (block = 0): Intent => ({ kind: 'charge', value: block });
+const hex = (turns = 1): Intent => ({ kind: 'hex', value: turns });
 
 type FoeTemplate = Omit<Foe, 'hp'>;
 
+/**
+ * Short 2–3 step patterns that loop. A wind-up (⚡) always means a big hit next turn,
+ * so each turn asks: block now, or race it down?
+ */
 export const FOES: readonly FoeTemplate[] = [
   { id: 'crypt-rat', name: 'Crypt Rat', type: 'rot', sprite: 'rat', rank: 'normal', maxHp: 20,
-    intents: [atk(5), atk(4, 'Nibble', 2), atk(9, 'Lunge')] },
+    intents: [atk(5), atk(4, 'Nibble', 2)] },
   { id: 'grave-bat', name: 'Grave Bat', type: 'shadow', sprite: 'bat', rank: 'normal', maxHp: 16,
-    intents: [atk(3, 'Flutter', 3), atk(6), roar(2)] },
+    intents: [atk(3, 'Flutter', 3), hex(1), atk(6)] },
   { id: 'restless-skeleton', name: 'Restless Skeleton', type: 'bone', sprite: 'skull', rank: 'normal', maxHp: 26,
-    intents: [atk(6), guard(8), atk(11, 'Bone crush')] },
+    intents: [atk(6), charge(4), atk(14, 'Bone crush')] },
   { id: 'lost-wisp', name: 'Lost Wisp', type: 'spirit', sprite: 'wisp', rank: 'normal', maxHp: 18,
-    intents: [atk(4, 'Chill', 2), guard(6), atk(9, 'Wail')] },
+    intents: [atk(4, 'Chill', 2), guard(6), hex(1)] },
   { id: 'ember-imp', name: 'Ember Imp', type: 'flame', sprite: 'imp', rank: 'normal', maxHp: 19,
-    intents: [atk(4, 'Cinders', 2), atk(8, 'Flare'), roar(1)] },
+    intents: [atk(4, 'Cinders', 2), roar(1), atk(8, 'Flare')] },
   { id: 'ghoul', name: 'Hungry Ghoul', type: 'rot', sprite: 'ghoul', rank: 'normal', maxHp: 32,
-    intents: [atk(7), roar(2), atk(12, 'Rend'), guard(6)] },
+    intents: [atk(7), charge(), atk(15, 'Rend')] },
   { id: 'stone-gargoyle', name: 'Stone Gargoyle', type: 'stone', sprite: 'golem', rank: 'normal', maxHp: 28,
-    intents: [guard(10), atk(10, 'Dive'), atk(6)] },
+    intents: [guard(10), charge(), atk(13, 'Dive')] },
   { id: 'bone-knight', name: 'Bone Knight', type: 'bone', sprite: 'knight', rank: 'elite', maxHp: 52,
-    intents: [guard(12), atk(14, 'Cleave'), atk(5, 'Jab', 2), roar(3)] },
+    intents: [atk(5, 'Jab', 2), charge(8), atk(18, 'Cleave'), hex(1)] },
   { id: 'crypt-golem', name: 'Crypt Golem', type: 'stone', sprite: 'golem', rank: 'elite', maxHp: 60,
-    intents: [guard(14), atk(16, 'Crush'), roar(2), atk(7, 'Pummel', 2)] },
+    intents: [guard(14), atk(7, 'Pummel', 2), charge(6), atk(20, 'Crush')] },
 ];
 
 const EARLY_FOES = ['crypt-rat', 'grave-bat', 'restless-skeleton', 'lost-wisp', 'ember-imp'];
@@ -62,8 +69,8 @@ const ELITES = ['bone-knight', 'crypt-golem'];
 
 export const BOSS: FoeTemplate = {
   id: 'hollow-warden', name: 'The Hollow Warden', type: 'spirit', sprite: 'warden', rank: 'boss', maxHp: 105,
-  intents: [atk(8), guard(14), atk(15, 'Grave slam'), roar(2)],
-  enragedIntents: [atk(6, 'Soul lash', 3), atk(18, 'Grave slam'), guard(12), atk(10)],
+  intents: [atk(8), hex(1), charge(10), atk(19, 'Grave slam'), roar(2)],
+  enragedIntents: [atk(6, 'Soul lash', 3), charge(8), atk(22, 'Grave slam'), atk(10)],
 };
 
 /** Enemies get a little tougher deeper in the floor. */
@@ -87,7 +94,7 @@ export type EventOption = {
   success: EventOutcome;
   failure?: EventOutcome;
 };
-export type EventOutcome = { text: string; hp?: number; healPercent?: number; strength?: number; loot?: boolean };
+export type EventOutcome = { text: string; hp?: number; healPercent?: number; strength?: number; loot?: boolean; upgrade?: boolean };
 export type CryptEvent = { id: string; title: string; prose: string; options: readonly EventOption[] };
 
 export const EVENTS: readonly CryptEvent[] = [
@@ -109,6 +116,7 @@ export const EVENTS: readonly CryptEvent[] = [
     options: [
       { id: 'pray', label: 'Pray (heal 30%)', success: { text: 'Warmth closes your wounds.', healPercent: 0.3 } },
       { id: 'blood', label: 'Offer blood (−6 HP, +2 STR this run)', success: { text: 'The shrine drinks. Your arm feels stronger.', hp: -6, strength: 2 } },
+      { id: 'meditate', label: 'Meditate (upgrade a card)', success: { text: 'The hum steadies your thoughts. One technique sharpens.', upgrade: true } },
     ],
   },
   {
@@ -119,6 +127,7 @@ export const EVENTS: readonly CryptEvent[] = [
       { id: 'answer', label: 'Answer the riddle', check: 'intelligence',
         success: { text: '"A promise," you say. The door slides open on a small cache.', loot: true },
         failure: { text: 'The face says nothing. The door stays shut.' } },
+      { id: 'study', label: 'Study the carvings (upgrade a card)', success: { text: 'The carvings show an old fighting form.', upgrade: true } },
       { id: 'leave', label: 'Walk past', success: { text: 'You leave the riddle unanswered.' } },
     ],
   },

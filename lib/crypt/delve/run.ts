@@ -1,7 +1,7 @@
 import { endTurn, playCard, startBattle, type Battle } from './battle.ts';
-import { CARDS, MAX_DECK_SIZE, REWARD_POOL, STARTER_DECK, type CardId } from './cards.ts';
+import { CARDS, MAX_DECK_SIZE, REWARD_POOL, STARTER_DECK, cardDef, isUpgraded, upgradedKey, type CardId, type DeckCard } from './cards.ts';
 import { BOSS, FLOOR_ROWS, REST_HEAL, checkChance, eventById, generateFloor, spawnFoe, type Room } from './floor.ts';
-import { gearAttributes, isUpgrade, lootById, rollLoot, type Loadout, type LootSource } from './loot.ts';
+import { gearAttributes, isUpgrade, loadoutCards, loadoutPassives, lootById, rollLoot, type Loadout, type LootSource } from './loot.ts';
 import { nextIndex, nextRoll, seedRng, type Rng } from './rng.ts';
 import {
   ZERO_ATTRIBUTES, addAttributes, clampAllocation, maxHpFor, type Attributes,
@@ -29,7 +29,9 @@ export type DelveState = {
   loadout: Loadout;
   /** Gear found this run, in drop order. Index = drop index for the vault claim. */
   found: string[];
-  deck: CardId[];
+  deck: DeckCard[];
+  /** Card upgrades you may pick right now (treasure chests and some mystery rooms). */
+  upgrades: number;
   hp: number;
   maxHp: number;
   rows: Room[][];
@@ -50,8 +52,24 @@ export type DelveCommand =
   | { type: 'end-turn' }
   | { type: 'pick-card'; cardId: CardId | null }
   | { type: 'event-option'; optionId: string }
-  | { type: 'rest'; choice: 'heal' | 'trim' }
+  /** Campfire: heal, OR remove one card (by deck index). */
+  | { type: 'rest'; choice: 'heal' }
+  | { type: 'rest'; choice: 'remove'; index: number }
+  /** Treasure / mystery: upgrade one card (by deck index) into its "+" version. */
+  | { type: 'upgrade-card'; index: number }
   | { type: 'continue' };
+
+/** You always keep at least this many cards (one full hand). */
+export const MIN_DECK_SIZE = 5;
+
+export function canRemoveCard(state: Pick<DelveState, 'deck'>): boolean {
+  return state.deck.length > MIN_DECK_SIZE;
+}
+
+export function canUpgradeCard(state: Pick<DelveState, 'deck' | 'upgrades' | 'phase'>, index: number): boolean {
+  const key = state.deck[index];
+  return state.upgrades > 0 && (state.phase === 'treasure' || state.phase === 'event') && !!key && !isUpgraded(key);
+}
 
 export function effectiveAttributes(state: Pick<DelveState, 'allocated' | 'runBonus' | 'loadout'>): Attributes {
   return addAttributes(addAttributes(state.allocated, state.runBonus), gearAttributes(state.loadout));
@@ -86,7 +104,7 @@ export function createDelve(input: {
   const maxHp = maxHpFor(effectiveAttributes(base), level);
   return {
     runId: input.runId, seed: input.seed, rng: floor.rng, floor: 1, level, ...base,
-    found: [], deck: STARTER_DECK.slice(), hp: maxHp, maxHp,
+    found: [], deck: STARTER_DECK.slice(), upgrades: 0, hp: maxHp, maxHp,
     rows: floor.rows, row: 0, path: [], phase: 'map', room: null, battle: null, reward: null, event: null, note: null,
   };
 }
@@ -131,19 +149,19 @@ function enterRoom(state: DelveState, room: Room): DelveState {
     const foe = spawnFoe(room.foeId ?? '', state.row);
     const [battleSeed, rng] = nextRoll(state.rng);
     const battle = startBattle({
-      rng: seedRng(Math.floor(battleSeed * 4294967295)), deck: state.deck, attributes: effectiveAttributes(state),
-      hp: state.hp, maxHp: state.maxHp, foe,
+      rng: seedRng(Math.floor(battleSeed * 4294967295)), deck: [...state.deck, ...loadoutCards(state.loadout)],
+      attributes: effectiveAttributes(state), hp: state.hp, maxHp: state.maxHp, foe, passives: loadoutPassives(state.loadout),
     });
     return { ...base, rng, phase: 'combat', battle };
   }
   if (room.kind === 'event') return { ...base, phase: 'event', event: { eventId: room.eventId ?? '', outcome: null } };
   if (room.kind === 'rest') return { ...base, phase: 'rest' };
   const drop = dropLoot(base, 'treasure');
-  return { ...drop.state, phase: 'treasure', reward: { cards: [], picked: true, loot: drop.itemId, equipped: drop.equipped } };
+  return { ...drop.state, phase: 'treasure', upgrades: 1, reward: { cards: [], picked: true, loot: drop.itemId, equipped: drop.equipped } };
 }
 
 function advance(state: DelveState): DelveState {
-  return { ...state, phase: 'map', row: state.row + 1, room: null, battle: null, reward: null, event: null };
+  return { ...state, phase: 'map', row: state.row + 1, room: null, battle: null, reward: null, event: null, upgrades: 0 };
 }
 
 export function reduceDelve(state: DelveState, command: DelveCommand): DelveState {
@@ -202,6 +220,7 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
       next = refreshMaxHp({ ...next, runBonus: addAttributes(next.runBonus, { strength: outcome.strength }) });
     }
     if (outcome.hp) next.hp = Math.max(1, Math.min(next.maxHp, next.hp + outcome.hp));
+    if (outcome.upgrade) next.upgrades = 1;
     if (outcome.healPercent) next.hp = Math.min(next.maxHp, next.hp + Math.ceil(next.maxHp * outcome.healPercent));
     let reward: Reward | null = null;
     if (outcome.loot) {
@@ -220,11 +239,19 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
       const healed = Math.min(state.maxHp - state.hp, Math.ceil(state.maxHp * REST_HEAL));
       return { ...advance({ ...state, hp: state.hp + healed }), note: `You rest by the fire and recover ${healed} HP.` };
     }
-    // Trim: remove one basic Strike or Guard so better cards come up more often.
-    const index = state.deck.lastIndexOf('strike') >= 0 ? state.deck.lastIndexOf('strike') : state.deck.lastIndexOf('guard');
-    if (index < 0 || state.deck.length <= 6) return state;
-    const deck = state.deck.filter((_, i) => i !== index);
-    return { ...advance({ ...state, deck }), note: `You drop a ${CARDS[state.deck[index]].name} card. Your deck is leaner.` };
+    if (command.choice !== 'remove') return state;
+    const key = state.deck[command.index];
+    if (!key || !canRemoveCard(state)) return state;
+    const deck = state.deck.filter((_, i) => i !== command.index);
+    return { ...advance({ ...state, deck }), note: `You remove ${cardDef(key).name} from your deck. It is leaner now.` };
+  }
+
+  if (command.type === 'upgrade-card') {
+    if (!canUpgradeCard(state, command.index)) return state;
+    const key = state.deck[command.index];
+    const deck = state.deck.slice();
+    deck[command.index] = upgradedKey(key);
+    return { ...state, deck, upgrades: state.upgrades - 1, note: `${cardDef(deck[command.index]).name}: ${cardDef(deck[command.index]).text}` };
   }
 
   if (command.type === 'continue') {
