@@ -6,7 +6,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import ts from 'typescript';
-import { createDelve, reduceDelve, runLoadout } from '../lib/crypt/delve/run.ts';
+import { createDelve as openDelve, reduceDelve, runLoadout } from '../lib/crypt/delve/run.ts';
+// Runs open with a 1-of-2 starting card pick; most tests take the first offer and go to the map.
+const createDelve = (input) => { const s = openDelve(input); return reduceDelve(s, { type: 'pick-start', cardId: s.startPick[0] }); };
 import { canPlay } from '../lib/crypt/delve/battle.ts';
 
 const require = createRequire(import.meta.url);

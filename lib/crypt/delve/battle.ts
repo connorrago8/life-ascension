@@ -60,6 +60,21 @@ export type FoeState = Foe & {
   bleed: number;
 };
 
+/** A status or gear effect that just triggered, for a small floating number or toast. */
+export type Proc = { kind: 'bleed' | 'burn' | 'thorns' | 'combo' | 'worn' | 'gear'; amount: number; text: string };
+
+/**
+ * Damage floor for long fights (END tune): from WORN_DOWN_TURN on, if your cards took less HP
+ * than your steady pressure (END × WORN_DOWN_PER_END) this turn, the foe is worn down by the
+ * difference as its turn starts. Hard hitters never see it; it keeps all-Block fights moving.
+ */
+export const WORN_DOWN_TURN = 2;
+export const WORN_DOWN_PER_END = 1.75;
+export function wornDownDamage(turn: number, endurance: number, dealtThisTurn: number): number {
+  if (turn < WORN_DOWN_TURN) return 0;
+  return Math.max(0, Math.floor(endurance * WORN_DOWN_PER_END) - Math.max(0, dealtThisTurn));
+}
+
 export type Feedback = {
   /** Increments every resolved card or enemy turn so the UI can replay its animation. */
   seq: number;
@@ -69,6 +84,8 @@ export type Feedback = {
   healed: number | null;
   crit: boolean;
   effect: 'super' | 'resisted' | 'normal' | null;
+  /** Statuses and gear passives that triggered on this step. */
+  procs: Proc[];
 };
 
 export type Battle = {
@@ -102,6 +119,10 @@ export type Battle = {
   passives: readonly GearPassive[];
   /** Twin strike already used this turn. */
   firstAttackDone: boolean;
+  /** Foe HP when this turn began, for the long-fight damage floor. */
+  turnStartHp: number;
+  /** The ready dodge came from gear (Moth Ward), so it shows a gear toast when used. */
+  gearDodge: boolean;
   drawPile: CardInstance[];
   hand: CardInstance[];
   discard: CardInstance[];
@@ -168,18 +189,24 @@ export function startBattle(input: {
     hp: input.hp, maxHp: input.maxHp, block: 0, energy: energyForTurn(input.attributes, 1), focused: false,
     might: 0, dodgeNext: passives.includes('first-dodge'), critNext: false, played: 0,
     thorns: passives.includes('start-thorns') ? 3 : 0, retain: false, haste: 0, weak: 0, passives, firstAttackDone: false,
+    gearDodge: passives.includes('first-dodge'), turnStartHp: input.foe.hp,
     drawPile, hand: [], discard: [], exhausted: [],
     foe: { ...input.foe, block: 0, strength: 0, vulnerable: 0, weak: 0, burn: 0, bleed: 0 },
     status: 'ongoing', log: [], feedback: emptyFeedback(0),
   };
-  if (passives.includes('start-block')) battle.block = 4;
+  if (passives.includes('start-block')) {
+    battle.block = 4;
+    battle.feedback.procs.push({ kind: 'gear', amount: 4, text: 'Gear: start with 4 Block' });
+  }
+  if (passives.includes('start-thorns')) battle.feedback.procs.push({ kind: 'gear', amount: 3, text: 'Gear: Thorns 3' });
+  if (passives.includes('first-dodge')) battle.feedback.procs.push({ kind: 'gear', amount: 0, text: 'Gear: first hit will miss' });
   if (input.attributes.agility >= 3) battle.log.push('You act first: +1 energy this turn.');
   const [count, rng2] = rollDrawCount(battle);
   return drawCards({ ...battle, rng: rng2 }, count);
 }
 
 function emptyFeedback(seq: number): Feedback {
-  return { seq, dealt: null, taken: null, blocked: null, healed: null, crit: false, effect: null };
+  return { seq, dealt: null, taken: null, blocked: null, healed: null, crit: false, effect: null, procs: [] };
 }
 
 export function foeIntent(battle: Pick<Battle, 'foe' | 'step' | 'enraged'>, ahead = 0): Intent {
@@ -321,7 +348,10 @@ export function playCard(state: Battle, uid: number): Battle {
     }
     const useFocus = def.kind === 'attack' && battle.focused;
     if (useFocus) battle.focused = false;
-    const hits = (def.hits ?? 1) + (twinReady(battle, def) ? 1 : 0);
+    const twin = twinReady(battle, def);
+    const hits = (def.hits ?? 1) + (twin ? 1 : 0);
+    if (twin) feedback.procs.push({ kind: 'gear', amount: 1, text: 'Gear: twin strike!' });
+    if (combo) feedback.procs.push({ kind: 'combo', amount: comboBonus(attributes), text: `Combo +${comboBonus(attributes)}` });
     if (def.kind === 'attack') battle.firstAttackDone = true;
     let total = 0;
     let anyCrit = false;
@@ -339,7 +369,10 @@ export function playCard(state: Battle, uid: number): Battle {
     if (feedback.effect === 'resisted') parts.push("It's not very effective…");
   }
   let block = cardBlock(def, attributes);
-  if (block > 0 && combo && !def.damage && !def.bodySlam) block += comboBonus(attributes);
+  if (block > 0 && combo && !def.damage && !def.bodySlam) {
+    block += comboBonus(attributes);
+    feedback.procs.push({ kind: 'combo', amount: comboBonus(attributes), text: `Combo +${comboBonus(attributes)} Block` });
+  }
   if (block > 0) {
     battle.block += block;
     feedback.blocked = block;
@@ -438,13 +471,20 @@ export function endTurn(state: Battle): Battle {
   // Your Hex wears off as your turn ends.
   battle.weak = Math.max(0, battle.weak - 1);
 
-  const burnTick = battle.foe.burn > 0 ? battle.foe.burn + (battle.passives.includes('burn-plus') ? 1 : 0) : 0;
-  const tick = burnTick + battle.foe.bleed;
+  const burnPlus = battle.foe.burn > 0 && battle.passives.includes('burn-plus');
+  const burnTick = battle.foe.burn > 0 ? battle.foe.burn + (burnPlus ? 1 : 0) : 0;
+  const worn = wornDownDamage(battle.turn, battle.attributes.endurance, battle.turnStartHp - battle.foe.hp);
+  const tick = burnTick + battle.foe.bleed + worn;
   if (tick > 0) {
     const hp = Math.max(0, battle.foe.hp - tick);
     battle.foe = { ...battle.foe, hp, burn: Math.max(0, battle.foe.burn - 1) };
     feedback.dealt = tick;
-    const what = [burnTick ? `Burn ${burnTick}` : '', battle.foe.bleed ? `Bleed ${battle.foe.bleed}` : ''].filter(Boolean).join(' + ');
+    if (burnTick) feedback.procs.push({ kind: 'burn', amount: burnTick, text: `Burn −${burnTick}` });
+    if (burnPlus) feedback.procs.push({ kind: 'gear', amount: 1, text: 'Gear: Burn +1' });
+    if (battle.foe.bleed) feedback.procs.push({ kind: 'bleed', amount: battle.foe.bleed, text: `Bleed −${battle.foe.bleed}` });
+    if (worn) feedback.procs.push({ kind: 'worn', amount: worn, text: `Worn down −${worn}` });
+    const what = [burnTick ? `Burn ${burnTick}` : '', battle.foe.bleed ? `Bleed ${battle.foe.bleed}` : '', worn ? `Worn down ${worn}` : '']
+      .filter(Boolean).join(' + ');
     battle.log.push(`${what} hits ${name} for ${tick}.`);
     if (hp <= 0) {
       return { ...battle, status: 'won', feedback, log: [...battle.log, `${name} is defeated!`] };
@@ -463,6 +503,8 @@ export function endTurn(state: Battle): Battle {
       battle.rng = afterDodge;
       if (battle.dodgeNext) {
         battle.dodgeNext = false;
+        if (battle.gearDodge) feedback.procs.push({ kind: 'gear', amount: 0, text: 'Gear: dodged!' });
+        battle.gearDodge = false;
         dodged += 1;
         continue;
       }
@@ -487,6 +529,7 @@ export function endTurn(state: Battle): Battle {
       const hp = Math.max(0, battle.foe.hp - thorned);
       battle.foe = { ...battle.foe, hp };
       battle.log.push(`Thorns hit ${name} for ${thorned}.`);
+      feedback.procs.push({ kind: 'thorns', amount: thorned, text: `Thorns −${thorned}` });
       if (hp <= 0 && battle.hp > 0) {
         return { ...battle, status: 'won', feedback, log: [...battle.log, `${name} is defeated!`] };
       }
@@ -520,6 +563,7 @@ export function endTurn(state: Battle): Battle {
   battle = {
     ...battle, turn: battle.turn + 1, energy: energyForTurn(battle.attributes, battle.turn + 1) + battle.haste, haste: 0,
     block: battle.retain ? battle.block : 0, retain: false, played: 0, firstAttackDone: false, feedback,
+    turnStartHp: battle.foe.hp,
   };
   const [count, rng] = rollDrawCount(battle);
   return drawCards({ ...battle, rng }, count);

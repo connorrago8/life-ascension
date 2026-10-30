@@ -5,7 +5,7 @@ import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
 import {
   bigHitComing, canPlay, cardCritChance, comboReady, ENERGY_PER_TURN, foeIntent, incomingDamage, INTENT_ICON, intentText,
-  PASSIVE_TEXT, previewDamage, previewHits, upcomingIntent, describeIntent, type Battle,
+  PASSIVE_TEXT, previewDamage, previewHits, upcomingIntent, describeIntent, WORN_DOWN_PER_END, WORN_DOWN_TURN, type Battle, type Proc,
 } from '../../lib/crypt/delve/battle';
 import {
   CARDS, cardDef, COMBO_AT, comboBonus, effectiveness, ELEMENT_LABEL, isUpgraded, resistancesOf, TYPE_LABEL, upgradeDef, weaknessesOf,
@@ -137,6 +137,7 @@ export function DelveRun(props: DelveRunProps) {
   return (
     <main className="wrap delve" aria-label="Forgotten Crypt delve">
       <RunHeader state={state} exitHref={props.exitHref} onCamp={() => dispatch({ kind: 'clear' })} />
+      {state.phase === 'start-pick' ? <StartPickView state={state} send={send} /> : null}
       {state.phase === 'map' ? <MapView state={state} onChoose={(index) => send({ type: 'choose-room', row: state.row, index })} /> : null}
       {state.phase === 'combat' && state.battle ? <CombatScreen state={state} battle={state.battle} send={send} /> : null}
       {state.phase === 'reward' && state.reward ? <RewardView state={state} send={send} /> : null}
@@ -395,23 +396,55 @@ const STATUS_HELP = {
   dodge: 'Dodge ready: the next enemy hit misses.',
   focus: 'Focused: your next attack deals double.',
   might: 'Might: every attack hit deals extra damage this fight.',
+  worn: 'Steady pressure: from turn 2, if your cards deal less than this in a turn, the foe is worn down by the rest as its turn starts. (END)',
 } as const;
 
-function StatusChips({ chips, label }: { chips: Chip[]; label: string }) {
-  const [open, setOpen] = useState<string | null>(null);
+function ChipRow({ chips, label, open, setOpen }: {
+  chips: Chip[]; label: string; open: string | null; setOpen: (key: string | null) => void;
+}) {
   if (chips.length === 0) return null;
-  const active = chips.find((chip) => chip.key === open) ?? null;
   return (
-    <div className="delve-status" aria-label={label}>
-      <div className="delve-chips">
-        {chips.map((chip) => (
-          <button key={chip.key} type="button" className={`delve-chip chip-${chip.key}`} aria-expanded={open === chip.key}
-            aria-label={`${chip.label}. ${chip.explain}`} onClick={() => setOpen(open === chip.key ? null : chip.key)}>
+    <div className="delve-chips" role="group" aria-label={label}>
+      <span className="delve-chips-label delve-small muted">{label}</span>
+      {chips.map((chip) => {
+        const key = `${label}-${chip.key}`;
+        return (
+          <button key={key} type="button" className={`delve-chip chip-${chip.key}`} aria-expanded={open === key}
+            aria-label={`${chip.label}. ${chip.explain}`} onClick={() => setOpen(open === key ? null : key)}>
             <span aria-hidden="true">{chip.icon}</span> {chip.label}
           </button>
-        ))}
-      </div>
-      {active ? <p className="delve-small delve-explain" role="status">{active.explain}</p> : null}
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * One tappable "Statuses" pill (collapsed by default) that expands into the enemy's and
+ * your status chips. Each chip still taps to explain itself.
+ */
+function StatusPanel({ battle }: { battle: Battle }) {
+  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
+  const foe = foeChips(battle);
+  const hero = heroChips(battle);
+  const all = [...foe.map((chip) => ({ ...chip, side: 'Enemy' })), ...hero.map((chip) => ({ ...chip, side: 'You' }))];
+  const active = all.find((chip) => `${chip.side}-${chip.key}` === open) ?? null;
+  const icons = all.map((chip) => chip.icon).filter((icon, i, list) => list.indexOf(icon) === i).slice(0, 6).join('');
+  return (
+    <div className="delve-status">
+      <button type="button" className="delve-status-pill" aria-expanded={expanded} aria-controls="delve-status-list"
+        onClick={() => setExpanded(!expanded)}>
+        Statuses <span aria-hidden="true">{icons}</span> <span className="delve-status-count">{all.length}</span>
+        <span aria-hidden="true"> {expanded ? '▴' : '▾'}</span>
+      </button>
+      {expanded ? (
+        <div id="delve-status-list" className="delve-status-list">
+          <ChipRow chips={foe} label="Enemy" open={open} setOpen={setOpen} />
+          <ChipRow chips={hero} label="You" open={open} setOpen={setOpen} />
+          {active ? <p className="delve-small delve-explain" role="status">{active.explain}</p> : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -444,6 +477,9 @@ function heroChips(battle: Battle): Chip[] {
   if (battle.dodgeNext) chips.push({ key: 'dodge', icon: '💨', label: 'Dodge ready', explain: STATUS_HELP.dodge });
   if (battle.focused) chips.push({ key: 'focus', icon: '🎯', label: 'Focused ×2', explain: STATUS_HELP.focus });
   if (battle.might > 0) chips.push({ key: 'might', icon: '⚔', label: `Might +${battle.might}`, explain: STATUS_HELP.might });
+  if (battle.turn >= WORN_DOWN_TURN && battle.attributes.endurance > 0) {
+    chips.push({ key: 'worn', icon: '⏳', label: `Steady ${Math.floor(battle.attributes.endurance * WORN_DOWN_PER_END)}`, explain: STATUS_HELP.worn });
+  }
   for (const passive of battle.passives) {
     chips.push({ key: `gear-${passive}`, icon: '✦', label: 'Gear', explain: PASSIVE_TEXT[passive] });
   }
@@ -457,8 +493,8 @@ function IntentPanel({ battle }: { battle: Battle }) {
   const telegraph = bigHitComing(battle);
   const kindClass = intent.kind === 'attack' ? 'attack' : intent.kind === 'guard' ? 'guard' : intent.kind === 'charge' ? 'charge' : 'roar';
   return (
-    <div className={`delve-intent intent-${kindClass}`} aria-label={`Next move: ${intentText(battle)}`}>
-      <p>
+    <div className={`delve-intent intent-${kindClass}${telegraph ? ' delve-bighit' : ''}`} aria-label={`Next move: ${intentText(battle)}`}>
+      <p className="delve-intent-next">
         <span aria-hidden="true">{INTENT_ICON[intent.kind]} </span>Next: <strong>{intentText(battle)}</strong>
         {incoming ? (
           <span className="delve-incoming">
@@ -467,10 +503,34 @@ function IntentPanel({ battle }: { battle: Battle }) {
         ) : null}
       </p>
       {telegraph ? (
-        <p className="delve-small delve-telegraph" role="status">⚡ Big hit next turn: {describeIntent(then, battle.foe)}. Block up or finish it now.</p>
+        <p className="delve-small delve-telegraph" role="status"><span className="delve-bighit-icon" aria-hidden="true">⚠</span> <strong>Big hit next turn:</strong> {describeIntent(then, battle.foe)}. Block up or finish it now.</p>
       ) : (
-        <p className="delve-small muted">Then: <span aria-hidden="true">{INTENT_ICON[then.kind]} </span>{describeIntent(then, battle.foe)}</p>
+        <p className="delve-small delve-intent-then">Then: <span aria-hidden="true">{INTENT_ICON[then.kind]} </span>{describeIntent(then, battle.foe)}</p>
       )}
+    </div>
+  );
+}
+
+const PROC_ICON: Record<Proc['kind'], string> = { bleed: '🩸', burn: '🔥', thorns: '🌵', combo: '⛓', worn: '⏳', gear: '✦' };
+
+/** Bleed/Burn/Thorns/Worn-down numbers float off the foe; combo and gear passives flash a small toast. CSS-only, keyed by seq. */
+function ProcFloaters({ battle }: { battle: Battle }) {
+  const procs = battle.feedback.procs ?? [];
+  const floats = procs.filter((proc) => proc.kind !== 'gear' && proc.kind !== 'combo');
+  const toasts = procs.filter((proc) => proc.kind === 'gear' || proc.kind === 'combo');
+  if (procs.length === 0) return null;
+  return (
+    <div className="delve-procs" key={`proc-${battle.feedback.seq}`}>
+      {floats.map((proc, i) => (
+        <span key={`${proc.kind}-${i}`} className={`delve-proc proc-${proc.kind}`} style={{ animationDelay: `${i * 120}ms` }} aria-hidden="true">
+          {PROC_ICON[proc.kind]} {proc.text}
+        </span>
+      ))}
+      {toasts.length > 0 ? (
+        <p className="delve-proc-toast" role="status">
+          {toasts.map((proc, i) => <span key={`${proc.kind}-${i}`} className={`proc-${proc.kind}`}>{PROC_ICON[proc.kind]} {proc.text}</span>)}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -491,11 +551,11 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
           <p className="delve-small muted">
             Weak to {weakTo}{resists ? ` · Resists ${resists}` : ''}{battle.enraged ? ' · ENRAGED' : ''}
           </p>
-          <StatusChips chips={foeChips(battle)} label={`${foe.name} statuses`} />
           <IntentPanel battle={battle} />
         </div>
         <div className="delve-monster" key={`foe-${fb.seq}`}>
           <MonsterSprite sprite={foe.sprite} label={foe.name} />
+          <ProcFloaters battle={battle} />
           {fb.dealt !== null ? (
             <span className={`delve-pop pop-dealt${fb.crit ? ' crit' : ''}`} aria-hidden="true">
               −{fb.dealt}{fb.crit ? '!' : ''}{fb.effect === 'super' ? ' ★' : ''}
@@ -504,22 +564,22 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
         </div>
       </div>
 
-      <div className="delve-hero">
-        <div className="delve-hero-sprite small" key={`hero-${fb.seq}`}>
+      <div className="delve-herobar" aria-label="You">
+        <div className="delve-hero-sprite tiny" key={`hero-${fb.seq}`}>
           <HeroSprite loadout={state.loadout} />
           {fb.taken !== null ? <span className="delve-pop pop-taken" aria-hidden="true">−{fb.taken}</span> : null}
           {fb.healed ? <span className="delve-pop pop-heal" aria-hidden="true">+{fb.healed}</span> : null}
         </div>
-        <div className="delve-hero-info">
+        <div className="delve-herobar-main">
           <HpBar hp={battle.hp} max={battle.maxHp} label="Your HP" block={battle.block} />
           <p className="delve-energy" aria-label={`Energy ${battle.energy} of ${ENERGY_PER_TURN}`}>
             {[0, 1, 2].map((i) => <span key={i} className={i < battle.energy ? 'on' : ''} aria-hidden="true">◆</span>)}
             {battle.energy > ENERGY_PER_TURN ? <span className="on" aria-hidden="true">+{battle.energy - ENERGY_PER_TURN}</span> : null}
             <span className="delve-small muted"> Turn {battle.turn} · Draw {battle.drawPile.length} · Discard {battle.discard.length}</span>
           </p>
-          <StatusChips chips={heroChips(battle)} label="Your statuses" />
         </div>
       </div>
+      <StatusPanel battle={battle} />
 
       <div className="delve-log" role="log" aria-live="polite">
         {lastLog.map((line, i) => <p key={`${battle.log.length}-${i}`} className="delve-small">{line}</p>)}
@@ -583,6 +643,26 @@ function LootLine({ itemId, equipped }: { itemId: string | null; equipped: boole
       {passiveLabel(entry) ? <p className="delve-small delve-passive">✦ {passiveLabel(entry)}</p> : null}
       <p className="delve-small muted">{entry.flavor} {equipped ? 'Equipped — look at your adventurer.' : 'Sent to your vault.'}</p>
     </div>
+  );
+}
+
+function StartPickView({ state, send }: { state: DelveState; send: (command: DelveCommand) => void }) {
+  return (
+    <section aria-labelledby="delve-start-title">
+      <h2 id="delve-start-title">Choose your opening card</h2>
+      <p>Pick 1 of 2 to add to your deck for this run.</p>
+      <div className="delve-hand delve-start-pick">
+        {state.startPick.map((id) => {
+          const def = CARDS[id];
+          return (
+            <button key={id} type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}`}
+              onClick={() => send({ type: 'pick-start', cardId: id })} aria-label={`Take ${def.name}, costs ${def.cost}. ${def.text}`}>
+              <CardFace def={def} />
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

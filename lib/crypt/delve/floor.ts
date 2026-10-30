@@ -25,7 +25,7 @@ export const ROW_PLAN: readonly RowPlan[] = [
 ];
 
 /** Global tuning knobs, checked by scripts/simulate-crypt-delve.mjs. */
-export const HP_SCALE = 1.76;
+export const HP_SCALE = 1.78;
 export const ATTACK_SCALE = 1.34;
 /** Extra foe HP per row deeper into the floor. */
 export const ROW_HP_GROWTH = 0.04;

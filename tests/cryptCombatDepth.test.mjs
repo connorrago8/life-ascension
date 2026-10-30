@@ -8,7 +8,9 @@ import {
 import { CARDS, COMBO_AT, cardDef, comboBonus, upgradeDef, cardBleed, cardThorns } from '../lib/crypt/delve/cards.ts';
 import { spawnFoe, FOES, BOSS, EVENTS } from '../lib/crypt/delve/floor.ts';
 import { LOOT, lootById, gearTooltip, passiveLabel, bonusLabel, loadoutPassives, loadoutCards } from '../lib/crypt/delve/loot.ts';
-import { createDelve, reduceDelve, canUpgradeCard, MIN_DECK_SIZE } from '../lib/crypt/delve/run.ts';
+import { createDelve as openDelve, reduceDelve, canUpgradeCard, MIN_DECK_SIZE } from '../lib/crypt/delve/run.ts';
+// Runs open with a 1-of-2 starting card pick; most tests take the first offer and go to the map.
+const createDelve = (input) => { const s = openDelve(input); return reduceDelve(s, { type: 'pick-start', cardId: s.startPick[0] }); };
 import { seedRng } from '../lib/crypt/delve/rng.ts';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -245,8 +247,10 @@ test('combat UI shows exact incoming damage, status chips with tap-to-explain, g
   const ui = read('components/crypt/DelveRun.tsx');
   assert.match(ui, /You take <strong>\{incoming\.afterBlock\}/);
   assert.match(ui, /Big hit next turn/);
-  assert.match(ui, /function StatusChips/);
-  assert.match(ui, /aria-expanded=\{open === chip\.key\}/);
+  assert.match(ui, /function StatusPanel/);
+  assert.match(ui, /aria-expanded=\{expanded\}/, 'one Statuses pill, collapsed by default');
+  assert.match(ui, /useState\(false\);\n  const \[open, setOpen\]/);
+  assert.match(ui, /aria-expanded=\{open === key\}/, 'each chip still taps to explain');
   for (const word of ['Bleed', 'Burn', 'Thorns', 'Haste', 'Combo', 'Crit', 'Hexed']) assert.ok(ui.includes(word), word);
   assert.match(ui, /passiveLabel\(entry\)/);
   assert.match(ui, /Remove a card/);

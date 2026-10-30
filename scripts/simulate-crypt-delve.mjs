@@ -55,7 +55,9 @@ function runOnce(seed, level, allocated) {
   const rank = pickRank(allocated);
   for (let guard = 0; guard < 3000; guard += 1) {
     if (s.phase === 'defeat' || s.phase === 'floor-clear') break;
-    if (s.phase === 'map') {
+    if (s.phase === 'start-pick') {
+      s = reduceDelve(s, { type: 'pick-start', cardId: rank.find((id) => s.startPick.includes(id)) ?? s.startPick[0] });
+    } else if (s.phase === 'map') {
       const choices = currentRoomChoices(s);
       const low = s.hp < s.maxHp * 0.5;
       const pref = (r) => r.kind === 'rest' ? (low ? 10 : 1) : r.kind === 'elite' ? (low ? -5 : 4) : r.kind === 'fight' ? (low ? 2 : 5) : r.kind === 'treasure' ? 6 : 3;

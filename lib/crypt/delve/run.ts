@@ -13,7 +13,7 @@ import {
  * caller as it drops (so it can be kept), and the floor checkpoint is reported only
  * when a floor is cleared. This reducer never grants XP itself.
  */
-export type DelvePhase = 'map' | 'combat' | 'reward' | 'event' | 'treasure' | 'rest' | 'floor-clear' | 'defeat';
+export type DelvePhase = 'start-pick' | 'map' | 'combat' | 'reward' | 'event' | 'treasure' | 'rest' | 'floor-clear' | 'defeat';
 
 export type Reward = { cards: CardId[]; picked: boolean; loot: string | null; equipped: boolean };
 export type EventState = { eventId: string; outcome: string | null };
@@ -39,6 +39,8 @@ export type DelveState = {
   row: number;
   path: number[];
   phase: DelvePhase;
+  /** Opening variety: the two cards offered before the first room (pick one). */
+  startPick: CardId[];
   room: Room | null;
   battle: Battle | null;
   reward: Reward | null;
@@ -51,6 +53,8 @@ export type DelveCommand =
   | { type: 'play'; uid: number }
   | { type: 'end-turn' }
   | { type: 'pick-card'; cardId: CardId | null }
+  /** Start of a run: add one of the two offered cards to your deck. */
+  | { type: 'pick-start'; cardId: CardId }
   | { type: 'event-option'; optionId: string }
   /** Campfire: heal, OR remove one card (by deck index). */
   | { type: 'rest'; choice: 'heal' }
@@ -102,10 +106,12 @@ export function createDelve(input: {
   const floor = generateFloor(seedRng(input.seed));
   const base = { allocated, runBonus: { ...ZERO_ATTRIBUTES }, loadout };
   const maxHp = maxHpFor(effectiveAttributes(base), level);
+  // Own stream so the opening offer never shifts the floor layout or the fights.
+  const startPick = rewardCards(seedRng((input.seed ^ 0x5eed) >>> 0), 2)[0];
   return {
     runId: input.runId, seed: input.seed, rng: floor.rng, floor: 1, level, ...base,
     found: [], deck: STARTER_DECK.slice(), upgrades: 0, hp: maxHp, maxHp,
-    rows: floor.rows, row: 0, path: [], phase: 'map', room: null, battle: null, reward: null, event: null, note: null,
+    rows: floor.rows, row: 0, path: [], phase: 'start-pick', startPick, room: null, battle: null, reward: null, event: null, note: null,
   };
 }
 
@@ -126,11 +132,11 @@ function dropLoot(state: DelveState, source: LootSource): { state: DelveState; i
   return { state: next, itemId: entry.id, equipped };
 }
 
-function rewardCards(rng: Rng): [CardId[], Rng] {
+function rewardCards(rng: Rng, count = 3): [CardId[], Rng] {
   const pool = REWARD_POOL.slice();
   const picks: CardId[] = [];
   let state = rng;
-  for (let i = 0; i < 3 && pool.length > 0; i += 1) {
+  for (let i = 0; i < count && pool.length > 0; i += 1) {
     const [index, next] = nextIndex(state, pool.length);
     state = next;
     picks.push(pool.splice(index, 1)[0]);
@@ -191,6 +197,14 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
       return { ...next, rng, phase: 'reward', reward: { cards, picked: false, loot: drop.itemId, equipped: drop.equipped } };
     }
     return next;
+  }
+
+  if (command.type === 'pick-start') {
+    if (state.phase !== 'start-pick' || !state.startPick.includes(command.cardId)) return state;
+    return {
+      ...state, phase: 'map', startPick: [], deck: [...state.deck, command.cardId],
+      note: `${CARDS[command.cardId].name} added to your deck.`,
+    };
   }
 
   if (command.type === 'pick-card') {

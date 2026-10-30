@@ -871,12 +871,80 @@ code { font-family: ui-monospace, monospace; }
 .pop-dealt.crit { color: #f2c46d; font-size: 1.45rem; }
 .pop-taken { color: #ff6b6b; }
 .pop-heal { color: #7ed9b8; top: auto; bottom: 0; }
+/* Combat spacing pass (iPhone): compact top half, room for the hand, clear of the bottom nav. */
+.delve-combat { gap: 6px; }
+.delve-combat .delve-foe { grid-template-columns: minmax(0, 1fr) 76px; gap: 8px; padding: 8px; border-radius: 12px; }
+.delve-combat .delve-monster-svg { width: 76px; }
+.delve-combat .delve-foe-info > .delve-small { margin: 0; }
+.delve-combat .delve-hp { height: 16px; margin: 3px 0; }
+.delve-combat .delve-hp-text { line-height: 16px; font-size: 0.72rem; }
+.delve-combat .delve-intent { margin-top: 4px; padding: 3px 6px; font-size: 0.82rem; line-height: 1.3; }
+.delve-intent-then { margin: 0; color: var(--muted); }
+.delve-combat .delve-telegraph { margin-top: 0 !important; }
+.delve-herobar { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; align-items: center; }
+.delve-hero-sprite.tiny, .delve-hero-sprite.tiny .pixel-sprite { width: 36px; }
+.delve-herobar .delve-energy { margin: 0; font-size: 0.95rem; line-height: 1.2; }
+.delve-status-pill { min-height: 36px; padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06); color: inherit; font-size: 0.82rem; cursor: pointer; justify-self: start; }
+.delve-status-pill[aria-expanded="true"] { border-color: #f0c060; }
+.delve-status-count { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: rgba(255,255,255,0.14); font-size: 0.72rem; text-align: center; }
+.delve-status, .delve-status-list { display: grid; gap: 4px; }
+.delve-chips-label { align-self: center; min-width: 40px; }
+.delve-combat .delve-log { min-height: 2.5em; font-size: 0.78rem; line-height: 1.25; }
+.delve-combat .delve-log p { margin: 0; }
+.delve-combat .delve-log p:nth-last-child(n+3) { display: none; }
+.delve-combat .delve-hand { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+.delve-combat .delve-card { min-height: 104px; padding: 18px 6px 6px; gap: 2px; font-size: 0.76rem; border-radius: 10px; }
+.delve-combat .delve-card-cost { top: 3px; left: 5px; width: 18px; height: 18px; font-size: 0.72rem; }
+.delve-combat .delve-card-name { font-size: 0.84rem; line-height: 1.15; }
+.delve-combat .delve-card-text { line-height: 1.2; overflow-wrap: anywhere; }
+.delve-combat .delve-end-turn { min-height: 48px; margin: 6px 0 0; }
+@media (max-width: 719px) {
+  /* Bottom nav bar + Play orb + home indicator: keep the hand and End turn fully above it. */
+  .delve-combat { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 379px) {
+  .delve-combat .delve-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .delve-combat .delve-card { min-height: 96px; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .delve-pop { animation: delve-pop 0.7s ease-out both; }
   .delve-monster:has(.pop-dealt) .delve-monster-svg { animation: delve-shake 0.3s ease-out; }
 }
 @keyframes delve-pop { from { transform: translateY(6px); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(-14px); opacity: 0.9; } }
 @keyframes delve-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+/* Combat feel: readable cards, 44px taps, big-hit urgency, status/gear feedback. */
+.delve-combat .delve-card { min-height: 108px; font-size: 0.8rem; }
+.delve-combat .delve-card-name { font-size: 0.88rem; }
+.delve-combat .delve-card-text { line-height: 1.22; }
+.delve-status-pill, .delve-chip { min-height: 44px; }
+.delve-start-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.delve-start-pick .delve-card { min-height: 120px; }
+.delve-intent.delve-bighit { border: 2px solid #ff7a45; background: rgba(255, 90, 40, 0.18); }
+.delve-bighit .delve-telegraph { color: #ffb38a; }
+.delve-bighit-icon { color: #ff7a45; font-weight: 900; }
+.delve-procs { position: absolute; inset: 0; pointer-events: none; }
+.delve-proc { position: absolute; left: -6px; bottom: 30px; font-weight: 800; font-size: 0.8rem; white-space: nowrap; text-shadow: 0 1px 0 #000; }
+.delve-proc + .delve-proc { bottom: 48px; }
+.delve-proc + .delve-proc + .delve-proc { bottom: 66px; }
+.proc-bleed { color: #ff6b6b; }
+.proc-burn { color: #ffa94d; }
+.proc-thorns { color: #8ce99a; }
+.proc-worn { color: #c0b8ff; }
+.proc-combo { color: #74c0fc; }
+.proc-gear { color: #f0c060; }
+.delve-proc-toast { position: absolute; right: 0; bottom: -10px; display: grid; gap: 2px; justify-items: end; margin: 0; font-size: 0.72rem; font-weight: 700;
+  white-space: nowrap; }
+.delve-proc-toast span { padding: 1px 6px; border-radius: 999px; background: rgba(10, 12, 16, 0.85); border: 1px solid currentColor; }
+@media (prefers-reduced-motion: no-preference) {
+  .delve-combat .delve-bighit { animation: delve-bighit-pulse 0.9s ease-in-out 2; }
+  .delve-proc { animation: delve-proc-float 1.1s ease-out both; }
+  .delve-proc-toast { animation: delve-toast 1.6s ease-out both; }
+}
+@keyframes delve-bighit-pulse { 50% { box-shadow: 0 0 0 4px rgba(255, 122, 69, 0.45); transform: scale(1.015); } }
+@keyframes delve-proc-float { from { transform: translateY(4px); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-18px); opacity: 0.85; } }
+@keyframes delve-toast { from { opacity: 0; transform: translateY(-4px); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; } to { opacity: 0.6; } }
 
 /* Collapsible quest sections (Journal "Done today" / "Completed", Home preview). */
 .collapsible-heading { margin: 0; font-size: inherit; }

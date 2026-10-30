@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { createDelve, reduceDelve, effectiveAttributes, currentRoomChoices } from '../lib/crypt/delve/run.ts';
+import { createDelve as openDelve, reduceDelve, effectiveAttributes, currentRoomChoices } from '../lib/crypt/delve/run.ts';
+// Runs open with a 1-of-2 starting card pick; most tests take the first offer and go to the map.
+const createDelve = (input) => { const s = openDelve(input); return reduceDelve(s, { type: 'pick-start', cardId: s.startPick[0] }); };
 import { startBattle, playCard, endTurn, canPlay, foeIntent, intentText, previewDamage, extraDrawChance, energyForTurn, ENERGY_PER_TURN, foeHitValue } from '../lib/crypt/delve/battle.ts';
 import { CARDS, CARD_IDS, MONSTER_TYPES, REWARD_POOL, STARTER_DECK, SUPER_EFFECTIVE, RESISTED, effectiveness, cardBlock, cardHeal, cardHitDamage, cardBurn, cardWeak, weaknessesOf } from '../lib/crypt/delve/cards.ts';
 import { spawnFoe, BOSS, FLOOR_ROWS, EVENTS, FOES, ENCOUNTERS_PER_RUN, generateFloor } from '../lib/crypt/delve/floor.ts';
