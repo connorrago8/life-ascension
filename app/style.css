@@ -847,6 +847,10 @@ code { font-family: ui-monospace, monospace; }
 .rarity-rare { border-color: #4a86e8; }
 .rarity-epic { border-color: #a56be0; box-shadow: 0 0 0 1px #a56be055; }
 .delve-vault .delve-loot { border-left: 3px solid; padding-left: 8px; }
+.delve-vault .delve-loot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.delve-wear { min-height: 44px; min-width: 88px; margin-left: auto; padding: 6px 12px; font-size: 0.9rem; }
+.delve-start-block { margin: 4px 0 12px; }
+.delve-start-block .delve-start { margin-top: 4px; }
 .delve-pop { position: absolute; top: 0; right: 0; font-weight: 800; font-size: 1.2rem; pointer-events: none; text-shadow: 0 1px 0 #000; }
 .pop-dealt { color: #fff; }
 .pop-dealt.crit { color: #f2c46d; font-size: 1.45rem; }

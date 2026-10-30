@@ -166,7 +166,7 @@ test('Ashen Hood (real-quest earned) has real stats and works in the Crypt only 
   assert.equal(LOOT_IDS.includes('ashen-hood'), false, 'never dropped or claimed in the Crypt');
   assert.deepEqual(ownedEarnedGear(['ashen-hood', 'golden-xp-sword']), ['ashen-hood']);
   assert.deepEqual(ownedEarnedGear(null), []);
-  const run = createDelve({ runId, seed: 9, level: 3, allocated: ZERO, vaultItemIds: ['ashen-hood'] });
+  const run = createDelve({ runId, seed: 9, level: 3, allocated: ZERO, vaultItemIds: ['ashen-hood'], wear: ['ashen-hood'] });
   assert.equal(run.loadout.helm, 'ashen-hood');
   assert.equal(effectiveAttributes(run).endurance, 1);
   assert.equal(effectiveAttributes(run).intelligence, 1);
@@ -212,7 +212,7 @@ test('gear raises stats and paints onto the 32×34 sprite', () => {
       for (const ink of row) assert.ok(ink === '.' || GEAR_INKS[ink], ink);
     }
   }
-  const run = createDelve({ runId, seed: 9, level: 1, allocated: ZERO, vaultItemIds: ['ember-blade'] });
+  const run = createDelve({ runId, seed: 9, level: 1, allocated: ZERO, vaultItemIds: ['ember-blade'], wear: ['ember-blade'] });
   assert.equal(effectiveAttributes(run).strength, 2);
 });
 

@@ -7,10 +7,10 @@ import { canPlay, ENERGY_PER_TURN, foeIntent, intentText, previewDamage, type Ba
 import { CARDS, effectiveness, ELEMENT_LABEL, resistancesOf, TYPE_LABEL, weaknessesOf, type CardId } from '../../lib/crypt/delve/cards';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
 import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
-import { bonusLabel, bestLoadout, lootById, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
+import { bonusLabel, lootById, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
 import {
-  createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, type DelveCommand, type DelveState,
+  createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, runLoadout, type DelveCommand, type DelveState,
 } from '../../lib/crypt/delve/run';
 import {
   adjustAttribute, ATTRIBUTE_INFO, ATTRIBUTE_KEYS, clampAllocation, critChance, dodgeChance, maxHpFor, pointsForLevel, spentPoints,
@@ -103,11 +103,12 @@ export function DelveRun(props: DelveRunProps) {
     });
   }, [state, props]);
 
-  const start = (allocated: Attributes) => {
+  const start = (allocated: Attributes, wear: readonly string[]) => {
     setCheckpoint(null);
     dispatch({
       kind: 'start',
-      state: createDelve({ runId: newRunId(), seed: newSeed(), level: props.level, allocated, vaultItemIds: vault }),
+      // Worn gear is chosen fresh at camp for each run; nothing worn carries over.
+      state: createDelve({ runId: newRunId(), seed: newSeed(), level: props.level, allocated, vaultItemIds: vault, wear }),
     });
   };
   const send = (command: DelveCommand) => dispatch({ kind: 'command', command });
@@ -149,7 +150,7 @@ export function DelveRun(props: DelveRunProps) {
 
 function Camp(props: {
   level: number; savedAttributes: Attributes; vault: readonly string[]; keepNote: string; exitHref: string;
-  onSave: (attributes: Attributes) => Promise<boolean>; onStart: (attributes: Attributes) => void;
+  onSave: (attributes: Attributes) => Promise<boolean>; onStart: (attributes: Attributes, wear: readonly string[]) => void;
 }) {
   const [draft, setDraft] = useState<Attributes>(() => clampAllocation(props.savedAttributes, props.level));
   const [saveNote, setSaveNote] = useState<string | null>(null);
@@ -158,7 +159,24 @@ function Camp(props: {
 
   const total = pointsForLevel(props.level);
   const left = total - spentPoints(draft);
-  const loadout = useMemo(() => bestLoadout(props.vault), [props.vault]);
+  // Crypt-run gear only (not /character account equipment). Camp mounts fresh after
+  // every run end, defeat or leave, so this always starts empty: nothing is worn
+  // until the player taps Wear again. It is never stored locally or on the server.
+  const [wear, setWear] = useState<string[]>([]);
+  const loadout = useMemo(() => runLoadout(props.vault, wear), [props.vault, wear]);
+  const toggleWear = (id: string) => {
+    const entry = lootById(id);
+    if (!entry) return;
+    setWear((current) => current.includes(id)
+      ? current.filter((other) => other !== id)
+      : [...current.filter((other) => lootById(other)?.slot !== entry.slot), id]);
+  };
+  const enter = (
+    <div className="delve-start-block">
+      <button type="button" className="btn delve-start" onClick={() => props.onStart(draft, Object.values(loadout) as string[])}>Enter Floor 1</button>
+      <p className="muted delve-small">Runs save only between floors. Leaving mid-floor ends the run, but gear you found is kept.</p>
+    </div>
+  );
   const preview = effectiveAttributes({ allocated: draft, runBonus: ZERO_ATTRIBUTES, loadout });
 
   const save = async () => {
@@ -191,6 +209,8 @@ function Camp(props: {
         </div>
       </section>
 
+      {enter}
+
       <section className="delve-panel" aria-labelledby="delve-attr-title">
         <h2 id="delve-attr-title">Attributes <span className="delve-points">{left} of {total} points left</span></h2>
         <ul className="delve-attrs">
@@ -219,6 +239,7 @@ function Camp(props: {
 
       <section className="delve-panel" aria-labelledby="delve-vault-title">
         <h2 id="delve-vault-title">Gear vault</h2>
+        <p className="muted delve-small">Tap Wear to bring gear on this run. Worn gear resets after every run.</p>
         {props.vault.length === 0 ? (
           <p className="muted delve-small">No gear yet. Monsters, chests and the boss drop it.</p>
         ) : (
@@ -232,6 +253,9 @@ function Camp(props: {
                   <strong>{entry.name}</strong> <span className="delve-small">{bonusLabel(entry)}</span>
                   {entry.earnedOnly ? <span className="soon-pill">Quest-earned</span> : null}
                   {worn ? <span className="soon-pill">Worn</span> : null}
+                  <button type="button" className="btn ghost delve-wear" aria-pressed={worn}
+                    aria-label={worn ? `Take off ${entry.name}` : `Wear ${entry.name} this run`}
+                    onClick={() => toggleWear(id)}>{worn ? 'Take off' : 'Wear'}</button>
                 </li>
               );
             })}
@@ -240,8 +264,6 @@ function Camp(props: {
         <p className="muted delve-small">{props.keepNote}</p>
       </section>
 
-      <button type="button" className="btn delve-start" onClick={() => props.onStart(draft)}>Enter Floor 1</button>
-      <p className="muted delve-small">Runs save only between floors. Leaving mid-floor ends the run, but gear you found is kept.</p>
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { endTurn, playCard, startBattle, type Battle } from './battle.ts';
 import { CARDS, MAX_DECK_SIZE, REWARD_POOL, STARTER_DECK, type CardId } from './cards.ts';
 import { BOSS, FLOOR_ROWS, REST_HEAL, checkChance, eventById, generateFloor, spawnFoe, type Room } from './floor.ts';
-import { bestLoadout, gearAttributes, isUpgrade, lootById, rollLoot, type Loadout, type LootSource } from './loot.ts';
+import { gearAttributes, isUpgrade, lootById, rollLoot, type Loadout, type LootSource } from './loot.ts';
 import { nextIndex, nextRoll, seedRng, type Rng } from './rng.ts';
 import {
   ZERO_ATTRIBUTES, addAttributes, clampAllocation, maxHpFor, type Attributes,
@@ -57,12 +57,30 @@ export function effectiveAttributes(state: Pick<DelveState, 'allocated' | 'runBo
   return addAttributes(addAttributes(state.allocated, state.runBonus), gearAttributes(state.loadout));
 }
 
+/**
+ * The Crypt loadout worn for one run. Nothing carries over between runs: it is
+ * built only from the ids the player chose to wear at camp this visit, and each
+ * must be in the vault (owned) and fit its slot. Gear found mid-run may be worn
+ * for the rest of that run, then the next run starts with nothing worn again.
+ */
+export function runLoadout(vaultItemIds: readonly string[], wear: readonly string[]): Loadout {
+  const owned = new Set(vaultItemIds);
+  const loadout: Loadout = {};
+  for (const id of wear) {
+    const entry = lootById(id);
+    if (entry && owned.has(id) && !loadout[entry.slot]) loadout[entry.slot] = entry.id;
+  }
+  return loadout;
+}
+
 export function createDelve(input: {
   runId: string; seed: number; level: number; allocated: Attributes; vaultItemIds?: readonly string[];
+  /** Vault items the player chose to wear at camp for this run. Defaults to none. */
+  wear?: readonly string[];
 }): DelveState {
   const level = Math.max(1, Math.floor(input.level) || 1);
   const allocated = clampAllocation(input.allocated, level);
-  const loadout = bestLoadout(input.vaultItemIds ?? []);
+  const loadout = runLoadout(input.vaultItemIds ?? [], input.wear ?? []);
   const floor = generateFloor(seedRng(input.seed));
   const base = { allocated, runBonus: { ...ZERO_ATTRIBUTES }, loadout };
   const maxHp = maxHpFor(effectiveAttributes(base), level);
