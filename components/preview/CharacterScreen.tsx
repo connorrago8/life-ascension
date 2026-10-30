@@ -52,18 +52,32 @@ export function CharacterScreen({ displayName, hideSampleStats = false, equipmen
     );
   }
 
+  // Signed-in slots are display-only: they show what the server snapshot says is
+  // equipped (or Empty) and never offer a local equip/ownership action.
+  function readOnlySlot(slot: VisibleSlot, label: string) {
+    const item = gearView.appearance.equipment.find((entry) => entry.slot === slot);
+    return (
+      <div key={slot} className="character-gear-slot character-slot-readonly" role="group"
+        aria-label={`${label}: ${item?.name ?? 'Empty'}`}>
+        <span className="character-slot-label">{label}</span>
+        <span className={item ? 'character-slot-item' : 'character-slot-item character-slot-empty'}>{item?.name ?? 'Empty'}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="preview-screen character-preview character-equipment-screen">
       <header className="character-header">
-        <div><h1 className="status-name">{displayName ?? gearView.appearance.name}</h1>{gearView.canChange && <p className="level-line">{levelTitle(base)}</p>}</div>
-        <p className="character-header-note">EQUIPMENT</p>
+        {/* The signed-in route already titles the page with the player's name; show it once. */}
+        <div>{displayName ? null : <h1 className="status-name">{gearView.appearance.name}</h1>}{gearView.canChange && <p className="level-line">{levelTitle(base)}</p>}</div>
+        <h2 className="character-header-note">EQUIPMENT</h2>
       </header>
       <section className="character-loadout-stage" aria-label={gearView.canChange ? 'Equipped character and gear preview' : gearView.source === 'verified' ? 'Server-verified equipped character' : 'Character with unverified equipment hidden'}>
-        <div className="character-slot-column">{gearView.canChange ? LEFT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
+        <div className="character-slot-column">{LEFT_SLOTS.map(({ slot, label }) => gearView.canChange ? slotButton(slot, label) : readOnlySlot(slot, label))}</div>
         <div className="character-avatar" aria-label="Full-body front-facing adventurer">
           <HomeCharacter model={homeCharacterModel(visibleAppearance)} idPrefix="character" beltPreviewStage={gearView.beltStage} />
         </div>
-        <div className="character-slot-column">{gearView.canChange ? RIGHT_SLOTS.map(({ slot, label }) => slotButton(slot, label)) : null}</div>
+        <div className="character-slot-column">{RIGHT_SLOTS.map(({ slot, label }) => gearView.canChange ? slotButton(slot, label) : readOnlySlot(slot, label))}</div>
       </section>
       {gearView.canChange && selectedSlot ? (
         <section ref={pickerRef} className="character-slot-picker" aria-label={`${slotLabel} equipment choices`}>

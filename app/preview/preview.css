@@ -679,19 +679,19 @@
 .character-equipment-screen { padding-bottom: 104px; }
 .character-header { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .character-header .level-line { margin: 2px 0 0; }
-.character-header-note { margin: 0 0 3px; color: #d7c4a3; font-size: .67rem; letter-spacing: .12em; }
+.character-header-note { margin: 0 0 3px; color: #d7c4a3; font-size: .67rem; font-weight: 600; letter-spacing: .12em; }
 .character-loadout-stage {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(115px, 1.65fr) minmax(0, 1fr);
-  gap: 5px; align-items: center; min-height: 285px;
+  gap: 5px; align-items: center; min-height: 0;
   border: 1px solid rgba(255,255,255,.09); border-radius: 16px;
   background: radial-gradient(ellipse at 50% 48%, #253039 0%, #151a20 65%, #11161b 100%);
   padding: 10px 6px;
 }
 .character-avatar { min-width: 0; display: grid; place-items: center; }
-.character-avatar .home-figure { width: 100%; max-width: 210px; max-height: 290px; filter: none; }
+.character-avatar .home-figure { width: 100%; max-width: 150px; max-height: 210px; filter: none; }
 .character-slot-column { min-width: 0; display: grid; gap: 9px; }
 .character-gear-slot {
-  display: flex; flex-direction: column; justify-content: center; min-height: 68px;
+  display: flex; flex-direction: column; justify-content: center; min-height: 58px;
   border: 1px solid rgba(215,196,163,.25); border-radius: 9px; padding: 5px;
   background: rgba(8,12,16,.7); text-align: center; overflow-wrap: anywhere;
 }
@@ -762,3 +762,19 @@
 .inventory-empty { font-size: .83rem; color: #9299a2; }
 .inventory-item-row { gap: 10px; }
 @media (max-width: 390px) { .character-slot-hint { font-size: .6rem; } }
+
+/* Signed-in Character route (iPhone): keep clear of the status bar / Dynamic
+   Island and let the last section scroll above the fixed bottom nav + Play orb. */
+.character-screen { padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+.character-screen::before {
+  content: ""; position: fixed; z-index: 29; top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top); background: var(--bg, #1c1f24); pointer-events: none;
+}
+.character-screen .character-equipment-screen { padding: 0 0 8px; }
+.character-screen .character-header { margin-bottom: 8px; }
+.character-screen .character-loadout-stage { padding: 8px 6px; }
+.character-slot-readonly { cursor: default; }
+.character-slot-empty { color: #7f8892; font-style: italic; }
+@media (max-width: 719px) {
+  .character-screen { padding-bottom: calc(56px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+}
