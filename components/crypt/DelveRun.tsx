@@ -15,6 +15,7 @@ import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, RO
 import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/gearArt';
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
+import { pathOptions, type PathOption } from '../../lib/crypt/delve/pathLabels';
 import {
   canRemoveCard, canUpgradeCard, createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, runLoadout, type DelveCommand,
   type DelveState,
@@ -345,32 +346,70 @@ const ROOM_GLYPH: Record<Room['kind'], string> = { fight: '⚔', elite: '☠', t
 function MapView({ state, onChoose }: { state: DelveState; onChoose: (index: number) => void }) {
   const choices = currentRoomChoices(state);
   const boss = state.row >= FLOOR_ROWS;
+  const options = pathOptions(choices, boss);
+  // Which option is highlighted on both the list and the map. Display only:
+  // entering a room still happens only from the list button below.
+  const [active, setActive] = useState<{ row: number; index: number } | null>(null);
+  const activeIndex = active && active.row === state.row ? active.index : null;
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const highlight = (index: number) => setActive({ row: state.row, index });
+  const showOnList = (index: number) => {
+    highlight(index);
+    const button = buttons.current[index];
+    button?.focus({ preventScroll: true });
+    button?.scrollIntoView({ block: 'nearest' });
+  };
+  const node = (option: PathOption, glyph: string) => (
+    <button key={option.index} type="button" data-path={option.badge}
+      className={`delve-node path-${option.badge.toLowerCase()}${activeIndex === option.index ? ' active' : ''}`}
+      aria-label={`Show on list: ${option.ariaLabel}`} aria-pressed={activeIndex === option.index}
+      onClick={() => showOnList(option.index)}>
+      <span className="delve-node-dot" aria-hidden="true">
+        <span className="delve-node-glyph">{glyph}</span>
+        <span className="delve-badge">{option.badge}</span>
+      </span>
+      <span className="delve-node-label" aria-hidden="true">{option.short}</span>
+    </button>
+  );
   return (
     <section aria-labelledby="delve-map-title">
       {state.note ? <p className="delve-note" role="status">{state.note}</p> : null}
       <h2 id="delve-map-title">{boss ? 'The Hollow Warden waits' : 'Choose your path'}</h2>
       <div className="delve-choices">
-        {choices.map((room, index) => (
-          <button key={`${state.row}-${index}`} type="button" className={`delve-room room-${room.kind}`} onClick={() => onChoose(index)}>
-            <span className="delve-room-glyph" aria-hidden="true">{boss ? '♛' : ROOM_GLYPH[room.kind]}</span>
-            <span className="delve-room-text">
-              <strong>{boss ? 'Boss' : ROOM_LABEL[room.kind]}: {roomTitle(room)}</strong>
-              <span className="delve-small muted">{boss ? 'Beat it to clear the floor and save your checkpoint.' : roomHint(room)}</span>
-            </span>
-          </button>
-        ))}
+        {options.map((option) => {
+          const room = choices[option.index];
+          return (
+            <button key={`${state.row}-${option.index}`} type="button" ref={(el) => { buttons.current[option.index] = el; }}
+              data-path={option.badge} aria-label={option.ariaLabel} aria-describedby={`delve-hint-${option.index}`}
+              className={`delve-room room-${room.kind} path-${option.badge.toLowerCase()}${activeIndex === option.index ? ' active' : ''}`}
+              onFocus={() => highlight(option.index)} onPointerEnter={() => highlight(option.index)}
+              onClick={() => onChoose(option.index)}>
+              <span className="delve-badge" aria-hidden="true">{option.badge}</span>
+              <span className="delve-room-glyph" aria-hidden="true">{boss ? '♛' : ROOM_GLYPH[room.kind]}</span>
+              <span className="delve-room-text">
+                <strong>{option.kind}: {option.title}</strong>
+                <span id={`delve-hint-${option.index}`} className="delve-small muted">{boss ? 'Beat it to clear the floor and save your checkpoint.' : roomHint(room)}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
+      <p className="delve-small muted delve-map-help">Letters match the map. Tap a room on the list to enter it.</p>
       <ol className="delve-path" aria-label="Floor map">
         {state.rows.map((row, r) => (
-          <li key={r} className={r < state.row ? 'done' : r === state.row ? 'now' : 'later'}>
-            {row.map((room, i) => (
-              <span key={i} className={r < state.row && state.path[r] === i ? 'taken' : ''} title={ROOM_LABEL[room.kind]}>
-                {ROOM_GLYPH[room.kind]}
-              </span>
-            ))}
-          </li>
+          r === state.row && !boss ? (
+            <li key={r} className="now reachable">{options.map((option) => node(option, ROOM_GLYPH[row[option.index].kind]))}</li>
+          ) : (
+            <li key={r} className={r < state.row ? 'done' : 'later'}>
+              {row.map((room, i) => (
+                <span key={i} className={r < state.row && state.path[r] === i ? 'taken' : ''} title={ROOM_LABEL[room.kind]}>
+                  {ROOM_GLYPH[room.kind]}
+                </span>
+              ))}
+            </li>
+          )
         ))}
-        <li className={boss ? 'now' : 'later'}><span>♛</span></li>
+        {boss ? <li className="now reachable">{options.map((option) => node(option, '♛'))}</li> : <li className="later"><span>♛</span></li>}
       </ol>
     </section>
   );
@@ -396,6 +435,7 @@ const STATUS_HELP = {
   crit: 'Crit: chance for an attack hit to deal double. (LCK)',
   dodge: 'Dodge ready: the next enemy hit misses.',
   focus: 'Focused: your next attack deals double.',
+  loaded: 'Loaded Dice: your next attack hit is a crit (double damage).',
   might: 'Might: every attack hit deals extra damage this fight.',
   worn: 'Steady pressure: from turn 2, if your cards deal less than this in a turn, the foe is worn down by the rest as its turn starts. (END)',
 } as const;
@@ -464,19 +504,19 @@ function foeChips(battle: Battle): Chip[] {
 
 function heroChips(battle: Battle): Chip[] {
   const chips: Chip[] = [];
-  if (battle.block > 0) chips.push({ key: 'block', icon: '🛡', label: `${battle.block}`, explain: STATUS_HELP.block });
+  if (battle.block > 0) chips.push({ key: 'block', icon: '🛡', label: `Block ${battle.block}`, explain: STATUS_HELP.block });
   if (battle.weak > 0) chips.push({ key: 'hexed', icon: '☠', label: 'Hexed', explain: STATUS_HELP.hexed });
   if (battle.thorns > 0) chips.push({ key: 'thorns', icon: '🌵', label: `Thorns ${battle.thorns}`, explain: STATUS_HELP.thorns });
   if (battle.retain) chips.push({ key: 'retain', icon: '🧱', label: 'Keep Block', explain: STATUS_HELP.retain });
-  if (battle.haste > 0) chips.push({ key: 'haste', icon: '✨', label: `Haste +${battle.haste}`, explain: STATUS_HELP.haste });
+  if (battle.haste > 0) chips.push({ key: 'haste', icon: '✨', label: `Haste +${battle.haste} next turn`, explain: STATUS_HELP.haste });
   chips.push({
     key: 'combo', icon: '⛓', label: comboReady(battle) ? `Combo ready +${comboBonus(battle.attributes)}` : `Combo ${Math.min(battle.played, COMBO_AT - 1)}/${COMBO_AT - 1}`,
     explain: STATUS_HELP.combo,
   });
   const crit = Math.round(cardCritChance(battle, CARDS.strike) * 100);
-  if (crit > 0 || battle.critNext) chips.push({ key: 'crit', icon: '🍀', label: battle.critNext ? 'Next hit crits' : `Crit ${crit}%`, explain: STATUS_HELP.crit });
+  if (crit > 0 || battle.critNext) chips.push({ key: 'crit', icon: '🍀', label: battle.critNext ? 'Next hit crits' : `Crit ${crit}%`, explain: battle.critNext ? STATUS_HELP.loaded : STATUS_HELP.crit });
   if (battle.dodgeNext) chips.push({ key: 'dodge', icon: '💨', label: 'Dodge ready', explain: STATUS_HELP.dodge });
-  if (battle.focused) chips.push({ key: 'focus', icon: '🎯', label: 'Focused ×2', explain: STATUS_HELP.focus });
+  if (battle.focused) chips.push({ key: 'focus', icon: '🎯', label: 'Next attack ×2', explain: STATUS_HELP.focus });
   if (battle.might > 0) chips.push({ key: 'might', icon: '⚔', label: `Might +${battle.might}`, explain: STATUS_HELP.might });
   if (battle.turn >= WORN_DOWN_TURN && battle.attributes.endurance > 0) {
     chips.push({ key: 'worn', icon: '⏳', label: `Steady ${Math.floor(battle.attributes.endurance * WORN_DOWN_PER_END)}`, explain: STATUS_HELP.worn });
@@ -582,8 +622,9 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
       </div>
       <StatusPanel battle={battle} />
 
-      <div className="delve-log" role="log" aria-live="polite">
-        {lastLog.map((line, i) => <p key={`${battle.log.length}-${i}`} className="delve-small">{line}</p>)}
+      {/* Turn log for screen readers only; buffs show as chips under Statuses instead of a floating line. */}
+      <div className="delve-log sr-only" role="log" aria-live="polite">
+        {lastLog.map((line, i) => <p key={`${battle.log.length}-${i}`}>{line}</p>)}
       </div>
 
       <div className="delve-hand" role="group" aria-label="Your hand">
@@ -621,11 +662,13 @@ function CardButton({ id, battle, disabled, onPlay }: { id: DeckCard; battle: Ba
   const combo = comboReady(battle) && (damage !== null || !!def.block);
   return (
     <button type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}${combo ? ' combo' : ''}`} disabled={disabled} onClick={onPlay}
-      aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}${combo ? ' Combo bonus.' : ''}`}>
+      aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}${damage !== null && effect === 'super' ? ' Super effective.' : ''}${damage !== null && effect === 'resisted' ? ' Resisted.' : ''}${combo ? ' Combo bonus.' : ''}`}>
       <CardFace def={def} upgraded={isUpgraded(id)} />
+      {combo ? <span className="delve-card-mark" aria-hidden="true" title="Combo bonus">⛓</span> : null}
       {damage !== null ? (
         <span className={`delve-card-dmg eff-${effect}`}>
-          {damage}{hits}{effect === 'super' ? ' ★' : effect === 'resisted' ? ' ↓' : ''}{combo ? ' ⛓' : ''}
+          <span className="delve-dmg-num">{damage}{hits}</span>
+          {effect !== 'normal' ? <sup className="delve-dmg-eff" aria-hidden="true" title={effect === 'super' ? 'Super effective' : 'Resisted'}>{effect === 'super' ? '↑' : '↓'}</sup> : null}
         </span>
       ) : null}
     </button>

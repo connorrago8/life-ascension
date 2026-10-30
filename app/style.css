@@ -803,6 +803,28 @@ code { font-family: ui-monospace, monospace; }
 .delve-path li.now { opacity: 1; }
 .delve-path li.done { opacity: 0.3; }
 .delve-path span.taken { color: var(--mint); opacity: 1; }
+/* Path letters: the same badge and colour on the list button and its map node. */
+.delve-room.path-a, .delve-node.path-a { --path: #5fd3b0; }
+.delve-room.path-b, .delve-node.path-b { --path: #e2b23a; }
+.delve-room.path-c, .delve-node.path-c { --path: #a98bff; }
+.delve-badge { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--path, var(--mint)); color: #14171c; font-size: 0.8rem; font-weight: 800; line-height: 1; }
+.delve-room { position: relative; }
+.delve-room.active, .delve-room:focus-visible { outline: 3px solid var(--path, var(--mint)); outline-offset: 2px; }
+.delve-map-help { margin: -6px 0 10px; text-align: center; }
+.delve-path li.reachable { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; width: 100%;
+  max-width: 360px; font-size: 1rem; padding: 4px 0 10px; }
+.delve-node { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 44px; min-height: 44px;
+  padding: 2px; border: 0; background: none; color: var(--text); cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
+.delve-node-dot { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid var(--path, var(--border)); background: #232830; }
+.delve-node .delve-badge { position: absolute; top: -6px; right: -10px; width: 20px; height: 20px; font-size: 0.72rem; }
+.delve-node-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.78rem; font-weight: 650; color: var(--path, var(--text)); }
+.delve-node.active .delve-node-dot { box-shadow: 0 0 0 3px var(--path, var(--mint)), 0 0 14px var(--path, var(--mint)); }
+.delve-node.active::after { content: ''; position: absolute; left: 50%; bottom: -12px; width: 3px; height: 12px; margin-left: -1.5px;
+  border-radius: 2px; background: var(--path, var(--mint)); }
+.delve-node:focus-visible { outline: 3px solid var(--path, var(--mint)); outline-offset: 2px; border-radius: 12px; }
 .delve-combat { display: grid; gap: 10px; }
 .delve-foe { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; align-items: center; border: 1px solid var(--border);
   border-radius: 14px; padding: 10px; }
@@ -831,7 +853,6 @@ code { font-family: ui-monospace, monospace; }
 .delve-chip[aria-expanded="true"] { border-color: #f0c060; }
 .delve-explain { margin: 4px 0 0; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.35); }
 .delve-passive { display: block; color: #e8c86a; }
-.delve-card.combo { box-shadow: 0 0 0 2px #7ad1ff; }
 .delve-card-name.upgraded { color: #9fe39f; }
 .delve-upgrade { margin: 10px 0; }
 .delve-upgrade h3 { margin: 0 0 4px; font-size: 1rem; }
@@ -926,6 +947,18 @@ code { font-family: ui-monospace, monospace; }
 .delve-status-pill, .delve-chip { min-height: 44px; }
 .delve-start-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .delve-start-pick .delve-card { min-height: 120px; }
+/* Card cleanup (iPhone playtest): calm borders, one strong highlight, damage number first. */
+.delve-card, .delve-card.kind-attack, .delve-card.kind-skill { border-color: var(--border); -webkit-tap-highlight-color: transparent; }
+.delve-card:not(:disabled):focus-visible { outline: 3px solid #f2c46d; outline-offset: 2px; }
+.delve-card:not(:disabled):active { border-color: #f2c46d; box-shadow: 0 0 0 2px #f2c46d; transform: translateY(1px); }
+.delve-card:focus:not(:focus-visible) { outline: none; }
+.delve-card:disabled { opacity: 0.42; filter: saturate(0.6); }
+.delve-card-mark { position: absolute; top: 3px; right: 5px; font-size: 0.68rem; line-height: 1; opacity: 0.6; }
+.delve-card-dmg { display: flex; align-items: flex-start; gap: 2px; color: var(--text); }
+.delve-dmg-num { font-size: 1.2rem; line-height: 1.05; font-weight: 800; }
+.delve-card-dmg.eff-super .delve-dmg-num { color: #f2c46d; }
+.delve-dmg-eff { top: 0; font-size: 0.66rem; line-height: 1; font-weight: 700; color: var(--muted); }
+.delve-combat .delve-hand { gap: 8px; }
 .delve-intent.delve-bighit { border: 2px solid #ff7a45; background: rgba(255, 90, 40, 0.18); }
 .delve-bighit .delve-telegraph { color: #ffb38a; }
 .delve-bighit-icon { color: #ff7a45; font-weight: 900; }
