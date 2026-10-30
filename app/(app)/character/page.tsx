@@ -32,8 +32,6 @@ export default function CharacterPage() {
   const equipmentMutationInFlight = useRef(false);
 
   const load = useCallback(async () => {
-    // Focus/visibility refreshes and post-equip reads may overlap. Only the
-    // latest request may commit a verified XP/equipment snapshot or error.
     const isCurrent = loadGate.current.begin();
     const commit = (next: LoadState) => { if (isCurrent()) setState(next); };
     const preview = process.env.NODE_ENV === 'development'
@@ -75,15 +73,12 @@ export default function CharacterPage() {
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
       });
     } catch {
-      // A transient network failure is not evidence that the user signed out.
       commit({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
     }
   }, []);
 
   async function setItemEquipped(slot: GearSlotKey, itemId: string, equip: boolean) {
     if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy || equipmentMutationInFlight.current) return;
-    // Client pre-check only (owned + fits slot + level unlocked). The server RPC
-    // independently enforces ownership and the level gate; it never grants items.
     const verifiedLevel = levelForVerifiedXp(state.xp);
     if (equip && !canRequestEquip(verifiedLevel, state.gear.ownedItemIds, slot, itemId)) {
       setEquipmentError(isSlotUnlocked(verifiedLevel, slot) ? 'That item is not available for this slot.' : `${slotLockText(slot)}.`);
@@ -91,7 +86,6 @@ export default function CharacterPage() {
     }
     if (!equip && SERVER_EQUIPPABLE_ITEMS[itemId] !== slot) return;
     equipmentMutationInFlight.current = true;
-    // An older focus refresh must not repaint stale gear during an equip RPC.
     loadGate.current.invalidate();
     setEquipmentBusy(true);
     setEquipmentError('');
@@ -105,9 +99,6 @@ export default function CharacterPage() {
           : 'Could not update your equipment. Your equipment is unchanged.');
         return;
       }
-      // Only the authoritative server read can change the visible equipment.
-      // If that read fails, do not leave the previous gear snapshot looking
-      // like a confirmed successful equip operation.
       setState({ status: 'loading' });
       await load();
     } catch {
@@ -120,7 +111,6 @@ export default function CharacterPage() {
 
   useEffect(() => {
     void load();
-    // Refresh verified XP and equipment when returning from Quest Board or another tab.
     const refreshOnFocus = () => { if (document.visibilityState === 'visible' && !equipmentMutationInFlight.current) void load(); };
     document.addEventListener('visibilitychange', refreshOnFocus);
     window.addEventListener('focus', refreshOnFocus);
@@ -164,38 +154,16 @@ export default function CharacterPage() {
     <main className="screen character-screen">
       <p className="page-brand">LIFE ASCENSION</p>
       {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
+
       <section className="panel" aria-label="Your character progress">
-        <h1>{state.name}</h1>
-        <p>Level {progress.level} · {progress.xpIntoLevel} / {progress.xpForNext} XP toward next level</p>
-        <p className="character-lifetime-xp" aria-label={`Lifetime XP: ${state.xp}`}>Lifetime XP: {state.xp}</p>
-        <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
+        <div className="slim-level">
+          <span>Level {progress.level}</span>
+          <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level">
+            <span className="xp-fill" style={{ width: `${fraction * 100}%` }} />
+          </div>
+        </div>
       </section>
-      <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified. Your XP and attributes remain account-derived.'}</p>
-      <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} playerLevel={state.preview ? null : levelForVerifiedXp(state.xp)} onEquipItem={(slot, itemId, equip) => { void setItemEquipped(slot, itemId, equip); }} armorBusy={equipmentBusy} />
-      {equipmentError && <p className="message" role="status">{equipmentError}</p>}
-      {armorMilestone && (
-        <section className="panel" aria-label="Ashen Hood unlock progress">
-          <h2>Ashen Hood</h2>
-          {armorMilestone.status === 'earning' && (
-            <p>{armorMilestone.remainingXp} more verified quest XP to reach the 10 XP armor milestone. Ownership is granted by your account, not this screen.</p>
-          )}
-          {armorMilestone.status === 'owned' && (
-            <p>{isSlotUnlocked(progress.level, 'headwear') ? 'Ashen Hood earned and verified. Tap the Headwear slot above to equip or remove it.' : `Ashen Hood earned and verified. Headwear ${slotLockText('headwear').toLowerCase()}, then tap the Headwear slot to equip it.`}</p>
-          )}
-          {armorMilestone.status === 'eligible-unconfirmed' && (
-            <p>You have reached the 10 XP milestone, but armor ownership has not been confirmed by your account. Refresh to check again.</p>
-          )}
-          {armorMilestone.status === 'unverified' && (
-            <p>Armor ownership is unavailable right now. Your lifetime XP is verified, but this screen cannot confirm an unlock. Refresh to try again.</p>
-          )}
-        </section>
-      )}
-      <section className="panel" aria-label="Earn your next reward">
-        <h2>Continue your adventure</h2>
-        <p className="muted">Complete real-world quests for verified XP. Ashen Hood is earned only through your account's XP ledger and appears after a server-confirmed equip.</p>
-        <a className="btn" href="/">Go to Quest Board</a>
-        <Link className="btn" href="/play/crypt" prefetch={false}>Enter Forgotten Crypt</Link>
-      </section>
+
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">
           {attributes.map((attribute) => (
@@ -215,6 +183,20 @@ export default function CharacterPage() {
         )}
       </section>
 
+      <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified.'}</p>
+      <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} playerLevel={state.preview ? null : levelForVerifiedXp(state.xp)} onEquipItem={(slot, itemId, equip) => { void setItemEquipped(slot, itemId, equip); }} armorBusy={equipmentBusy} />
+      {equipmentError && <p className="message" role="status">{equipmentError}</p>}
+
+      {armorMilestone && (
+        <section className="panel" aria-label="Ashen Hood unlock progress">
+          <h2>Ashen Hood</h2>
+          {armorMilestone.status === 'earning' && <p>{armorMilestone.remainingXp} more verified quest XP to unlock.</p>}
+          {armorMilestone.status === 'owned' && <p>{isSlotUnlocked(progress.level, 'headwear') ? 'Earned. Tap Headwear slot to equip.' : `Earned. ${slotLockText('headwear')}.`}</p>}
+          {armorMilestone.status === 'eligible-unconfirmed' && <p>Milestone reached. Refresh to confirm ownership.</p>}
+          {armorMilestone.status === 'unverified' && <p>Ownership unverified. Refresh to check.</p>}
+        </section>
+      )}
+
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
         <h2 id="wellness-heading">Wellness</h2>
         {wellness.connected ? (
@@ -226,7 +208,6 @@ export default function CharacterPage() {
           <p className="wellness-empty">{WELLNESS_EMPTY}</p>
         )}
       </section>
-
     </main>
   );
 }
