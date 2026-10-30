@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { questDetailHref, shouldOpenQuestCard } from '../../../lib/questCardTap';
 
 type Quest = { id: string; title: string; domain: string; cadence: string; active: boolean };
 type InstanceStatus = { quest_id: string; due_date: string; status: 'available' | 'completed' | 'deferred' };
@@ -23,6 +26,7 @@ function todayLocal() {
 }
 
 export default function QuestNotesIndex() {
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -102,7 +106,8 @@ export default function QuestNotesIndex() {
   const inactiveQuests = quests.filter((quest) => !quest.active);
   const renderQuest = (quest: Quest) => {
     const latest = notes.find((note) => note.quest_id === quest.id);
-    return <div className="quest" key={quest.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : 'One-time'}{doneQuestIds.has(quest.id) ? (quest.cadence === 'daily' ? ' · ✓ Done today' : ' · ✓ Completed') : ''}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions"><a className="btn ghost" href={`/quests/${quest.id}`}>View progress</a></div></div>;
+    const done = doneQuestIds.has(quest.id);
+    return <div className="quest quest-tappable" key={quest.id} onClick={(event) => { if (shouldOpenQuestCard(event.target as Element, String(window.getSelection?.() ?? ''))) router.push(questDetailHref(quest.id)); }}><div className="quest-main"><div className="quest-title"><Link className="quest-title-link" href={questDetailHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : 'One-time'}{doneQuestIds.has(quest.id) ? (quest.cadence === 'daily' ? ' · ✓ Done today' : ' · ✓ Completed') : ''}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions">{done && quest.active ? <span className="tag" aria-label={`${quest.title} done`}>✓ Done</span> : <a className="btn ghost" href={questDetailHref(quest.id)}>View progress</a>}</div></div>;
   };
 
   return (

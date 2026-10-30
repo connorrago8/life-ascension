@@ -76,14 +76,18 @@ test('field journal and epilogue remain UI-only and provide accessible choices',
 });
 
 
-test('Character preserves six slots and never grants preview gear as authenticated ownership', () => {
+test('Character shows the six approved slots and never grants preview gear as authenticated ownership', () => {
   const screen = readFileSync(join(root, 'components/preview/CharacterScreen.tsx'), 'utf8');
-  for (const slot of ['head', 'chest', 'legs', 'main-hand', 'off-hand', 'feet']) {
-    assert.ok(screen.includes("slot: '" + slot + "'"), slot);
+  const slots = readFileSync(join(root, 'lib/gearSlots.ts'), 'utf8');
+  for (const slot of ['headwear', 'armor', 'shield', 'weapon', 'cloak', 'companion']) {
+    assert.ok(slots.includes("key: '" + slot + "'"), slot);
   }
+  for (const old of ['Legs', 'Boots', 'Off hand']) assert.ok(!screen.includes("label: '" + old + "'"), old);
+  assert.match(screen, /LEFT_GEAR_SLOTS/);
+  assert.match(screen, /RIGHT_GEAR_SLOTS/);
   assert.match(screen, /characterGearView\(equipmentMode, appearance, verifiedGear\)/);
   assert.match(screen, /gearView\.source === 'verified'/);
-  assert.match(screen, /verifiedGear\?\.ownedItemIds\.includes\('ashen-hood'\)/);
-  assert.match(screen, /onEquipArmor/);
+  assert.match(screen, /ownedItemsForSlot\(verifiedGear\?\.ownedItemIds, key\)/);
+  assert.match(screen, /onEquipItem/);
   assert.doesNotMatch(screen, /set_quest_instance_status|add_quest_progress|grantXp|supabase/);
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
@@ -10,6 +11,7 @@ import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
 import { supabase } from '../../../lib/supabase';
 import { earnedArmorMilestone, parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
+import { SERVER_EQUIPPABLE_ITEMS, canRequestEquip, isSlotUnlocked, levelForVerifiedXp, slotLockText, type GearSlotKey } from '../../../lib/gearSlots';
 import { WELLNESS_EMPTY, wellnessSnapshot } from '../../../lib/wellness';
 
 type LoadState =
@@ -78,8 +80,16 @@ export default function CharacterPage() {
     }
   }, []);
 
-  async function setArmorEquipped(equip: boolean) {
+  async function setItemEquipped(slot: GearSlotKey, itemId: string, equip: boolean) {
     if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy || equipmentMutationInFlight.current) return;
+    // Client pre-check only (owned + fits slot + level unlocked). The server RPC
+    // independently enforces ownership and the level gate; it never grants items.
+    const verifiedLevel = levelForVerifiedXp(state.xp);
+    if (equip && !canRequestEquip(verifiedLevel, state.gear.ownedItemIds, slot, itemId)) {
+      setEquipmentError(isSlotUnlocked(verifiedLevel, slot) ? 'That item is not available for this slot.' : `${slotLockText(slot)}.`);
+      return;
+    }
+    if (!equip && SERVER_EQUIPPABLE_ITEMS[itemId] !== slot) return;
     equipmentMutationInFlight.current = true;
     // An older focus refresh must not repaint stale gear during an equip RPC.
     loadGate.current.invalidate();
@@ -87,10 +97,12 @@ export default function CharacterPage() {
     setEquipmentError('');
     try {
       const { error } = await supabase().rpc('equip_earned_armor', {
-        p_item_id: 'ashen-hood', p_equip: equip,
+        p_item_id: itemId, p_equip: equip,
       });
       if (error) {
-        setEquipmentError('Could not update your armor. Your equipment is unchanged.');
+        setEquipmentError(error.message === 'Slot locked'
+          ? `${slotLockText(slot)}. Your equipment is unchanged.`
+          : 'Could not update your equipment. Your equipment is unchanged.');
         return;
       }
       // Only the authoritative server read can change the visible equipment.
@@ -99,7 +111,7 @@ export default function CharacterPage() {
       setState({ status: 'loading' });
       await load();
     } catch {
-      setEquipmentError('Could not update your armor. Try again.');
+      setEquipmentError('Could not update your equipment. Try again.');
     } finally {
       equipmentMutationInFlight.current = false;
       setEquipmentBusy(false);
@@ -159,7 +171,7 @@ export default function CharacterPage() {
         <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label="Progress to next level"><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
       </section>
       <p className="muted">{state.preview ? 'Equipment below is a visual demo using starter items.' : state.gear ? 'Armor ownership and equipped state are read from your account.' : 'Equipment is hidden until account ownership and equipped state can be verified. Your XP and attributes remain account-derived.'}</p>
-      <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} onEquipArmor={(equip) => { void setArmorEquipped(equip); }} armorBusy={equipmentBusy} />
+      <CharacterScreen displayName={state.name} hideSampleStats equipmentMode={state.preview ? 'preview' : state.gear ? 'verified' : 'unverified'} verifiedGear={state.gear} playerLevel={state.preview ? null : levelForVerifiedXp(state.xp)} onEquipItem={(slot, itemId, equip) => { void setItemEquipped(slot, itemId, equip); }} armorBusy={equipmentBusy} />
       {equipmentError && <p className="message" role="status">{equipmentError}</p>}
       {armorMilestone && (
         <section className="panel" aria-label="Ashen Hood unlock progress">
@@ -168,7 +180,7 @@ export default function CharacterPage() {
             <p>{armorMilestone.remainingXp} more verified quest XP to reach the 10 XP armor milestone. Ownership is granted by your account, not this screen.</p>
           )}
           {armorMilestone.status === 'owned' && (
-            <p>Ashen Hood earned and verified. Use the equipment control above to equip or remove it.</p>
+            <p>{isSlotUnlocked(progress.level, 'headwear') ? 'Ashen Hood earned and verified. Tap the Headwear slot above to equip or remove it.' : `Ashen Hood earned and verified. Headwear ${slotLockText('headwear').toLowerCase()}, then tap the Headwear slot to equip it.`}</p>
           )}
           {armorMilestone.status === 'eligible-unconfirmed' && (
             <p>You have reached the 10 XP milestone, but armor ownership has not been confirmed by your account. Refresh to check again.</p>
@@ -182,7 +194,7 @@ export default function CharacterPage() {
         <h2>Continue your adventure</h2>
         <p className="muted">Complete real-world quests for verified XP. Ashen Hood is earned only through your account's XP ledger and appears after a server-confirmed equip.</p>
         <a className="btn" href="/">Go to Quest Board</a>
-        <a className="btn" href="/play/crypt">Enter Forgotten Crypt</a>
+        <Link className="btn" href="/play/crypt" prefetch={false}>Enter Forgotten Crypt</Link>
       </section>
       <section className="stat-block" aria-label="Attributes">
         <div className="stat-grid">

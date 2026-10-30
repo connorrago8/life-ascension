@@ -778,3 +778,25 @@
 @media (max-width: 719px) {
   .character-screen { padding-bottom: calc(56px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 }
+
+/* Tap-a-slot equipment bottom sheet (sits above the fixed app nav). */
+.gear-sheet-backdrop { z-index: 50; }
+.gear-sheet { z-index: 51; }
+.gear-sheet-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
+.gear-sheet-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: #232a31;
+}
+.gear-sheet-item-text { min-width: 0; display: grid; gap: 3px; }
+.gear-sheet-item-name { font-weight: 650; overflow-wrap: anywhere; }
+.gear-sheet-boosts { color: #91cbb7; font-size: .78rem; }
+.gear-sheet-item .mini-action { min-height: 44px; min-width: 76px; flex: none; }
+.gear-sheet-empty { padding: 10px 0; font-size: .9rem; }
+.character-slot-button:disabled { cursor: default; opacity: .7; }
+.character-slot-locked { opacity: .62; cursor: not-allowed; }
+.character-slot-lock-line { display: inline-flex; align-items: center; justify-content: center; gap: 4px; color: #a9b1ba; }
+.character-slot-lock { flex: none; }
+/* Approved slot names (Headwear, Companion) must not break mid-word in narrow tiles. */
+.character-slot-label { overflow-wrap: normal; word-break: keep-all; }
+@media (max-width: 379px) { .character-slot-label { font-size: .56rem; letter-spacing: .02em; } }
+@media (max-width: 300px) { .character-slot-label { font-size: .5rem; letter-spacing: 0; } }

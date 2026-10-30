@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 import { createLatestCharacterLoadGate } from '../lib/preview/latestCharacterLoadGate.ts';
+import { SERVER_EQUIPPABLE_ITEMS, canRequestEquip, isSlotUnlocked, levelForVerifiedXp, slotLockText } from './helpers/gearSlotsModule.mjs';
 
 const source = readFileSync(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -23,10 +24,10 @@ function findNode(predicate) {
 function routeHandler(name, deps) {
   const node = name === 'load'
     ? findNode((n) => ts.isVariableDeclaration(n) && n.name.getText(ast) === 'load')
-    : findNode((n) => ts.isFunctionDeclaration(n) && n.name?.text === 'setArmorEquipped');
+    : findNode((n) => ts.isFunctionDeclaration(n) && n.name?.text === 'setItemEquipped');
   const code = name === 'load'
     ? `const handler = ${node.initializer.arguments[0].getText(ast)};`
-    : `${node.getText(ast)}\nconst handler = setArmorEquipped;`;
+    : `${node.getText(ast)}\nconst handler = setItemEquipped;`;
   const compiled = ts.transpileModule(code, {
     compilerOptions: { module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022 },
   }).outputText;
@@ -74,10 +75,12 @@ function scenario(oldGearPromise, equipPromise = null) {
     parseAuthenticatedGearSnapshot: (value) => value,
     adventurerName: () => 'Adventurer', loginHref: () => '/login',
   });
-  const equip = routeHandler('setArmorEquipped', {
-    state, equipmentBusy: false, equipmentMutationInFlight: { current: false }, loadGate, setEquipmentBusy: () => {},
+  const equipItem = routeHandler('setItemEquipped', {
+    levelForVerifiedXp, canRequestEquip, isSlotUnlocked, slotLockText, SERVER_EQUIPPABLE_ITEMS,
+    state: { ...state, xp: 25 }, equipmentBusy: false, equipmentMutationInFlight: { current: false }, loadGate, setEquipmentBusy: () => {},
     setEquipmentError: () => {}, supabase: () => client, setState, load,
   });
+  const equip = (on) => equipItem('headwear', 'ashen-hood', on);
   return { load, equip, loadGate, history, get state() { return state; },
     get gearCalls() { return gearCalls; }, get equipCalls() { return equipCalls; } };
 }
@@ -162,4 +165,19 @@ test('failed equip releases singleflight lock without claiming equipment ownersh
   assert.deepEqual(app.state.gear.equippedItemIds, [], 'failed equip cannot invent owned gear');
   await app.equip(true);
   assert.equal(app.equipCalls, 2, 'failure must release synchronous lock for a new attempt');
+});
+
+test('locked headwear (below Lv 3) never reaches the equip RPC', async () => {
+  const gear = Promise.resolve({ data: { ownedItemIds: ['ashen-hood'], equippedItemIds: [] }, error: null });
+  const app = scenario(gear);
+  let message = '';
+  const locked = routeHandler('setItemEquipped', {
+    levelForVerifiedXp, canRequestEquip, isSlotUnlocked, slotLockText, SERVER_EQUIPPABLE_ITEMS,
+    state: { status: 'ready', preview: false, xp: 24, gear: { ownedItemIds: ['ashen-hood'], equippedItemIds: [] } },
+    equipmentBusy: false, equipmentMutationInFlight: { current: false }, loadGate: app.loadGate,
+    setEquipmentBusy: () => {}, setEquipmentError: (m) => { message = m; },
+    supabase: () => { throw new Error('locked slot must not call Supabase'); }, setState: () => {}, load: app.load,
+  });
+  await locked('headwear', 'ashen-hood', true);
+  assert.equal(message, 'Unlocks at Lv 3.');
 });

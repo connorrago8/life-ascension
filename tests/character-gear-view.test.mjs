@@ -52,7 +52,7 @@ test('authenticated character route opts out of preview loadout even when previe
   assert.match(screen, /visibleAppearance = displayName \? \{ \.\.\.gearView\.appearance, name: displayName \}/);
   assert.match(screen, /homeCharacterModel\(visibleAppearance\)/);
   assert.match(screen, /beltPreviewStage=\{gearView\.beltStage\}/);
-  assert.match(screen, /gearView\.canChange && selectedSlot/);
+  assert.match(screen, /if \(gearView\.canChange\) \{\s*return PREVIEW_CATALOG/);
   assert.match(screen, /gearView\.canChange && !hideSampleStats/);
 });
 
@@ -111,7 +111,7 @@ test('verified armor is server-only; authenticated route cannot fabricate the sn
   assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   assert.match(screen, /gearView\.source === 'verified'/);
   assert.match(screen, /verifiedGear\?: AuthenticatedGearSnapshot/);
-  assert.match(screen, /gearView\.canChange && selectedSlot/);
+  assert.match(screen, /if \(gearView\.canChange\) \{\s*return PREVIEW_CATALOG/);
   assert.doesNotMatch(route, /equipmentMode=\{'verified'\}/);
 });
 
@@ -135,8 +135,9 @@ test('authenticated armor controls call only owner-checked RPC and refresh after
   assert.match(route, /parseAuthenticatedGearSnapshot\(gearResult\.data\)/);
   assert.match(route, /rpc\('equip_earned_armor'/);
   assert.match(route, /await load\(\)/);
-  assert.match(screen, /ownedArmor && onEquipArmor/);
+  assert.match(screen, /serverEquip = gearView\.source === 'verified' && Boolean\(verifiedGear\) && Boolean\(onEquipItem\)/);
   assert.match(screen, /disabled=\{armorBusy\}/);
+  assert.match(route, /canRequestEquip\(verifiedLevel, state\.gear\.ownedItemIds, slot, itemId\)/);
   assert.doesNotMatch(route, /sessionStorage\\.setItem/);
 });
 
@@ -177,5 +178,7 @@ test('authenticated Character offers truthful milestone guidance and Crypt entry
   assert.match(route, /armorMilestone\.status === 'unverified'/);
   assert.match(route, /armorMilestone\.status === 'owned'/);
   assert.match(route, /armorMilestone\.status === 'earning'/);
-  assert.match(route, /href="\/play\/crypt">Enter Forgotten Crypt<\/a>/);
+  assert.match(route, /import Link from 'next\/link'/);
+  assert.match(route, /<Link className="btn" href="\/play\/crypt" prefetch=\{false\}>Enter Forgotten Crypt<\/Link>/);
+  assert.doesNotMatch(route, /<a className="btn" href="\/play\/crypt">/);
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
-const completedStart = home.indexOf('{showCompleted&&completedQuests.map');
+const completedStart = home.indexOf('{showCompleted&&<div id="completed-quests-list">{completedQuests.map');
 const completedEnd = home.indexOf('</section>', completedStart);
 const completedCards = home.slice(completedStart, completedEnd);
 const details = '<QuestDetails quest={quest} instance={instance!}/>';

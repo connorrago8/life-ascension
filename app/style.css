@@ -713,3 +713,14 @@ code { font-family: ui-monospace, monospace; }
 .board-section:first-of-type { margin-top: 8px; }
 .board-section h3 { font-size: 0.98rem; font-weight: 650; margin: 0 0 6px; }
 .btn.confirm-armed { background: #f2c46d; color: var(--ink); box-shadow: 0 0 0 2px #f2c46d55; }
+
+/* Play hub: keep the preview banner clear of the iPhone status bar / Dynamic Island. */
+.screen.play-screen { padding-top: calc(12px + env(safe-area-inset-top)); }
+
+/* Tap-to-open quest cards: the whole card opens details; the title link is the keyboard path. */
+.quest-tappable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.quest-title-link { color: inherit; text-decoration: none; }
+.quest-title-link:hover, .quest-title-link:focus-visible { text-decoration: underline; }
+.board-completed { margin-top: 20px; border-top: 1px solid var(--border, #38404b); padding-top: 16px; }
+.completed-board-toggle { min-height: 44px; }
+.quest-create-form { scroll-margin-top: calc(12px + env(safe-area-inset-top)); scroll-margin-bottom: calc(96px + env(safe-area-inset-bottom)); }
