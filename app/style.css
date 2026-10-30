@@ -495,6 +495,14 @@ code { font-family: ui-monospace, monospace; }
   .quest-card-details > summary { transition: color 120ms ease; }
 }
 
+/* At high browser zoom, keep quest actions readable instead of squeezing labels.
+   Covers the quest card actions and the in-card progress row (Add/Undo/Clear/Complete/Log). */
+@media (max-width: 280px) {
+  .quest-card-actions, .quest-progress-controls .actions { flex-direction: column; align-items: stretch; }
+  .quest-card-actions .btn, .quest-progress-controls .actions .btn { width: 100%; flex: 0 0 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .quest-progress-controls .actions input[type='number'] { flex: 0 0 auto; width: 100%; max-width: none !important; }
+}
+
 /* Playable unsaved Crypt preview styles from Charlie PR #22. */
 .play-screen, .crypt-screen { overflow-x: clip; max-width: 100%; }
 .wayfarer-mark { margin: 0 0 8px; color: var(--muted); font-size: 0.85rem; }
