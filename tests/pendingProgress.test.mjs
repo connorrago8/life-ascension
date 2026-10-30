@@ -305,7 +305,7 @@ test('completed quest with pending or malformed journal is discoverable after re
 });
 
 test('Home exposes completed progress retry after refresh without creating another request', async () => {
-  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = await readFile(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /hasPendingCompletedRecovery\(instances,key=>localStorage\.getItem\(key\)\)/);
   assert.match(home, /setShowCompleted\(true\)/);
   assert.match(home, /completedQuests\.map\(\(\{quest,instance\}\)=>/);
@@ -336,7 +336,7 @@ test('older pending request discovery is bounded, UUID-filtered and fails closed
 });
 
 test('Home loads only owner-scoped older completed journals and renders retry separately from daily completion', async () => {
-  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = await readFile(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /try\{pendingIds=pendingProgressInstanceIds\(localStorage\)\}catch/);
   assert.match(home, /pendingIds\.length\?s\.from\('quest_instances'\)\.select\([^\n]+\)\.eq\('owner_id',user\.id\)\.in\('id',pendingIds\)\.eq\('status','completed'\)/);
   assert.match(home, /earlierRecoveries=recoverableCompletedEntries\(instances,recoveryIds,quests,recoveryQuests,completedQuests\.map\(x=>x\.instance!\.id\)\)/);
@@ -348,7 +348,7 @@ test('Home loads only owner-scoped older completed journals and renders retry se
 
 test('archived completed quest keeps pending retry metadata owner-scoped', async () => {
   // Static integration contract: not an authenticated Supabase/browser test.
-  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = await readFile(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /missingRecoveryQuestIds=\[\.\.\.new Set\(\(recoveries\|\|\[\]\)\.map\(row=>row\.quest_id\)\)\]/);
   assert.match(home, /\.eq\('owner_id',user\.id\)\.in\('id',missingRecoveryQuestIds\)\.limit\(100\)/);
   assert.match(home, /setRecoveryQuests\(missingRecoveryQuests\|\|\[\]\)/);
@@ -391,7 +391,7 @@ test('archived same-day and older completed pending saves remain visible without
 test('completed archived retry removes stale recovery row only after confirmed journal deletion', async () => {
   const { parsePendingProgress, recoverableCompletedEntries } = await loadParser();
   const handlers = await loadProgressHandlers();
-  const home = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = await readFile(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /function journalResolved\(instanceId:string\)\{setRecoveryIds\(ids=>ids\.filter\(id=>id!==instanceId\)\)\}/);
   assert.equal((home.match(/onJournalResolved=\{journalResolved\}/g) ?? []).length, 3,
     'Active, current-day Completed and archived recovery controls all notify Home');

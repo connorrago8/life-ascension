@@ -972,3 +972,74 @@ code { font-family: ui-monospace, monospace; }
 .character-level-xp { opacity: 0.7; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .character-xp-track { flex: 1; height: 6px; margin: 0; }
 .character-milestone { font-size: 0.85rem; margin: 8px 0 0; }
+
+/* ---------- Home: character-first hub (read-only; quests live on /quests) ---------- */
+.home-hub { display: flex; flex-direction: column; gap: 12px; padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
+.hub-header { text-align: center; }
+.hub-name { font-size: 1.6rem; margin: 4px 0 2px; overflow-wrap: anywhere; }
+.hub-class { color: var(--muted); font-size: 0.9rem; margin: 0; }
+.hub-stage { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 0; }
+.hub-stage-glow {
+  position: absolute; inset: 6% 18% 4%;
+  background: radial-gradient(circle at 50% 45%, #7ed9b833, #7ed9b80d 48%, transparent 72%);
+  border-radius: 50%; pointer-events: none;
+}
+.hub-stage .home-figure { position: relative; width: min(220px, 56vw); max-height: 34vh; height: auto; display: block; }
+.hub-stage .home-figure-bob { transform-origin: 50% 80%; animation: hub-bob 4.8s ease-in-out infinite; }
+@keyframes hub-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .hub-stage .home-figure-bob { animation: none; } }
+.hub-level { display: grid; gap: 6px; }
+.hub-level-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hub-level-badge { font-weight: 750; font-size: 1.15rem; color: var(--mint); letter-spacing: -0.01em; }
+.hub-level-xp { color: var(--text); font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+.hub-xp-track { height: 10px; background: var(--track); border-radius: 999px; overflow: hidden; }
+.hub-xp-fill { display: block; height: 100%; background: linear-gradient(90deg, #5fc79f, var(--mint)); border-radius: inherit; transition: width .4s ease; }
+.hub-lifetime { margin: 0; font-size: 0.8rem; text-align: right; }
+.hub-card { border: 1px solid var(--border); border-radius: 16px; background: #20242a; padding: 12px 14px; }
+.hub-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.hub-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-radius: 10px; background: #1a1d22; }
+.hub-stat-label { font-size: 0.7rem; letter-spacing: 0.12em; color: var(--muted); font-weight: 650; }
+.hub-stat-value { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hub-gear { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; min-width: 0; }
+.hub-gear-label { font-size: 0.7rem; letter-spacing: 0.12em; color: var(--muted); font-weight: 650; text-transform: uppercase; }
+.hub-gear-empty { color: var(--muted); font-size: 0.9rem; }
+.hub-gear-items { display: flex; gap: 6px; flex-wrap: wrap; }
+.hub-gear-chip { border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 0.85rem; }
+.hub-gear-chip small { color: var(--muted); }
+.hub-today { display: flex; align-items: center; gap: 10px; min-height: 52px; color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.hub-today:active { background: #262b32; }
+.hub-today:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.hub-today-label { font-size: 0.7rem; letter-spacing: 0.12em; color: var(--mint); font-weight: 700; text-transform: uppercase; }
+.hub-today-value { flex: 1; font-weight: 600; }
+.hub-today-chevron { color: var(--muted); font-size: 1.3rem; line-height: 1; }
+@media (max-height: 700px) {
+  .home-hub { gap: 9px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+  .hub-name { font-size: 1.35rem; }
+  .hub-stage .home-figure { max-height: 28vh; }
+}
+
+/* ---------- Quests board: cleaner cards and sections (logic unchanged) ---------- */
+.quest-board-page { padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
+.quest-board-page .board-header { align-items: flex-start; }
+.quest-board-page .board-header h1 { margin-bottom: 2px; }
+.quest-board-page .board-header p { margin: 0; }
+.quest-board-page .board-mode-tabs { gap: 0; margin-top: 12px; padding: 3px; border: 1px solid var(--border); border-radius: 14px; background: #181b1f; flex-wrap: nowrap; }
+.quest-board-page .board-mode-tabs .btn { flex: 1; border: 0; border-radius: 11px; padding: 10px 8px; font-size: 0.92rem; }
+.quest-board-page .board-mode-tabs .btn.ghost { color: var(--muted); }
+.quest-board-page .panel { background: #20242a; border-color: #343b46; }
+.quest-board-page .board-summary .xp { font-size: 1.35rem; margin: 4px 0 6px; }
+.quest-board-page .board-summary .progress { height: 8px; margin-top: 6px; }
+.quest-board-page .board-panel { padding: 14px 12px; }
+.quest-board-page .board-panel > h2 { padding: 0 4px; }
+.quest-board-page .board-section { border-top: 0; margin-top: 14px; padding-top: 0; }
+.quest-board-page .board-section h3 { display: flex; align-items: baseline; gap: 6px; padding: 0 4px; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mint); }
+.quest-board-page .board-section h3 .muted { letter-spacing: 0; }
+.quest-board-page .board-section > p.muted { padding: 0 4px; font-size: 0.85rem; }
+.quest-board-page .quest { border: 1px solid #343b46; border-radius: 14px; background: #1a1d22; padding: 12px; margin: 8px 0; }
+.quest-board-page .quest-card-actions { margin-left: auto; }
+.quest-board-page .quest-card-actions .btn { min-width: 44px; }
+.quest-board-page .board-completed { border-top: 1px solid #343b46; padding-top: 12px; }
+.quest-board-page .completed-board-toggle { width: 100%; justify-content: flex-start; gap: 8px; }
+.quest-board-page .board-create-toggle { width: 100%; }
+.quest-board-page .board-foot { margin-top: 18px; text-align: center; line-height: 1.9; }
+.quest-board-page .board-foot a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; }

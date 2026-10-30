@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 // Source-extracted Home callback; no hosted database or browser.
-const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
+const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
 const signature="async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{";
 const start=home.indexOf(signature),end=home.indexOf(' // A confirmed retry',start);
 assert.ok(start>=0&&end>start,'Home progress callback boundaries changed');

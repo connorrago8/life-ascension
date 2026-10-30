@@ -60,7 +60,7 @@ test('duplicate completion confirms previous reward without claiming a new award
 });
 
 test('Home calls v2 only for completion and never infers XP from lifetime delta', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /if\(action==='complete'\)\{/);
   assert.match(home, /\.rpc\('set_quest_instance_status_v2',\{p_instance_id:id,p_action:action\}\)/);
   assert.match(home, /completionFeedback\(data,id\)/);

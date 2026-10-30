@@ -9,9 +9,9 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
 
-const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
+const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
 const controls=readFileSync(new URL('../components/QuestProgressControls.tsx',import.meta.url),'utf8');
-const journal=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
+const journal=readFileSync(new URL('../app/(app)/quests/journal/page.tsx',import.meta.url),'utf8');
 
 test('board renders Today, This Week and Upcoming sections',()=>{
  for(const label of ['Today','This Week','Upcoming'])assert.match(home,new RegExp(`aria-label="${label}"><h3>${label} `));

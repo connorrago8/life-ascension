@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { questDetailHref, shouldOpenQuestCard, QUEST_CARD_INTERACTIVE_SELECTOR } from '../lib/questCardTap.ts';
 
 const read = (rel) => readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
-const home = read('app/(app)/page.tsx');
-const journal = read('app/(app)/quests/page.tsx');
+const home = read('app/(app)/quests/page.tsx');
+const journal = read('app/(app)/quests/journal/page.tsx');
 const fakeTarget = (insideControl) => ({ closest: (sel) => (sel === QUEST_CARD_INTERACTIVE_SELECTOR && insideControl ? {} : null) });
 
 test('card taps open details but never hijack nested controls or text selection', () => {

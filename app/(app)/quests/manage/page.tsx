@@ -42,7 +42,7 @@ export default function ManageQuests(){
   setMessage(error?'Could not archive quest.':'Quest archived. XP history preserved.');await load();setBusy(null);
  }
  return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Manage quests</h1><p className="muted">Rename, change dates, or archive active quests. Archiving never removes earned XP.</p>
- <p><Link href="/">← Back to Quest Board</Link></p>
+ <p><Link href="/quests">← Back to Quest Board</Link></p>
  {loading?<p>Loading quests…</p>:!signedIn?<p>Please <Link href="/login?next=%2Fquests%2Fmanage">sign in</Link> to manage quests.</p>:<section className="panel"><h2>Active quests</h2>{quests.length===0&&<p>No active quests.</p>}
  {quests.map(q=><div className="quest" key={q.id}><div className="quest-main"><div className="quest-title">{q.title}</div><div className="muted">{q.domain} · {q.cadence} · {q.scheduled_for||'No date set'}</div></div><div className="actions"><button className="btn ghost" disabled={!!busy} onClick={()=>void rename(q)}>Rename</button><button className="btn ghost" disabled={!!busy} onClick={()=>void reschedule(q)}>Reschedule</button><button className="btn ghost" disabled={!!busy} onClick={()=>void archive(q)}>Archive</button></div></div>)}
  </section>}<p className="message" role="status" aria-live="polite">{message}</p></main>;

@@ -1,138 +1,231 @@
 'use client';
-
+import {useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import { CollapsibleSection } from '../../../components/CollapsibleSection';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabase';
-import { questDetailHref, shouldOpenQuestCard } from '../../../lib/questCardTap';
-
-type Quest = { id: string; title: string; domain: string; cadence: string; active: boolean };
-type InstanceStatus = { quest_id: string; due_date: string; status: 'available' | 'completed' | 'deferred' };
-type Note = { id: string; quest_id: string; note: string; percent: number | null; created_at: string };
-
-const DOMAINS: Record<string, string> = {
-  hygiene: 'Hygiene & appearance',
-  home: 'Home & environment',
-  mental_health: 'Mental health & recovery',
-  personal_growth: 'Growth & hobbies',
-  finance: 'Financial health',
-  career: 'Career & productivity',
-  relationships: 'Relationships',
-  physical_health: 'Physical health',
-};
-
-function todayLocal() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-}
-
-export default function QuestNotesIndex() {
-  const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [quests, setQuests] = useState<Quest[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [doneQuestIds, setDoneQuestIds] = useState<Set<string>>(new Set());
-  const [message, setMessage] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const client = supabase();
-      const { data: authData, error: authError } = await client.auth.getUser();
-      const user = authError ? null : authData.user;
-      setUserId(user?.id ?? null);
-      setReady(true);
-      if (!user) return;
-      const [questResult, noteResult] = await Promise.all([
-        client.from('quests').select('id,title,domain,cadence,active').order('created_at', { ascending: true }),
-        client.from('quest_progress').select('id,quest_id,note,percent,created_at').order('created_at', { ascending: false }).limit(100),
-      ]);
-      if (questResult.error || noteResult.error) {
-        setMessage(questResult.error?.message || noteResult.error?.message || 'Unable to load quest notes.');
-        return;
-      }
-      const loadedQuests = (questResult.data ?? []) as Quest[];
-      // Issue #46: mirror the Today board. A daily quest completed today and a
-      // completed one-time quest are shown as done, not as open/active work.
-      const today = todayLocal();
-      const onceIds = loadedQuests.filter((quest) => quest.active && quest.cadence !== 'daily').map((quest) => quest.id);
-      const [todayResult, onceResult] = await Promise.all([
-        client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).eq('due_date', today).limit(1000),
-        onceIds.length
-          ? client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).in('quest_id', onceIds).eq('status', 'completed').limit(1000)
-          : Promise.resolve({ data: [] as InstanceStatus[], error: null }),
-      ]);
-      if (todayResult.error || onceResult.error) {
-        setMessage(todayResult.error?.message || onceResult.error?.message || 'Unable to load quest status.');
-        return;
-      }
-      const done = new Set<string>();
-      for (const row of [...((todayResult.data ?? []) as InstanceStatus[]), ...((onceResult.data ?? []) as InstanceStatus[])]) {
-        if (row.status === 'completed') done.add(row.quest_id);
-      }
-      setQuests(loadedQuests);
-      setNotes((noteResult.data ?? []) as Note[]);
-      setDoneQuestIds(done);
-    } catch {
-      setMessage('Supabase is not configured in this browser.');
-      setReady(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    try {
-      const { data: { subscription } } = supabase().auth.onAuthStateChange(() => { void load(); });
-      return () => subscription.unsubscribe();
-    } catch {
-      return;
-    }
-  }, [load]);
-
-  if (!ready) return <main className="wrap">Loading quest notes…</main>;
-  if (!userId) {
-    return (
-      <main className="wrap">
-        <div className="eyebrow">LIFE ASCENSION</div>
-        <h1>Quest notes</h1>
-        <p className="muted">Sign in to record progress on your quests.</p>
-        <a className="btn" href="/login?next=%2Fquests">Sign in</a>
-      </main>
-    );
+import {useRouter} from 'next/navigation';
+import {questDetailHref,shouldOpenQuestCard} from '../../../lib/questCardTap';
+import {supabase} from '../../../lib/supabase';
+import {ADVENTURER_CLASS} from '../../../lib/character';
+import {levelFor} from '../../../lib/level';
+import {verifiedLifetimeXp} from '../../../lib/characterXpProof';
+import {QuestProgressControls} from '../../../components/QuestProgressControls';
+import {QuestDetails} from '../../../components/QuestDetails';
+import {ConfirmCompleteButton} from '../../../components/ConfirmCompleteButton';
+import {completionFeedback} from '../../../lib/preview/questReceipt.mjs';
+import {confirmedProgressResult} from '../../../lib/preview/progressDelta.mjs';
+import {hasPendingCompletedRecovery,pendingProgressInstanceIds,recoverableCompletedEntries} from '../../../lib/preview/pendingProgress';
+type Quest={id:string;title:string;domain:string;cadence:'once'|'daily';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
+type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
+const DOMAINS=[['hygiene','Hygiene & appearance'],['home','Home & environment'],['mental_health','Mental health & recovery'],['personal_growth','Growth & hobbies'],['finance','Financial health'],['career','Career & productivity'],['relationships','Relationships'],['physical_health','Physical health']];
+function todayLocal(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+export default function QuestBoard(){
+ const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState<number|null>(null),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2Fquests');
+ const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
+ const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
+ const router=useRouter();const questFormRef=useRef<HTMLFormElement>(null);const openQuestFormOnRender=useRef(false);
+ const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
+ const questCreateInFlight=useRef(false);
+ const questActionInFlight=useRef(false);
+ // A completed quest with an unconfirmed request must expose Retry after refresh.
+ useEffect(()=>{
+  if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
+ },[instances]);
+ const load=useCallback(async(expectedProgressInstanceId?:string)=>{const epoch=++loadEpoch.current;
+  if(process.env.NODE_ENV==='development'&&typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='1'){
+    setLayoutPreview(true);setUser('preview');setReady(true);setQuests([]);setRecoveryQuests([]);setInstances([]);setXp(0);setMessage('');return false;
   }
-
-  const activeQuests = quests.filter((quest) => quest.active && !doneQuestIds.has(quest.id));
-  const doneQuests = quests.filter((quest) => quest.active && doneQuestIds.has(quest.id));
-  // Daily quests done today reopen tomorrow; one-time quests stay completed.
-  const doneTodayQuests = doneQuests.filter((quest) => quest.cadence === 'daily');
-  const completedQuests = doneQuests.filter((quest) => quest.cadence !== 'daily');
-  const inactiveQuests = quests.filter((quest) => !quest.active);
-  const renderQuest = (quest: Quest) => {
-    const latest = notes.find((note) => note.quest_id === quest.id);
-    const done = doneQuestIds.has(quest.id);
-    return <div className="quest quest-tappable" key={quest.id} onClick={(event) => { if (shouldOpenQuestCard(event.target as Element, String(window.getSelection?.() ?? ''))) router.push(questDetailHref(quest.id)); }}><div className="quest-main"><div className="quest-title"><Link className="quest-title-link" href={questDetailHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : 'One-time'}{doneQuestIds.has(quest.id) ? (quest.cadence === 'daily' ? ' · ✓ Done today' : ' · ✓ Completed') : ''}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions">{done && quest.active ? <span className="tag" aria-label={`${quest.title} done`}>✓ Done</span> : <a className="btn ghost" href={questDetailHref(quest.id)}>View progress</a>}</div></div>;
-  };
-
-  return (
-    <main className="wrap">
-      <header className="top">
-        <div>
-          <div className="eyebrow">LIFE ASCENSION</div>
-          <h1>Quest journal</h1>
-          <p className="muted">Track notes and progress here. Complete quests on Home to earn XP.</p>
-        </div>
-        <a className="btn ghost" href="/">Quest board</a>
-      </header>
-      <section className="panel" aria-label="Active quest journal"><h2>Active quests ({activeQuests.length})</h2>{activeQuests.length === 0 && <p className="muted">{doneQuests.length > 0 ? 'All caught up for today.' : 'No active quests. Add one from Home.'}</p>}{activeQuests.map(renderQuest)}</section>
-      {doneTodayQuests.length > 0 && <CollapsibleSection title="Done today" count={doneTodayQuests.length} label="Done today journal"><p className="muted">Daily quests reopen tomorrow on the quest board.</p>{doneTodayQuests.map(renderQuest)}</CollapsibleSection>}
-      {completedQuests.length > 0 && <CollapsibleSection title="Completed" count={completedQuests.length} label="Completed journal">{completedQuests.map(renderQuest)}</CollapsibleSection>}
-      {inactiveQuests.length > 0 && <section className="panel"><button type="button" className="btn ghost" aria-expanded={showInactive} onClick={() => setShowInactive(value => !value)}>{showInactive ? '▾' : '▸'} Archived quests ({inactiveQuests.length})</button>{showInactive && inactiveQuests.map(renderQuest)}</section>}
-      <p className="message" role="status" aria-live="polite">{message}</p>
-    </main>
-  );
+  setLayoutPreview(false);const s=supabase();const {data:{user},error:authError}=await s.auth.getUser();if(epoch!==loadEpoch.current)return false;const nextAccount=authError?null:(user?.id||null);if(accountRef.current!==nextAccount){accountRef.current=nextAccount;setQuests([]);setInstances([]);setRecoveryQuests([]);setRecoveryIds([]);setXp(null);}setUser(nextAccount);setReady(true);if(authError||!user)return false;
+ // Recover only journal-backed older completed instances owned by this signed-in user.
+ // Never query arbitrary history or trust a browser key without server owner filtering.
+ let pendingIds:string[]=[];try{pendingIds=pendingProgressInstanceIds(localStorage)}catch{/* Storage getter denied; never query broad history. */}
+ const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(epoch!==loadEpoch.current)return false;if(qe){setMessage(qe.message);return false}const all=q||[];const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));if(epoch!==loadEpoch.current)return false;const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return false}const today=todayLocal();
+const goalIds=all.filter(q=>q.quest_type==='goal').map(q=>q.id);
+const onceIds=all.filter(q=>q.quest_type==='scheduled'&&q.cadence==='once').map(q=>q.id);
+const [{data:todayRows,error:te},{data:goals,error:ge},{data:openOnce,error:oe},{data:ledger,error:le},{data:recoveries,error:re}]=await Promise.all([
+ s.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id',user.id).eq('due_date',today).limit(1000),
+ goalIds.length?s.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id',user.id).in('quest_id',goalIds).limit(1000):Promise.resolve({data:[] as Instance[],error:null}),
+ onceIds.length?s.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id',user.id).in('quest_id',onceIds).neq('status','completed').limit(1000):Promise.resolve({data:[] as Instance[],error:null}),
+ s.rpc('get_lifetime_xp'),
+ pendingIds.length?s.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id',user.id).in('id',pendingIds).eq('status','completed').limit(100):Promise.resolve({data:[] as Instance[],error:null})
+]);
+if(epoch!==loadEpoch.current)return false;
+if(te||ge||oe||le||re){setMessage(te?.message||ge?.message||oe?.message||le?.message||re?.message||'Unable to load');return false}
+// A pending retry must remain visible if its quest was archived after completion.
+// Fetch metadata only for server-confirmed, owner-scoped recovered instances.
+const missingRecoveryQuestIds=[...new Set((recoveries||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
+const {data:missingRecoveryQuests,error:missingRecoveryError}=missingRecoveryQuestIds.length
+ ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
+ :{data:[] as Quest[],error:null};
+if(epoch!==loadEpoch.current)return false;
+if(missingRecoveryError){setMessage(missingRecoveryError.message);return false}
+const verifiedXp = verifiedLifetimeXp(ledger);
+setQuests(all);setRecoveryQuests(missingRecoveryQuests||[]);
+const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(goals||[]),...(openOnce||[]),...(recoveries||[])])rows.set(row.id,row);
+setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(verifiedXp);
+if(verifiedXp===null){
+ setMessage('Lifetime XP could not be verified. Refresh to retry; no XP was changed.');
+ return false;
 }
-
-function preview(note: string) {
-  return note.length > 140 ? `${note.slice(0, 140)}…` : note;
+// A successful page reload is not proof of this save if its instance was omitted.
+// Keep the original idempotent request until an owner-scoped refreshed row is visible.
+return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false},[]);
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const next=window.location.pathname+window.location.search+window.location.hash;
+  setLoginHref('/login?next='+encodeURIComponent(next||'/quests'));
+  if(!user)return;
+  const proposedTitle=params.get('quest');
+  const proposedDomain=params.get('domain');
+  const proposedCadence=params.get('cadence');
+  if(proposedTitle && proposedTitle.trim().length<=120){
+    setTitle(proposedTitle.trim());
+    if(DOMAINS.some(d=>d[0]===proposedDomain))setDomain(proposedDomain!);
+    if(proposedCadence==='once'||proposedCadence==='daily')setCadence(proposedCadence);
+    setShowQuestForm(true);setMessage('AI quest proposal loaded. Review and select Add quest to save it.');
+    window.history.replaceState({},'',window.location.pathname);
+  }
+ },[user]);
+ // Opening the creator must visibly do something on iPhone: bring the form into view and focus its first field.
+ useEffect(()=>{if(!showQuestForm||!openQuestFormOnRender.current)return;openQuestFormOnRender.current=false;const form=questFormRef.current;if(!form)return;form.scrollIntoView({behavior:'smooth',block:'start'});form.querySelector<HTMLInputElement>('#quest-title')?.focus({preventScroll:true})},[showQuestForm]);
+ useEffect(()=>{void load();const {data:{subscription}}=supabase().auth.onAuthStateChange(()=>{void load()});return()=>subscription.unsubscribe()},[load]);
+ async function add(e:React.FormEvent){
+  e.preventDefault();
+  if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}
+  if(!title.trim()||busy||!user||questCreateInFlight.current)return;
+  // Lock synchronously: a second tap can arrive before React commits busy state.
+  questCreateInFlight.current=true;
+  const operationAccount=accountRef.current;
+  setBusy(true);
+  try {
+   const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
+   const {error}=trackProgress
+    ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
+    : await supabase().rpc('create_scheduled_quest',payload);
+   // An old account's response must not update the newly signed-in account's UI.
+   if(accountRef.current!==operationAccount)return;
+   if(error){setMessage(error.message);return}
+   setMessage('Quest scheduled.');
+   setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);
+   try {
+    await load();
+   } catch {
+    // The create RPC succeeded. A subsequent failed refresh must not imply creation failed.
+    if(accountRef.current===operationAccount)setMessage('Quest created, but board refresh failed. Refresh to view it; do not add it again.');
+   }
+  } catch {
+   // A lost response may follow a successful server commit; never auto-repeat creation.
+   if(accountRef.current===operationAccount)setMessage('Quest creation not confirmed. Refresh your board before trying again.');
+  } finally {
+   questCreateInFlight.current=false;
+   setBusy(false);
+  }
+ }
+ async function act(id:string,action:'complete'|'defer'|'resume'){
+  if(layoutPreview){setMessage('Layout preview. Sign in to update quests.');return}
+  if(busy||questActionInFlight.current)return;
+  // Completion is confirmed in-app (ConfirmCompleteButton two-step tap) before act() runs.
+  // A second tap can fire before React commits the busy state.
+  questActionInFlight.current=true;
+  const operationAccount=accountRef.current;
+  setBusy(true);
+  try {
+    if(action==='complete'){
+      // Only the versioned, quest-scoped receipt may justify a new XP claim.
+      // QA must include Alpha PR #31's reviewed v2 migration before this draft is deployed.
+      const {data,error}=await supabase().rpc('set_quest_instance_status_v2',{p_instance_id:id,p_action:action});
+      if(accountRef.current!==operationAccount)return;
+      setMessage(error?.message||completionFeedback(data,id));
+    } else {
+      const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});
+      if(accountRef.current!==operationAccount)return;
+      setMessage(error?.message||(action==='defer'?'Quest deferred without penalty.':'Quest returned to your board.'));
+    }
+    await load();
+  } catch {
+    if(accountRef.current===operationAccount)setMessage('Quest update not confirmed. Refresh before retrying.');
+  } finally {
+    questActionInFlight.current=false;
+    setBusy(false);
+  }
+ }
+ async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{
+  if(layoutPreview||busy)return 'retry';
+  const operationAccount=accountRef.current;
+  const operationEpoch=loadEpoch.current;
+  if(!operationAccount)return 'retry';
+  const operationIsCurrent=()=>accountRef.current===operationAccount&&loadEpoch.current===operationEpoch;
+  setBusy(true);
+  try {
+   const {data,error}=await supabase().rpc('log_quest_progress',{p_instance_id:id,p_request_id:requestId,p_delta:delta});
+   if(!operationIsCurrent())return 'retry';
+   if(error){
+    // Transport/server errors may have committed before the response was lost.
+    const definite=/^(22|23|P0001)/.test(error.code ?? '');
+    const ambiguous=!definite;
+    if(!ambiguous){
+     const refreshed=await load();
+     if(!refreshed||accountRef.current!==operationAccount||loadEpoch.current!==operationEpoch+1)return 'retry';
+    }
+    setMessage(ambiguous?'Save not confirmed. Retry the pending operation.':error.message);
+    return ambiguous?'retry':'rejected';
+   }
+   const confirmation=confirmedProgressResult(data);
+   if(!confirmation){
+    // A missing/malformed RPC result may follow a committed operation: keep its request ID.
+    setMessage('Progress save response not verified. Retry the same operation.');
+    return 'retry';
+   }
+   const refreshed=await load(id);
+   if(!refreshed||typeof refreshed!=='object'||refreshed.current_amount!==confirmation.currentAmount||refreshed.status!==confirmation.status){
+    // Preserve the original idempotent request until refreshed server state is verified.
+    if(accountRef.current===operationAccount)setMessage('Progress confirmed by server, but refresh was not verified. Retry the same operation.');
+    return 'retry';
+   }
+   if(accountRef.current!==operationAccount||loadEpoch.current!==operationEpoch+1)return 'retry';
+   setMessage(confirmation.status === 'completed'
+    ? 'Quest completion confirmed. XP is displayed from your account ledger.'
+    : 'Progress saved.');
+   return 'saved';
+  } catch {
+   if(operationIsCurrent())setMessage('Connection lost. Retry the pending operation; do not log again.');
+   return 'retry';
+  } finally {setBusy(false);}
+ }
+ // A confirmed retry clears its journal after load() snapshots pending IDs.
+ // Reconcile the parent recovery list without another network query.
+ function journalResolved(instanceId:string){setRecoveryIds(ids=>ids.filter(id=>id!==instanceId))}
+ async function logout(){if(layoutPreview){window.location.assign('/login');return}try{const {error}=await supabase().auth.signOut();if(error){setMessage('Sign out was not confirmed. Please retry.');return}++loadEpoch.current;accountRef.current=null;setQuests([]);setInstances([]);setRecoveryQuests([]);setRecoveryIds([]);setXp(null);setUser(null)}catch{setMessage('Sign out was not confirmed. Please retry.')}}
+ if(!ready)return <main className="wrap">Loading your character…</main>;
+ if(!user)return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Your adventure awaits</h1><p className="muted">Real actions. Real progress. Your private quest journal.</p><a className="btn" href={loginHref}>Sign in</a></main>;
+ const today=todayLocal();const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.instance!.status!=='completed'||x.instance!.due_date===today));const completedQuests=visible.filter(x=>x.instance?.status==='completed');const earlierRecoveries=recoverableCompletedEntries(instances,recoveryIds,quests,recoveryQuests,completedQuests.map(x=>x.instance!.id));const activeQuests=visible.filter(x=>x.instance?.status!=='completed');const completed=completedQuests.length;const lvl=xp===null?null:levelFor(xp);
+ // Issue #46: the board shows every open quest the Journal counts, grouped by when it is due.
+ // Today = daily quests and anything due today or overdue; This Week = due in the next 7 days; Upcoming = later.
+ const weekEnd=addDays(today,7);
+ const sectionFor=(due:string)=>due<=today?'today':due<=weekEnd?'week':'upcoming';
+ const todayQuests=activeQuests.filter(x=>x.quest.cadence==='daily'||sectionFor(x.instance!.due_date)==='today');
+ const weekQuests=activeQuests.filter(x=>x.quest.cadence!=='daily'&&sectionFor(x.instance!.due_date)==='week');
+ const laterQuests=activeQuests.filter(x=>x.quest.cadence!=='daily'&&sectionFor(x.instance!.due_date)==='upcoming');
+ // Quests that start in the future and have no instance yet (e.g. a daily habit starting next week).
+ const notStarted=quests.filter(q=>q.scheduled_for&&q.scheduled_for>today&&!visible.some(v=>v.quest.id===q.id)&&!instances.some(i=>i.quest_id===q.id)).sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||''));
+ const weekNotStarted=notStarted.filter(q=>q.scheduled_for!<=weekEnd),laterNotStarted=notStarted.filter(q=>q.scheduled_for!>weekEnd);
+ const openCount=activeQuests.length+notStarted.length;const todayTotal=todayQuests.length+completed;
+ // Mirrors the server completion window: one-time chores open on their due date; goals may finish early.
+ const canComplete=(quest:Quest,instance:Instance)=>instance.status==='available'&&(quest.cadence==='daily'?instance.due_date<=today:quest.quest_type==='goal'||instance.due_date<=today);
+ const openCard=(e:React.MouseEvent<HTMLElement>,quest:Quest)=>{const selection=typeof window!=='undefined'?String(window.getSelection?.()??''):'';if(shouldOpenQuestCard(e.target as Element,selection))router.push(questDetailHref(quest.id))};
+ const cardTitle=(quest:Quest)=><div className="quest-title"><Link className="quest-title-link" href={questDetailHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div>;
+ const questCard=({quest,instance}:{quest:Quest;instance?:Instance})=><div className="quest quest-tappable" key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}<div className="muted">{quest.quest_type==='goal'?'Deadline':'Due'} {instance?.due_date}{instance&&instance.due_date<today&&instance.status!=='completed'?' · Overdue':''}{quest.cadence==='daily'?' · Daily':''}</div><QuestDetails quest={quest} instance={instance!}/></div>{instance?.status==='available'&&quest.target_amount!=null&&canComplete(quest,instance)&&<QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/> }<div className="actions quest-card-actions" aria-label={`Actions for ${quest.title}`}>{instance?.status==='completed'?<span className="tag">✓ Done</span>:instance?.status==='deferred'?<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'resume')}>Resume</button>:instance&&canComplete(quest,instance)?<><button className="btn ghost" disabled={busy} onClick={()=>act(instance!.id,'defer')}>Defer</button>{(quest.target_amount==null||instance.current_amount>=quest.target_amount)&&<ConfirmCompleteButton label="Complete" questTitle={quest.title} disabled={busy} onConfirm={()=>act(instance!.id,'complete')}/>}</>:<span className="muted">Opens {instance?.due_date}</span>}</div></div>;
+ const notStartedCard=(q:Quest)=><div className="quest quest-tappable" key={q.id} onClick={e=>openCard(e,q)}><div className="quest-main">{cardTitle(q)}<div className="muted">{q.cadence==='daily'?'Daily · starts':q.quest_type==='goal'?'Deadline':'Scheduled'} · {q.scheduled_for}</div></div></div>;
+ return <main className="wrap quest-board-page">{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}<header className="top board-header"><div><div className="eyebrow">LIFE ASCENSION</div><h1>{mode==='daily'?'Today’s Quests':'The Adventurer’s Path'}</h1><p className="muted">{new Date(dateString()+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p></div><button className="btn ghost" onClick={logout}>Sign out</button></header>
+ <nav className="tabs board-mode-tabs" aria-label="View mode"><button className={'btn '+(mode==='daily'?'':'ghost')} onClick={()=>setMode('daily')}>Daily Mode</button><button className={'btn '+(mode==='adventure'?'':'ghost')} onClick={()=>setMode('adventure')}>Adventure Mode</button></nav>
+ <section className="panel board-summary"><div className="eyebrow">{lvl?`LEVEL ${lvl.level} · ${ADVENTURER_CLASS.toUpperCase()}`:"LEVEL UNAVAILABLE · XP NOT VERIFIED"}</div><div className="xp">{xp===null?"—":xp} <small>lifetime XP</small></div><p className="muted">{completed} of {todayTotal} today’s quests completed · {openCount} open in total · No XP penalty for missed days</p><div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={Math.max(todayTotal,1)} aria-valuenow={completed}><span style={{width:(todayTotal?completed/todayTotal*100:0)+'%'}}/></div></section>
+ {mode==='adventure'&&<section className="panel"><div className="eyebrow">CHAPTER I</div><h2>The Awakening</h2><p className="muted">Your character grows through real actions. Fantasy encounters are future upgrades.</p></section>}
+ <section className="panel board-panel" aria-label="Quest board"><h2>Quest Board</h2>{visible.length===0&&notStarted.length===0&&<p className="muted">Create your first quest below.</p>}{openCount===0&&completed>0&&<p className="muted">All caught up! Your completed quests are tucked away below.</p>}
+ <div className="board-section" aria-label="Today"><h3>Today <span className="muted">({todayQuests.length})</span></h3>{todayQuests.length===0?<p className="muted">Nothing open for today.</p>:todayQuests.map(questCard)}</div>
+ <div className="board-section" aria-label="This Week"><h3>This Week <span className="muted">({weekQuests.length+weekNotStarted.length})</span></h3><p className="muted">Due in the next 7 days (Chicago time). Goals can be completed early.</p>{weekQuests.length+weekNotStarted.length===0?<p className="muted">Nothing else due this week.</p>:<>{weekQuests.map(questCard)}{weekNotStarted.map(notStartedCard)}</>}</div>
+ <div className="board-section" aria-label="Upcoming"><h3>Upcoming <span className="muted">({laterQuests.length+laterNotStarted.length})</span></h3><p className="muted">Scheduled quests and deadlines after this week.</p>{laterQuests.length+laterNotStarted.length===0?<p className="muted">Nothing scheduled later.</p>:<>{laterQuests.map(questCard)}{laterNotStarted.slice(0,20).map(notStartedCard)}</>}</div>
+ {completed>0&&<div className="board-section board-completed" aria-label="Completed"><button type="button" className="btn ghost completed-board-toggle" aria-expanded={showCompleted} aria-controls="completed-quests-list" onClick={()=>setShowCompleted(v=>!v)}><span aria-hidden="true">{showCompleted?'▾':'▸'}</span> Completed ({completed})</button>{showCompleted&&<div id="completed-quests-list">{completedQuests.map(({quest,instance})=><div className="quest quest-tappable" key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}<div className="muted">Completed · {instance?.due_date}</div><QuestDetails quest={quest} instance={instance!}/></div><div className="actions"><span className="tag">✓ Done</span></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance!} disabled={busy} onLog={logProgress}/></div>)}</div>}</div>}</section>
+ {earlierRecoveries.length>0&&<section className="panel"><h2>Completed quests with pending saves</h2><p className="muted">Review the original saved request before logging new progress. Retry never creates another request ID.</p>{earlierRecoveries.map(({quest,instance})=><div className="quest" key={instance.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">Completed · {instance.due_date}</div></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/></div>)}</section>}
+ <section className="panel board-create"><button type="button" className="btn ghost board-create-toggle" aria-expanded={showQuestForm} aria-controls="quest-create-form" onClick={()=>{openQuestFormOnRender.current=!showQuestForm;setShowQuestForm(value=>!value)}}>{showQuestForm?'▾ Hide quest creator':'+ Create a quest'}</button>{showQuestForm&&<form id="quest-create-form" ref={questFormRef} className="quest-create-form" onSubmit={add}><h2>Create or approve a quest</h2><p className="muted">Quests proposed in ChatGPT can open here prefilled. Review before saving.</p><label htmlFor="quest-title">What real-world action will you take?</label><input id="quest-title" className="field" maxLength={120} required placeholder="e.g. Fold and put away laundry" value={title} onChange={e=>setTitle(e.target.value)}/><div className="form-row"><label>Life domain<select className="field" value={domain} onChange={e=>setDomain(e.target.value)}>{DOMAINS.map(d=><option key={d[0]} value={d[0]}>{d[1]}</option>)}</select></label><label>Frequency<select className="field" value={cadence} disabled={questType==='goal'} onChange={e=>setCadence(e.target.value as 'once'|'daily')}><option value="daily">Every day</option><option value="once">One-time</option></select></label></div><label>Quest type<select className="field" value={questType} onChange={e=>{const v=e.target.value as 'scheduled'|'goal';setQuestType(v);if(v==='goal')setCadence('once')}}><option value="scheduled">Scheduled chore / habit</option><option value="goal">Goal with deadline (early completion allowed)</option></select></label><label htmlFor="quest-date">{questType==='goal'?'Goal deadline':'First due date'} (Chicago time)</label><input id="quest-date" className="field" type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><label style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" checked={trackProgress} onChange={e=>setTrackProgress(e.target.checked)}/> Track partial progress (optional)</label>{trackProgress&&<div className="form-row"><label>Target amount<input className="field" type="number" min={1} max={1000000} step={1} value={targetAmount} onChange={e=>setTargetAmount(e.target.value)}/></label><label>Unit<input className="field" maxLength={32} value={progressUnit} onChange={e=>setProgressUnit(e.target.value)}/></label><label>Quick-log increment<input className="field" type="number" min={1} max={targetAmount||1} step={1} value={progressIncrement} onChange={e=>setProgressIncrement(e.target.value)}/></label></div>}<button className="btn" disabled={busy||!title.trim()||(trackProgress&&(!Number.isInteger(Number(targetAmount))||Number(targetAmount)<1||Number(targetAmount)>1000000||!progressUnit.trim()||!Number.isInteger(Number(progressIncrement))||Number(progressIncrement)<1||Number(progressIncrement)>Number(targetAmount)))}>Schedule quest</button></form>}</section>
+ <p className="message" role="status" aria-live="polite">{message}</p><p className="foot board-foot">Self-reported MVP. Health, finance, and AI integrations are not active. <a href="/quests/journal">Quest notes</a> · <a href="/settings/api-keys">API keys</a> · <a href="/settings/password">Set or change password</a></p></main>
 }
+function dateString(){return todayLocal()}
+function addDays(date:string,days:number){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}

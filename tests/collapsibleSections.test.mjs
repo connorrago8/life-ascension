@@ -35,7 +35,7 @@ test('CollapsibleSection renders closed by default with "Title (N)", a chevron a
 });
 
 test('Journal splits "Done today" and "Completed" into collapsible sections without touching quest actions', () => {
-  const journal = read('app/(app)/quests/page.tsx');
+  const journal = read('app/(app)/quests/journal/page.tsx');
   assert.match(journal, /<CollapsibleSection title="Done today" count=\{doneTodayQuests\.length\}/);
   assert.match(journal, /<CollapsibleSection title="Completed" count=\{completedQuests\.length\}/);
   assert.doesNotMatch(journal, /defaultOpen/, 'both start closed');
@@ -44,7 +44,7 @@ test('Journal splits "Done today" and "Completed" into collapsible sections with
 });
 
 test('Home board and Home preview keep Completed closed by default with a count and accessible toggle', () => {
-  const home = read('app/(app)/page.tsx');
+  const home = read('app/(app)/quests/page.tsx');
   assert.match(home, /const \[showCompleted,setShowCompleted\]=useState\(false\)/);
   assert.match(home, /aria-expanded=\{showCompleted\}/);
   assert.match(home, /Completed \(\{completed\}\)/);

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 function extractLoad() {
- const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
+ const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
  const marker='const load=useCallback(async(expectedProgressInstanceId?:string)=>{',start=home.indexOf(marker),end=home.indexOf('},[]);',start);
  assert.ok(start>=0&&end>start,'Home load callback boundaries changed');
  const code=('async(expectedProgressInstanceId)=>{'+home.slice(start+marker.length,end)+'}')

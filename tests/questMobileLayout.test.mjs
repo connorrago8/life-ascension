@@ -46,7 +46,7 @@ test('custom amount cannot change while saving or retrying', () => {
 });
 
 test('quest card does not promise XP before authoritative reward confirmation', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(home, /· \+1 XP/);
 });
 
@@ -56,7 +56,7 @@ test('definitive progress failures are announced to assistive technology', () =>
 });
 
 test('mobile quest card prioritizes completion without removing secondary actions', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /quest-card-actions/);
   assert.match(home, /aria-label=\{\x60Actions for \$\{quest\.title\}\x60\}/);
   assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px;/);
@@ -83,7 +83,7 @@ test('authenticated character hides sample progression level', () => {
 });
 
 test('quest metadata uses progressive disclosure', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /<QuestDetails quest=\{quest\} instance=\{instance!\}\/>/);
   const componentUrl = new URL('../components/QuestDetails.tsx', import.meta.url);
   const source = readFileSync(componentUrl, 'utf8');

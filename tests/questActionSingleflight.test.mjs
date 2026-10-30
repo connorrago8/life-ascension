@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
+const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
 const start=home.indexOf("async function act(id:string,action:'complete'|'defer'|'resume'){");
 const end=home.indexOf('async function logProgress(',start);
 assert.ok(start>=0&&end>start,'Quest action callback boundaries changed');

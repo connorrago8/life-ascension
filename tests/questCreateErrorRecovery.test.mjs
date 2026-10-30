@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const page = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+const page = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
 const start = page.indexOf('async function add(e:React.FormEvent)');
 const end = page.indexOf('async function act(', start);
 const handler = page.slice(start, end);
