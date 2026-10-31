@@ -26,12 +26,11 @@ export function useQuestBoardV3Selection(){
   if(qe){setMessage("Could not load quest pool.");return}
   const pool=((rows||[]) as DbQuest[]).map(q=>({id:q.id,title:q.title,cadence:"daily" as const,source:"manual" as const,enabled:q.active,priority:5,createdAt:q.created_at,category:q.domain} satisfies Quest));
   const proposed=selectDailyQuests(pool,new Date()).map(q=>q.id);
-  // ON CONFLICT DO NOTHING: another device can win; always re-read the winner.
-  const {error:writeError}=await client.from("quest_board_v3_selections").upsert({owner_id:user.id,day,quest_ids:proposed},{onConflict:"owner_id,day",ignoreDuplicates:true});
-  if(writeError){setMessage("Daily selection could not be saved.");return}
-  const {data:final,error:finalError}=await client.from("quest_board_v3_selections").select("quest_ids").eq("owner_id",user.id).eq("day",day).single();
-  if(finalError||!final){setMessage("Unable to verify saved daily selection.");return}
-  setSelection({day,questIds:final.quest_ids as string[],persisted:true});setMessage("");
+  // Server RPC validates ownership, gameplay-day boundary and immutable first writer.
+  const {data:frozen,error:freezeError}=await client.rpc("quest_board_v3_freeze_selection",{p_day:day,p_quest_ids:proposed});
+  if(freezeError||!Array.isArray(frozen)){setMessage("Daily selection could not be frozen on the server.");return}
+  setSelection({day,questIds:frozen as string[],persisted:true});setMessage("");
+
  },[]);
  useEffect(()=>{void refresh()},[refresh]);
  return {selection,message,refresh};
