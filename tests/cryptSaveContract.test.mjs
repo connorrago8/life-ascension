@@ -20,3 +20,15 @@ test('malformed and incompatible saves fail closed', () => {
   assert.equal(parseCryptSave(JSON.stringify({ ...good, run: { ...good.run, phase: 'fight' } })), null);
   assert.equal(parseCryptSave(JSON.stringify({ ...good, run: { ...good.run, seed: -1 } })), null);
 });
+
+
+test('defeat cannot be retried or escaped into the same run', () => {
+  const run = createRun(99);
+  const defeated = { ...run, phase: 'fight', encounterId: 'rat', hp: 0, battle: { status: 'lost' } };
+  assert.equal(reduceRun(defeated, { type: 'back' }), defeated);
+  assert.equal(reduceRun(defeated, { type: 'retry-fight' }), defeated);
+  const newRun = reduceRun(defeated, { type: 'restart', seed: 100 });
+  assert.equal(newRun.phase, 'intro');
+  assert.equal(newRun.seed, 100);
+  assert.equal(newRun.fightCleared, false);
+});
