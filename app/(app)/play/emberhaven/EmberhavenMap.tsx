@@ -19,11 +19,12 @@ export function EmberhavenMap() {
   const [facing, setFacing] = useState<'north' | 'south' | 'east' | 'west'>('south');
   const move = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
     setFacing(direction);
-    setSteps((count) => count + 1);
-    setPosition((old) => ({
-      x: Math.max(8, Math.min(92, old.x + (direction === 'east' ? 8 : direction === 'west' ? -8 : 0))),
-      y: Math.max(8, Math.min(92, old.y + (direction === 'south' ? 8 : direction === 'north' ? -8 : 0))),
-    }));
+    setPosition((old) => {
+      const x = Math.max(8, Math.min(92, old.x + (direction === 'east' ? 8 : direction === 'west' ? -8 : 0)));
+      const y = Math.max(8, Math.min(92, old.y + (direction === 'south' ? 8 : direction === 'north' ? -8 : 0)));
+      if (x !== old.x || y !== old.y) setSteps((count) => count + 1);
+      return { x, y };
+    });
   }, []);
   const nearby = landmarks.find((landmark) => Math.hypot(position.x - landmark.x, position.y - landmark.y) < 14);
   const active = landmarks.find((landmark) => landmark.id === selected) ?? landmarks[2];
