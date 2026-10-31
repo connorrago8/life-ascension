@@ -171,10 +171,12 @@ test('migration guards: single locked mint, no client mint, Crypt cap and RLS un
 test('board UI: fire badge, 5-quest daily board with off-board list, weekly section, 44px targets', () => {
   const board = read('app/(app)/quests/page.tsx');
   const css = read('app/style.css');
-  assert.match(board, /className=\{'streak-badge'/);
+  assert.match(board, /className=\{'streak-badge lit'/);
+  assert.match(board, /streak\?\.\[quest\.id\]/, 'badge belongs to its quest');
+  assert.doesNotMatch(board.slice(board.indexOf('<header className="top board-header"'), board.indexOf('<nav className="tabs')), /streak-badge/, 'no account-wide streak badge');
   assert.match(board, /dailyBoardIds\(user,today,/);
   assert.match(board, /More daily quests \(\{offBoardQuests\.length\}\)/);
-  assert.match(board, /still counts: \+1 XP and your streak/);
+  assert.match(board, /still counts: \+1 XP and this quest’s streak/);
   assert.match(board, /weeklyVisible\(user,q\.id,today/);
   assert.match(board, /Weekly · open until Sunday night/);
   assert.match(board, /streakFor&&streakFor\.owner===user/, 'never shows another account’s streak');

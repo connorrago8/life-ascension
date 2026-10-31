@@ -16,6 +16,11 @@ on:
       - 'scripts/verify-qa-preview-env-metadata.mjs'
       - 'lib/supabaseRuntimeConfig.ts'
       - 'tests/deployment-env.test.mjs'
+      - 'app/(app)/quests/page.tsx'
+      - 'lib/nav.ts'
+      - 'tests/questStreaks.test.mjs'
+      - 'tests/characterScreen.test.mjs'
+      - 'supabase/migrations/*per_quest_streak_badges.sql'
       - 'tests/qa-browser-bundle-after-build.test.mjs'
   workflow_dispatch:
 

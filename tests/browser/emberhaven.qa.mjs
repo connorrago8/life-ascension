@@ -148,9 +148,15 @@ try {
     assert.deepEqual((await readRun()).state, original.state, 'reload must preserve the complete run state');
     await page.goto(`${base}/play/emberhaven`);
     await page.getByRole('button', { name: 'Begin the Lantern Route', exact: true }).waitFor();
+    await page.goto(`${base}/quests?preview=1`);
+    await page.getByText('Layout preview. Sign in to load your quests.', { exact: true }).waitFor();
+    assert.equal(await page.locator('header .streak-badge').count(), 0, 'no global daily streak');
+    assert.ok(await page.locator('.quest-title .streak-badge').count() > 0, 'daily streaks appear next to quest titles');
+    await page.getByRole('link', { name: 'Hub', exact: true }).waitFor();
+    assert.equal(await page.getByRole('link', { name: 'Play', exact: true }).count(), 0);
     assert.deepEqual(errors, []);
     assert.deepEqual(violations, []);
-    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, Lantern Route clue collection and puzzle retry/completion, guest Crypt resume and reload, no external requests or network writes`);
+    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, Lantern Route clue collection and puzzle retry/completion, guest Crypt resume and reload, per-quest badges and Hub navigation, no external requests or network writes`);
     await context.close();
   }
 } finally {
