@@ -85,7 +85,7 @@ export default function EmberhavenPage() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <span aria-hidden="true" style={{
                 width: 46, height: 46, flexShrink: 0, display: 'grid', placeItems: 'center',
-                border: '1px solid #506a60', borderRadius: 12, color: 'var(--mint)', fontSize: 24,
+                border: '1px solid #506a60', borderRadius: 12, color: '#f0c181', fontSize: 24,
               }}>{place.symbol}</span>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p style={{ color: 'var(--mint)', fontSize: 10, letterSpacing: '.12em', fontWeight: 700 }}>{place.kicker}</p>
