@@ -22,8 +22,11 @@ import {
 } from '../../lib/crypt/content';
 import { createRun, nodeAccess, reduceRun, type Phase, type RunCommand, type RunState } from '../../lib/crypt/run';
 import { readScopedRunValue, scopeRunValue, toggleScopedRunFlag, type RunScopedValue } from '../../lib/crypt/runScopedUi';
+import { parseCryptSave, serializeCryptSave } from '../../lib/crypt/saveContract';
 import { CombatView } from './CombatView';
 import { PixelArt } from './PixelArt';
+
+const LOCAL_PREVIEW_SAVE_KEY = 'life-ascension:crypt:preview-save:v1';
 
 function freshSeed(): number {
   const buf = new Uint32Array(1);
@@ -53,9 +56,36 @@ export function CryptRun() {
   const [endingChoice, setEndingChoice] = useState<RunScopedValue<'leave' | 'inspect'>>(null);
   const [showFieldNotes, setShowFieldNotes] = useState<RunScopedValue<boolean>>(null);
 
+  const [saveReady, setSaveReady] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   useEffect(() => {
-    setRun(createRun(freshSeed()));
+    // Preview-only browser persistence. Account-scoped server saves are a separate milestone.
+    try {
+      const existing = window.localStorage.getItem(LOCAL_PREVIEW_SAVE_KEY);
+      if (existing) {
+        const restored = parseCryptSave(existing);
+        if (!restored) {
+          setSaveError('An incompatible Crypt save was found. It was not overwritten.');
+          setSaveReady(true);
+          return;
+        }
+        setRun(restored.run);
+      } else {
+        setRun(createRun(freshSeed()));
+      }
+    } catch {
+      setSaveError('Browser storage is unavailable. This preview run may not survive a refresh.');
+      setRun(createRun(freshSeed()));
+    }
+    setSaveReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!saveReady || !run || saveError) return;
+    try { window.localStorage.setItem(LOCAL_PREVIEW_SAVE_KEY, serializeCryptSave(run)); }
+    catch { setSaveError('Could not save this run. Keep this tab open to avoid losing progress.'); }
+  }, [run, saveReady, saveError]);
 
   useEffect(() => {
     if (run) window.scrollTo(0, 0);
@@ -79,6 +109,8 @@ export function CryptRun() {
   function restart() {
     setEndingChoice(null);
     setShowFieldNotes(null);
+    setSaveError(null);
+    try { window.localStorage.removeItem(LOCAL_PREVIEW_SAVE_KEY); } catch { /* preview storage may be disabled */ }
     setRun(createRun(freshSeed()));
   }
 
@@ -87,7 +119,8 @@ export function CryptRun() {
       <main className="screen crypt-screen">
         <p className="page-brand">LIFE ASCENSION</p>
         <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
-        <p className="muted">{FLOOR.loading}</p>
+        <p className="muted">{saveError ?? FLOOR.loading}</p>
+        {saveError && <button type="button" className="btn" onClick={restart}>Discard incompatible local save and start a new run</button>}
       </main>
     );
   }
@@ -102,9 +135,10 @@ export function CryptRun() {
     <main className="screen crypt-screen" data-phase={run.phase}>
       <p className="page-brand">LIFE ASCENSION</p>
       <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
+      {saveError && <p role="alert" className="muted">{saveError}</p>}
       <header className="crypt-top">
         {run.phase === 'intro' ? (
-          <Link href="/play" prefetch={false} className="icon-btn" aria-label="Leave Crypt; unsaved dungeon progress will be lost"><BackIcon /></Link>
+          <Link href="/play" prefetch={false} className="icon-btn" aria-label="Return to adventure hub; this preview run is saved locally when browser storage is available"><BackIcon /></Link>
         ) : (
           <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
             // Returning to the sealed door should offer both endings again.
@@ -119,10 +153,10 @@ export function CryptRun() {
           {head.subtitle ? <p>{head.subtitle}</p> : null}
         </div>
         <div className="crypt-header-actions">
-          <Link href="/play" prefetch={false} className="btn ghost crypt-leave" aria-label="Leave Crypt; unsaved dungeon progress will be lost">
+          <Link href="/play" prefetch={false} className="btn ghost crypt-leave" aria-label="Return to adventure hub; this preview run is saved locally when browser storage is available">
             Leave Crypt
           </Link>
-          <button type="button" className="btn ghost crypt-restart" onClick={restart}>{FLOOR.restart}</button>
+          <button type="button" className="btn ghost crypt-restart" onClick={restart} aria-label="Abandon current preview run and start a new one">{FLOOR.restart}</button>
         </div>
       </header>
 
