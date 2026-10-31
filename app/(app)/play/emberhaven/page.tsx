@@ -79,7 +79,7 @@ export default function EmberhavenPage() {
           <article key={place.name} style={{
             border: '1px solid var(--border)',
             borderRadius: 16,
-            background: 'linear-gradient(145deg, #302d28, #191d21)',
+            background: 'linear-gradient(145deg, #3b3029, #191d21)',
             padding: 16,
           }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
