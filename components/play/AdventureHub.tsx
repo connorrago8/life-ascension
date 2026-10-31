@@ -110,6 +110,9 @@ export function AdventureHub() {
       ) : (
         <button type="button" className="btn adv-enter" disabled>{HUB.enter}</button>
       )}
+      <Link className="btn" href="/play/emberhaven" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 12 }}>
+        Visit Emberhaven town →
+      </Link>
       <p className="play-note">{HUB.note}</p>
     </main>
   );
