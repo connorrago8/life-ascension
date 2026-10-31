@@ -38,6 +38,19 @@ begin
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
  if v_xp<>1 then raise exception 'Normal quest expected 1 XP, got %',v_xp; end if;
 end $$;
+-- Assigning an already-completed quest must not retroactively change its 1 XP.
+insert into public.quests(id,owner_id,title,domain,cadence)
+values('c0000000-0000-4000-8000-000000000103','a0000000-0000-4000-8000-000000000101','Wash Dishes','home','daily');
+do $
+declare v_instance uuid; v_quest uuid; v_xp int;
+begin
+ v_instance:=public.ensure_quest_instance('c0000000-0000-4000-8000-000000000103',current_date);
+ perform public.set_quest_instance_status(v_instance,'complete');
+ v_quest:=public.quest_companion_assign_to_owner('b0000000-0000-4000-8000-000000000101','Wash Dishes');
+ if v_quest<>'c0000000-0000-4000-8000-000000000103'::uuid then raise exception 'Failed to reuse completed quest'; end if;
+ select amount into v_xp from public.xp_ledger where instance_id=v_instance;
+ if v_xp<>1 then raise exception 'Historical XP was modified'; end if;
+end $;
 -- Another owner cannot assign the companion.
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000102',true);
 do $$
