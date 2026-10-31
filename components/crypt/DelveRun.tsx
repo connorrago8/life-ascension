@@ -19,9 +19,11 @@ import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterA
 import { pathOptions, type PathOption } from '../../lib/crypt/delve/pathLabels';
 import { copiesInDeck, deckIsFull, pileSummary, type PileEntry } from '../../lib/crypt/delve/piles';
 import { runRecap, type RunRecap, type SaveMode } from '../../lib/crypt/delve/recap';
+import { STARTER_DECKS, starterSummary, type StarterId } from '../../lib/crypt/delve/starters';
 import { RunRecapView } from './RunRecap';
 import {
-  canRemoveCard, canUpgradeCard, createDelve, currentRoomChoices, effectiveAttributes, MIN_DECK_SIZE, reduceDelve, removalPreview, runLoadout,
+  canRemoveCard, canUpgradeCard, canWearDrop, createDelve, currentRoomChoices, effectiveAttributes, MIN_DECK_SIZE, reduceDelve, removalPreview, runLoadout,
+  wearPreview,
   type DelveCommand,
   type DelveState,
 } from '../../lib/crypt/delve/run';
@@ -143,7 +145,7 @@ export function DelveRun(props: DelveRunProps) {
     dispatch({
       kind: 'start',
       // Worn gear is chosen fresh at camp for each run; nothing worn carries over.
-      state: createDelve({ runId: newRunId(), seed: newSeed(), level: props.level, allocated, vaultItemIds: vault, wear }),
+      state: createDelve({ runId: newRunId(), seed: newSeed(), level: props.level, allocated, vaultItemIds: vault, wear, deckSelect: true }),
     });
   };
   const send = (command: DelveCommand) => dispatch({ kind: 'command', command });
@@ -165,6 +167,7 @@ export function DelveRun(props: DelveRunProps) {
   return (
     <main className="wrap delve" aria-label="Forgotten Crypt delve">
       <RunHeader state={state} exitHref={props.exitHref} onCamp={() => dispatch({ kind: 'clear' })} />
+      {state.phase === 'deck-select' ? <DeckSelectView send={send} /> : null}
       {state.phase === 'start-pick' ? <StartPickView state={state} send={send} /> : null}
       {state.phase === 'map' ? <MapView state={state} onChoose={(index) => send({ type: 'choose-room', row: state.row, index })} /> : null}
       {state.phase === 'combat' && state.battle ? <CombatScreen state={state} battle={state.battle} send={send} /> : null}
@@ -654,7 +657,9 @@ const PILE_NOTE: Record<PileKind, string> = {
 };
 
 /** Bottom sheet listing one pile. Sits above the bottom nav and inside the safe area. */
-function PileSheet({ kind, cards, onClose }: { kind: PileKind; cards: readonly ({ id: DeckCard } | DeckCard)[]; onClose: () => void }) {
+function PileSheet({ kind, cards, onClose, title, note }: {
+  kind: PileKind; cards: readonly ({ id: DeckCard } | DeckCard)[]; onClose: () => void; title?: string; note?: string;
+}) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const closeLatest = useRef(onClose);
   closeLatest.current = onClose;
@@ -670,10 +675,10 @@ function PileSheet({ kind, cards, onClose }: { kind: PileKind; cards: readonly (
       <button type="button" className="delve-pile-backdrop" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <div className="delve-pile-sheet" role="dialog" aria-modal="true" aria-labelledby="delve-pile-title">
         <div className="delve-pile-head">
-          <h3 id="delve-pile-title">{PILE_TITLE[kind]} · {cards.length} {cards.length === 1 ? 'card' : 'cards'}</h3>
+          <h3 id="delve-pile-title">{title ?? PILE_TITLE[kind]} · {cards.length} {cards.length === 1 ? 'card' : 'cards'}</h3>
           <button ref={closeRef} type="button" className="btn ghost delve-pile-close" onClick={onClose}>Close</button>
         </div>
-        <p className="delve-small muted delve-pile-note">{PILE_NOTE[kind]}</p>
+        <p className="delve-small muted delve-pile-note">{note ?? PILE_NOTE[kind]}</p>
         {entries.length > 0 ? <PileList entries={entries} /> : <p className="delve-small muted">No cards here.</p>}
       </div>
     </>
@@ -842,16 +847,74 @@ function CardButton({ id, battle, disabled, onPlay }: { id: DeckCard; battle: Ba
 
 /* ---------- After-room screens ---------- */
 
-function LootLine({ itemId, equipped }: { itemId: string | null; equipped: boolean }) {
+/**
+ * Gear that just dropped. It is added to the vault and is never worn automatically:
+ * the player taps Wear here (for the rest of this run) or at camp before a run.
+ */
+function LootDrop({ state, send }: { state: DelveState; send: (command: DelveCommand) => void }) {
+  const itemId = state.reward?.loot ?? null;
   if (!itemId) return null;
   const entry = lootById(itemId);
   if (!entry) return null;
+  const worn = state.loadout[entry.slot] === entry.id;
+  const wearable = canWearDrop(state, itemId);
+  const swap = wearPreview(state.loadout, itemId);
+  const current = state.loadout[entry.slot] ? lootById(state.loadout[entry.slot] as string) : null;
   return (
-    <div className={`delve-loot-drop rarity-${entry.rarity}`} role="status">
+    <div className={`delve-loot-drop rarity-${entry.rarity}`}>
       <p><strong>{RARITY_LABEL[entry.rarity]} gear: {entry.name}</strong> · {bonusLabel(entry)}</p>
       {passiveLabel(entry) ? <p className="delve-small delve-passive">✦ {passiveLabel(entry)}</p> : null}
-      <p className="delve-small muted">{entry.flavor} {equipped ? 'Equipped — look at your adventurer.' : 'Sent to your vault.'}</p>
+      <p className="delve-small muted">{entry.flavor}</p>
+      <p className="delve-small delve-loot-where" role="status">
+        {worn ? 'Worn for the rest of this run · also kept in your vault.'
+          : wearable ? 'Added to vault · tap Wear to use it this run, or Wear it at camp.'
+            : 'Added to vault · tap Wear at camp.'}
+      </p>
+      {wearable ? (
+        <div className="delve-wear-row">
+          <button type="button" className="btn ghost delve-wear-now" onClick={() => send({ type: 'wear', itemId })}
+            aria-label={`Wear ${entry.name} for the rest of this run${swap?.replaces ? `, replacing ${swap.replaces}` : ''}`}>Wear</button>
+          <span className="delve-small muted">
+            {current ? `Replaces ${current.name} (${bonusLabel(current)})` : 'Nothing worn in this slot'}
+          </span>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/** Run start: choose one of four starter decks (existing cards only). The 1-of-2 opening pick follows. */
+function DeckSelectView({ send }: { send: (command: DelveCommand) => void }) {
+  const [viewing, setViewing] = useState<StarterId | null>(null);
+  const shown = viewing ? STARTER_DECKS.find((deck) => deck.id === viewing) ?? null : null;
+  return (
+    <section aria-labelledby="delve-deck-select-title">
+      <h2 id="delve-deck-select-title">Choose your starting deck</h2>
+      <p className="delve-small muted">10 cards for this run. Then you pick 1 of 2 extra cards.</p>
+      <ul className="delve-starters">
+        {STARTER_DECKS.map((deck) => (
+          <li key={deck.id} className={`delve-starter starter-${deck.id}`}>
+            <div className="delve-starter-head">
+              <strong className="delve-starter-name">{deck.name}</strong>
+              <span className="delve-small muted">{deck.cards.length} cards</span>
+            </div>
+            <p className="delve-small delve-starter-line">{deck.line}</p>
+            <p className="delve-small muted delve-starter-cards">
+              {starterSummary(deck.cards).map((entry) => (entry.count > 1 ? `${entry.name} ×${entry.count}` : entry.name)).join(' · ')}
+            </p>
+            <div className="delve-starter-actions">
+              <button type="button" className="btn delve-starter-pick" onClick={() => send({ type: 'pick-deck', deckId: deck.id })}
+                aria-label={`Start with the ${deck.name} deck. ${deck.line}`}>Choose {deck.name}</button>
+              <button type="button" className="btn ghost delve-starter-view" onClick={() => setViewing(deck.id)}
+                aria-label={`View the ${deck.name} deck's cards`}>View cards</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {shown ? (
+        <PileSheet kind="deck" cards={shown.cards} title={`${shown.name} deck`} note={shown.line} onClose={() => setViewing(null)} />
+      ) : null}
+    </section>
   );
 }
 
@@ -883,7 +946,7 @@ function RewardView({ state, send }: { state: DelveState; send: (command: DelveC
   return (
     <section aria-labelledby="delve-reward-title">
       <h2 id="delve-reward-title">Victory!</h2>
-      <LootLine itemId={reward.loot} equipped={reward.equipped} />
+      <LootDrop state={state} send={send} />
       <div className="delve-reward-deck">
         <p className="delve-small">Deck <strong>{state.deck.length}/{MAX_DECK_SIZE}</strong></p>
         <button type="button" className="btn ghost delve-view-deck" onClick={() => setShowDeck(true)}>View deck</button>
@@ -936,7 +999,7 @@ function EventView({ state, send }: { state: DelveState; send: (command: DelveCo
       ) : (
         <>
           <p className="delve-note" role="status">{ev.outcome}</p>
-          {state.reward ? <LootLine itemId={state.reward.loot} equipped={state.reward.equipped} /> : null}
+          {state.reward ? <LootDrop state={state} send={send} /> : null}
           <UpgradePicker state={state} send={send} />
           <button type="button" className="btn" onClick={() => send({ type: 'continue' })}>Continue</button>
         </>
@@ -978,7 +1041,7 @@ function TreasureView({ state, send }: { state: DelveState; send: (command: Delv
     <section aria-labelledby="delve-treasure-title">
       <h2 id="delve-treasure-title">Old chest</h2>
       <div className="delve-hero-sprite"><HeroSprite loadout={state.loadout} label="Your adventurer" /></div>
-      <LootLine itemId={state.reward?.loot ?? null} equipped={state.reward?.equipped ?? false} />
+      <LootDrop state={state} send={send} />
       <UpgradePicker state={state} send={send} />
       <button type="button" className="btn" onClick={() => send({ type: 'continue' })}>{state.upgrades > 0 ? 'Skip upgrade' : 'Continue'}</button>
     </section>

@@ -483,9 +483,11 @@ export function playCard(state: Battle, uid: number): Battle {
     battle.energy += def.energy;
     parts.push(`+${def.energy} energy`);
   }
+  // Draw while the played card is still in play, then move it to discard/exhaust.
+  // A card that draws can never reshuffle and redraw itself (no Haste/Insight loops).
+  if (def.draw) battle = drawCards(battle, def.draw);
   if (def.exhaust) battle.exhausted = [...battle.exhausted, instance];
   else battle.discard = [...battle.discard, instance];
-  if (def.draw) battle = drawCards(battle, def.draw);
   battle.played += 1;
 
   battle.log.push(parts.length > 0 ? `${parts.join('. ')}.` : `${def.name}.`);

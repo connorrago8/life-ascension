@@ -1,8 +1,9 @@
 import { endTurn, playCard, startBattle, type Battle } from './battle.ts';
-import { CARDS, MAX_DECK_SIZE, REWARD_POOL, STARTER_DECK, cardDef, isUpgraded, upgradedKey, type CardId, type DeckCard } from './cards.ts';
+import { CARDS, MAX_DECK_SIZE, REWARD_POOL, cardDef, isUpgraded, upgradedKey, type CardId, type DeckCard } from './cards.ts';
 import { BOSS, FLOOR_ROWS, REST_HEAL, checkChance, eventById, generateFloor, spawnFoe, type Room } from './floor.ts';
 import { gearAttributes, isUpgrade, loadoutCards, loadoutPassives, lootById, rollLoot, type Loadout, type LootSource } from './loot.ts';
 import { nextIndex, nextRoll, seedRng, type Rng } from './rng.ts';
+import { starterById, starterCards, type StarterId } from './starters.ts';
 import {
   ZERO_ATTRIBUTES, addAttributes, clampAllocation, maxHpFor, type Attributes,
 } from './stats.ts';
@@ -13,9 +14,13 @@ import {
  * caller as it drops (so it can be kept), and the floor checkpoint is reported only
  * when a floor is cleared. This reducer never grants XP itself.
  */
-export type DelvePhase = 'start-pick' | 'map' | 'combat' | 'reward' | 'event' | 'treasure' | 'rest' | 'floor-clear' | 'defeat';
+export type DelvePhase = 'deck-select' | 'start-pick' | 'map' | 'combat' | 'reward' | 'event' | 'treasure' | 'rest' | 'floor-clear' | 'defeat';
 
-export type Reward = { cards: CardId[]; picked: boolean; loot: string | null; equipped: boolean };
+/**
+ * `worn` is true only after the player taps Wear on this drop. Gear is never
+ * equipped automatically: drops go to the vault (and this run's found list).
+ */
+export type Reward = { cards: CardId[]; picked: boolean; loot: string | null; worn: boolean };
 export type EventState = { eventId: string; outcome: string | null };
 
 export type DelveState = {
@@ -30,6 +35,8 @@ export type DelveState = {
   /** Gear found this run, in drop order. Index = drop index for the vault claim. */
   found: string[];
   deck: DeckCard[];
+  /** Starter deck chosen on the deck-select screen. Missing/null = the default starting deck. */
+  starter?: StarterId | null;
   /** Card upgrades you may pick right now (treasure chests and some mystery rooms). */
   upgrades: number;
   hp: number;
@@ -55,12 +62,16 @@ export type DelveCommand =
   | { type: 'pick-card'; cardId: CardId | null }
   /** Start of a run: add one of the two offered cards to your deck. */
   | { type: 'pick-start'; cardId: CardId }
+  /** Run start (deck-select phase): pick one of the four starter decks. */
+  | { type: 'pick-deck'; deckId: StarterId }
   | { type: 'event-option'; optionId: string }
   /** Campfire: heal, OR remove one card (by deck index). */
   | { type: 'rest'; choice: 'heal' }
   | { type: 'rest'; choice: 'remove'; index: number }
   /** Treasure / mystery: upgrade one card (by deck index) into its "+" version. */
   | { type: 'upgrade-card'; index: number }
+  /** Explicit Wear: put on the gear that just dropped (reward, chest or mystery room) for the rest of this run. */
+  | { type: 'wear'; itemId: string }
   | { type: 'continue' };
 
 /** You always keep at least this many cards (one full hand). */
@@ -109,6 +120,8 @@ export function createDelve(input: {
   runId: string; seed: number; level: number; allocated: Attributes; vaultItemIds?: readonly string[];
   /** Vault items the player chose to wear at camp for this run. Defaults to none. */
   wear?: readonly string[];
+  /** Open on the starter deck-select screen (the game UI). Without it the run uses the default deck. */
+  deckSelect?: boolean;
 }): DelveState {
   const level = Math.max(1, Math.floor(input.level) || 1);
   const allocated = clampAllocation(input.allocated, level);
@@ -120,8 +133,8 @@ export function createDelve(input: {
   const startPick = rewardCards(seedRng((input.seed ^ 0x5eed) >>> 0), 2)[0];
   return {
     runId: input.runId, seed: input.seed, rng: floor.rng, floor: 1, level, ...base,
-    found: [], deck: STARTER_DECK.slice(), upgrades: 0, hp: maxHp, maxHp,
-    rows: floor.rows, row: 0, path: [], phase: 'start-pick', startPick, room: null, battle: null, reward: null, event: null, note: null,
+    found: [], deck: starterCards(null), starter: null, upgrades: 0, hp: maxHp, maxHp,
+    rows: floor.rows, row: 0, path: [], phase: input.deckSelect ? 'deck-select' : 'start-pick', startPick, room: null, battle: null, reward: null, event: null, note: null,
   };
 }
 
@@ -131,15 +144,31 @@ function refreshMaxHp(state: DelveState): DelveState {
   return { ...state, maxHp, hp: Math.min(maxHp, state.hp + gained) };
 }
 
-/** Roll gear, record it as found and equip it when it is an upgrade. */
-function dropLoot(state: DelveState, source: LootSource): { state: DelveState; itemId: string | null; equipped: boolean } {
+/** Roll gear and record it as found (it goes to the vault). Never equips it: the player taps Wear. */
+function dropLoot(state: DelveState, source: LootSource): { state: DelveState; itemId: string | null } {
   const [entry, rng] = rollLoot(state.rng, source, effectiveAttributes(state).luck);
-  let next = { ...state, rng };
-  if (!entry) return { state: next, itemId: null, equipped: false };
-  const equipped = isUpgrade(next.loadout, entry);
-  next = { ...next, found: [...next.found, entry.id] };
-  if (equipped) next = refreshMaxHp({ ...next, loadout: { ...next.loadout, [entry.slot]: entry.id } });
-  return { state: next, itemId: entry.id, equipped };
+  const next = { ...state, rng };
+  if (!entry) return { state: next, itemId: null };
+  return { state: { ...next, found: [...next.found, entry.id] }, itemId: entry.id };
+}
+
+/** Phases where the gear that just dropped can be worn with an explicit Wear tap. */
+const WEAR_PHASES: readonly DelvePhase[] = ['reward', 'treasure', 'event'];
+
+/** Can the player tap Wear on `itemId` right now? Only the drop on screen, only once. */
+export function canWearDrop(state: Pick<DelveState, 'phase' | 'reward' | 'loadout'>, itemId: string): boolean {
+  const reward = state.reward;
+  if (!reward || reward.worn || reward.loot !== itemId || !WEAR_PHASES.includes(state.phase)) return false;
+  const entry = lootById(itemId);
+  return !!entry && state.loadout[entry.slot] !== entry.id;
+}
+
+/** Display helper: what Wear would replace, and whether it scores higher than what is worn. */
+export function wearPreview(loadout: Loadout, itemId: string): { replaces: string | null; better: boolean } | null {
+  const entry = lootById(itemId);
+  if (!entry) return null;
+  const current = loadout[entry.slot] ? lootById(loadout[entry.slot] as string) : null;
+  return { replaces: current?.name ?? null, better: isUpgrade(loadout, entry) };
 }
 
 function rewardCards(rng: Rng, count = 3): [CardId[], Rng] {
@@ -173,7 +202,7 @@ function enterRoom(state: DelveState, room: Room): DelveState {
   if (room.kind === 'event') return { ...base, phase: 'event', event: { eventId: room.eventId ?? '', outcome: null } };
   if (room.kind === 'rest') return { ...base, phase: 'rest' };
   const drop = dropLoot(base, 'treasure');
-  return { ...drop.state, phase: 'treasure', upgrades: 1, reward: { cards: [], picked: true, loot: drop.itemId, equipped: drop.equipped } };
+  return { ...drop.state, phase: 'treasure', upgrades: 1, reward: { cards: [], picked: true, loot: drop.itemId, worn: false } };
 }
 
 function advance(state: DelveState): DelveState {
@@ -201,12 +230,18 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
       const drop = dropLoot(next, boss ? 'boss' : state.room?.kind === 'elite' ? 'elite' : 'fight');
       next = drop.state;
       if (boss) {
-        return { ...next, phase: 'floor-clear', reward: { cards: [], picked: true, loot: drop.itemId, equipped: drop.equipped } };
+        return { ...next, phase: 'floor-clear', reward: { cards: [], picked: true, loot: drop.itemId, worn: false } };
       }
       const [cards, rng] = rewardCards(next.rng);
-      return { ...next, rng, phase: 'reward', reward: { cards, picked: false, loot: drop.itemId, equipped: drop.equipped } };
+      return { ...next, rng, phase: 'reward', reward: { cards, picked: false, loot: drop.itemId, worn: false } };
     }
     return next;
+  }
+
+  if (command.type === 'pick-deck') {
+    const starter = starterById(command.deckId);
+    if (state.phase !== 'deck-select' || !starter) return state;
+    return { ...state, phase: 'start-pick', starter: starter.id, deck: starterCards(starter.id), note: null };
   }
 
   if (command.type === 'pick-start') {
@@ -255,7 +290,7 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
     if (outcome.loot) {
       const drop = dropLoot(next, 'event');
       next = drop.state;
-      reward = { cards: [], picked: true, loot: drop.itemId, equipped: drop.equipped };
+      reward = { cards: [], picked: true, loot: drop.itemId, worn: false };
       const entry = drop.itemId ? lootById(drop.itemId) : null;
       if (entry) text = `${text} Found: ${entry.name}.`;
     }
@@ -281,6 +316,14 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
     const deck = state.deck.slice();
     deck[command.index] = upgradedKey(key);
     return { ...state, deck, upgrades: state.upgrades - 1, note: `${cardDef(deck[command.index]).name}: ${cardDef(deck[command.index]).text}` };
+  }
+
+  if (command.type === 'wear') {
+    if (!canWearDrop(state, command.itemId) || !state.reward) return state;
+    const entry = lootById(command.itemId);
+    if (!entry) return state;
+    const worn = refreshMaxHp({ ...state, loadout: { ...state.loadout, [entry.slot]: entry.id } });
+    return { ...worn, reward: { ...state.reward, worn: true } };
   }
 
   if (command.type === 'continue') {

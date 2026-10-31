@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import ts from 'typescript';
-import { createDelve as openDelve, reduceDelve, runLoadout } from '../lib/crypt/delve/run.ts';
+import { canWearDrop, createDelve as openDelve, reduceDelve, runLoadout } from '../lib/crypt/delve/run.ts';
 // Runs open with a 1-of-2 starting card pick; most tests take the first offer and go to the map.
 const createDelve = (input) => { const s = openDelve(input); return reduceDelve(s, { type: 'pick-start', cardId: s.startPick[0] }); };
 import { canPlay } from '../lib/crypt/delve/battle.ts';
@@ -72,7 +72,9 @@ function playOut(seed) {
     else if (state.phase === 'combat') {
       const playable = state.battle.hand.find((c) => canPlay(state.battle, c.uid));
       command = playable ? { type: 'play', uid: playable.uid } : { type: 'end-turn' };
-    } else if (state.phase === 'reward') command = { type: 'pick-card', cardId: state.reward.cards[0] ?? null };
+    } else if ((state.phase === 'reward' || state.phase === 'treasure' || (state.phase === 'event' && state.event.outcome))
+      && state.reward?.loot && canWearDrop(state, state.reward.loot)) command = { type: 'wear', itemId: state.reward.loot };
+    else if (state.phase === 'reward') command = { type: 'pick-card', cardId: state.reward.cards[0] ?? null };
     else if (state.phase === 'event') command = state.event.outcome ? { type: 'continue' } : { type: 'event-option', optionId: 'leave' };
     else if (state.phase === 'rest') command = { type: 'rest', choice: 'heal' };
     else command = { type: 'continue' };
@@ -84,7 +86,7 @@ function playOut(seed) {
   throw new Error('run did not finish');
 }
 
-test('gear auto-worn after a mid-run drop does not survive into the next run', () => {
+test('gear the player taps Wear on mid-run does not survive into the next run', () => {
   let checked = 0;
   for (let seed = 1; seed <= 30 && checked < 3; seed += 1) {
     const end = playOut(seed);

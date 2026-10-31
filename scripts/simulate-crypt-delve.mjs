@@ -1,8 +1,9 @@
 // Balance check for the Crypt delve. Plays many seeded runs with a simple greedy policy.
-// Usage: node --experimental-strip-types scripts/simulate-crypt-delve.mjs
+// Usage: node --experimental-strip-types scripts/simulate-crypt-delve.mjs  (optional SIM_STARTER=bruiser|duelist|scholar|guardian)
 import { CARDS, cardBlock, cardBleed, cardBurn, cardDef, cardThorns } from '../lib/crypt/delve/cards.ts';
 import { foeIntent, intentDamage, previewDamage } from '../lib/crypt/delve/battle.ts';
-import { canUpgradeCard, createDelve, currentRoomChoices, reduceDelve } from '../lib/crypt/delve/run.ts';
+import { canUpgradeCard, canWearDrop, createDelve, currentRoomChoices, reduceDelve } from '../lib/crypt/delve/run.ts';
+import { isUpgrade, lootById } from '../lib/crypt/delve/loot.ts';
 
 const ARCHETYPE_FOR = { strength: 'bruiser', agility: 'combo', intelligence: 'caster', endurance: 'tank', luck: 'luck' };
 const GENERAL_RANK = ['adrenaline', 'heavy-blow', 'bash', 'flurry', 'arcane-bolt', 'expose', 'shield-bash', 'iron-skin', 'smite', 'ember', 'frost-shard', 'kindle', 'lucky-strike', 'battle-cry', 'bulwark', 'insight', 'cleaver', 'riposte', 'second-wind', 'hex', 'sidestep', 'quick-jab', 'momentum', 'gamble', 'jackpot', 'loaded-dice', 'reckless-swing', 'body-slam', 'rend', 'haste', 'spiked-guard', 'entrench'];
@@ -50,7 +51,9 @@ function playTurn(state) {
 }
 
 function runOnce(seed, level, allocated) {
-  let s = createDelve({ runId: `sim-${seed}`, seed, level, allocated });
+  // SIM_STARTER=bruiser|duelist|scholar|guardian plays that starter deck; unset = the default deck.
+  let s = createDelve({ runId: `sim-${seed}`, seed, level, allocated, deckSelect: Boolean(process.env.SIM_STARTER) });
+  if (s.phase === 'deck-select') s = reduceDelve(s, { type: 'pick-deck', deckId: process.env.SIM_STARTER });
   let turns = 0; let rooms = 0; let cardsPlayed = 0; let fights = 0;
   const rank = pickRank(allocated);
   for (let guard = 0; guard < 3000; guard += 1) {
@@ -70,18 +73,26 @@ function runOnce(seed, level, allocated) {
       const before = s.battle.log.length;
       s = playTurn(s); turns += 1; cardsPlayed += Math.max(0, (s.battle?.log.length ?? before) - before - 1);
     } else if (s.phase === 'reward') {
+      s = wearIfBetter(s);
       const pick = rank.find((id) => s.reward.cards.includes(id)) ?? null;
       s = reduceDelve(s, { type: 'pick-card', cardId: pick });
     } else if (s.phase === 'event') {
-      if (s.event.outcome) s = reduceDelve(upgradeBest(s, rank), { type: 'continue' });
+      if (s.event.outcome) s = reduceDelve(upgradeBest(wearIfBetter(s), rank), { type: 'continue' });
       else s = reduceDelve(s, { type: 'event-option', optionId: (s.hp > s.maxHp * 0.5 ? 0 : 0) === 0 ? requireFirst(s) : '' });
-    } else if (s.phase === 'treasure') s = reduceDelve(upgradeBest(s, rank), { type: 'continue' });
+    } else if (s.phase === 'treasure') s = reduceDelve(upgradeBest(wearIfBetter(s), rank), { type: 'continue' });
     else if (s.phase === 'rest') {
       const idx = s.deck.lastIndexOf('strike') >= 0 ? s.deck.lastIndexOf('strike') : s.deck.lastIndexOf('guard');
       s = s.hp < s.maxHp * 0.8 || idx < 0 ? reduceDelve(s, { type: 'rest', choice: 'heal' }) : reduceDelve(s, { type: 'rest', choice: 'remove', index: idx });
     }
   }
   return { won: s.phase === 'floor-clear', row: s.row, turns, rooms, fights, found: s.found.length, hp: s.hp };
+}
+// Gear is never auto-equipped: the sim player taps Wear on a drop that beats what it wears.
+function wearIfBetter(s) {
+  const id = s.reward?.loot;
+  const entry = id ? lootById(id) : null;
+  if (!entry || !canWearDrop(s, id) || !isUpgrade(s.loadout, entry)) return s;
+  return reduceDelve(s, { type: 'wear', itemId: id });
 }
 function upgradeBest(s, rank) {
   if (s.upgrades <= 0) return s;

@@ -128,7 +128,7 @@ test('reward: copies count, deck-full detection, and an honest note at the 26-ca
   assert.equal(copiesInDeck(['strike', 'strike+', 'guard'], 'strike'), 2);
   let state = createDelve({ runId: 'r', seed: 5, level: 1, allocated: LV1 });
   state = reduceDelve(state, { type: 'pick-start', cardId: state.startPick[0] });
-  const reward = { cards: ['strike', 'guard', 'spark'], picked: false, loot: null, equipped: false };
+  const reward = { cards: ['strike', 'guard', 'spark'], picked: false, loot: null, worn: false };
   const below = reduceDelve({ ...state, phase: 'reward', reward }, { type: 'pick-card', cardId: 'spark' });
   assert.equal(below.deck.length, state.deck.length + 1);
   assert.match(below.note, /Spark added to your deck/);

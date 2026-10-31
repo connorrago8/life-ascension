@@ -1249,3 +1249,23 @@ code { font-family: ui-monospace, monospace; }
 .delve-deck-card.btn { min-height: 44px; border-left: 3px solid var(--frame, var(--border)); }
 .delve-deck-card-cost { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #f2c46d; color: var(--ink);
   font-size: 0.72rem; font-weight: 800; vertical-align: 1px; }
+
+/* Crypt: explicit Wear on dropped gear (never auto-equipped) */
+.delve-loot-where { margin-top: 4px; color: var(--text, #e6e6e6); }
+.delve-wear-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.delve-wear-now { min-height: 44px; min-width: 88px; padding: 6px 14px; font-size: 0.95rem; }
+
+/* Crypt: starter deck select (run start) */
+.delve-starters { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.delve-starter { border: 1px solid var(--border); border-left: 4px solid var(--frame, #8f97a6); border-radius: 12px; padding: 10px 12px; background: #262b33; }
+.starter-bruiser { --frame: #d0644c; }
+.starter-duelist { --frame: #4fc1a6; }
+.starter-scholar { --frame: #a184ea; }
+.starter-guardian { --frame: #5b95d6; }
+.delve-starter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.delve-starter-name { font-size: 1.05rem; color: var(--frame); }
+.delve-starter-line { margin: 2px 0 4px; }
+.delve-starter-cards { margin: 0 0 8px; line-height: 1.35; }
+.delve-starter-actions { display: flex; gap: 8px; }
+.delve-starter-pick { flex: 1; min-height: 44px; }
+.delve-starter-view { min-height: 44px; min-width: 96px; }
