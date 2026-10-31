@@ -22,11 +22,14 @@ test('malformed and incompatible saves fail closed', () => {
 });
 
 
-test('defeat cannot be retried or escaped into the same run', () => {
+test('defeat can be retried or retreated without resetting the whole run', () => {
   const run = createRun(99);
   const defeated = { ...run, phase: 'fight', encounterId: 'rat', hp: 0, battle: { status: 'lost' } };
   assert.equal(reduceRun(defeated, { type: 'back' }).phase, 'map');
-  assert.equal(reduceRun(defeated, { type: 'retry-fight' }), defeated);
+  const retried = reduceRun(defeated, { type: 'retry-fight' });
+  assert.equal(retried.phase, 'fight');
+  assert.equal(retried.battle?.status, 'ongoing');
+  assert.equal(retried.hp, retried.maxHp);
   const newRun = reduceRun(defeated, { type: 'restart', seed: 100 });
   assert.equal(newRun.phase, 'intro');
   assert.equal(newRun.seed, 100);
