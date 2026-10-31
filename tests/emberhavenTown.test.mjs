@@ -41,3 +41,12 @@ test('Town adventure gate does not assert Crypt unlock state', () => {
   assert.match(source, /Crypt availability depends on the deployed game version/);
   assert.match(source, /no shop, crafting, or rewards are active here/);
 });
+
+const hub = readFileSync(new URL('../components/play/AdventureHub.tsx', import.meta.url), 'utf8');
+
+test('Playable AdventureHub links to Emberhaven without changing Crypt entry', () => {
+  assert.match(hub, /href="\/play\/emberhaven"/);
+  assert.match(hub, /CRYPT_ENTRY_HREF = '\/play\/delve'/);
+  assert.match(hub, /ACTIVE_RUN_KEY/);
+  assert.doesNotMatch(source, /ACTIVE_RUN_KEY|clearActiveRun|saveActiveRun/);
+});
