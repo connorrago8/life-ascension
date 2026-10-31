@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
@@ -10,6 +10,7 @@ import { PixelArt } from '../crypt/PixelArt';
 import { SPRITES } from '../../lib/crypt/art';
 import { HUB, PLAYER, PREVIEW_BANNER } from '../../lib/crypt/content';
 import { WayfarerMark } from './WayfarerMark';
+import { ACTIVE_RUN_KEY } from '../../lib/cryptActiveRun';
 
 // Default Rusty Sword / Rusty Armor (0 stats) on the hero sprite.
 const STARTER_OVERLAYS = gearOverlays({});
@@ -21,6 +22,11 @@ const HERO_PALETTE = { ...PALETTE, ...GEAR_INKS };
  * linked from the map; it stays reachable only for its existing browser QA.
  */
 export const CRYPT_ENTRY_HREF = '/play/delve';
+
+/** The delve link, keeping guest/dev preview mode (?preview=1) so the same run resumes. */
+export function cryptEntryHref(search: string): string {
+  return new URLSearchParams(search).get('preview') === '1' ? `${CRYPT_ENTRY_HREF}?preview=1` : CRYPT_ENTRY_HREF;
+}
 
 function Star() {
   return (
@@ -34,10 +40,21 @@ export function AdventureHub() {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(HUB.locations[0].id);
   const selected = HUB.locations.find((location) => location.id === selectedId) ?? HUB.locations[0];
+  // Keep ?preview=1 on the way in, and say "Continue run" when an unfinished run is waiting.
+  const [entryHref, setEntryHref] = useState(CRYPT_ENTRY_HREF);
+  const [hasRun, setHasRun] = useState(false);
+  useEffect(() => {
+    setEntryHref(cryptEntryHref(window.location.search));
+    try {
+      setHasRun(!!window.localStorage.getItem(ACTIVE_RUN_KEY));
+    } catch {
+      setHasRun(false);
+    }
+  }, []);
 
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
-    if (location.kind === 'preview') router.push(CRYPT_ENTRY_HREF);
+    if (location.kind === 'preview') router.push(entryHref);
   }
 
   return (
@@ -89,7 +106,7 @@ export function AdventureHub() {
 
       <p className="adv-blurb">{selected.blurb}</p>
       {selected.kind === 'preview' ? (
-        <Link className="btn adv-enter" href={CRYPT_ENTRY_HREF}>{HUB.enter}</Link>
+        <Link className="btn adv-enter" href={entryHref}>{hasRun ? 'Continue run' : HUB.enter}</Link>
       ) : (
         <button type="button" className="btn adv-enter" disabled>{HUB.enter}</button>
       )}

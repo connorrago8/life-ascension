@@ -9,8 +9,9 @@ test('Adventure map Forgotten Crypt entry opens the new delve', () => {
   const hub = read('components/play/AdventureHub.tsx');
   assert.match(hub, /export const CRYPT_ENTRY_HREF = '\/play\/delve';/);
   // Tapping the map node and the Enter button both target the delve.
-  assert.match(hub, /if \(location\.kind === 'preview'\) router\.push\(CRYPT_ENTRY_HREF\)/);
-  assert.match(hub, /<Link className="btn adv-enter" href=\{CRYPT_ENTRY_HREF\}>\{HUB\.enter\}<\/Link>/);
+  assert.match(hub, /if \(location\.kind === 'preview'\) router\.push\(entryHref\)/);
+  assert.match(hub, /<Link className="btn adv-enter" href=\{entryHref\}>\{hasRun \? 'Continue run' : HUB\.enter\}<\/Link>/);
+  assert.match(hub, /useState\(CRYPT_ENTRY_HREF\)/);
   assert.doesNotMatch(hub, /href="\/play\/crypt"|push\('\/play\/crypt'\)/);
 });
 

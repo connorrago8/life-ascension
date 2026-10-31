@@ -36,7 +36,9 @@ import {
  * The Crypt delve screen. Pure UI: it knows nothing about accounts. The parent
  * passes the hero's level (from real quests), saved attributes and vault gear,
  * and receives callbacks when gear drops or a floor is cleared.
- * State lives only in this component, so leaving the page ends the run.
+ * State lives in this component; the parent may keep a copy (onStateChange) and
+ * hand it back (resume) so a reload or the Play tab never loses the run. Only
+ * End run (confirmed), defeat or a floor clear ends it.
  * Nothing here runs on a timer: a hidden tab can never lose a fight.
  */
 export type DelveRunProps = {
@@ -54,6 +56,12 @@ export type DelveRunProps = {
   saveMode?: SaveMode;
   /** Called when a run ends (and again as vault saves confirm) with its recap. Never equips anything. */
   onRunEnd?: (recap: RunRecap, kept: number) => void;
+  /** An unfinished run to continue (from the parent's saved copy). */
+  resume?: DelveState | null;
+  /** Called with the latest run state after every change (null at camp). */
+  onStateChange?: (state: DelveState | null) => void;
+  /** The player confirmed End run. Called before navigating away. */
+  onEndRun?: () => void;
 };
 
 const HERO_PALETTE = { ...PALETTE, ...GEAR_INKS };
@@ -82,7 +90,7 @@ function holderReducer(holder: Holder, action: Action): Holder {
 }
 
 export function DelveRun(props: DelveRunProps) {
-  const [{ state }, dispatch] = useReducer(holderReducer, { state: null });
+  const [{ state }, dispatch] = useReducer(holderReducer, props.resume ?? null, (resume): Holder => ({ state: resume }));
   const [vault, setVault] = useState<string[]>(() => props.vaultItemIds.slice());
   const reported = useRef<{ runId: string; count: number }>({ runId: '', count: 0 });
   const clearedRuns = useRef<Set<string>>(new Set());
@@ -126,6 +134,11 @@ export function DelveRun(props: DelveRunProps) {
     }
   }, [state, props]);
 
+  const onStateChange = props.onStateChange;
+  useEffect(() => {
+    onStateChange?.(state);
+  }, [state, onStateChange]);
+
   const currentRun = useRef<string | null>(null);
   currentRun.current = state?.runId ?? null;
   useEffect(() => {
@@ -149,6 +162,10 @@ export function DelveRun(props: DelveRunProps) {
     });
   };
   const send = (command: DelveCommand) => dispatch({ kind: 'command', command });
+  const endRun = () => {
+    props.onEndRun?.();
+    dispatch({ kind: 'clear' });
+  };
 
   if (!state) {
     return (
@@ -166,7 +183,7 @@ export function DelveRun(props: DelveRunProps) {
 
   return (
     <main className="wrap delve" aria-label="Forgotten Crypt delve">
-      <RunHeader state={state} exitHref={props.exitHref} onCamp={() => dispatch({ kind: 'clear' })} />
+      <RunHeader state={state} exitHref={props.exitHref} onCamp={endRun} />
       {state.phase === 'deck-select' ? <DeckSelectView send={send} /> : null}
       {state.phase === 'start-pick' ? <StartPickView state={state} send={send} /> : null}
       {state.phase === 'map' ? <MapView state={state} onChoose={(index) => send({ type: 'choose-room', row: state.row, index })} /> : null}
@@ -211,7 +228,7 @@ function Camp(props: {
   const enter = (
     <div className="delve-start-block">
       <button type="button" className="btn delve-start" onClick={() => props.onStart(draft, Object.values(loadout) as string[])}>Enter Floor 1</button>
-      <p className="muted delve-small">Runs save only between floors. Leaving mid-floor ends the run, but gear you found is kept.</p>
+      <p className="muted delve-small">Checkpoints save between floors. An unfinished run is kept on this device, so reloading or tapping Play picks it up again. Only End run (or the run's end) finishes it.</p>
     </div>
   );
   const preview = effectiveAttributes({ allocated: draft, runBonus: ZERO_ATTRIBUTES, loadout });
@@ -373,7 +390,7 @@ function RunHeader({ state, exitHref, onCamp }: { state: DelveState; exitHref: s
           <button type="button" className="btn ghost delve-leave" onClick={() => setConfirm(true)}>Leave</button>
         )}
       </div>
-      {confirm && !over ? <p className="delve-small" role="alert">Leaving ends this run. Gear you found stays in your vault.</p> : null}
+      {confirm && !over ? <p className="delve-small" role="alert">End this run for good? It can't be resumed. Gear you found stays in your vault.</p> : null}
       {state.phase !== 'combat' ? <HpBar hp={state.hp} max={state.maxHp} label="Your HP" /> : null}
     </header>
   );
@@ -387,23 +404,41 @@ function MapView({ state, onChoose }: { state: DelveState; onChoose: (index: num
   const choices = currentRoomChoices(state);
   const boss = state.row >= FLOOR_ROWS;
   const options = pathOptions(choices, boss);
-  // Which option is highlighted on both the list and the map. Display only:
-  // entering a room still happens only from the list button below.
+  // Which option is highlighted on both the list and the map. A room card on the
+  // list enters on one tap; a map circle selects on the first tap and enters on a
+  // second tap of the SAME circle (a tap on another circle just moves the selection).
   const [active, setActive] = useState<{ row: number; index: number } | null>(null);
   const activeIndex = active && active.row === state.row ? active.index : null;
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  // One entry per map step: a fast triple tap can never enter twice or skip a row.
+  const entered = useRef<number | null>(null);
+  const enter = (index: number) => {
+    if (entered.current === state.row) return;
+    entered.current = state.row;
+    onChoose(index);
+  };
   const highlight = (index: number) => setActive({ row: state.row, index });
   const showOnList = (index: number) => {
     highlight(index);
-    const button = buttons.current[index];
-    button?.focus({ preventScroll: true });
-    button?.scrollIntoView({ block: 'nearest' });
+    // Sync the card above without scrolling, so the circle stays under the finger for the second tap.
+    buttons.current[index]?.focus({ preventScroll: true });
+  };
+  // Only a tap on the circle itself arms it; hover or focus on a card never makes one tap enter.
+  const [armed, setArmed] = useState<{ row: number; index: number } | null>(null);
+  const armedIndex = armed && armed.row === state.row && activeIndex === armed.index ? armed.index : null;
+  const tapNode = (index: number) => {
+    if (armedIndex === index) enter(index);
+    else {
+      setArmed({ row: state.row, index });
+      showOnList(index);
+    }
   };
   const node = (option: PathOption, glyph: string) => (
     <button key={option.index} type="button" data-path={option.badge}
       className={`delve-node path-${option.badge.toLowerCase()}${activeIndex === option.index ? ' active' : ''}`}
-      aria-label={`Show on list: ${option.ariaLabel}`} aria-pressed={activeIndex === option.index}
-      onClick={() => showOnList(option.index)}>
+      aria-label={armedIndex === option.index ? `Selected: ${option.ariaLabel}. Tap again to enter.` : `Select on map: ${option.ariaLabel}`}
+      aria-pressed={activeIndex === option.index}
+      onClick={() => tapNode(option.index)}>
       <span className="delve-node-dot" aria-hidden="true">
         <span className="delve-node-glyph">{glyph}</span>
         <span className="delve-badge">{option.badge}</span>
@@ -422,8 +457,10 @@ function MapView({ state, onChoose }: { state: DelveState; onChoose: (index: num
             <button key={`${state.row}-${option.index}`} type="button" ref={(el) => { buttons.current[option.index] = el; }}
               data-path={option.badge} aria-label={option.ariaLabel} aria-describedby={`delve-hint-${option.index}`}
               className={`delve-room room-${room.kind} path-${option.badge.toLowerCase()}${activeIndex === option.index ? ' active' : ''}`}
-              onFocus={() => highlight(option.index)} onPointerEnter={() => highlight(option.index)}
-              onClick={() => onChoose(option.index)}>
+              onFocus={() => highlight(option.index)}
+              // Mouse hover only: a hover highlight on touch makes iOS Safari treat the first tap as a hover.
+              onPointerEnter={(event) => { if (event.pointerType === 'mouse') highlight(option.index); }}
+              onClick={() => enter(option.index)}>
               <span className="delve-badge" aria-hidden="true">{option.badge}</span>
               <span className="delve-room-glyph" aria-hidden="true">{boss ? '♛' : ROOM_GLYPH[room.kind]}</span>
               <span className="delve-room-text">
@@ -434,7 +471,7 @@ function MapView({ state, onChoose }: { state: DelveState; onChoose: (index: num
           );
         })}
       </div>
-      <p className="delve-small muted delve-map-help">Letters match the map. Tap a room on the list to enter it.</p>
+      <p className="delve-small muted delve-map-help">Letters match the map. Tap a room card to enter it, or tap a circle on the map to select it and tap it again to enter.</p>
       <ol className="delve-path" aria-label="Floor map">
         {state.rows.map((row, r) => (
           r === state.row && !boss ? (

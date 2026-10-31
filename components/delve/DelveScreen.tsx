@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DelveRun } from '../crypt/DelveRun';
 import { capNote, floorClearMessage, parseCryptProfile } from '../../lib/cryptVault';
 import { coerceXp, levelFor } from '../../lib/level';
@@ -9,12 +9,16 @@ import { ZERO_ATTRIBUTES, type Attributes } from '../../lib/crypt/delve/stats';
 import { ownedEarnedGear } from '../../lib/crypt/delve/loot';
 import type { RunRecap, SaveMode } from '../../lib/crypt/delve/recap';
 import { recordRunEnd } from '../../lib/cryptReturn';
+import { browserStorage, clearActiveRun, isLiveRun, loadActiveRun, runOwner, saveActiveRun } from '../../lib/cryptActiveRun';
+import type { DelveState } from '../../lib/crypt/delve/run';
 import { parseAuthenticatedGearSnapshot } from '../../lib/preview/characterGearView';
 
 /**
  * Account layer for the Crypt delve. Reads the hero's level (real quests only)
  * and the Crypt vault, and reports drops and floor clears to server functions
- * that enforce every limit. Signing out remounts the run, which ends it.
+ * that enforce every limit. An unfinished run is kept in this browser (per owner)
+ * so a reload, the Play tab or leaving and coming back resumes it. Signing out
+ * clears it and remounts the run, which ends it.
  */
 type Mode = 'loading' | 'preview' | 'guest' | 'offline' | 'online';
 
@@ -27,6 +31,8 @@ export function DelveScreen() {
   const [vault, setVault] = useState<string[]>([]);
   const [xpNote, setXpNote] = useState('');
   const [session, setSession] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [inRun, setInRun] = useState(false);
 
   useEffect(() => {
     const preview = process.env.NODE_ENV === 'development'
@@ -46,6 +52,9 @@ export function DelveScreen() {
     const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
       // Logging out ends any unfinished run.
       if (event === 'SIGNED_OUT' && !cancelled) {
+        const storage = browserStorage();
+        if (storage) clearActiveRun(storage);
+        setUserId(null);
         setSession((n) => n + 1);
         setMode('guest');
         setLevel(1);
@@ -61,6 +70,7 @@ export function DelveScreen() {
           setMode('guest');
           return;
         }
+        setUserId(data.user.id);
         const xp = await client.rpc('get_lifetime_xp');
         if (cancelled) return;
         if (!xp.error) setLevel(levelFor(coerceXp(xp.data)).level);
@@ -138,6 +148,33 @@ export function DelveScreen() {
     }
   }, [online]);
 
+  // Resume the owner's unfinished run once we know who is playing (read once per session).
+  const owner = mode === 'loading' ? null : runOwner(mode, userId);
+  const resume = useMemo(() => {
+    const storage = browserStorage();
+    return owner && storage ? loadActiveRun(storage, owner, Date.now()) : null;
+  }, [owner, session]);
+  const onStateChange = useCallback((state: DelveState | null) => {
+    setInRun(isLiveRun(state));
+    const storage = browserStorage();
+    // Camp (no run) keeps a saved run untouched; a live run is saved; an over run is cleared.
+    if (!owner || !storage || !state) return;
+    saveActiveRun(storage, owner, state, Date.now());
+  }, [owner]);
+  const onEndRun = useCallback(() => {
+    const storage = browserStorage();
+    if (storage) clearActiveRun(storage);
+    setInRun(false);
+  }, []);
+
+  // Dungeon mode: hide the app's bottom nav while a run is live (shown again at camp and on the recap).
+  useEffect(() => {
+    const root = document.documentElement;
+    if (inRun) root.setAttribute('data-delve-run', 'live');
+    else root.removeAttribute('data-delve-run');
+    return () => root.removeAttribute('data-delve-run');
+  }, [inRun]);
+
   if (mode === 'loading') {
     return <main className="wrap delve"><p className="muted" role="status">Opening the Crypt…</p></main>;
   }
@@ -152,7 +189,10 @@ export function DelveScreen() {
 
   return (
     <DelveRun
-      key={session}
+      key={`${session}:${owner}`}
+      resume={resume}
+      onStateChange={onStateChange}
+      onEndRun={onEndRun}
       level={level}
       savedAttributes={attributes}
       vaultItemIds={vault}

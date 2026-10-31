@@ -1269,3 +1269,16 @@ code { font-family: ui-monospace, monospace; }
 .delve-starter-actions { display: flex; gap: 8px; }
 .delve-starter-pick { flex: 1; min-height: 44px; }
 .delve-starter-view { min-height: 44px; min-width: 96px; }
+
+/* Crypt dungeon mode: while a delve run is live the app nav steps aside (the run
+   header keeps Leave → End run). It returns at camp and on the victory/defeat recap. */
+html[data-delve-run='live'] .app-nav,
+html[data-delve-run='live'] .more-sheet,
+html[data-delve-run='live'] .more-backdrop,
+html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
+@media (max-width: 719px) {
+  html[data-delve-run='live'] .shell-main { padding-bottom: env(safe-area-inset-bottom); }
+  html[data-delve-run='live'] .delve-pile-sheet { bottom: calc(12px + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  html[data-delve-run='live'] .delve { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+}
