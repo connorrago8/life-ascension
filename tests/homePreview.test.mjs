@@ -373,8 +373,10 @@ test('character equipment slots open available gear choices', () => {
   const character = read('components/preview/CharacterScreen.tsx');
   assert.match(character, /setSelectedSlot/);
   assert.match(character, /PREVIEW_CATALOG\.filter/);
-  assert.match(character, /equip\(item\.id\)/);
-  assert.match(character, /aria-expanded=\{selectedSlot === slot\}/);
+  assert.match(character, /if \(nextEquipped\) equip\(itemId\); else unequip\(itemId\)/);
+  assert.match(character, /aria-expanded=\{selectedSlot === slot\.key\}/);
+  assert.match(character, /role="dialog"/);
+  assert.match(character, /No items for this slot yet/);
 });
 
 test('inventory supports equipment-slot filters', () => {

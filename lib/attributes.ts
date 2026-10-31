@@ -1,11 +1,12 @@
 export const ATTRIBUTE_PLACEHOLDER = '—';
 
-/** Final attribute set. Abbreviations are STR, INT, VIT, and DIS. */
+/** Approved attribute set: STR, AGI, INT, END, LCK (same five the Crypt delve uses). */
 export const ATTRIBUTES = [
   { key: 'strength', label: 'Strength', short: 'STR' },
+  { key: 'agility', label: 'Agility', short: 'AGI' },
   { key: 'intelligence', label: 'Intelligence', short: 'INT' },
-  { key: 'vitality', label: 'Vitality', short: 'VIT' },
-  { key: 'discipline', label: 'Discipline', short: 'DIS' },
+  { key: 'endurance', label: 'Endurance', short: 'END' },
+  { key: 'luck', label: 'Luck', short: 'LCK' },
 ] as const;
 
 export type AttributeKey = (typeof ATTRIBUTES)[number]['key'];

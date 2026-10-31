@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 // Executes the actual Home logout callback against isolated auth/state mocks.
 // No React renderer, hosted database, deployment, or iPhone acceptance.
-const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
 const start = home.indexOf('async function logout(){');
 const end = home.indexOf('\n if(!ready)', start);
 assert.ok(start >= 0 && end > start, 'Home logout callback boundaries changed');

@@ -104,7 +104,7 @@ export function CryptRun() {
       <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
       <header className="crypt-top">
         {run.phase === 'intro' ? (
-          <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => window.location.assign('/play')}><BackIcon /></button>
+          <Link href="/play" prefetch={false} className="icon-btn" aria-label="Leave Crypt; unsaved dungeon progress will be lost"><BackIcon /></Link>
         ) : (
           <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
             // Returning to the sealed door should offer both endings again.

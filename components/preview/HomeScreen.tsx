@@ -130,8 +130,8 @@ export function HomeScreen() {
               aria-controls="completed-quest-list"
               onClick={() => setShowCompleted((current) => !current)}
             >
-              <span>✓ {completedQuests.length} completed</span>
-              <span aria-hidden="true">{showCompleted ? '−' : '+'}</span>
+              <span>Completed ({completedQuests.length})</span>
+              <span className={`collapsible-chevron${showCompleted ? ' is-open' : ''}`} aria-hidden="true">▸</span>
             </button>
             {showCompleted ? (
               <ul id="completed-quest-list" className="quest-list completed-list">

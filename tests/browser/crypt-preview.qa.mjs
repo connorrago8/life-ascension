@@ -201,6 +201,45 @@ try {
     'Explicit Leave Crypt navigation must exit the dungeon');
   await exitPage.close();
 
+  // The intro back arrow must offer the same explicit unsaved-progress warning.
+  const introExitPage = await context.newPage();
+  await introExitPage.goto(baseURL + '/play/crypt');
+  await introExitPage.locator('[data-phase="intro"]').waitFor();
+  const introExit = introExitPage.locator('.crypt-top > a.icon-btn');
+  const introRequests = [];
+  const prematurePlayRequests = [];
+  let exitClicked = false;
+  introExitPage.on('request', request => {
+    const requestURL = new URL(request.url());
+    const expectedURL = new URL('/play', baseURL);
+    if (!exitClicked && requestURL.origin === expectedURL.origin &&
+        (requestURL.pathname === '/play' || requestURL.pathname.startsWith('/play/')) &&
+        requestURL.pathname !== '/play/crypt') {
+      prematurePlayRequests.push({ method: request.method(), url: request.url() });
+    }
+    const reason = cryptPreviewRequestViolation(
+      { method: request.method(), url: request.url() }, baseURL);
+    if (reason) introRequests.push(reason);
+  });
+  await introExit.waitFor({ state: 'visible' });
+  assert.equal(await introExit.getAttribute('href'), '/play');
+  assert.equal(await introExit.getAttribute('aria-label'),
+    'Leave Crypt; unsaved dungeon progress will be lost');
+  assert.equal(await introExit.getAttribute('rel'), null,
+    'Intro exit should not require a special link relation');
+  await introExit.focus();
+  assert.equal(await introExit.evaluate(el => document.activeElement === el), true,
+    'Intro exit must be keyboard focusable');
+  await introExitPage.waitForTimeout(250);
+  assert.deepEqual(introRequests, [],
+    'Idle/focused intro exit must not request disallowed resources');
+  assert.deepEqual(prematurePlayRequests, [],
+    'Idle/focused intro exit must not request /play before activation');
+  exitClicked = true;
+  await introExit.click();
+  await introExitPage.waitForURL(url => url.pathname === '/play');
+  await introExitPage.close();
+
   console.log('PASS: real Chromium Crypt Rat → inscription → Ember Charm → Sentinel → sealed door,');
   console.log('clue retention, 320px scroll/tap both endings and restart, 320/390px no overflow, no unexpected network requests.');
   console.log('NOT covered: hosted QA, authenticated rewards, physical iPhone Safari or permanent loot.');

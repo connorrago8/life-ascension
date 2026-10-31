@@ -19,7 +19,7 @@ export const HUB = {
       icon: 'skull' as const,
       x: 30,
       y: 40,
-      blurb: 'A short unsaved floor. The gate is open for a preview.',
+      blurb: 'Twelve rooms of card battles, gear drops and a boss. Choose your path.',
     },
     {
       id: 'town',

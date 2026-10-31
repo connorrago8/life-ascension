@@ -8,32 +8,34 @@ test('preview copy does not offer allocation or equipping', () => {
   assert.equal(EQUIPMENT_PREVIEW, 'Preview: equipment coming soon.');
 });
 
-test('attributes are only STR, INT, VIT, and DIS', () => {
+test('attributes are only STR, AGI, INT, END, and LCK', () => {
   assert.deepEqual(
     ATTRIBUTES.map((attribute) => [attribute.key, attribute.label, attribute.short]),
     [
       ['strength', 'Strength', 'STR'],
+      ['agility', 'Agility', 'AGI'],
       ['intelligence', 'Intelligence', 'INT'],
-      ['vitality', 'Vitality', 'VIT'],
-      ['discipline', 'Discipline', 'DIS'],
+      ['endurance', 'Endurance', 'END'],
+      ['luck', 'Luck', 'LCK'],
     ],
   );
 });
 
 test('attributes fall back to a placeholder when the profile has no such column', () => {
   assert.equal(attributeValue(null, 'strength'), ATTRIBUTE_PLACEHOLDER);
-  assert.equal(attributeValue(undefined, 'vitality'), ATTRIBUTE_PLACEHOLDER);
-  assert.equal(attributeValue({ display_name: 'Ada' }, 'discipline'), ATTRIBUTE_PLACEHOLDER);
+  assert.equal(attributeValue(undefined, 'endurance'), ATTRIBUTE_PLACEHOLDER);
+  assert.equal(attributeValue({ display_name: 'Ada' }, 'luck'), ATTRIBUTE_PLACEHOLDER);
   assert.equal(attributeValue({ strength: null }, 'strength'), ATTRIBUTE_PLACEHOLDER);
   assert.equal(attributeValue({ intelligence: '  ' }, 'intelligence'), ATTRIBUTE_PLACEHOLDER);
 });
 
 test('attributes read numeric or text values when the row actually has them', () => {
-  const row = { strength: 3, intelligence: 2, vitality: 0, discipline: '4' };
+  const row = { strength: 3, agility: 1, intelligence: 2, endurance: 0, luck: '4' };
   assert.equal(attributeValue(row, 'strength'), '3');
+  assert.equal(attributeValue(row, 'agility'), '1');
   assert.equal(attributeValue(row, 'intelligence'), '2');
-  assert.equal(attributeValue(row, 'vitality'), '0');
-  assert.equal(attributeValue(row, 'discipline'), '4');
+  assert.equal(attributeValue(row, 'endurance'), '0');
+  assert.equal(attributeValue(row, 'luck'), '4');
 });
 
 test('the adventurer name prefers display_name, then the email local part', () => {

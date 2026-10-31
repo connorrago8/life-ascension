@@ -1,5 +1,7 @@
 import { homeAriaLabel, type HomeCharacterModel } from '../../lib/preview/characterRender';
 import { BeltWaistLayer } from './BeltWaistLayer';
+/** Same values as RUST_COLORS in lib/starterLook (a test keeps them in sync). Import-free for isolated render tests. */
+const RUST_COLORS = { rustDark: '#6E4A35', rust: '#A3683F', rustLight: '#C08A5C', iron: '#7D7068', grip: '#4A3322' } as const;
 import type { BeltStage } from '../../lib/preview/beltProgression';
 
 /**
@@ -55,6 +57,18 @@ export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { 
         <path d="M153 118 L135 122 122 161 135 220 151 222 163 176Z" fill={model.tunic} opacity=".8" />
         <path d="M111 105 L120 126 129 105 136 120 120 158 104 120Z" fill={model.skinShadow} opacity=".8" />
         <path d="M120 158 L120 222" stroke={model.tunicLight} strokeWidth="2" opacity=".7" />
+        {/* Default Rusty Armor (0 stats) while the Armor slot is empty. */}
+        {model.starterArmor ? (
+          <g data-starter="rusty-armor">
+            <path d="M89 117 Q120 106 151 117 L158 172 150 200 90 200 82 172Z" fill={RUST_COLORS.iron} stroke="#3B2A20" strokeWidth="2" />
+            <path d="M93 124 Q120 115 147 124 L152 170 145 194 95 194 88 170Z" fill={RUST_COLORS.rustDark} opacity=".55" />
+            <path d="M120 116 L120 198" stroke={RUST_COLORS.rustLight} strokeWidth="2" opacity=".7" />
+            <path d="M88 150 Q120 158 152 150" stroke="#3B2A20" strokeWidth="2" fill="none" opacity=".6" />
+            <path d="M101 128 Q104 140 99 152 M139 134 Q136 146 142 160 M108 170 Q112 180 106 190" stroke={RUST_COLORS.rust} strokeWidth="3" fill="none" opacity=".8" />
+            <circle cx="96" cy="124" r="2.2" fill={RUST_COLORS.rustLight} /><circle cx="144" cy="124" r="2.2" fill={RUST_COLORS.rustLight} />
+            <path d="M84 113 Q74 116 70 132 L86 138 92 120Z M156 113 Q166 116 170 132 L154 138 148 120Z" fill={RUST_COLORS.iron} stroke="#3B2A20" strokeWidth="2" />
+          </g>
+        ) : null}
         {beltPreviewStage ? (
           <BeltWaistLayer stage={beltPreviewStage} color={model.belt} />
         ) : (
@@ -68,6 +82,16 @@ export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { 
             <path d="M98 115 L144 217" stroke="#b59b75" strokeWidth="2" opacity=".65" />
           </>
         )}
+        {/* Default Rusty Sword (0 stats) while the Weapon slot is empty; the hand is drawn over its grip. */}
+        {model.starterWeapon && model.mainHand !== 'staff' && model.mainHand !== 'lantern' ? (
+          <g data-starter="rusty-sword">
+            <path d="M54 266 L64 266 62 330 59 340 56 330Z" fill={RUST_COLORS.iron} stroke={RUST_COLORS.rustDark} strokeWidth="2" />
+            <path d="M58 270 L58 326" stroke={RUST_COLORS.rust} strokeWidth="2" opacity=".8" />
+            <path d="M56 288 L61 292 M57 306 L60 309" stroke={RUST_COLORS.rust} strokeWidth="3" opacity=".9" />
+            <rect x="43" y="259" width="31" height="7" rx="2" fill={RUST_COLORS.rustDark} stroke="#3B2A20" strokeWidth="1.5" />
+            <rect x="54" y="236" width="9" height="24" rx="2" fill={RUST_COLORS.grip} />
+          </g>
+        ) : null}
         {/* Arms and fitted bracers; no separate circular puppet joints. */}
         <path d="M85 115 Q69 119 64 142 L55 201 73 206 90 156Z" fill={`url(#${shirt})`} stroke="#343333" strokeWidth="2" />
         <path d="M155 115 Q171 119 176 142 L185 201 167 206 150 156Z" fill={`url(#${shirt})`} stroke="#343333" strokeWidth="2" />

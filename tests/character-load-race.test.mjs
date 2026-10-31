@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 import { createLatestCharacterLoadGate } from '../lib/preview/latestCharacterLoadGate.ts';
+import { SERVER_EQUIPPABLE_ITEMS, canRequestEquip, isSlotUnlocked, levelForVerifiedXp, slotLockText } from './helpers/gearSlotsModule.mjs';
 
 const source = readFileSync(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -23,10 +24,10 @@ function findNode(predicate) {
 function routeHandler(name, deps) {
   const node = name === 'load'
     ? findNode((n) => ts.isVariableDeclaration(n) && n.name.getText(ast) === 'load')
-    : findNode((n) => ts.isFunctionDeclaration(n) && n.name?.text === 'setArmorEquipped');
+    : findNode((n) => ts.isFunctionDeclaration(n) && n.name?.text === 'setItemEquipped');
   const code = name === 'load'
     ? `const handler = ${node.initializer.arguments[0].getText(ast)};`
-    : `${node.getText(ast)}\nconst handler = setArmorEquipped;`;
+    : `${node.getText(ast)}\nconst handler = setItemEquipped;`;
   const compiled = ts.transpileModule(code, {
     compilerOptions: { module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022 },
   }).outputText;
@@ -49,11 +50,16 @@ function scenario(oldGearPromise, equipPromise = null) {
     gear: { ownedItemIds: owned, equippedItemIds: [] } };
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: 'account-a', email: 'a@example.test' } }, error: null }) },
-    from: () => ({ select: () => ({ eq: () => ({
-      maybeSingle: async () => ({ data: null, error: null }),
-    }) }) }),
+    from: (table) => table === 'wellness_readings'
+      // Read-only latest wellness reading (absent on databases without the wellness migration).
+      ? { select: () => ({ order: () => ({ limit: async () => ({ data: null, error: { message: 'not available' } }) }) }) }
+      : { select: () => ({ eq: () => ({
+        maybeSingle: async () => ({ data: null, error: null }),
+      }) }) },
     rpc: async (name) => {
       if (name === 'get_lifetime_xp') return { data: 10, error: null };
+      // Read-only Crypt stat allocation; absent on databases without the Crypt migration.
+      if (name === 'get_crypt_profile') return { data: null, error: { message: 'not available' } };
       if (name === 'equip_earned_armor') {
         equipCalls += 1;
         return equipPromise ?? { error: null };
@@ -72,12 +78,17 @@ function scenario(oldGearPromise, equipPromise = null) {
     loadGate, process, window: undefined, setState, supabase: () => client,
     verifiedLifetimeXp: (value) => value,
     parseAuthenticatedGearSnapshot: (value) => value,
+    parseCryptProfile: (value) => ({ attributes: value?.attributes ?? null }),
     adventurerName: () => 'Adventurer', loginHref: () => '/login',
+    WELLNESS_READING_COLUMNS: 'reading_date,sleep_hours,steps,source,updated_at',
+    wellnessSnapshot: () => ({ connected: false }),
   });
-  const equip = routeHandler('setArmorEquipped', {
-    state, equipmentBusy: false, equipmentMutationInFlight: { current: false }, loadGate, setEquipmentBusy: () => {},
+  const equipItem = routeHandler('setItemEquipped', {
+    levelForVerifiedXp, canRequestEquip, isSlotUnlocked, slotLockText, SERVER_EQUIPPABLE_ITEMS,
+    state: { ...state, xp: 25 }, equipmentBusy: false, equipmentMutationInFlight: { current: false }, loadGate, setEquipmentBusy: () => {},
     setEquipmentError: () => {}, supabase: () => client, setState, load,
   });
+  const equip = (on) => equipItem('headwear', 'ashen-hood', on);
   return { load, equip, loadGate, history, get state() { return state; },
     get gearCalls() { return gearCalls; }, get equipCalls() { return equipCalls; } };
 }
@@ -162,4 +173,19 @@ test('failed equip releases singleflight lock without claiming equipment ownersh
   assert.deepEqual(app.state.gear.equippedItemIds, [], 'failed equip cannot invent owned gear');
   await app.equip(true);
   assert.equal(app.equipCalls, 2, 'failure must release synchronous lock for a new attempt');
+});
+
+test('locked headwear (below Lv 3) never reaches the equip RPC', async () => {
+  const gear = Promise.resolve({ data: { ownedItemIds: ['ashen-hood'], equippedItemIds: [] }, error: null });
+  const app = scenario(gear);
+  let message = '';
+  const locked = routeHandler('setItemEquipped', {
+    levelForVerifiedXp, canRequestEquip, isSlotUnlocked, slotLockText, SERVER_EQUIPPABLE_ITEMS,
+    state: { status: 'ready', preview: false, xp: 24, gear: { ownedItemIds: ['ashen-hood'], equippedItemIds: [] } },
+    equipmentBusy: false, equipmentMutationInFlight: { current: false }, loadGate: app.loadGate,
+    setEquipmentBusy: () => {}, setEquipmentError: (m) => { message = m; },
+    supabase: () => { throw new Error('locked slot must not call Supabase'); }, setState: () => {}, load: app.load,
+  });
+  await locked('headwear', 'ashen-hood', true);
+  assert.equal(message, 'Unlocks at Lv 3.');
 });

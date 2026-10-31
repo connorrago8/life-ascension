@@ -1,5 +1,5 @@
-export const metadata = { title: 'Quest notes · LIFE ASCENSION' };
+export const metadata = { title: 'Quests · LIFE ASCENSION' };
 
-export default function QuestNotesLayout({ children }: { children: React.ReactNode }) {
+export default function QuestsLayout({ children }: { children: React.ReactNode }) {
   return children;
 }
