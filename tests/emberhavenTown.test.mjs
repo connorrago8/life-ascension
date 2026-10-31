@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('../app/(app)/play/emberhaven/page.tsx', import.meta.url), 'utf8');
 
 test('Emberhaven connects to existing quest, character, and adventure routes', () => {
-  for (const route of ['/quests', '/character', '/play']) {
+  for (const route of ['/quests', '/play/emberhaven/blacksmith', '/play']) {
     assert.match(source, new RegExp(`href: '${route.replaceAll('/', '\\/')}'`));
   }
 });
@@ -26,4 +26,18 @@ test('Emberhaven exposes landmarks and respects mobile safe areas', () => {
   assert.match(source, /aria-label="Town destinations"/);
   assert.match(source, /safe-area-inset-bottom/);
   assert.match(source, /minHeight: 44/);
+});
+
+const forge = readFileSync(new URL('../app/(app)/play/emberhaven/blacksmith/page.tsx', import.meta.url), 'utf8');
+
+test('Blacksmith makes no false account-inventory promises', () => {
+  assert.match(forge, /demonstration content, not verified account inventory/);
+  assert.match(forge, /href="\/character"/);
+  assert.match(forge, /href="\/play\/emberhaven"/);
+  assert.doesNotMatch(forge, /supabase\(|\.rpc\(|localStorage\.|sessionStorage\.|fetch\(/);
+});
+
+test('Town adventure gate acknowledges the locked Crypt', () => {
+  assert.match(source, /Crypt may still be locked/);
+  assert.match(source, /No shop, crafting, or rewards are active here/);
 });
