@@ -58,6 +58,13 @@ export default function CompanionMode(){
   if(!error)setAssignment("");
   await load();setBusy(false);
  }
+ async function retireAssignment(id:string){
+  if(busy||!window.confirm("Retire this assignment? Future completions return to normal XP."))return;
+  setBusy(true);
+  const {error}=await supabase().rpc("quest_companion_retire_assignment",{p_assignment_id:id});
+  setMessage(error?.message||"Assignment retired. Existing XP remains unchanged.");
+  await load();setBusy(false);
+ }
  async function log(h:Habit){
   if(!profile||busy)return;setBusy(true);
   const period=h.cadence==="weekly"?week:h.cadence==="daily"?today:"1970-01-01";
