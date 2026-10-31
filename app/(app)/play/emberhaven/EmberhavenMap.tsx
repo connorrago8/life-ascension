@@ -44,7 +44,7 @@ export function EmberhavenMap() {
           <path d="M50 43 L19 28 M50 43 L76 25 M50 43 L21 72 M50 43 L74 73 M50 43 L50 91" fill="none" stroke="#d8b47a" strokeWidth="1.5" strokeDasharray="2 2" opacity=".65" />
           <path d="M4 6 Q50 -2 96 6 L96 96 Q50 103 4 96 Z" fill="none" stroke="#8d7759" strokeWidth="2" />
         </svg>
-        <div aria-hidden="true" data-facing={facing} style={{ position: 'absolute', left: `${position.x}%`, top: `${position.y}%`, transform: 'translate(-50%, -50%)', zIndex: 2, width: 24, height: 34, transition: 'left 160ms linear, top 160ms linear', pointerEvents: 'none', filter: 'drop-shadow(0 3px 3px #0009)', rotate: facing === 'west' ? '-8deg' : facing === 'east' ? '8deg' : '0deg' }}>
+        <div className="town-avatar" aria-hidden="true" data-facing={facing} style={{ position: 'absolute', left: `${position.x}%`, top: `${position.y}%`, transform: 'translate(-50%, -50%)', zIndex: 2, width: 24, height: 34, pointerEvents: 'none', filter: 'drop-shadow(0 3px 3px #0009)', rotate: facing === 'west' ? '-8deg' : facing === 'east' ? '8deg' : '0deg' }}>
           <div style={{ margin: '0 auto', width: 13, height: 12, background: '#e3b98d', border: '2px solid #272a37', borderRadius: 3 }} />
           <div style={{ width: 22, height: 15, background: '#56766e', border: '2px solid #252b32', borderRadius: 4 }} />
           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}><span style={{ width: 6, height: 7, background: '#343f4c' }} /><span style={{ width: 6, height: 7, background: '#343f4c' }} /></div>
@@ -74,6 +74,12 @@ export function EmberhavenMap() {
         {interaction && <p role="note" style={{ padding: 12, borderLeft: '3px solid #e6b66b', background: '#2a2b28', marginTop: 8 }}>{active.story}</p>}
         <Link className="btn" href={active.href} style={{ minHeight: 44, width: '100%', marginTop: 12 }}>Enter {active.label} →</Link>
       </div>
+      <style jsx>{`
+        .town-avatar { transition: left 160ms linear, top 160ms linear; }
+        @media (prefers-reduced-motion: reduce) {
+          .town-avatar { transition: none; }
+        }
+      `}</style>
     </section>
   );
 }

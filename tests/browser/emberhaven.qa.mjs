@@ -59,11 +59,55 @@ try {
       assert.equal(await enter.getAttribute('href'), path);
       await enter.click();
       await page.waitForURL(url => url.pathname === path);
-      await page.goto(`${base}/play/emberhaven`);
+      if (path.startsWith('/play/emberhaven/')) {
+        await page.locator('main a[href="/play/emberhaven"]').click();
+      } else if (path === '/play') {
+        await page.getByRole('link', { name: 'Visit Emberhaven town →', exact: true }).click();
+      } else {
+        await page.goBack();
+      }
+      await page.getByRole('heading', { name: 'Emberhaven', exact: true }).waitFor();
     }
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    assert.equal(await avatar.evaluate(el => getComputedStyle(el).transitionDuration), '0s');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    assert.match(await avatar.evaluate(el => getComputedStyle(el).transitionDuration), /0\.16s/);
+
+    // Create a real guest run through the UI, then leave via browser history.
+    // "End run" deliberately destroys the run and is not a resume route.
+    await page.getByRole('button', { name: 'Inspect Trail Gate', exact: true }).click();
+    await page.getByRole('link', { name: 'Enter Trail Gate →', exact: true }).click();
+    await page.getByRole('link', { name: 'Enter →', exact: true }).click();
+    await page.getByRole('button', { name: 'Enter Floor 1', exact: true }).click();
+    await page.getByRole('button', { name: /^Start with the Bruiser deck/ }).click();
+    await page.getByRole('heading', { name: 'Choose your opening card', exact: true }).waitFor();
+    await page.getByRole('button', { name: /^Take .* costs / }).first().click();
+    await page.getByRole('heading', { name: 'Choose your path', exact: true }).waitFor();
+    const readRun = () => page.evaluate(() => JSON.parse(localStorage.getItem('la.crypt.activeRun.v1')));
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('la.crypt.activeRun.v1'))?.state?.phase === 'map');
+    const original = await readRun();
+    assert.equal(original.owner, 'guest');
+    await page.goBack();
+    await page.getByRole('link', { name: 'Visit Emberhaven town →', exact: true }).click();
+    assert.deepEqual(await readRun(), original, 'entering town must not change the saved run');
+    for (const name of ['Blacksmith', 'Hearth', 'Market', 'Waystone']) {
+      await page.getByRole('button', { name: `Inspect ${name}`, exact: true }).click();
+      await page.getByRole('link', { name: `Enter ${name} →`, exact: true }).click();
+      await page.locator('main a[href="/play/emberhaven"]').click();
+      await page.getByRole('heading', { name: 'Emberhaven', exact: true }).waitFor();
+      assert.deepEqual(await readRun(), original, `${name} must not change the saved run`);
+    }
+    await page.getByRole('button', { name: 'Inspect Trail Gate', exact: true }).click();
+    await page.getByRole('link', { name: 'Enter Trail Gate →', exact: true }).click();
+    await page.getByRole('link', { name: 'Continue run', exact: true }).click();
+    await page.getByRole('heading', { name: 'Choose your path', exact: true }).waitFor();
+    assert.deepEqual((await readRun()).state, original.state, 'resume must preserve the complete run state');
+    await page.reload();
+    await page.getByRole('heading', { name: 'Choose your path', exact: true }).waitFor();
+    assert.deepEqual((await readRun()).state, original.state, 'reload must preserve the complete run state');
     assert.deepEqual(errors, []);
     assert.deepEqual(violations, []);
-    console.log(`PASS ${width}px: movement, collision, boundary, dialogue, six navigation targets, no external requests or writes`);
+    console.log(`PASS ${width}px: movement, collision, dialogue, return links, reduced motion, guest Crypt resume and reload, no external requests or network writes`);
     await context.close();
   }
 } finally {
