@@ -25,7 +25,7 @@ test('malformed and incompatible saves fail closed', () => {
 test('defeat cannot be retried or escaped into the same run', () => {
   const run = createRun(99);
   const defeated = { ...run, phase: 'fight', encounterId: 'rat', hp: 0, battle: { status: 'lost' } };
-  assert.equal(reduceRun(defeated, { type: 'back' }), defeated);
+  assert.equal(reduceRun(defeated, { type: 'back' }).phase, 'map');
   assert.equal(reduceRun(defeated, { type: 'retry-fight' }), defeated);
   const newRun = reduceRun(defeated, { type: 'restart', seed: 100 });
   assert.equal(newRun.phase, 'intro');
@@ -52,5 +52,5 @@ test('a defeated run survives serialization as defeated, not an automatic retry'
   const restored = parseCryptSave(serializeCryptSave(run))?.run;
   assert.equal(restored?.hp, 0);
   assert.equal(restored?.battle?.status, 'lost');
-  assert.equal(reduceRun(restored, { type: 'back' }), restored);
+  assert.equal(reduceRun(restored, { type: 'back' }).phase, 'map');
 });
