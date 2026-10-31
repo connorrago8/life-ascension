@@ -61,3 +61,23 @@ test("reward stats hidden until requested",()=>{
  assert.equal(rewardPreview(reward,false).stats,undefined);
  assert.deepEqual(rewardPreview(reward,true).stats,{defense:5});
 });
+
+test("weekly review remains attributed to original week",()=>{
+ const s=empty([quest("clean","weekly")]);
+ const result=exports.resolveWeeklyReview(s,"clean","2026-10-26","pending");
+ assert.deepEqual(result.weeklyReviews,[{questId:"clean",week:"2026-10-26",status:"pending"}]);
+ const revised=exports.resolveWeeklyReview(result,"clean","2026-10-26","completed");
+ assert.equal(revised.weeklyReviews.length,1);
+ assert.equal(revised.weeklyReviews[0].status,"completed");
+ assert.throws(()=>exports.resolveWeeklyReview(s,"clean","2026-10-27","completed"),/Monday/);
+});
+test("pending suggestions resolve only once",()=>{
+ const s={...empty([]),pendingInputs:[{id:"one",question:"Add reminder?",createdAt:"2026-10-31T12:00:00Z"}]};
+ const first=exports.resolvePendingInput(s,"one",at("2026-10-31T18:00:00Z"));
+ const second=exports.resolvePendingInput(first,"one",at("2026-11-01T18:00:00Z"));
+ assert.deepEqual(first,second);
+});
+test("AI suggestions reject duplicate titles regardless of whitespace and case",()=>{
+ assert.equal(exports.isDuplicateQuestTitle([quest("Brush Teeth")]," brush   teeth "),true);
+ assert.equal(exports.isDuplicateQuestTitle([quest("Brush Teeth")],"Fold laundry"),false);
+});
