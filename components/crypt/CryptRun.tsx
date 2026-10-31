@@ -62,6 +62,7 @@ export function CryptRun() {
   const [saveReady, setSaveReady] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState('Loading saved run…');
+  const [saveMode, setSaveMode] = useState<'cloud' | 'local'>('local');
   const revision = useRef<number | null>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const cloudAccount = useRef<string | null>(null);
@@ -78,6 +79,7 @@ export function CryptRun() {
           if (error) throw error;
           if (user) {
             cloudAccount.current = user.id;
+            setSaveMode('cloud');
             const saved = await loadCloudCryptRun();
             if (cancelled || generation !== epoch.current) return;
             revision.current = saved?.revision ?? 0;
@@ -135,8 +137,8 @@ export function CryptRun() {
       });
       return;
     }
-    try { window.localStorage.setItem(LOCAL_PREVIEW_SAVE_KEY, serializeCryptSave(run)); }
-    catch { setSaveError('Could not save this run. Keep this tab open.'); }
+    try { window.localStorage.setItem(LOCAL_PREVIEW_SAVE_KEY, serializeCryptSave(run)); setSaveStatus('Saved on this device'); }
+    catch { setSaveError('Could not save this run. Keep this tab open.'); setSaveStatus('Local save failed'); }
   }, [run, saveReady, saveError]);
 
   useEffect(() => {
@@ -190,6 +192,7 @@ export function CryptRun() {
       <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
       {saveError && <p role="alert" className="muted">{saveError}</p>}
       <p role="status" className="muted">{saveStatus}</p>
+      {saveMode === 'local' && <p className="muted">This playtest saves on this browser only. Do not clear Safari website data until you finish your run.</p>}
       <header className="crypt-top">
         {run.phase === 'intro' ? (
           <Link href="/play" prefetch={false} className="icon-btn" aria-label="Return to adventure hub; this preview run is saved locally when browser storage is available"><BackIcon /></Link>
