@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 const landmarks = [
-  { id: 'board', label: 'Noticeboard', icon: '✦', href: '/quests', detail: 'Your real-world quests' },
+  { id: 'board', label: 'Noticeboard', icon: '✦', href: '/quest-board-v3', detail: 'Your real-world quests' },
   { id: 'forge', label: 'Blacksmith', icon: '⚒', href: '/play/emberhaven/blacksmith', detail: 'Meet Mara at the forge' },
   { id: 'hearth', label: 'Hearth', icon: '♨', href: '/play/emberhaven/hearth', detail: 'A quiet place by the fire' },
   { id: 'market', label: 'Market', icon: '✧', href: '/play/emberhaven/market', detail: 'Meet the lantern keeper' },
