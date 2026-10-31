@@ -1,0 +1,42 @@
+name: ChatGPT isolated feature checks
+
+on:
+  push:
+    branches:
+      - 'chatgpt/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatgpt-feature-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.repository == 'connorrago8/life-ascension'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact pushed commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: TypeScript verification
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Build gate explanation
+        run: |
+          echo "Full npm run build is NOT executed in this unprivileged workflow."
+          echo "The project build requires a verified Supabase public key fingerprint and environment pin."
+          echo "No production, preview, or database credentials are available to this job."
+          echo "A green result certifies TypeScript and unit tests only, not the build or hosted QA."
