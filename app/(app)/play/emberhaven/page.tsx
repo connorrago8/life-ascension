@@ -74,7 +74,7 @@ export default function EmberhavenPage() {
         <div style={{ position: 'absolute', bottom: 0, right: '6%', width: '25%', height: 34, background: '#423b37', clipPath: 'polygon(0 35%, 50% 0, 100% 35%, 100% 100%, 0 100%)' }} />
         <span style={{ position: 'absolute', bottom: 15, left: '50%', width: 8, height: 14, background: '#e9ae68', boxShadow: '0 0 22px 8px #c77c3455' }} />
       </div>
-      <section aria-label="Town destinations" style={{ display: 'grid', gap: 12, marginTop: 24 }}>
+      <section aria-label="Town destinations" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 12, marginTop: 24 }}>
         {places.map((place) => (
           <article key={place.name} style={{
             border: '1px solid var(--border)',
