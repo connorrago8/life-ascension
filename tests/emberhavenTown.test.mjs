@@ -101,3 +101,9 @@ test('Town exploration includes directional feedback and local proximity cues', 
   assert.match(map, /atSelected/);
   assert.match(map, /You are at this landmark/);
 });
+
+test('Town walking counts actual movement without nested state updates', () => {
+  assert.match(map, /x !== position.x \|\| y !== position.y/);
+  assert.match(map, /setSteps/);
+  assert.doesNotMatch(map, /setPosition\(\(old\) =>/);
+});
