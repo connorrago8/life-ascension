@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { questDay, selectDailyQuests, type Quest } from "../src/lib/quest-board-v3";
 
 type Snapshot={day:string;questIds:string[];persisted:boolean};
-type DbQuest={id:string;title:string;cadence:string;created_at:string;domain:string;active:boolean};
+type DbQuest={id:string;title:string;cadence:string;created_at:string;domain:string;active:boolean;scheduled_for:string|null;quest_type:string};
 export function useQuestBoardV3Selection(){
  const [selection,setSelection]=useState<Snapshot|null>(null);
  const [message,setMessage]=useState("");
@@ -22,9 +22,9 @@ export function useQuestBoardV3Selection(){
   if(stored){
    setSelection({day,questIds:stored.quest_ids as string[],persisted:true});setMessage("");return;
   }
-  const {data:rows,error:qe}=await client.from("quests").select("id,title,cadence,created_at,domain,active").eq("owner_id",user.id).eq("active",true).eq("cadence","daily").order("created_at",{ascending:true}).limit(300);
+  const {data:rows,error:qe}=await client.from("quests").select("id,title,cadence,created_at,domain,active,scheduled_for,quest_type").eq("owner_id",user.id).eq("active",true).eq("cadence","daily").order("created_at",{ascending:true}).limit(300);
   if(qe){setSelection(null);setMessage("Could not load quest pool.");return}
-  const pool=((rows||[]) as DbQuest[]).map(q=>({id:q.id,title:q.title,cadence:"daily" as const,source:"manual" as const,enabled:q.active,priority:5,createdAt:q.created_at,category:q.domain} satisfies Quest));
+  const pool=((rows||[]) as DbQuest[]).filter(q=>q.quest_type!=="goal"&&(!q.scheduled_for||q.scheduled_for<=day)).map(q=>({id:q.id,title:q.title,cadence:"daily" as const,source:"manual" as const,enabled:q.active,priority:5,createdAt:q.created_at,category:q.domain} satisfies Quest));
   const proposed=selectDailyQuests(pool,new Date()).map(q=>q.id);
   // Server RPC validates ownership, gameplay-day boundary and immutable first writer.
   const {data:frozen,error:freezeError}=await client.rpc("quest_board_v3_freeze_selection",{p_day:day,p_quest_ids:proposed});
