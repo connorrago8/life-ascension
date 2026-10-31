@@ -127,7 +127,7 @@ export function weeklyReviewDue(state: QuestBoardState, now: Date): Quest[] {
   const local = new Date(`${p.year}-${p.month}-${p.day}T12:00:00Z`);
   const week = questWeek(now);
   const fridayOrLater = local.getUTCDay() === 5 ? Number(p.hour) >= 17 : local.getUTCDay() === 6 || local.getUTCDay() === 0;
-  return state.quests.filter(q => q.enabled && q.cadence === "weekly" && (fridayOrLater || state.weeklyReviews.some(r => r.questId === q.id && r.week !== week && r.status === "pending")) && !isCompleted(q, state.completions, now) && !state.weeklyReviews.some(r => r.questId === q.id && r.week === week && r.status === "ignored"));
+  return state.quests.filter(q => q.enabled && q.cadence === "weekly" && (fridayOrLater || state.weeklyReviews.some(r => r.questId === q.id && r.week !== week && r.status === "pending")) && !isCompleted(q, state.completions, now) && !state.weeklyReviews.some(r => r.questId === q.id && r.week === week && (r.status === "ignored" || r.status === "pending")));
 }
 /** Calendar events become suggestions, never mandatory quests, until reviewed. */
 export function calendarPendingInputs(events: CalendarSuggestion[], existing: PendingInput[], now: Date): PendingInput[] {
