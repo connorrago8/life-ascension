@@ -94,3 +94,10 @@ test('Town walking has movement controls and keyboard support', () => {
   assert.match(map, /Walk east/);
   assert.match(map, /Walk west/);
 });
+
+test('Town exploration includes directional feedback and local proximity cues', () => {
+  assert.match(map, /setSteps/);
+  assert.match(map, /data-facing/);
+  assert.match(map, /atSelected/);
+  assert.match(map, /You are at this landmark/);
+});
