@@ -16,7 +16,7 @@ alter table public.quest_companion_assignments enable row level security;
 create policy companion_assignments_owner_read on public.quest_companion_assignments for select to authenticated using(owner_id=(select auth.uid()));
 revoke all on public.quest_companion_assignments from anon,authenticated;
 grant select on public.quest_companion_assignments to authenticated;
-alter table public.xp_ledger drop constraint xp_ledger_amount_check;
+alter table public.xp_ledger drop constraint if exists xp_ledger_amount_check;
 alter table public.xp_ledger add constraint xp_ledger_amount_check check(amount in (1,2));
 create or replace function public.quest_companion_assign_to_owner(p_companion_id uuid,p_title text)
 returns uuid language plpgsql security definer set search_path='' as $$
