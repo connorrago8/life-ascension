@@ -70,3 +70,16 @@ begin
 end $$;
 revoke all on function public.set_quest_instance_status(uuid,text) from public,anon;
 grant execute on function public.set_quest_instance_status(uuid,text) to authenticated;
+
+-- Owner-controlled assignment retirement. Future completions revert to ordinary XP.
+create or replace function public.quest_companion_retire_assignment(p_assignment_id uuid)
+returns boolean language plpgsql security definer set search_path='' as $$
+declare v_owner uuid := auth.uid();
+begin
+ if v_owner is null then raise exception 'Authentication required'; end if;
+ update public.quest_companion_assignments set active=false
+ where id=p_assignment_id and owner_id=v_owner and active;
+ return found;
+end $$;
+revoke all on function public.quest_companion_retire_assignment(uuid) from public,anon;
+grant execute on function public.quest_companion_retire_assignment(uuid) to authenticated;
