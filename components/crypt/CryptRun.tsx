@@ -311,7 +311,7 @@ export function CryptRun() {
           onAction={(action) => dispatch({ type: 'combat', action })}
           onContinue={() => dispatch({ type: 'continue' }, run.phase)}
           onRetry={restart}
-          onRetreat={restart}
+          onRetreat={() => dispatch({ type: 'back' }, 'fight')}
         />
       )}
 
