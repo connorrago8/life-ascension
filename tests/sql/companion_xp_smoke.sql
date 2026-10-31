@@ -51,6 +51,19 @@ begin
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
  if v_xp<>1 then raise exception 'Historical XP was modified'; end if;
 end $audit$;
+-- Retiring an assignment changes future XP, not the existing ledger.
+do $retire$
+declare v_assignment uuid; v_instance uuid; v_xp int;
+begin
+ select id into v_assignment from public.quest_companion_assignments
+ where quest_id='c0000000-0000-4000-8000-000000000101'::uuid;
+ if not public.quest_companion_retire_assignment(v_assignment) then raise exception 'Retirement failed'; end if;
+ if public.quest_companion_retire_assignment(v_assignment) then raise exception 'Repeated retirement should be idempotent'; end if;
+ v_instance:=public.ensure_quest_instance('c0000000-0000-4000-8000-000000000101'::uuid,current_date+1);
+ perform public.set_quest_instance_status(v_instance,'complete');
+ select amount into v_xp from public.xp_ledger where instance_id=v_instance;
+ if v_xp<>1 then raise exception 'Retired assignment should award 1 XP'; end if;
+end $retire$;
 -- Another owner cannot assign the companion.
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000102',true);
 do $$
