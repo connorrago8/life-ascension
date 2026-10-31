@@ -1282,3 +1282,16 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
     max-height: calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
   html[data-delve-run='live'] .delve { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
+
+/* ---------- Quest streak fire, daily board overflow, weekly quests (t672u) ---------- */
+.streak-badge { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 44px; margin: 8px 0 0 !important; padding: 6px 12px; border: 1px solid #343b46; border-radius: 999px; background: #181b1f; color: var(--muted); font-size: 0.85rem; line-height: 1.25; max-width: 100%; }
+.streak-badge .streak-fire { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.streak-badge.lit { border-color: #6b4a2a; background: linear-gradient(90deg, rgba(255, 140, 60, 0.14), rgba(255, 140, 60, 0.03)); }
+.streak-badge.lit .streak-fire { color: #ffb070; }
+.streak-badge .streak-hint { min-width: 0; overflow-wrap: anywhere; }
+.quest-board-page .weekly-pending { padding: 0 4px; font-size: 0.85rem; margin-top: 8px; }
+.quest-board-page .board-offboard { margin-top: 10px; }
+.quest-board-page .offboard-toggle { min-height: 44px; width: 100%; justify-content: flex-start; gap: 8px; }
+.quest-board-page #offboard-quests-list > p.muted { padding: 8px 4px 0; font-size: 0.85rem; }
+.hub-today .hub-streak { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hub-today .hub-streak.lit { color: #ffb070; }

@@ -15,6 +15,7 @@ import { verifiedLifetimeXp } from '../../lib/characterXpProof';
 import { GEAR_SLOTS, SERVER_EQUIPPABLE_ITEMS } from '../../lib/gearSlots';
 import { chicagoToday, todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
 import { supabase } from '../../lib/supabase';
+import { localParts, parseStreak, type StreakState } from '../../lib/questStreak';
 import { starterSlots } from '../../lib/starterLook';
 import { ReturnBanner } from '../../components/home/ReturnBanner';
 
@@ -29,6 +30,7 @@ type HomeState =
       stats: Record<string, unknown> | null;
       gear: AuthenticatedGearSnapshot | null;
       today: TodayGlance | null;
+      streak: StreakState | null;
       preview: boolean;
     };
 
@@ -50,7 +52,7 @@ export default function Home() {
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      commit({ status: 'ready', name: 'Adventurer', xp: 7, stats: { strength: 3, agility: 2, intelligence: 1, endurance: 2, luck: 1 }, gear: null, today: { left: 2, done: 1 }, preview: true });
+      commit({ status: 'ready', name: 'Adventurer', xp: 7, stats: { strength: 3, agility: 2, intelligence: 1, endurance: 2, luck: 1 }, gear: null, today: { left: 2, done: 1 }, streak: { fire: 7, doneToday: true, today: chicagoToday(), timeZone: 'America/Chicago' }, preview: true });
       return;
     }
     try {
@@ -59,13 +61,15 @@ export default function Home() {
       const user = authError ? null : authData.user;
       if (!user) { commit({ status: 'signed-out' }); return; }
       const today = chicagoToday();
-      const [xpResult, profileResult, gearResult, statsResult, questsResult, instancesResult] = await Promise.all([
+      const [xpResult, profileResult, gearResult, statsResult, questsResult, instancesResult, streakResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
         client.rpc('get_crypt_profile'),
         client.from('quests').select('id,cadence,quest_type,scheduled_for').eq('active', true).limit(1000),
         client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).lte('due_date', today).or(`status.eq.available,due_date.eq.${today}`).limit(1000),
+        // Optional: a database without get_quest_streak just hides the badge.
+        Promise.resolve(client.rpc('get_quest_streak')).catch(() => ({ data: null, error: true })),
       ]);
       const verifiedXp = xpResult.error ? null : verifiedLifetimeXp(xpResult.data);
       if (verifiedXp === null) {
@@ -75,7 +79,7 @@ export default function Home() {
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
       const glance = questsResult.error || instancesResult.error
         ? null
-        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today);
+        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date()).minutes });
       commit({
         status: 'ready',
         name: adventurerName(user.email, profile?.display_name),
@@ -83,6 +87,7 @@ export default function Home() {
         stats: statsResult.error ? null : parseCryptProfile(statsResult.data).attributes,
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
         today: glance,
+        streak: streakResult.error ? null : parseStreak(streakResult.data),
         preview: false,
       });
     } catch {
@@ -186,9 +191,10 @@ export default function Home() {
       </section>
 
       {state.today && (
-        <Link href="/quests" className="hub-card hub-today" aria-label={`Today: ${todayGlanceLabel(state.today)}. Open quests`}>
+        <Link href="/quests" className="hub-card hub-today" aria-label={`Today: ${todayGlanceLabel(state.today)}.${state.streak ? ` Streak ${state.streak.fire} days.` : ''} Open quests`}>
           <span className="hub-today-label">Today</span>
           <span className="hub-today-value">{todayGlanceLabel(state.today)}</span>
+          {state.streak && <span className={'hub-streak' + (state.streak.fire > 0 ? ' lit' : '')} aria-hidden="true">🔥 {state.streak.fire}</span>}
           <span className="hub-today-chevron" aria-hidden="true">›</span>
         </Link>
       )}

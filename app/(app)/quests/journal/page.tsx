@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { weekStart } from '../../../../lib/questStreak';
 import { CollapsibleSection } from '../../../../components/CollapsibleSection';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -56,19 +57,24 @@ export default function QuestNotesIndex() {
       // Issue #46: mirror the Today board. A daily quest completed today and a
       // completed one-time quest are shown as done, not as open/active work.
       const today = todayLocal();
-      const onceIds = loadedQuests.filter((quest) => quest.active && quest.cadence !== 'daily').map((quest) => quest.id);
-      const [todayResult, onceResult] = await Promise.all([
+      const onceIds = loadedQuests.filter((quest) => quest.active && quest.cadence !== 'daily' && quest.cadence !== 'weekly').map((quest) => quest.id);
+      // Weekly quests are done for the week when this week's (Monday-keyed) instance is completed.
+      const weeklyIds = loadedQuests.filter((quest) => quest.active && quest.cadence === 'weekly').map((quest) => quest.id);
+      const [todayResult, onceResult, weeklyResult] = await Promise.all([
         client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).eq('due_date', today).limit(1000),
         onceIds.length
           ? client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).in('quest_id', onceIds).eq('status', 'completed').limit(1000)
           : Promise.resolve({ data: [] as InstanceStatus[], error: null }),
+        weeklyIds.length
+          ? client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).in('quest_id', weeklyIds).eq('due_date', weekStart(today)).limit(1000)
+          : Promise.resolve({ data: [] as InstanceStatus[], error: null }),
       ]);
-      if (todayResult.error || onceResult.error) {
-        setMessage(todayResult.error?.message || onceResult.error?.message || 'Unable to load quest status.');
+      if (todayResult.error || onceResult.error || weeklyResult.error) {
+        setMessage(todayResult.error?.message || onceResult.error?.message || weeklyResult.error?.message || 'Unable to load quest status.');
         return;
       }
       const done = new Set<string>();
-      for (const row of [...((todayResult.data ?? []) as InstanceStatus[]), ...((onceResult.data ?? []) as InstanceStatus[])]) {
+      for (const row of [...((todayResult.data ?? []) as InstanceStatus[]), ...((onceResult.data ?? []) as InstanceStatus[]), ...((weeklyResult.data ?? []) as InstanceStatus[])]) {
         if (row.status === 'completed') done.add(row.quest_id);
       }
       setQuests(loadedQuests);
@@ -111,7 +117,7 @@ export default function QuestNotesIndex() {
   const renderQuest = (quest: Quest) => {
     const latest = notes.find((note) => note.quest_id === quest.id);
     const done = doneQuestIds.has(quest.id);
-    return <div className="quest quest-tappable" key={quest.id} onClick={(event) => { if (shouldOpenQuestCard(event.target as Element, String(window.getSelection?.() ?? ''))) router.push(questDetailHref(quest.id)); }}><div className="quest-main"><div className="quest-title"><Link className="quest-title-link" href={questDetailHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : 'One-time'}{doneQuestIds.has(quest.id) ? (quest.cadence === 'daily' ? ' · ✓ Done today' : ' · ✓ Completed') : ''}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions">{done && quest.active ? <span className="tag" aria-label={`${quest.title} done`}>✓ Done</span> : <a className="btn ghost" href={questDetailHref(quest.id)}>View progress</a>}</div></div>;
+    return <div className="quest quest-tappable" key={quest.id} onClick={(event) => { if (shouldOpenQuestCard(event.target as Element, String(window.getSelection?.() ?? ''))) router.push(questDetailHref(quest.id)); }}><div className="quest-main"><div className="quest-title"><Link className="quest-title-link" href={questDetailHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div><div className="muted">{DOMAINS[quest.domain] ?? quest.domain} · {quest.cadence === 'daily' ? 'Daily' : quest.cadence === 'weekly' ? 'Weekly' : 'One-time'}{doneQuestIds.has(quest.id) ? (quest.cadence === 'daily' ? ' · ✓ Done today' : quest.cadence === 'weekly' ? ' · ✓ Done this week' : ' · ✓ Completed') : ''}</div>{latest && <p className="muted">{preview(latest.note)}{latest.percent != null ? ` · ${latest.percent}%` : ''}</p>}</div><div className="actions">{done && quest.active ? <span className="tag" aria-label={`${quest.title} done`}>✓ Done</span> : <a className="btn ghost" href={questDetailHref(quest.id)}>View progress</a>}</div></div>;
   };
 
   return (
