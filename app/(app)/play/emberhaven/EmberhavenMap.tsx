@@ -27,6 +27,7 @@ export function EmberhavenMap() {
   }, []);
   const nearby = landmarks.find((landmark) => Math.hypot(position.x - landmark.x, position.y - landmark.y) < 14);
   const active = landmarks.find((landmark) => landmark.id === selected) ?? landmarks[2];
+  const atSelected = Math.hypot(position.x - active.x, position.y - active.y) < 14;
 
   return (
     <section aria-labelledby="ember-map-title" style={{ marginTop: 22 }}>
@@ -60,6 +61,7 @@ export function EmberhavenMap() {
         <p style={{ fontSize: 11, letterSpacing: '.1em', color: '#f0c181' }}>SELECTED LANDMARK</p>
         <h3 style={{ margin: '7px 0' }}>{active.label}</h3>
         <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>{active.story}</p>
+        <p style={{ color: atSelected ? '#a9dfb6' : '#f0c181', fontSize: 12 }}>{atSelected ? 'You are at this landmark.' : 'Select a landmark or walk closer to explore.'}</p>
         <Link className="btn" href={active.href} style={{ minHeight: 44, width: '100%', marginTop: 12 }}>Enter {active.label} →</Link>
       </div>
     </section>
