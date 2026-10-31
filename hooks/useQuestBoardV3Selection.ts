@@ -11,7 +11,7 @@ export function useQuestBoardV3Selection(){
  const refresh=useCallback(async()=>{
   const client=supabase();
   const {data:{user},error:authError}=await client.auth.getUser();
-  if(authError||!user){setSelection(null);return}
+  if(authError||!user){setSelection(null);setMessage("");return}
   const day=questDay(new Date());
   const {data:stored,error:readError}=await client.from("quest_board_v3_selections").select("quest_ids").eq("owner_id",user.id).eq("day",day).maybeSingle();
   if(readError){
@@ -22,13 +22,13 @@ export function useQuestBoardV3Selection(){
   if(stored){
    setSelection({day,questIds:stored.quest_ids as string[],persisted:true});setMessage("");return;
   }
-  const {data:rows,error:qe}=await client.from("quests").select("id,title,cadence,created_at,domain,active").eq("owner_id",user.id).eq("active",true).eq("cadence","daily").limit(300);
-  if(qe){setMessage("Could not load quest pool.");return}
+  const {data:rows,error:qe}=await client.from("quests").select("id,title,cadence,created_at,domain,active").eq("owner_id",user.id).eq("active",true).eq("cadence","daily").order("created_at",{ascending:true}).limit(300);
+  if(qe){setSelection(null);setMessage("Could not load quest pool.");return}
   const pool=((rows||[]) as DbQuest[]).map(q=>({id:q.id,title:q.title,cadence:"daily" as const,source:"manual" as const,enabled:q.active,priority:5,createdAt:q.created_at,category:q.domain} satisfies Quest));
   const proposed=selectDailyQuests(pool,new Date()).map(q=>q.id);
   // Server RPC validates ownership, gameplay-day boundary and immutable first writer.
   const {data:frozen,error:freezeError}=await client.rpc("quest_board_v3_freeze_selection",{p_day:day,p_quest_ids:proposed});
-  if(freezeError||!Array.isArray(frozen)){setMessage("Daily selection could not be frozen on the server.");return}
+  if(freezeError||!Array.isArray(frozen)){setSelection(null);setMessage("Daily selection could not be frozen on the server.");return}
   setSelection({day,questIds:frozen as string[],persisted:true});setMessage("");
 
  },[]);
