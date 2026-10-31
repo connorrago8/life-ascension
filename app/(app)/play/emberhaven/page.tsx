@@ -1,9 +1,9 @@
 import Link from 'next/link';
 
 /**
- * Emberhaven's first vertical slice is intentionally navigation-only.
- * No account writes, invented currency, equipment grants, or run resets.
- * This route is isolated from Grok's active AdventureHub and Crypt changes.
+ * Emberhaven's six-location exploration hub. All destinations are read-only
+ * except navigation to existing quest and adventure experiences.
+ * No account writes, equipment grants, or run resets originate here.
  */
 const places = [
   {
@@ -64,11 +64,11 @@ export default function EmberhavenPage() {
         <div aria-hidden="true" style={{ fontSize: 44, lineHeight: 1.3, color: 'var(--mint)' }}>✧</div>
         <h1 id="emberhaven-title" style={{ fontSize: 'clamp(1.8rem, 7vw, 2.4rem)', marginTop: 8 }}>Emberhaven</h1>
         <p className="lede" style={{ maxWidth: 310, margin: '12px auto 0' }}>
-          The hearth is still burning. Your next step is yours to choose.
+          Six paths. One living town. Choose where your story goes next.
         </p>
       </div>
 
-      <div aria-hidden="true" style={{ height: 52, margin: '10px auto 0', maxWidth: 320, position: 'relative', overflow: 'hidden', borderBottom: '3px solid #806346' }}>
+      <div aria-hidden="true" style={{ height: 52, margin: '10px auto 0', maxWidth: 480, position: 'relative', overflow: 'hidden', borderBottom: '3px solid #806346' }}>
         <div style={{ position: 'absolute', bottom: 0, left: '7%', width: '27%', height: 28, background: '#423b37', clipPath: 'polygon(0 35%, 50% 0, 100% 35%, 100% 100%, 0 100%)' }} />
         <div style={{ position: 'absolute', bottom: 0, left: '38%', width: '26%', height: 44, background: '#554439', clipPath: 'polygon(0 32%, 50% 0, 100% 32%, 100% 100%, 0 100%)' }} />
         <div style={{ position: 'absolute', bottom: 0, right: '6%', width: '25%', height: 34, background: '#423b37', clipPath: 'polygon(0 35%, 50% 0, 100% 35%, 100% 100%, 0 100%)' }} />
