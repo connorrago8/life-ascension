@@ -8,7 +8,7 @@ assert.equal(new URL(base).hostname, '127.0.0.1');
 const browser = await chromium.launch({ headless: true, chromiumSandbox: true });
 try {
   for (const width of [320, 375, 390, 430]) {
-    const context = await browser.newContext({ viewport: { width, height: 844 } });
+    const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: true });
     const violations = [];
     const errors = [];
     await context.route('**/*', route => {
@@ -27,6 +27,21 @@ try {
     const avatar = page.locator('[data-facing]');
     const point = () => avatar.evaluate(el => [parseFloat(el.style.left), parseFloat(el.style.top)]);
     assert.deepEqual(await point(), [47, 43]);
+    await page.getByRole('button', { name: 'Walk east', exact: true }).tap();
+    assert.deepEqual(await point(), [55, 43]);
+    await page.getByRole('button', { name: 'Walk west', exact: true }).tap();
+    assert.deepEqual(await point(), [47, 43]);
+    const forge = page.getByRole('button', { name: 'Inspect Blacksmith', exact: true });
+    await forge.focus();
+    await page.keyboard.press('Space');
+    assert.equal(await forge.getAttribute('aria-pressed'), 'true');
+    await page.keyboard.press('ArrowUp');
+    assert.deepEqual(await point(), [47, 43], 'arrow keys on a landmark must not move the avatar');
+    assert.equal(await forge.evaluate(el => getComputedStyle(el).outlineWidth), '3px');
+    for (const control of await page.locator('section[aria-labelledby="ember-map-title"] button').all()) {
+      const box = await control.boundingBox();
+      assert.ok(box && box.width >= 44 && box.height >= 44, 'town controls must have 44px touch targets');
+    }
     await page.getByRole('button', { name: 'Walk north', exact: true }).click();
     assert.deepEqual(await point(), [47, 35]);
     const map = page.getByLabel('Interactive Emberhaven map. Focus here and use arrow keys to walk.', { exact: true });
@@ -35,7 +50,7 @@ try {
     assert.deepEqual(await point(), [39, 35]);
     await page.keyboard.press('ArrowUp'); // obstacle centered at (35, 22)
     assert.deepEqual(await point(), [39, 35]);
-    assert.match(await page.getByRole('status').innerText(), /Steps 2\./);
+    assert.match(await page.getByRole('status').innerText(), /Steps 4\./);
     for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowLeft');
     assert.deepEqual(await point(), [8, 35]);
     const steps = await page.getByRole('status').innerText();
@@ -72,6 +87,13 @@ try {
     assert.equal(await avatar.evaluate(el => getComputedStyle(el).transitionDuration), '0s');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     assert.match(await avatar.evaluate(el => getComputedStyle(el).transitionDuration), /0\.16s/);
+    // CSS layout zoom checks reflow; this is not native Safari zoom or VoiceOver.
+    await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, '200% layout zoom must not cause horizontal overflow');
+    for (const control of await page.locator('section[aria-labelledby="ember-map-title"] button').all()) {
+      assert.ok(await control.isVisible(), 'town controls must remain visible at 200% layout zoom');
+    }
+    await page.evaluate(() => { document.documentElement.style.zoom = ''; });
 
     // Create a real guest run through the UI, then leave via browser history.
     // "End run" deliberately destroys the run and is not a resume route.
@@ -107,7 +129,7 @@ try {
     assert.deepEqual((await readRun()).state, original.state, 'reload must preserve the complete run state');
     assert.deepEqual(errors, []);
     assert.deepEqual(violations, []);
-    console.log(`PASS ${width}px: movement, collision, dialogue, return links, reduced motion, guest Crypt resume and reload, no external requests or network writes`);
+    console.log(`PASS ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, guest Crypt resume and reload, no external requests or network writes`);
     await context.close();
   }
 } finally {

@@ -36,7 +36,7 @@ export function EmberhavenMap() {
     <section aria-labelledby="ember-map-title" style={{ marginTop: 22 }}>
       <h2 id="ember-map-title" style={{ textAlign: 'center', fontSize: '1.3rem' }}>Explore the town</h2>
       <p className="muted" style={{ textAlign: 'center', fontSize: 13, marginBottom: 14 }}>Move your adventurer with the controls or select a landmark. Approach a location to enter.</p>
-      <div aria-label="Interactive Emberhaven map. Focus here and use arrow keys to walk." tabIndex={0} onKeyDown={(event) => {
+      <div className="town-map" aria-label="Interactive Emberhaven map. Focus here and use arrow keys to walk." tabIndex={0} onKeyDown={(event) => {
         const direction = ({ ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east' } as const)[event.key as 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'];
         if (direction && event.target === event.currentTarget) { event.preventDefault(); move(direction); }
       }} style={{ position: 'relative', height: 300, borderRadius: 18, overflow: 'hidden', border: '2px solid #82613e', background: 'radial-gradient(ellipse at 50% 45%, #584a37 0%, #303c39 53%, #17262a 100%)' }}>
@@ -75,6 +75,10 @@ export function EmberhavenMap() {
         <Link className="btn" href={active.href} style={{ minHeight: 44, width: '100%', marginTop: 12 }}>Enter {active.label} →</Link>
       </div>
       <style jsx>{`
+        .town-map:focus-visible, button:focus-visible, a:focus-visible {
+          outline: 3px solid #ffe4ad;
+          outline-offset: 3px;
+        }
         .town-avatar { transition: left 160ms linear, top 160ms linear; }
         @media (prefers-reduced-motion: reduce) {
           .town-avatar { transition: none; }
