@@ -130,8 +130,8 @@ export function CombatView({
       {battle.status === 'lost' && (
         <>
           <p className="combat-result">{guardian ? COMBAT.guardianLose : COMBAT.lose}</p>
-          <button type="button" className="btn crypt-block" onClick={() => { setShowHistory(false); onRetry(); }}>{COMBAT.retry}</button>
-          <button type="button" className="btn ghost crypt-block" onClick={onRetreat}>{COMBAT.retreat}</button>
+          <button type="button" className="btn crypt-block" onClick={() => { setShowHistory(false); onRetry(); }}>Start a new run</button>
+          <button type="button" className="btn ghost crypt-block" onClick={onRetreat}>Abandon defeated run and restart</button>
         </>
       )}
       {battle.status === 'ongoing' && (

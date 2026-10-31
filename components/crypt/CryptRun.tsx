@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SPRITES } from '../../lib/crypt/art';
 import {
   COMBAT,
@@ -22,8 +22,14 @@ import {
 } from '../../lib/crypt/content';
 import { createRun, nodeAccess, reduceRun, type Phase, type RunCommand, type RunState } from '../../lib/crypt/run';
 import { readScopedRunValue, scopeRunValue, toggleScopedRunFlag, type RunScopedValue } from '../../lib/crypt/runScopedUi';
+import { parseCryptSave, serializeCryptSave } from '../../lib/crypt/saveContract';
+import { loadCloudCryptRun, saveCloudCryptRun, CryptSaveConflict } from '../../lib/crypt/cloudSave';
+import { supabase } from '../../lib/supabase';
 import { CombatView } from './CombatView';
 import { PixelArt } from './PixelArt';
+
+const CLOUD_ENABLED = process.env.NEXT_PUBLIC_CRYPT_CLOUD_SAVE_ENABLED === 'true';
+const LOCAL_PREVIEW_SAVE_KEY = 'life-ascension:crypt:preview-save:v1';
 
 function freshSeed(): number {
   const buf = new Uint32Array(1);
@@ -53,9 +59,90 @@ export function CryptRun() {
   const [endingChoice, setEndingChoice] = useState<RunScopedValue<'leave' | 'inspect'>>(null);
   const [showFieldNotes, setShowFieldNotes] = useState<RunScopedValue<boolean>>(null);
 
+  const [saveReady, setSaveReady] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState('Loading saved run…');
+  const [saveMode, setSaveMode] = useState<'cloud' | 'local'>('local');
+  const revision = useRef<number | null>(null);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const cloudAccount = useRef<string | null>(null);
+  const epoch = useRef(0);
+
   useEffect(() => {
-    setRun(createRun(freshSeed()));
+    let cancelled = false;
+    const generation = ++epoch.current;
+    async function initialize() {
+      if (CLOUD_ENABLED) {
+        try {
+          const { data: { user }, error } = await supabase().auth.getUser();
+          if (cancelled || generation !== epoch.current) return;
+          if (error) throw error;
+          if (user) {
+            cloudAccount.current = user.id;
+            setSaveMode('cloud');
+            const saved = await loadCloudCryptRun();
+            if (cancelled || generation !== epoch.current) return;
+            revision.current = saved?.revision ?? 0;
+            setRun(saved?.run ?? createRun(freshSeed()));
+            setSaveStatus(saved ? 'Cloud run restored' : 'New cloud run');
+            setSaveReady(true);
+            return;
+          }
+        } catch (error) {
+          if (cancelled || generation !== epoch.current) return;
+          setSaveError(error instanceof Error ? error.message : 'Cloud save unavailable.');
+          setSaveStatus('Cloud save unavailable — no run started');
+          setSaveReady(true);
+          return; // Never overwrite an inaccessible or incompatible cloud save.
+        }
+      }
+      try {
+        const existing = window.localStorage.getItem(LOCAL_PREVIEW_SAVE_KEY);
+        if (existing) {
+          const restored = parseCryptSave(existing);
+          if (!restored) throw new Error('Incompatible local save; it was not overwritten.');
+          setRun(restored.run);
+        } else setRun(createRun(freshSeed()));
+        setSaveStatus('Browser-local preview save');
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'Browser storage unavailable.');
+        // Preserve playability even when private browsing disables localStorage.
+        setRun(createRun(freshSeed()));
+        setSaveStatus('Unsaved preview — keep this tab open');
+      }
+      if (!cancelled) setSaveReady(true);
+    }
+    void initialize();
+    return () => { cancelled = true; epoch.current++; };
   }, []);
+
+  useEffect(() => {
+    if (!saveReady || !run || saveError) return;
+    if (cloudAccount.current) {
+      const snapshot = run;
+      const account = cloudAccount.current;
+      const generation = epoch.current;
+      setSaveStatus('Saving to cloud…');
+      queue.current = queue.current.then(async () => {
+        if (generation !== epoch.current || revision.current === null) return;
+        const { data: { user }, error } = await supabase().auth.getUser();
+        if (error || user?.id !== account) throw new Error('Account changed; cloud save stopped.');
+        const next = await saveCloudCryptRun(snapshot, revision.current);
+        if (generation !== epoch.current) return;
+        revision.current = next;
+        setSaveStatus('Saved to cloud');
+      }).catch((error: unknown) => {
+        if (generation !== epoch.current) return;
+        setSaveError(error instanceof CryptSaveConflict
+          ? 'Another device updated this run. Reload to view that version; local changes were not uploaded.'
+          : error instanceof Error ? error.message : 'Cloud save failed.');
+        setSaveStatus('Cloud save failed — progress not synchronized');
+      });
+      return;
+    }
+    try { window.localStorage.setItem(LOCAL_PREVIEW_SAVE_KEY, serializeCryptSave(run)); setSaveStatus('Saved on this device'); }
+    catch { setSaveError('Could not save this run. Keep this tab open.'); setSaveStatus('Local save failed'); }
+  }, [run, saveReady, saveError]);
 
   useEffect(() => {
     if (run) window.scrollTo(0, 0);
@@ -79,6 +166,9 @@ export function CryptRun() {
   function restart() {
     setEndingChoice(null);
     setShowFieldNotes(null);
+    if (saveError && cloudAccount.current) return;
+    setSaveError(null);
+    try { window.localStorage.removeItem(LOCAL_PREVIEW_SAVE_KEY); } catch { /* preview storage may be disabled */ }
     setRun(createRun(freshSeed()));
   }
 
@@ -87,7 +177,8 @@ export function CryptRun() {
       <main className="screen crypt-screen">
         <p className="page-brand">LIFE ASCENSION</p>
         <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
-        <p className="muted">{FLOOR.loading}</p>
+        <p className="muted">{saveError ?? FLOOR.loading}</p>
+        {saveError && !cloudAccount.current && <button type="button" className="btn" onClick={restart}>Start a new local run</button>}
       </main>
     );
   }
@@ -102,9 +193,12 @@ export function CryptRun() {
     <main className="screen crypt-screen" data-phase={run.phase}>
       <p className="page-brand">LIFE ASCENSION</p>
       <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
+      {saveError && <p role="alert" className="muted">{saveError}</p>}
+      <p role="status" className="muted">{saveStatus}</p>
+      {saveMode === 'local' && <p className="muted">This playtest saves on this browser only. Do not clear Safari website data until you finish your run.</p>}
       <header className="crypt-top">
         {run.phase === 'intro' ? (
-          <Link href="/play" prefetch={false} className="icon-btn" aria-label="Leave Crypt; unsaved dungeon progress will be lost"><BackIcon /></Link>
+          <Link href="/play" prefetch={false} className="icon-btn" aria-label="Return to adventure hub; this preview run is saved locally when browser storage is available"><BackIcon /></Link>
         ) : (
           <button type="button" className="icon-btn" aria-label={FLOOR.back} onClick={() => {
             // Returning to the sealed door should offer both endings again.
@@ -119,10 +213,10 @@ export function CryptRun() {
           {head.subtitle ? <p>{head.subtitle}</p> : null}
         </div>
         <div className="crypt-header-actions">
-          <Link href="/play" prefetch={false} className="btn ghost crypt-leave" aria-label="Leave Crypt; unsaved dungeon progress will be lost">
+          <Link href="/play" prefetch={false} className="btn ghost crypt-leave" aria-label="Return to adventure hub; this preview run is saved locally when browser storage is available">
             Leave Crypt
           </Link>
-          <button type="button" className="btn ghost crypt-restart" onClick={restart}>{FLOOR.restart}</button>
+          <button type="button" className="btn ghost crypt-restart" onClick={restart} aria-label="Abandon current preview run and start a new one">{FLOOR.restart}</button>
         </div>
       </header>
 
