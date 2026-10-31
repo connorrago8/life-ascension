@@ -24,6 +24,8 @@ declare v_owner uuid := auth.uid(); v_title text := btrim(p_title); v_quest uuid
 begin
  if v_owner is null then raise exception 'Authentication required'; end if;
  if v_title is null or char_length(v_title) not between 1 and 120 then raise exception 'Invalid quest title'; end if;
+ -- Reject title variants that differ only by whitespace before looking up the existing quest.
+ v_title := regexp_replace(v_title,'[[:space:]]+',' ','g');
  if not exists(select 1 from public.quest_companions where id=p_companion_id and owner_id=v_owner and consent_confirmed_at is not null) then raise exception 'Companion unavailable'; end if;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_owner::text || ':' || lower(regexp_replace(v_title,'[[:space:]]+',' ','g')),0));
  select id into v_quest from public.quests
