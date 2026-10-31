@@ -10,6 +10,7 @@ type Assignment={id:string;quest_id:string;requested_title:string;active:boolean
 export default function CompanionMode(){
  const [profile,setProfile]=useState<Companion|null>(null),[habits,setHabits]=useState<Habit[]>([]),[logs,setLogs]=useState<Log[]>([]);
  const [assignments,setAssignments]=useState<Assignment[]>([]);
+ const [lifetimeXp,setLifetimeXp]=useState(0);
  const [ready,setReady]=useState(false),[signedIn,setSignedIn]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const [name,setName]=useState("Izzy"),[title,setTitle]=useState(""),[cadence,setCadence]=useState<Habit["cadence"]>("daily");
  const [consent,setConsent]=useState(false);
@@ -28,6 +29,9 @@ export default function CompanionMode(){
   ]);
   if(he||le){setMessage("Unable to load companion habits or logs.");return}
   setHabits((h||[]) as Habit[]);setLogs((l||[]) as Log[]);
+  const {count:total,error:countError}=await client.from("quest_companion_completions").select("id",{count:"exact",head:true}).eq("companion_id",p.id);
+  if(countError)setMessage("Companion XP count is temporarily unavailable.");
+  else setLifetimeXp(total||0);
   const {data:a}=await client.from("quest_companion_assignments").select("id,quest_id,requested_title,active").eq("companion_id",p.id).eq("active",true).order("created_at",{ascending:false});
   setAssignments((a||[]) as Assignment[]);
  },[]);
@@ -66,7 +70,7 @@ export default function CompanionMode(){
  return <main className="wrap"><div className="eyebrow">LIFE ASCENSION · PRIVATE COMPANION MODE</div><h1>💜 {profile?.display_name||"Companion Mode"}</h1>
  <p className="muted">You manually log activities. No companion account, automatic monitoring, or penalties for missing logs. Companion XP is separate from your own.</p>
  {!profile?<section className="panel"><h2>Create a companion profile</h2><label>Display name<input className="field" maxLength={40} value={name} onChange={e=>setName(e.target.value)}/></label><label style={{display:"block",margin:"16px 0"}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> I confirm this person agreed to have their habits tracked.</label><button className="btn" disabled={busy||!consent} onClick={createProfile}>Create private profile</button></section>:<>
- <section className="panel"><div className="eyebrow">COMPANION PROGRESSION</div><h2>{logs.length} XP <small>from recorded completions</small></h2><p className="muted">{current.length} completions logged in the last 7 days · Missing entries are unknown, not failures.</p><Link className="btn ghost" href="/quest-board-v3">← My Quest Board</Link></section>
+ <section className="panel"><div className="eyebrow">COMPANION PROGRESSION</div><h2>{lifetimeXp} XP <small>from recorded completions</small></h2><p className="muted">{current.length} completions logged in the last 7 days · Missing entries are unknown, not failures.</p><Link className="btn ghost" href="/quest-board-v3">← My Quest Board</Link></section>
  <section className="panel"><h2>Log {profile.display_name}'s quests</h2>{habits.map(h=>{const period=h.cadence==="weekly"?week:h.cadence==="daily"?today:"1970-01-01";const done=logs.some(l=>l.habit_id===h.id&&l.period_start===period);return <div className="quest" key={h.id}><div className="quest-main"><div className="quest-title">{h.title}</div><div className="muted">{h.cadence} · +1 companion XP · {done?"Logged this period":"Not logged this period"}</div></div><button className="btn" disabled={busy||done} onClick={()=>log(h)}>{done?"✓ Logged":"Log completion"}</button></div>})}</section>
  <section className="panel"><h2>Add a manual quest</h2><input className="field" value={title} onChange={e=>setTitle(e.target.value)} maxLength={120} placeholder="e.g. Workout class"/><select className="field" value={cadence} onChange={e=>setCadence(e.target.value as Habit["cadence"])}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="once">One-time</option></select><button className="btn" disabled={busy||!title.trim()} onClick={addHabit}>Add quest</button></section>
  <section className="panel"><h2>💜 Quests from Izzy → Connor</h2>
