@@ -6,8 +6,10 @@ import {questDay,questWeek} from "../../../src/lib/quest-board-v3";
 type Companion={id:string;display_name:string;consent_confirmed_at:string|null};
 type Habit={id:string;title:string;cadence:"daily"|"weekly"|"once";active:boolean};
 type Log={id:string;habit_id:string;period_start:string;recorded_at:string};
+type Assignment={id:string;quest_id:string;requested_title:string;active:boolean};
 export default function CompanionMode(){
  const [profile,setProfile]=useState<Companion|null>(null),[habits,setHabits]=useState<Habit[]>([]),[logs,setLogs]=useState<Log[]>([]);
+ const [assignments,setAssignments]=useState<Assignment[]>([]);
  const [ready,setReady]=useState(false),[signedIn,setSignedIn]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const [name,setName]=useState("Izzy"),[title,setTitle]=useState(""),[cadence,setCadence]=useState<Habit["cadence"]>("daily");
  const [consent,setConsent]=useState(false);
@@ -26,6 +28,8 @@ export default function CompanionMode(){
   ]);
   if(he||le){setMessage("Unable to load companion habits or logs.");return}
   setHabits((h||[]) as Habit[]);setLogs((l||[]) as Log[]);
+  const {data:a}=await client.from("quest_companion_assignments").select("id,quest_id,requested_title,active").eq("companion_id",p.id).eq("active",true).order("created_at",{ascending:false});
+  setAssignments((a||[]) as Assignment[]);
  },[]);
  useEffect(()=>{void load()},[load]);
  const current=useMemo(()=>logs.filter(l=>l.recorded_at>=new Date(Date.now()-7*86400000).toISOString()),[logs]);
@@ -48,7 +52,7 @@ export default function CompanionMode(){
   const {data,error}=await supabase().rpc("quest_companion_assign_to_owner",{p_companion_id:profile.id,p_title:assignment.trim()});
   setMessage(error?.message||(data?"💜 Quest assigned to Connor · +2 XP when completed.":"Unable to assign quest."));
   if(!error)setAssignment("");
-  setBusy(false);
+  await load();setBusy(false);
  }
  async function log(h:Habit){
   if(!profile||busy)return;setBusy(true);
@@ -68,7 +72,8 @@ export default function CompanionMode(){
  <section className="panel"><h2>💜 Quests from Izzy → Connor</h2>
  <p className="muted">Type a task for Connor. Matching existing or AI-created quests are upgraded instead of duplicated. Future eligible completions award 2 XP; previous XP stays unchanged.</p>
  <input className="field" value={assignment} maxLength={120} onChange={e=>setAssignment(e.target.value)} placeholder="e.g. Fold and put away laundry" aria-label="Quest for Connor"/>
- <button className="btn" disabled={busy||!assignment.trim()} onClick={assignToConnor}>Assign to Connor · 2 XP</button></section>
+ <button className="btn" disabled={busy||!assignment.trim()} onClick={assignToConnor}>Assign to Connor · 2 XP</button>
+ {assignments.length>0&&<div style={{marginTop:16}}><h3>Assigned quests</h3>{assignments.map(a=><div className="quest" key={a.id}><div className="quest-main"><div className="quest-title">💜 {a.requested_title}</div><div className="muted">Assigned to Connor · +2 XP on eligible completion</div></div></div>)}</div>}</section>
  <section className="panel"><h2>Weekly activity snapshot</h2><p className="muted">{current.length} recorded completions in the past seven days. This is a descriptive count, not an automatic AI assessment.</p>{habits.map(h=><p key={h.id}>{h.title}: {current.filter(l=>l.habit_id===h.id).length} logged</p>)}</section>
  </>}
  {message&&<p className="message" role="status">{message}</p>}
