@@ -16,6 +16,8 @@ import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/g
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
 import { pathOptions, type PathOption } from '../../lib/crypt/delve/pathLabels';
+import { runRecap, type RunRecap, type SaveMode } from '../../lib/crypt/delve/recap';
+import { RunRecapView } from './RunRecap';
 import {
   canRemoveCard, canUpgradeCard, createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, runLoadout, type DelveCommand,
   type DelveState,
@@ -40,8 +42,13 @@ export type DelveRunProps = {
   keepNote: string;
   exitHref: string;
   onSaveAttributes: (attributes: Attributes) => Promise<boolean>;
-  onLoot: (runId: string, dropIndex: number, itemId: string) => void;
+  /** Resolves true once the server confirms the drop is in the vault (signed-in runs). */
+  onLoot: (runId: string, dropIndex: number, itemId: string) => void | Promise<boolean>;
   onFloorCleared: (runId: string, floor: number) => Promise<string>;
+  /** Where loot goes: the account vault, this visit only, or a dev preview. Defaults to this visit. */
+  saveMode?: SaveMode;
+  /** Called when a run ends (and again as vault saves confirm) with its recap. Never equips anything. */
+  onRunEnd?: (recap: RunRecap, kept: number) => void;
 };
 
 const HERO_PALETTE = { ...PALETTE, ...GEAR_INKS };
@@ -75,6 +82,15 @@ export function DelveRun(props: DelveRunProps) {
   const reported = useRef<{ runId: string; count: number }>({ runId: '', count: 0 });
   const clearedRuns = useRef<Set<string>>(new Set());
   const [checkpoint, setCheckpoint] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<{ runId: string; drops: number[] }>({ runId: '', drops: [] });
+  const saveMode: SaveMode = props.saveMode ?? 'visit';
+  const recap = useMemo(() => (state ? runRecap(state) : null), [state]);
+  const confirmedCount = recap && confirmed.runId === recap.runId ? confirmed.drops.length : 0;
+  const keptCount = recap ? (saveMode === 'vault' ? Math.min(confirmedCount, recap.found.length) : recap.found.length) : 0;
+  const onRunEnd = props.onRunEnd;
+  useEffect(() => {
+    if (recap && onRunEnd) onRunEnd(recap, keptCount);
+  }, [recap, keptCount, onRunEnd]);
 
   useEffect(() => {
     setVault((current) => {
@@ -92,7 +108,15 @@ export function DelveRun(props: DelveRunProps) {
       const index = reported.current.count;
       const itemId = state.found[index];
       reported.current.count += 1;
-      props.onLoot(state.runId, index, itemId);
+      const runId = state.runId;
+      const claim = props.onLoot(runId, index, itemId);
+      if (claim && typeof claim.then === 'function') {
+        claim.then((ok) => {
+          if (ok) setConfirmed((current) => current.runId === runId
+            ? (current.drops.includes(index) ? current : { runId, drops: [...current.drops, index] })
+            : { runId, drops: [index] });
+        }, () => {});
+      }
       setVault((current) => (current.includes(itemId) ? current : [...current, itemId]));
     }
   }, [state, props]);
@@ -145,11 +169,9 @@ export function DelveRun(props: DelveRunProps) {
       {state.phase === 'event' && state.event ? <EventView state={state} send={send} /> : null}
       {state.phase === 'treasure' ? <TreasureView state={state} send={send} /> : null}
       {state.phase === 'rest' ? <RestView state={state} send={send} /> : null}
-      {state.phase === 'floor-clear' ? (
-        <EndView state={state} won checkpoint={checkpoint} onCamp={() => dispatch({ kind: 'clear' })} exitHref={props.exitHref} />
-      ) : null}
-      {state.phase === 'defeat' ? (
-        <EndView state={state} won={false} checkpoint={null} onCamp={() => dispatch({ kind: 'clear' })} exitHref={props.exitHref} />
+      {recap ? (
+        <RunRecapView recap={recap} mode={saveMode} confirmed={confirmedCount} checkpoint={checkpoint}
+          onContinue={() => dispatch({ kind: 'clear' })} exitHref={props.exitHref} />
       ) : null}
     </main>
   );
@@ -839,27 +861,3 @@ function RestView({ state, send }: { state: DelveState; send: (command: DelveCom
   );
 }
 
-function EndView({ state, won, checkpoint, onCamp, exitHref }: {
-  state: DelveState; won: boolean; checkpoint: string | null; onCamp: () => void; exitHref: string;
-}) {
-  return (
-    <section aria-labelledby="delve-end-title" className={`delve-end ${won ? 'won' : 'lost'}`}>
-      <h2 id="delve-end-title">{won ? 'Floor 1 cleared!' : 'You fell in the Crypt'}</h2>
-      <div className="delve-hero-sprite"><HeroSprite loadout={state.loadout} label="Your adventurer" /></div>
-      {won ? (
-        <>
-          <p>The Hollow Warden crumbles. Floors 2–5 of the Forgotten Crypt open in a later update.</p>
-          {state.reward ? <LootLine itemId={state.reward.loot} equipped={state.reward.equipped} /> : null}
-          {checkpoint ? <p className="delve-note" role="status">{checkpoint}</p> : null}
-        </>
-      ) : (
-        <p>The run is over. You keep every piece of gear you found.</p>
-      )}
-      <p className="delve-small">Gear found this run: {state.found.length === 0 ? 'none' : state.found.map((id) => lootById(id)?.name ?? id).join(', ')}</p>
-      <div className="delve-options">
-        <button type="button" className="btn" onClick={onCamp}>Back to camp</button>
-        <a className="btn ghost" href={exitHref}>Leave the Crypt</a>
-      </div>
-    </section>
-  );
-}

@@ -7,6 +7,8 @@ import { coerceXp, levelFor } from '../../lib/level';
 import { supabase } from '../../lib/supabase';
 import { ZERO_ATTRIBUTES, type Attributes } from '../../lib/crypt/delve/stats';
 import { ownedEarnedGear } from '../../lib/crypt/delve/loot';
+import type { RunRecap, SaveMode } from '../../lib/crypt/delve/recap';
+import { recordRunEnd } from '../../lib/cryptReturn';
 import { parseAuthenticatedGearSnapshot } from '../../lib/preview/characterGearView';
 
 /**
@@ -108,16 +110,22 @@ export function DelveScreen() {
     }
   }, [online]);
 
-  const onLoot = useCallback((runId: string, dropIndex: number, itemId: string) => {
-    if (!online) return;
-    void (async () => {
-      try {
-        await supabase().rpc('claim_crypt_loot', { p_run_id: runId, p_drop_index: dropIndex, p_item_id: itemId });
-      } catch {
-        /* The run keeps going; the item stays in this visit's vault. */
-      }
-    })();
+  const onLoot = useCallback(async (runId: string, dropIndex: number, itemId: string): Promise<boolean> => {
+    if (!online) return false;
+    try {
+      const { error } = await supabase().rpc('claim_crypt_loot', { p_run_id: runId, p_drop_index: dropIndex, p_item_id: itemId });
+      return !error;
+    } catch {
+      /* The run keeps going; the item stays in this visit's vault. */
+      return false;
+    }
   }, [online]);
+
+  const saveMode: SaveMode = mode === 'online' ? 'vault' : mode === 'preview' ? 'preview' : 'visit';
+  // One-time Home banner ("Back from the Crypt"): result and item count only, keyed by run id. No worn gear.
+  const onRunEnd = useCallback((recap: RunRecap, kept: number) => {
+    recordRunEnd({ runId: recap.runId, result: recap.result, floor: recap.floor, kept, mode: saveMode, endedAt: Date.now() });
+  }, [saveMode]);
 
   const onFloorCleared = useCallback(async (runId: string, floor: number) => {
     if (!online) return 'Floor cleared. Sign in with the Crypt vault online to save checkpoints and earn capped Crypt XP.';
@@ -153,6 +161,8 @@ export function DelveScreen() {
       onSaveAttributes={onSaveAttributes}
       onLoot={onLoot}
       onFloorCleared={onFloorCleared}
+      saveMode={saveMode}
+      onRunEnd={onRunEnd}
     />
   );
 }

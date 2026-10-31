@@ -16,6 +16,7 @@ import { GEAR_SLOTS, SERVER_EQUIPPABLE_ITEMS } from '../../lib/gearSlots';
 import { chicagoToday, todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
 import { supabase } from '../../lib/supabase';
 import { starterSlots } from '../../lib/starterLook';
+import { ReturnBanner } from '../../components/home/ReturnBanner';
 
 type HomeState =
   | { status: 'loading' }
@@ -105,6 +106,7 @@ export default function Home() {
   if (state.status === 'signed-out') {
     return (
       <main className="wrap home-hub">
+        <ReturnBanner />
         <div className="eyebrow">LIFE ASCENSION</div>
         <h1>Your adventure awaits</h1>
         <p className="muted">Real actions. Real progress. Your private quest journal.</p>
@@ -140,6 +142,7 @@ export default function Home() {
   return (
     <main className="wrap home-hub">
       {state.preview && <p className="preview-banner" role="status">Layout preview. Sign in to load your adventurer.</p>}
+      <ReturnBanner />
       <header className="hub-header">
         <div className="eyebrow">LIFE ASCENSION</div>
         <h1 className="hub-name">{state.name}</h1>

@@ -1085,3 +1085,41 @@ code { font-family: ui-monospace, monospace; }
 .wellness-setup .panel p { margin: 0; }
 .wellness-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
 .wellness-setup code { font-size: .85em; overflow-wrap: anywhere; }
+
+/* Victory & Return: run recap (Crypt) and the one-time Home banner. */
+.recap { display: grid; gap: 10px; padding: 4px 0 calc(24px + env(safe-area-inset-bottom)); }
+.recap-kicker { margin: 0; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.recap-title { margin: 0; font-size: 1.7rem; line-height: 1.1; }
+.recap-won .recap-title { color: #f2c46d; }
+.recap-lost .recap-title { color: var(--mint); }
+.recap-lede { margin: 0; color: var(--text); }
+.recap-mode { margin: 0; padding: 6px 10px; border-radius: 10px; border: 1px dashed var(--border); color: var(--muted); font-size: 0.85rem; }
+.recap-reward { margin: 0; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--border); background: #232830; }
+.recap-reward p { margin: 0; }
+.recap-reward-label { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: #f2c46d; font-weight: 700; }
+.recap-reward-name { font-size: 1.3rem; font-weight: 800; margin: 2px 0 !important; }
+.recap-reward-status { margin-top: 6px !important; color: var(--mint); font-weight: 650; }
+.recap-retained { margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--mint); background: rgba(95, 211, 176, 0.08); font-weight: 600; }
+.recap-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.recap-summary > div { padding: 8px; border-radius: 10px; border: 1px solid var(--border); min-width: 0; }
+.recap-summary dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.recap-summary dd { margin: 2px 0 0; font-weight: 700; font-size: 0.9rem; overflow-wrap: anywhere; }
+.recap-gear-names { margin: 0; }
+.recap-actions { display: grid; gap: 8px; margin-top: 4px; }
+.recap-actions .btn { min-height: 48px; display: grid; place-items: center; text-align: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .recap-title, .recap-reward { animation: recap-rise 0.45s ease-out both; }
+  .recap-reward { animation-delay: 0.12s; }
+}
+@keyframes recap-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.return-banner { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; padding: 10px 6px 10px 12px; border-radius: 14px;
+  border: 1px solid var(--border); background: #232830; }
+.return-conquered { border-color: #f2c46d; }
+.return-fallen { border-color: var(--mint); }
+.return-text { flex: 1; min-width: 0; }
+.return-headline { margin: 0; font-weight: 700; }
+.return-detail { margin: 2px 0 0; color: var(--muted); font-size: 0.85rem; }
+.return-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--mint); font-weight: 650; }
+.return-dismiss { flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: none; color: var(--muted);
+  font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.return-dismiss:focus-visible { outline: 3px solid var(--mint); outline-offset: 1px; }
