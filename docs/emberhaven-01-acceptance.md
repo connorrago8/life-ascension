@@ -89,3 +89,7 @@ A visible avatar can move in four directions using on-screen touch controls or a
 ## Town movement polish
 
 The avatar tracks facing and local step count, adds simple directional pose changes, and distinguishes being at a selected landmark from viewing one at a distance. Foliage accents enrich the map. Step count is ephemeral UI feedback only: it is not XP, a quest, an achievement, or persistent account data. Check map focus and mobile controls during QA.
+
+## Playable Alpha feature batch
+
+Collision-aware cardinal movement is now isolated in lib/emberhavenMovement.ts. Four visible obstacles block movement, and landmarks offer optional inspect dialogue while keeping accessible direct-entry links. This remains a prototype, not a full sprite-animation engine. Run TypeScript, node tests, actual Chromium and iPhone checks before declaring the batch accepted. Check collision boundaries, keyboard focus, VoiceOver, dialogue toggle, and Crypt continuity.
