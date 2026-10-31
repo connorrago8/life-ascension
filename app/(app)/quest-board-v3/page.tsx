@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabase";
+import { useQuestBoardV3Selection } from "../../../hooks/useQuestBoardV3Selection";
 import { questDay, individualStreak, type Completion, type Quest as EngineQuest } from "../../../src/lib/quest-board-v3";
 
 type DbQuest={id:string;title:string;domain:string;cadence:"once"|"daily";created_at:string;quest_type:"scheduled"|"goal";scheduled_for:string|null};
@@ -17,6 +18,7 @@ export default function QuestBoardV3Connected(){
  const [completedOpen,setCompletedOpen]=useState(false);
  const [showAll,setShowAll]=useState(false);
  const today=questDay(new Date());
+ const {selection,message:selectionMessage}=useQuestBoardV3Selection();
  const load=useCallback(async()=>{
   try{
    const client=supabase();
@@ -56,6 +58,8 @@ export default function QuestBoardV3Connected(){
  const active=rows.filter(r=>r.instance.status!=="completed");
  const completed=rows.filter(r=>r.instance.status==="completed");
  const daily=active.filter(r=>r.quest.cadence==="daily");
+ const selectedIds=new Set(selection?.questIds||[]);
+ const selectedDaily=selection?.persisted?daily.filter(r=>selectedIds.has(r.quest.id)):daily;
  const goals=active.filter(r=>r.quest.quest_type==="goal");
  async function complete(row:BoardRow){
   if(busy||!window.confirm(`Confirm you completed "${row.quest.title}"?`))return;
@@ -74,12 +78,13 @@ export default function QuestBoardV3Connected(){
   <h1>Quest Board 3.0</h1>
   <p className="muted">Your existing quests, completion history and XP. This experimental view uses the current database; new AI/calendar features are not enabled.</p>
   <section className="panel"><div className="eyebrow">{today} · Chicago 5 AM reset</div><h2>{completed.length} completed · {active.length} available</h2><p className="muted">Lifetime XP: {xp??"—"} · Existing XP rules preserved</p></section>
-  <section className="panel"><h2>Daily Quests</h2><p className="muted">{daily.length} active daily habits · Individual streaks</p>
-   {visible.filter(r=>r.quest.cadence==="daily"&&r.quest.quest_type!=="goal").map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">🔥 {row.streak}-day streak · +1 XP</div></div><div className="actions"><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div></div>)}
+  <section className="panel"><h2>Daily Quests</h2><p className="muted">{selectedDaily.length} selected daily habits · Individual streaks</p>{selectionMessage&&<p className="muted" role="status">{selectionMessage}</p>}
+   {visible.filter(r=>r.quest.cadence==="daily"&&r.quest.quest_type!=="goal"&&(!selection?.persisted||selectedIds.has(r.quest.id))).map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">🔥 {row.streak}-day streak · +1 XP</div></div><div className="actions"><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div></div>)}
    {!showAll&&active.length>10&&<button className="btn ghost" onClick={()=>setShowAll(true)}>Show all active quests</button>}
    <button className="btn ghost" style={{marginTop:14}} aria-expanded={completedOpen} onClick={()=>setCompletedOpen(v=>!v)}>{completedOpen?"▾":"▸"} Completed Today ({completed.length})</button>
    {completedOpen&&completed.map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">✓ Complete · 🔥 {row.streak} streak</div></div></div>)}
   </section>
+  <section className="panel"><h2>Other Habits</h2><p className="muted">Habits outside today’s selection remain eligible for completion and +1 XP.</p>{selection?.persisted&&daily.filter(r=>!selectedIds.has(r.quest.id)).map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">Off-board · 🔥 {row.streak}-day streak</div></div><button className="btn ghost" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div>)}</section>
   <section className="panel"><h2>Main Quests & Goals</h2>{goals.length===0&&<p className="muted">No active goals currently.</p>}
    {goals.map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">Goal · {row.quest.scheduled_for||"No deadline"} · +1 XP on completion</div></div><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div>)}
   </section>
