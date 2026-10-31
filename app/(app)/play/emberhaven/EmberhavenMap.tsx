@@ -20,6 +20,7 @@ export function EmberhavenMap() {
   const [facing, setFacing] = useState<TownDirection>('south');
   const move = useCallback((direction: TownDirection) => {
     setFacing(direction);
+    setInteraction(false);
     const next = walkTown(position, direction);
     if (next !== position) {
       setPosition(next);
@@ -29,6 +30,7 @@ export function EmberhavenMap() {
   const nearby = landmarks.find((landmark) => townDistance(position, landmark) < 14);
   const active = landmarks.find((landmark) => landmark.id === selected) ?? landmarks[2];
   const atSelected = townDistance(position, active) < 14;
+  const [interaction, setInteraction] = useState(false);
 
   return (
     <section aria-labelledby="ember-map-title" style={{ marginTop: 22 }}>
@@ -53,7 +55,7 @@ export function EmberhavenMap() {
           <span key={index} aria-hidden="true" style={{ position: 'absolute', left: `${obstacle.x}%`, top: `${obstacle.y}%`, transform: 'translate(-50%, -50%)', width: `${obstacle.radius * 2}%`, height: `${obstacle.radius * 2}%`, borderRadius: '40%', background: 'radial-gradient(circle, #46513d, #202d29)', border: '2px solid #607052', pointerEvents: 'none' }} />
         ))}
         {landmarks.map((landmark) => (
-          <button key={landmark.id} type="button" aria-pressed={selected === landmark.id} aria-label={`Inspect ${landmark.label}`} onClick={() => setSelected(landmark.id)} style={{ position: 'absolute', left: `${landmark.x}%`, top: `${landmark.y}%`, transform: 'translate(-50%, -50%)', display: 'grid', placeItems: 'center', width: 44, height: 44, borderRadius: 12, border: selected === landmark.id ? '3px solid #ffe4ad' : '2px solid #a98c62', background: selected === landmark.id ? '#79552d' : '#293238', color: '#ffe0a6', fontSize: 23, cursor: 'pointer', boxShadow: selected === landmark.id ? '0 0 20px #f2b35d88' : '0 2px 8px #0008' }}>{landmark.icon}</button>
+          <button key={landmark.id} type="button" aria-pressed={selected === landmark.id} aria-label={`Inspect ${landmark.label}`} onClick={() => { setSelected(landmark.id); setInteraction(false); }} style={{ position: 'absolute', left: `${landmark.x}%`, top: `${landmark.y}%`, transform: 'translate(-50%, -50%)', display: 'grid', placeItems: 'center', width: 44, height: 44, borderRadius: 12, border: selected === landmark.id ? '3px solid #ffe4ad' : '2px solid #a98c62', background: selected === landmark.id ? '#79552d' : '#293238', color: '#ffe0a6', fontSize: 23, cursor: 'pointer', boxShadow: selected === landmark.id ? '0 0 20px #f2b35d88' : '0 2px 8px #0008' }}>{landmark.icon}</button>
         ))}
       </div>
       <div aria-label="Town movement controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 52px)', justifyContent: 'center', gap: 6, marginTop: 14 }}>
@@ -68,6 +70,8 @@ export function EmberhavenMap() {
         <h3 style={{ margin: '7px 0' }}>{active.label}</h3>
         <p className="muted" style={{ fontSize: 14, lineHeight: 1.6 }}>{active.story}</p>
         <p style={{ color: atSelected ? '#a9dfb6' : '#f0c181', fontSize: 12 }}>{atSelected ? 'You are at this landmark.' : 'Select a landmark or walk closer to explore.'}</p>
+        <button type="button" onClick={() => setInteraction((open) => !open)} aria-expanded={interaction} style={{ minHeight: 44, width: '100%', borderRadius: 10, border: '1px solid #9e8054', background: '#3a352b', color: '#f7d5a0', marginTop: 8 }}>Talk / inspect {active.label}</button>
+        {interaction && <p role="note" style={{ padding: 12, borderLeft: '3px solid #e6b66b', background: '#2a2b28', marginTop: 8 }}>{active.story}</p>}
         <Link className="btn" href={active.href} style={{ minHeight: 44, width: '100%', marginTop: 12 }}>Enter {active.label} →</Link>
       </div>
     </section>
