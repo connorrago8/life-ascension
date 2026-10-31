@@ -31,7 +31,7 @@ test('Emberhaven exposes landmarks and respects mobile safe areas', () => {
 const forge = readFileSync(new URL('../app/(app)/play/emberhaven/blacksmith/page.tsx', import.meta.url), 'utf8');
 
 test('Blacksmith makes no false account-inventory promises', () => {
-  assert.match(forge, /demonstration content, not verified account inventory/);
+  assert.match(forge, /Character shows account equipment when available; layout previews use demonstration items/);
   assert.match(forge, /href="\/character"/);
   assert.match(forge, /href="\/play\/emberhaven"/);
   assert.doesNotMatch(forge, /supabase\(|\.rpc\(|localStorage\.|sessionStorage\.|fetch\(/);

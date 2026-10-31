@@ -117,13 +117,27 @@ try {
     await page.goBack();
     await page.getByRole('link', { name: 'Visit Emberhaven town →', exact: true }).click();
     assert.deepEqual(await readRun(), original, 'entering town must not change the saved run');
+    await page.getByRole('button', { name: 'Begin the Lantern Route', exact: true }).click();
     for (const name of ['Blacksmith', 'Hearth', 'Market', 'Waystone']) {
       await page.getByRole('button', { name: `Inspect ${name}`, exact: true }).click();
       await page.getByRole('link', { name: `Enter ${name} →`, exact: true }).click();
-      await page.locator('main a[href="/play/emberhaven"]').click();
+      if (name !== 'Waystone') {
+        const npc = { Blacksmith: 'Mara Venn', Hearth: 'Hearth keeper', Market: 'Lantern keeper' }[name];
+        await page.getByRole('button', { name: `Talk to ${npc}`, exact: true }).click();
+        await page.getByRole('button', { name: 'Ask about the Lantern Route', exact: true }).click();
+        await page.getByRole('button', { name: 'Ask about the Lantern Route', exact: true }).click();
+      } else {
+        for (const title of ['Light', 'Craft', 'Warmth']) await page.getByRole('button', { name: `Place ${title}`, exact: true }).click();
+        await page.getByText(/Those signs do not match the clues/).waitFor();
+        await page.getByRole('button', { name: 'Rearrange signs', exact: true }).click();
+        for (const title of ['Warmth', 'Craft', 'Light']) await page.getByRole('button', { name: `Place ${title}`, exact: true }).click();
+        await page.getByText(/The Lantern Route is complete/).waitFor();
+      }
+      await page.locator('main a[href="/play/emberhaven"]').first().click();
       await page.getByRole('heading', { name: 'Emberhaven', exact: true }).waitFor();
       assert.deepEqual(await readRun(), original, `${name} must not change the saved run`);
     }
+    await page.getByText('Lantern Route complete.', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Inspect Trail Gate', exact: true }).click();
     await page.getByRole('link', { name: 'Enter Trail Gate →', exact: true }).click();
     await page.getByRole('link', { name: 'Continue run', exact: true }).click();
@@ -132,9 +146,11 @@ try {
     await page.reload();
     await page.getByRole('heading', { name: 'Choose your path', exact: true }).waitFor();
     assert.deepEqual((await readRun()).state, original.state, 'reload must preserve the complete run state');
+    await page.goto(`${base}/play/emberhaven`);
+    await page.getByRole('button', { name: 'Begin the Lantern Route', exact: true }).waitFor();
     assert.deepEqual(errors, []);
     assert.deepEqual(violations, []);
-    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, guest Crypt resume and reload, no external requests or network writes`);
+    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, Lantern Route clue collection and puzzle retry/completion, guest Crypt resume and reload, no external requests or network writes`);
     await context.close();
   }
 } finally {

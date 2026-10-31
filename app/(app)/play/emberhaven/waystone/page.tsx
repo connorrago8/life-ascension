@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { WaystonePuzzle } from '../TownVisit';
 
 const features = [
   {
@@ -25,6 +26,7 @@ export default function WaystonePage() {
         <h1 id="waystone-title">The Waystone</h1>
         <p className="lede">An ancient marker stands beyond the walls. The active Crypt journey begins through the adventure map.</p>
       </header>
+      <WaystonePuzzle />
       <section aria-label="The Waystone landmarks" style={{ display: 'grid', gap: 14 }}>
         {features.map((feature, index) => (
           <article key={feature.name} style={{ padding: 20, borderRadius: 16, border: '1px solid #66513d', background: index % 2 ? 'linear-gradient(140deg, #25201e, #191d21)' : 'linear-gradient(140deg, #292820, #191d21)' }}>

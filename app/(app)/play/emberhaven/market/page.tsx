@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { TownConversation } from '../TownVisit';
 
 const features = [
   {
@@ -17,7 +18,7 @@ const features = [
 
 export default function MarketPage() {
   return (
-    <main className="screen" aria-labelledby="market-title" style={{ paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
+    <main className="screen" aria-labelledby="market-title" style={{ paddingBottom: 'calc(40px + env(safe-area-inset-bottom))', overflowWrap: 'anywhere' }}>
       <Link className="btn" href="/play/emberhaven" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>← Emberhaven square</Link>
       <header style={{ textAlign: 'center', padding: '32px 0 22px', background: 'radial-gradient(ellipse at center, #b7884130, transparent 70%)' }}>
         <div aria-hidden="true" style={{ fontSize: 48, color: '#e9ae68' }}>✧</div>
@@ -25,6 +26,7 @@ export default function MarketPage() {
         <h1 id="market-title">The Lantern Market</h1>
         <p className="lede">Amber lanterns line the cobbled street. The stalls are not yet open for trading.</p>
       </header>
+      <TownConversation stop="market" />
       <section aria-label="The Lantern Market landmarks" style={{ display: 'grid', gap: 14 }}>
         {features.map((feature, index) => (
           <article key={feature.name} style={{ padding: 20, borderRadius: 16, border: '1px solid #66513d', background: index % 2 ? 'linear-gradient(140deg, #25201e, #191d21)' : 'linear-gradient(140deg, #292820, #191d21)' }}>

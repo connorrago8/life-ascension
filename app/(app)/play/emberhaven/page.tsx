@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { EmberhavenMap } from './EmberhavenMap';
+import { TownTrail } from './TownVisit';
 
 /**
  * Emberhaven's six-location exploration hub. All destinations are read-only
@@ -76,6 +77,7 @@ export default function EmberhavenPage() {
         <span style={{ position: 'absolute', bottom: 15, left: '50%', width: 8, height: 14, background: '#ffd18a', boxShadow: '0 0 22px 8px #c77c3455' }} />
       </div>
       <EmberhavenMap />
+      <TownTrail />
       <section aria-label="Town destinations" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 12, marginTop: 24 }}>
         {places.map((place) => (
           <article key={place.name} style={{

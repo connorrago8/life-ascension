@@ -1,19 +1,18 @@
 import Link from 'next/link';
+import { TownConversation } from '../TownVisit';
 
 const slots = [
   { name: 'Weapon', icon: '⚔', detail: 'Review the weapon slot and its visual presentation on the Character screen.', lore: 'A blade is only as true as the hand that carries it.' },
   { name: 'Armor', icon: '⬡', detail: 'Inspect your armor presentation before returning to the road.', lore: 'The forge keeps the memory of every shield.' },
-  { name: 'Accessory', icon: '✧', detail: 'Account-linked equipment comparisons are not available yet.', lore: 'Small charms carry stories bigger than kingdoms.' },
 ] as const;
 
 /**
- * Read-only town destination. The current Character screen explicitly uses
- * starter demonstration equipment, not account-synced inventory. Never
- * represent those sample items as earned or equipped account data.
+ * Town navigation and optional dialogue only. Character owns equipment data
+ * and explicit Wear actions; the forge never mirrors or changes inventory.
  */
 export default function EmberhavenBlacksmithPage() {
   return (
-    <main className="screen" aria-labelledby="forge-title" style={{ paddingBottom: 'calc(36px + env(safe-area-inset-bottom))' }}>
+    <main className="screen" aria-labelledby="forge-title" style={{ paddingBottom: 'calc(36px + env(safe-area-inset-bottom))', overflowWrap: 'anywhere' }}>
       <Link href="/play/emberhaven" className="btn" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
         ← Back to Emberhaven
       </Link>
@@ -23,6 +22,7 @@ export default function EmberhavenBlacksmithPage() {
         <h1 id="forge-title">The Blacksmith</h1>
         <p className="lede">Steel remembers every journey. Your equipment deserves a closer look.</p>
       </header>
+      <TownConversation stop="forge" />
       <section aria-labelledby="forge-slots" style={{ display: 'grid', gap: 12 }}>
         <h2 id="forge-slots" style={{ fontSize: '1.2rem' }}>Equipment stations</h2>
         {slots.map((slot) => (
@@ -41,11 +41,11 @@ export default function EmberhavenBlacksmithPage() {
         ))}
       </section>
       <p role="note" className="muted" style={{ marginTop: 18 }}>
-        Equipment on the current Character screen is demonstration content, not verified account inventory.
+        Character shows account equipment when available; layout previews use demonstration items.
         No purchases, upgrades, crafting, comparisons, or item grants happen here.
       </p>
       <Link className="btn" href="/character" style={{ minHeight: 44, width: '100%', marginTop: 16 }}>
-        Inspect character presentation →
+        Open Character →
       </Link>
     </main>
   );
