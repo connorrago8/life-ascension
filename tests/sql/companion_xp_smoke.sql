@@ -92,6 +92,16 @@ begin
   if sqlerrm='Cross-owner assignment unexpectedly succeeded' then raise; end if;
  end;
 end $$;
+-- Bulk instance creation must never include another owner's quests.
+do $bulk_isolation$
+declare v_count integer;
+begin
+ select public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date) into v_count;
+ if v_count<>0 then raise exception 'Cross-owner bulk ensure returned % quests',v_count; end if;
+ if exists(select 1 from public.quest_instances where owner_id=auth.uid()) then
+  raise exception 'Cross-owner bulk ensure created an instance';
+ end if;
+end $bulk_isolation$;
 -- Cross-owner retirement must not alter the original owner's assignment.
 do $unauthorized_retire$
 declare v_assignment uuid;
