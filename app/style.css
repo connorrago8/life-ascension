@@ -1171,3 +1171,81 @@ code { font-family: ui-monospace, monospace; }
 .delve-view-deck { min-height: 44px; }
 .delve-card-have { margin-top: auto; font-size: 0.72rem; color: var(--muted); }
 .delve-deck-full { padding: 8px 10px; border-radius: 10px; border: 1px solid #f0c060; background: rgba(240, 192, 96, 0.1); }
+
+/* ---------- Crypt: card frames, intent icons, combat feedback, campfire removal (visual only) ---------- */
+.delve-icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; flex: none; }
+/* Card groups: one accent per archetype, shared by frames, art and pile rows. */
+.grp-basic { --frame: #8f97a6; }
+.grp-bruiser { --frame: #d0644c; }
+.grp-combo { --frame: #4fc1a6; }
+.grp-caster { --frame: #a184ea; }
+.grp-tank { --frame: #5b95d6; }
+.grp-luck { --frame: #e0b44a; }
+.delve-card.has-frame { border-color: color-mix(in srgb, var(--frame) 42%, var(--border));
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--frame) 20%, transparent) 0, transparent 30px); }
+/* Type: attacks get a solid top bar, skills a side bar and an inner ring. */
+.delve-card.has-frame.kind-attack { box-shadow: inset 0 3px 0 var(--frame); }
+.delve-card.has-frame.kind-skill { box-shadow: inset 3px 0 0 var(--frame), inset 0 0 0 1px color-mix(in srgb, var(--frame) 22%, transparent); }
+.delve-card.has-frame:not(:disabled):active { border-color: #f2c46d; box-shadow: 0 0 0 2px #f2c46d; }
+.delve-card-art { position: absolute; top: 3px; right: 4px; width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 13px; color: var(--frame, #c9ced6); background: color-mix(in srgb, var(--frame, #8f97a6) 18%, #1b1f25);
+  border: 1px solid color-mix(in srgb, var(--frame, #8f97a6) 45%, transparent); pointer-events: none; }
+.delve-combat .delve-card-art { top: 2px; right: 3px; width: 18px; height: 18px; font-size: 12px; }
+.delve-card-mark { right: 26px; }
+/* Upgraded: green ring on the cost and the art tile, plus the green "+" name. */
+.delve-card.upgraded .delve-card-cost { box-shadow: 0 0 0 2px #9fe39f; }
+.delve-card.upgraded .delve-card-art { border-color: #9fe39f; }
+.delve-card-static { cursor: default; max-width: 180px; min-height: 108px; margin: 6px 0; }
+/* Enemy intents: icon + big number first, the "Next / Then" text stays. */
+.delve-foe-side { display: grid; justify-items: center; align-content: start; gap: 4px; min-width: 0; }
+.delve-intent-badge { display: inline-flex; align-items: center; justify-content: center; gap: 3px; max-width: 100%; padding: 1px 7px; border-radius: 999px;
+  line-height: 1.3; font-weight: 800; background: rgba(0, 0, 0, 0.45); border: 1px solid currentColor; white-space: nowrap; }
+.delve-intent-badge .delve-icon { font-size: 1rem; }
+.delve-intent-num { font-size: 1.05rem; font-variant-numeric: tabular-nums; color: #fff; }
+.delve-intent-badge.windup-big { box-shadow: 0 0 0 2px rgba(255, 122, 69, 0.45); }
+.delve-next-icon { font-size: 0.95em; }
+.itype-attack { color: #ff8a73; }
+.itype-block { color: #7fb6ff; }
+.itype-buff { color: #f2c46d; }
+.itype-debuff { color: #c9a0ff; }
+.itype-windup { color: #ffb05c; }
+.delve-intent.itype-debuff { background: #34244a; }
+.delve-intent { color: var(--text); }
+.delve-then-icon { opacity: 0.9; }
+/* Feedback pops sit on top and never take taps. */
+.delve-herobar-main { position: relative; }
+.pop-block { top: -6px; right: 4px; display: inline-flex; align-items: center; gap: 2px; font-size: 0.85rem; color: #7fb6ff; }
+.delve-hand { position: relative; }
+.delve-played { position: absolute; z-index: 2; left: 50%; top: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 10px; border: 1px solid var(--frame, #f2c46d); background: #23272d; color: var(--text); font-size: 0.8rem; font-weight: 700;
+  white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, 0); }
+.delve-played .delve-icon { color: var(--frame, #f2c46d); }
+@media (prefers-reduced-motion: no-preference) {
+  .delve-pop { animation: delve-pop 0.38s ease-out both; }
+  .delve-monster.hit .delve-monster-svg { animation: delve-shake 0.26s ease-out, delve-hit-flash 0.22s ease-out; }
+  .delve-monster.hit.crit .delve-monster-svg { animation: delve-shake 0.32s ease-out, delve-crit-flash 0.3s ease-out; }
+  .delve-herobar.hurt .delve-hero-sprite .pixel-sprite { animation: delve-shake 0.26s ease-out, delve-hurt-flash 0.24s ease-out; }
+  .delve-herobar.hurt .delve-hp { animation: delve-hurt-bar 0.3s ease-out; }
+  .delve-played { animation: delve-card-fly 0.32s ease-out both; }
+  .delve-card.has-frame { transition: transform 0.12s ease-out; }
+}
+@keyframes delve-hit-flash { from { filter: brightness(2.2) saturate(0.4); } to { filter: none; } }
+@keyframes delve-crit-flash { from { filter: brightness(2.6) sepia(1) saturate(3); } to { filter: none; } }
+@keyframes delve-hurt-flash { from { filter: brightness(1.6) sepia(1) saturate(6) hue-rotate(-40deg); } to { filter: none; } }
+@keyframes delve-hurt-bar { from { box-shadow: 0 0 0 2px #ff6b6b; } to { box-shadow: 0 0 0 0 transparent; } }
+@keyframes delve-card-fly { from { opacity: 1; transform: translate(-50%, 24px) scale(1); } 60% { opacity: 0.9; } to { opacity: 0; transform: translate(-50%, -64px) scale(0.85); } }
+/* Reduced motion: no shakes, flashes, flies or pops moving. Numbers still show, still. */
+@media (prefers-reduced-motion: reduce) {
+  .delve-combat *, .delve-combat *::before, .delve-combat *::after { animation: none !important; transition: none !important; }
+  .delve-played { display: none; }
+}
+/* Campfire removal: before → after count, the card, a confirm step. */
+.delve-deck-change { font-size: 1.1rem; margin: 4px 0; }
+.delve-deck-change strong { font-variant-numeric: tabular-nums; }
+.delve-remove-confirm { margin: 10px 0; padding: 10px; border-radius: 12px; border: 1px solid #f0c060; background: rgba(240, 192, 96, 0.08); }
+.delve-remove-confirm h3 { margin: 0; font-size: 1rem; }
+.delve-remove-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.delve-remove-actions .btn { min-height: 44px; }
+.delve-deck-card.btn { min-height: 44px; border-left: 3px solid var(--frame, var(--border)); }
+.delve-deck-card-cost { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #f2c46d; color: var(--ink);
+  font-size: 0.72rem; font-weight: 800; vertical-align: 1px; }

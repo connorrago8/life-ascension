@@ -70,6 +70,16 @@ export function canRemoveCard(state: Pick<DelveState, 'deck'>): boolean {
   return state.deck.length > MIN_DECK_SIZE;
 }
 
+/** Campfire removal preview (display only): deck size before and after removing the card at `index`. */
+export function removalPreview(deck: readonly DeckCard[], index: number): {
+  key: DeckCard; name: string; before: number; after: number; allowed: boolean;
+} | null {
+  const key = deck[index];
+  if (!key) return null;
+  const allowed = deck.length > MIN_DECK_SIZE;
+  return { key, name: cardDef(key).name, before: deck.length, after: allowed ? deck.length - 1 : deck.length, allowed };
+}
+
 export function canUpgradeCard(state: Pick<DelveState, 'deck' | 'upgrades' | 'phase'>, index: number): boolean {
   const key = state.deck[index];
   return state.upgrades > 0 && (state.phase === 'treasure' || state.phase === 'event') && !!key && !isUpgraded(key);

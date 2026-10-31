@@ -4,13 +4,14 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
 import {
-  bigHitComing, canPlay, cardCritChance, cardCues, comboReady, ENERGY_PER_TURN, foeIntent, incomingDamage, INTENT_ICON, intentText,
+  bigHitComing, canPlay, cardCritChance, cardCues, comboReady, ENERGY_PER_TURN, foeIntent, incomingDamage, intentText,
   PASSIVE_TEXT, previewDamage, previewHits, upcomingIntent, describeIntent, WORN_DOWN_PER_END, WORN_DOWN_TURN, type Battle, type Proc,
 } from '../../lib/crypt/delve/battle';
 import {
   CARDS, cardDef, COMBO_AT, comboBonus, effectiveness, ELEMENT_LABEL, isUpgraded, MAX_DECK_SIZE, resistancesOf, TYPE_LABEL, upgradeDef, weaknessesOf,
   type CardDef, type DeckCard,
 } from '../../lib/crypt/delve/cards';
+import { cardFrameClass, cardIcon, GROUP_LABEL, ICONS, INTENT_TYPE, INTENT_TYPE_ICON, intentBadge, playedCard, type IconKey } from '../../lib/crypt/delve/cardArt';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
 import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/gearArt';
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
@@ -20,7 +21,8 @@ import { copiesInDeck, deckIsFull, pileSummary, type PileEntry } from '../../lib
 import { runRecap, type RunRecap, type SaveMode } from '../../lib/crypt/delve/recap';
 import { RunRecapView } from './RunRecap';
 import {
-  canRemoveCard, canUpgradeCard, createDelve, currentRoomChoices, effectiveAttributes, reduceDelve, runLoadout, type DelveCommand,
+  canRemoveCard, canUpgradeCard, createDelve, currentRoomChoices, effectiveAttributes, MIN_DECK_SIZE, reduceDelve, removalPreview, runLoadout,
+  type DelveCommand,
   type DelveState,
 } from '../../lib/crypt/delve/run';
 import {
@@ -308,6 +310,18 @@ function HeroSprite({ loadout, label }: { loadout: Loadout; label?: string }) {
   return <AdventurerSprite label={label} overlays={gearOverlays(loadout)} palette={HERO_PALETTE} />;
 }
 
+/** Small inline SVG icon (card art, intents). Decorative: the text next to it carries the meaning. */
+function Icon({ name, className }: { name: IconKey; className?: string }) {
+  const icon = ICONS[name];
+  return (
+    <svg className={`delve-icon${className ? ` ${className}` : ''}`} viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      {icon.stroke
+        ? <path d={icon.d} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+        : <path d={icon.d} fill="currentColor" fillRule="evenodd" />}
+    </svg>
+  );
+}
+
 function MonsterSprite({ sprite, label }: { sprite: keyof typeof MONSTER_SPRITES; label: string }) {
   const rows = MONSTER_SPRITES[sprite];
   const width = rows[0]?.length ?? 16;
@@ -556,10 +570,11 @@ function IntentPanel({ battle }: { battle: Battle }) {
   const incoming = incomingDamage(battle);
   const telegraph = bigHitComing(battle);
   const kindClass = intent.kind === 'attack' ? 'attack' : intent.kind === 'guard' ? 'guard' : intent.kind === 'charge' ? 'charge' : 'roar';
+  const badge = intentBadge(battle);
   return (
-    <div className={`delve-intent intent-${kindClass}${telegraph ? ' delve-bighit' : ''}`} aria-label={`Next move: ${intentText(battle)}`}>
+    <div className={`delve-intent intent-${kindClass} itype-${badge.type}${telegraph ? ' delve-bighit' : ''}`} aria-label={`Next move (${badge.label}): ${intentText(battle)}`}>
       <p className="delve-intent-next">
-        <span aria-hidden="true">{INTENT_ICON[intent.kind]} </span>Next: <strong>{intentText(battle)}</strong>
+        <Icon name={badge.icon} className={`delve-next-icon itype-${badge.type}`} /> Next: <strong>{intentText(battle)}</strong>
         {intent.kind === 'attack' && battle.foe.weak > 0 ? <span className="delve-intent-weak"> (Weakened −25%)</span> : null}
         {incoming ? (
           <span className="delve-incoming">
@@ -570,9 +585,19 @@ function IntentPanel({ battle }: { battle: Battle }) {
       {telegraph ? (
         <p className="delve-small delve-telegraph" role="status"><span className="delve-bighit-icon" aria-hidden="true">⚠</span> <strong>Big hit next turn:</strong> {describeIntent(then, battle.foe)}. Block up or finish it now.</p>
       ) : (
-        <p className="delve-small delve-intent-then">Then: <span aria-hidden="true">{INTENT_ICON[then.kind]} </span>{describeIntent(then, battle.foe)}</p>
+        <p className="delve-small delve-intent-then">Then: <Icon name={INTENT_TYPE_ICON[INTENT_TYPE[then.kind]]} className={`delve-then-icon itype-${INTENT_TYPE[then.kind]}`} /> {describeIntent(then, battle.foe)}</p>
       )}
     </div>
+  );
+}
+
+/** Big intent badge under the enemy: icon by move type and the main number (damage after Rage and Weaken). */
+function IntentBadge({ battle }: { battle: Battle }) {
+  const badge = intentBadge(battle);
+  return (
+    <span className={`delve-intent-badge itype-${badge.type}${bigHitComing(battle) ? ' windup-big' : ''}`} aria-hidden="true" title={badge.label}>
+      <Icon name={badge.icon} />{badge.value ? <span className="delve-intent-num">{badge.value}</span> : null}
+    </span>
   );
 }
 
@@ -679,6 +704,11 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
   const [pile, setPile] = useState<PileKind | null>(null);
   const foe = battle.foe;
   const fb = battle.feedback;
+  // Card-play motion: compare with the previous battle state (display only, no timers).
+  const previous = useRef<Battle | null>(null);
+  const flown = useMemo(() => playedCard(previous.current, battle), [battle]);
+  useEffect(() => { previous.current = battle; }, [battle]);
+  const flownDef = flown ? cardDef(flown) : null;
   const lastLog = battle.log.slice(-3);
   const typeLabel = TYPE_LABEL[foe.type];
   const weakTo = weaknessesOf(foe.type).map((element) => ELEMENT_LABEL[element]).join('/');
@@ -700,25 +730,33 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
           ) : null}
           <IntentPanel battle={battle} />
         </div>
-        <div className="delve-monster" key={`foe-${fb.seq}`}>
-          <MonsterSprite sprite={foe.sprite} label={foe.name} />
-          <ProcFloaters battle={battle} />
-          {fb.dealt !== null ? (
-            <span className={`delve-pop pop-dealt${fb.crit ? ' crit' : ''}`} aria-hidden="true">
-              −{fb.dealt}{fb.crit ? '!' : ''}{fb.effect === 'super' ? ' ★' : ''}
-            </span>
-          ) : null}
+        <div className="delve-foe-side">
+          <div className={`delve-monster${fb.dealt ? ' hit' : ''}${fb.crit ? ' crit' : ''}`} key={`foe-${fb.seq}`}>
+            <MonsterSprite sprite={foe.sprite} label={foe.name} />
+            <ProcFloaters battle={battle} />
+            {fb.dealt !== null ? (
+              <span className={`delve-pop pop-dealt${fb.crit ? ' crit' : ''}`} aria-hidden="true">
+                −{fb.dealt}{fb.crit ? '!' : ''}{fb.effect === 'super' ? ' ★' : ''}
+              </span>
+            ) : null}
+          </div>
+          <IntentBadge battle={battle} />
         </div>
       </div>
 
-      <div className="delve-herobar" aria-label="You">
+      <div className={`delve-herobar${fb.taken ? ' hurt' : ''}`} aria-label="You">
         <div className="delve-hero-sprite tiny" key={`hero-${fb.seq}`}>
           <HeroSprite loadout={state.loadout} />
           {fb.taken !== null ? <span className="delve-pop pop-taken" aria-hidden="true">−{fb.taken}</span> : null}
           {fb.healed ? <span className="delve-pop pop-heal" aria-hidden="true">+{fb.healed}</span> : null}
         </div>
-        <div className="delve-herobar-main">
+        <div className="delve-herobar-main" key={`bar-${fb.seq}`}>
           <HpBar hp={battle.hp} max={battle.maxHp} label="Your HP" block={battle.block} />
+          {fb.blocked ? (
+            <span className="delve-pop pop-block" aria-hidden="true">
+              <Icon name="shield" />{fb.taken === null ? `+${fb.blocked}` : `${fb.blocked} blocked`}
+            </span>
+          ) : null}
           <p className="delve-energy" aria-label={`Energy ${battle.energy} of ${ENERGY_PER_TURN}`}>
             {[0, 1, 2].map((i) => <span key={i} className={i < battle.energy ? 'on' : ''} aria-hidden="true">◆</span>)}
             {battle.energy > ENERGY_PER_TURN ? <span className="on" aria-hidden="true">+{battle.energy - ENERGY_PER_TURN}</span> : null}
@@ -741,6 +779,11 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
       </div>
 
       <div className="delve-hand" role="group" aria-label="Your hand">
+        {flownDef ? (
+          <span key={`fly-${fb.seq}`} className={`delve-played grp-${flownDef.archetype} kind-${flownDef.kind}`} aria-hidden="true">
+            <Icon name={cardIcon(flownDef)} /> {flownDef.name}
+          </span>
+        ) : null}
         {battle.hand.map((instance) => (
           <CardButton key={instance.uid} id={instance.id} battle={battle} disabled={!canPlay(battle, instance.uid)}
             onPlay={() => send({ type: 'play', uid: instance.uid })} />
@@ -758,6 +801,7 @@ function CardFace({ def, upgraded }: { def: CardDef; upgraded?: boolean }) {
   return (
     <>
       <span className="delve-card-cost" aria-hidden="true">{def.cost}</span>
+      <span className="delve-card-art" aria-hidden="true" title={`${GROUP_LABEL[def.archetype]} ${def.kind}`}><Icon name={cardIcon(def)} /></span>
       <span className={`delve-card-name${upgraded ? ' upgraded' : ''}`}>{def.name}</span>
       <span className="delve-card-text">{def.text}</span>
     </>
@@ -776,7 +820,7 @@ function CardButton({ id, battle, disabled, onPlay }: { id: DeckCard; battle: Ba
   const cues = cardCues(battle, id).filter((cue) => damage !== null || cue.key === 'slam' || cue.warn || cue.label.endsWith('Block'));
   const slamZero = !!def.bodySlam && damage === null;
   return (
-    <button type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}${combo ? ' combo' : ''}`} disabled={disabled} onClick={onPlay}
+    <button type="button" className={`${cardFrameClass(def, isUpgraded(id))}${combo ? ' combo' : ''}`} disabled={disabled} onClick={onPlay}
       aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}${damage !== null && effect === 'super' ? ' Super effective.' : ''}${damage !== null && effect === 'resisted' ? ' Resisted.' : ''}${combo ? ' Combo bonus.' : ''}${cues.length ? ` ${cues.map((cue) => cue.label).join(', ')}.` : ''}`}>
       <CardFace def={def} upgraded={isUpgraded(id)} />
       {combo ? <span className="delve-card-mark" aria-hidden="true" title="Combo bonus">⛓</span> : null}
@@ -820,7 +864,7 @@ function StartPickView({ state, send }: { state: DelveState; send: (command: Del
         {state.startPick.map((id) => {
           const def = CARDS[id];
           return (
-            <button key={id} type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}`}
+            <button key={id} type="button" className={cardFrameClass(def)}
               onClick={() => send({ type: 'pick-start', cardId: id })} aria-label={`Take ${def.name}, costs ${def.cost}. ${def.text}`}>
               <CardFace def={def} />
             </button>
@@ -854,7 +898,7 @@ function RewardView({ state, send }: { state: DelveState; send: (command: DelveC
           const def = CARDS[id];
           const have = copiesInDeck(state.deck, id);
           return (
-            <button key={id} type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}`}
+            <button key={id} type="button" className={cardFrameClass(def)}
               disabled={full} onClick={() => send({ type: 'pick-card', cardId: id })}
               aria-label={`Take ${def.name}, costs ${def.cost}. ${def.text} You have ${have}.`}>
               <CardFace def={def} />
@@ -943,20 +987,43 @@ function TreasureView({ state, send }: { state: DelveState; send: (command: Delv
 
 function RestView({ state, send }: { state: DelveState; send: (command: DelveCommand) => void }) {
   const [removing, setRemoving] = useState(false);
+  const [picked, setPicked] = useState<number | null>(null);
   const canRemove = canRemoveCard(state);
+  const size = state.deck.length;
+  const preview = picked !== null ? removalPreview(state.deck, picked) : null;
+  // Sorted by cost, then name, for easy scanning; each entry keeps its deck index.
+  const order = state.deck.map((key, index) => ({ key, index, def: cardDef(key) }))
+    .sort((a, b) => a.def.cost - b.def.cost || a.def.name.localeCompare(b.def.name) || a.index - b.index);
   return (
     <section aria-labelledby="delve-rest-title">
       <h2 id="delve-rest-title">Campfire</h2>
       <p>The fire is low but warm. Choose one: heal, or remove a card.</p>
-      {removing ? (
+      {preview && picked !== null ? (
+        <div className="delve-remove-confirm" role="group" aria-labelledby="delve-remove-title">
+          <h3 id="delve-remove-title">Remove {preview.name}?</h3>
+          <div className={`${cardFrameClass(cardDef(preview.key), isUpgraded(preview.key))} delve-card-static`}>
+            <CardFace def={cardDef(preview.key)} upgraded={isUpgraded(preview.key)} />
+          </div>
+          <p className="delve-deck-change" aria-label={`Deck goes from ${preview.before} to ${preview.after} cards`}>
+            Deck <strong>{preview.before}</strong> <span aria-hidden="true">→</span> <strong>{preview.after}</strong>
+          </p>
+          <p className="delve-small muted">It is gone for the rest of this run. This uses the campfire.</p>
+          <div className="delve-remove-actions">
+            <button type="button" className="btn confirm-armed" disabled={!preview.allowed}
+              onClick={() => send({ type: 'rest', choice: 'remove', index: picked })}>Remove {preview.name}</button>
+            <button type="button" className="btn ghost" onClick={() => setPicked(null)}>Pick another</button>
+          </div>
+        </div>
+      ) : removing ? (
         <div className="delve-upgrade">
           <h3>Remove which card?</h3>
+          <p className="delve-small delve-deck-change-line">Deck <strong>{size}</strong> <span aria-hidden="true">→</span> <strong>{size - 1}</strong> · you keep at least {MIN_DECK_SIZE}. You confirm next.</p>
           <div className="delve-deck-list">
-            {state.deck.map((key, index) => (
-              <button key={`${key}-${index}`} type="button" className="btn ghost delve-deck-card"
-                aria-label={`Remove ${cardDef(key).name}`} onClick={() => send({ type: 'rest', choice: 'remove', index })}>
-                <strong>{cardDef(key).name}</strong>
-                <span className="delve-small muted">{cardDef(key).cost} energy · {CARDS[cardDef(key).id].text}</span>
+            {order.map(({ key, index, def }) => (
+              <button key={`${key}-${index}`} type="button" className={`btn ghost delve-deck-card grp-${def.archetype}`}
+                aria-label={`Remove ${def.name}? Shows a confirm step.`} onClick={() => setPicked(index)}>
+                <strong><span className="delve-deck-card-cost" aria-hidden="true">{def.cost}</span> {def.name}</strong>
+                <span className="delve-small muted">{CARDS[def.id].text}</span>
               </button>
             ))}
           </div>
@@ -966,8 +1033,11 @@ function RestView({ state, send }: { state: DelveState; send: (command: DelveCom
         <div className="delve-options">
           <button type="button" className="btn" onClick={() => send({ type: 'rest', choice: 'heal' })}>Rest (heal 35%)</button>
           <button type="button" className="btn ghost" disabled={!canRemove} onClick={() => setRemoving(true)}>
-            Remove a card (deck {state.deck.length})
+            {canRemove ? `Remove a card (Deck ${size} → ${size - 1})` : `Remove a card (Deck ${size}: at minimum)`}
           </button>
+          {canRemove ? null : (
+            <p className="delve-small muted" role="note">Your deck is at the minimum of {MIN_DECK_SIZE} cards, so no card can be removed.</p>
+          )}
         </div>
       )}
     </section>
