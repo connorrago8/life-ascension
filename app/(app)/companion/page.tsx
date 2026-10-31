@@ -15,7 +15,9 @@ export default function CompanionMode(){
  const [name,setName]=useState("Izzy"),[title,setTitle]=useState(""),[cadence,setCadence]=useState<Habit["cadence"]>("daily");
  const [consent,setConsent]=useState(false);
  const [assignment,setAssignment]=useState("");
- const today=questDay(new Date()),week=questWeek(new Date());
+ const [clock,setClock]=useState(()=>new Date());
+ const today=questDay(clock),week=questWeek(clock);
+ useEffect(()=>{const timer=window.setInterval(()=>setClock(new Date()),30000);return()=>window.clearInterval(timer)},[]);
  const load=useCallback(async()=>{
   const client=supabase();const {data:{user}}=await client.auth.getUser();
   setSignedIn(!!user);setReady(true);if(!user)return;
