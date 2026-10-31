@@ -27,6 +27,16 @@ begin
  select count(*) into v_count from public.xp_ledger where instance_id=v_instance;
  if v_count<>1 then raise exception 'Duplicate XP ledger row'; end if;
 end $$;
+-- Bulk instance creation must be idempotent and scoped to the owner.
+do $bulk$
+declare v_before integer; v_after integer;
+begin
+ select count(*) into v_before from public.quest_instances where owner_id=auth.uid();
+ perform public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date);
+ perform public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date);
+ select count(*) into v_after from public.quest_instances where owner_id=auth.uid();
+ if v_after < v_before then raise exception 'Bulk ensure removed instances'; end if;
+end $bulk$;
 -- Normal quest still awards exactly 1 XP.
 insert into public.quests(id,owner_id,title,domain,cadence)
 values('c0000000-0000-4000-8000-000000000102','a0000000-0000-4000-8000-000000000101','Brush Teeth','hygiene','daily');
