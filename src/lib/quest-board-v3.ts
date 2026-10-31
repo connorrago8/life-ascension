@@ -179,7 +179,7 @@ export function rewardPreview(reward: Reward, expanded: boolean): { label: strin
 export function resolveWeeklyReview(state: QuestBoardState, questId: string, week: string, status: WeeklyReview["status"]): QuestBoardState {
   const quest = state.quests.find(q => q.id === questId && q.cadence === "weekly" && q.enabled);
   if (!quest) throw new Error("Unknown weekly quest");
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(week)) throw new Error("Invalid week");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) throw new Error("Invalid week");
   const date = new Date(week + "T12:00:00Z");
   if (Number.isNaN(date.getTime()) || date.getUTCDay() !== 1 || date.toISOString().slice(0,10) !== week) throw new Error("Week must start Monday");
   const previous = state.weeklyReviews.filter(r => !(r.questId === questId && r.week === week));
@@ -191,6 +191,6 @@ export function resolvePendingInput(state: QuestBoardState, inputId: string, now
 }
 /** Prevent automatic AI suggestions that repeat an existing habit title. */
 export function isDuplicateQuestTitle(quests: Quest[], title: string): boolean {
-  const normalize = (s: string) => s.normalize("NFKC").trim().replace(/\\s+/g," ").toLocaleLowerCase("en-US");
+  const normalize = (s: string) => s.normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase("en-US");
   return quests.some(q => normalize(q.title) === normalize(title));
 }
