@@ -1,0 +1,140 @@
+/**
+ * Quest Board 3.0 — pure scheduling and selection engine.
+ * Integration adapter: persistence, auth, AI, calendar and notifications belong to callers.
+ * All timestamps are UTC ISO strings; gameplay days use America/Chicago, starting 05:00.
+ */
+export type Cadence = "daily" | "weekly" | "once";
+export type QuestStatus = "active" | "completed" | "pending" | "ignored";
+export type QuestSource = "manual" | "ai" | "calendar";
+export interface Quest {
+  id: string;
+  title: string;
+  cadence: Cadence;
+  source: QuestSource;
+  enabled: boolean;
+  priority: number;
+  createdAt: string;
+  isNew?: boolean;
+  category?: string;
+  goalId?: string;
+}
+export interface Completion { questId: string; period: string; completedAt: string; source: "tap" | "chat" | "voice" | "integration"; }
+export interface PendingInput { id: string; questId?: string; eventId?: string; question: string; createdAt: string; resolvedAt?: string; }
+export interface WeeklyReview { questId: string; week: string; status: "completed" | "pending" | "ignored"; }
+export interface Goal { id: string; title: string; milestoneIds: string[]; linkedQuestIds: string[]; rewardId?: string; }
+export interface Reward { id: string; title: string; requirement: string; estimatedLabel: string; previewStats?: Record<string, number>; }
+export interface CalendarSuggestion { eventId: string; title: string; startsAt: string; proposedQuest: string; }
+export interface QuestBoardState {
+  quests: Quest[];
+  completions: Completion[];
+  pendingInputs: PendingInput[];
+  weeklyReviews: WeeklyReview[];
+  goals: Goal[];
+  rewards: Reward[];
+  bonusRerolls: Record<string, number>;
+}
+const ZONE = "America/Chicago";
+function parts(date: Date) {
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date);
+  return Object.fromEntries(p.map(x => [x.type, x.value]));
+}
+function dayShift(ymd: string, delta: number): string {
+  const d = new Date(ymd + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+/** 05:00 local boundary; works across DST transitions. */
+export function questDay(now: Date): string {
+  const p = parts(now);
+  const ymd = `${p.year}-${p.month}-${p.day}`;
+  return Number(p.hour) < 5 ? dayShift(ymd, -1) : ymd;
+}
+export function questWeek(now: Date): string {
+  const day = questDay(now);
+  const date = new Date(day + "T12:00:00Z");
+  const mondayOffset = (date.getUTCDay() + 6) % 7;
+  return dayShift(day, -mondayOffset);
+}
+export function periodFor(quest: Quest, now: Date): string {
+  return quest.cadence === "daily" ? questDay(now) : quest.cadence === "weekly" ? questWeek(now) : "once";
+}
+export function isCompleted(quest: Quest, completions: Completion[], now: Date): boolean {
+  const period = periodFor(quest, now);
+  return completions.some(c => c.questId === quest.id && c.period === period);
+}
+/** Idempotent completion, including quests not shown on the board. Persist with UNIQUE(quest_id,period). */
+export function completeQuest(state: QuestBoardState, questId: string, now: Date, source: Completion["source"]): { state: QuestBoardState; xpAwarded: 0 | 1 } {
+  const quest = state.quests.find(q => q.id === questId && q.enabled);
+  if (!quest) throw new Error("Unknown or disabled quest");
+  if (isCompleted(quest, state.completions, now)) return { state, xpAwarded: 0 };
+  const completion: Completion = { questId, period: periodFor(quest, now), completedAt: now.toISOString(), source };
+  return { state: { ...state, completions: [...state.completions, completion] }, xpAwarded: 1 };
+}
+/** Daily quest count scales from five toward ten as pool grows to 25. */
+export function dailyQuestCount(poolSize: number): number {
+  return Math.max(0, Math.min(poolSize, Math.min(10, 5 + Math.floor(Math.max(0, poolSize - 5) / 4))));
+}
+function seededUnit(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) / 4294967296;
+}
+function rank(quests: Quest[], seed: string): Quest[] {
+  return [...quests].sort((a,b) => seededUnit(seed + ":" + a.id) - seededUnit(seed + ":" + b.id) || a.id.localeCompare(b.id));
+}
+/** Deterministic for the same day and pool; 3 random + 2 personalized at initial size 5. */
+export function selectDailyQuests(quests: Quest[], now: Date): Quest[] {
+  const pool = quests.filter(q => q.enabled && q.cadence === "daily");
+  const count = dailyQuestCount(pool.length);
+  const personalized = Math.round(count * 0.4);
+  const random = count - personalized;
+  const seed = questDay(now);
+  const randomPicks = rank(pool, seed + ":random").slice(0, random);
+  const picked = new Set(randomPicks.map(q => q.id));
+  const personalPicks = pool.filter(q => !picked.has(q.id)).sort((a,b) => b.priority - a.priority || seededUnit(seed + a.id) - seededUnit(seed + b.id)).slice(0, personalized);
+  return [...randomPicks, ...personalPicks];
+}
+/** All weekly quests are revealed by Wednesday 14:00 Chicago time. */
+export function isWeeklyRevealed(quest: Quest, now: Date): boolean {
+  if (quest.cadence !== "weekly") return true;
+  const p = parts(now);
+  const local = new Date(`${p.year}-${p.month}-${p.day}T12:00:00Z`);
+  const weekday = local.getUTCDay(); // 1 Mon, 2 Tue, 3 Wed
+  if (weekday > 3 || weekday === 0) return true;
+  const minutesSinceMonday = (weekday - 1) * 1440 + Number(p.hour) * 60 + Number(p.minute);
+  const windowMinutes = 2 * 1440 + 14 * 60;
+  const revealMinute = Math.floor(seededUnit(questWeek(now) + ":weekly:" + quest.id) * windowMinutes);
+  return minutesSinceMonday >= revealMinute;
+}
+export function bonusChoices(state: QuestBoardState, now: Date): Quest[] {
+  const day = questDay(now);
+  const daily = state.quests.filter(q => q.enabled && q.cadence === "daily");
+  const displayed = selectDailyQuests(daily, now);
+  if (!displayed.length || displayed.some(q => !isCompleted(q, state.completions, now))) return [];
+  const used = state.bonusRerolls[day] || 0;
+  const selected = new Set(displayed.map(q => q.id));
+  return rank(daily.filter(q => !selected.has(q.id) && !isCompleted(q, state.completions, now)), day + ":bonus:" + used).slice(0, 3);
+}
+export function rerollBonus(state: QuestBoardState, now: Date): QuestBoardState {
+  const day = questDay(now);
+  if ((state.bonusRerolls[day] || 0) >= 1) throw new Error("Daily bonus reroll already used");
+  if (!bonusChoices(state, now).length) throw new Error("Bonus quests not unlocked or unavailable");
+  return { ...state, bonusRerolls: { ...state.bonusRerolls, [day]: 1 } };
+}
+/** Weekly review prompt: after Friday 17:00 or when an unresolved prior week exists. */
+export function weeklyReviewDue(state: QuestBoardState, now: Date): Quest[] {
+  const p = parts(now);
+  const local = new Date(`${p.year}-${p.month}-${p.day}T12:00:00Z`);
+  const week = questWeek(now);
+  const fridayOrLater = local.getUTCDay() === 5 ? Number(p.hour) >= 17 : local.getUTCDay() === 6 || local.getUTCDay() === 0;
+  return state.quests.filter(q => q.enabled && q.cadence === "weekly" && (fridayOrLater || state.weeklyReviews.some(r => r.questId === q.id && r.week !== week && r.status === "pending")) && !isCompleted(q, state.completions, now) && !state.weeklyReviews.some(r => r.questId === q.id && r.week === week && r.status === "ignored"));
+}
+/** Calendar events become suggestions, never mandatory quests, until reviewed. */
+export function calendarPendingInputs(events: CalendarSuggestion[], existing: PendingInput[], now: Date): PendingInput[] {
+  const seen = new Set(existing.map(i => i.eventId).filter(Boolean));
+  return events.filter(e => !seen.has(e.eventId)).map(e => ({
+    id: "calendar:" + e.eventId, eventId: e.eventId,
+    question: `Add "${e.proposedQuest}" for "${e.title}" and choose a reminder?`,
+    createdAt: now.toISOString()
+  }));
+}
