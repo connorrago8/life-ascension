@@ -1,0 +1,42 @@
+name: Emberhaven isolated verification
+
+on:
+  push:
+    branches:
+      - chatgpt/emberhaven-crypt-integration-20261031
+    paths:
+      - 'app/(app)/play/emberhaven/**'
+      - 'lib/emberhavenMovement.ts'
+      - 'tests/emberhaven*.test.mjs'
+      - '.github/workflows/emberhaven-verify.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no lockfile currently tracked)
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run lint
+      - name: Emberhaven behavior and contract tests
+        run: node --test tests/emberhaven*.test.mjs
+      - name: Entire repository test suite
+        run: npm test
