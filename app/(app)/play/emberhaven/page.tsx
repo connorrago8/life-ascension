@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { TownBackLink } from './TownBackLink';
 import { EmberhavenMap } from './EmberhavenMap';
 import { TownTrail } from './TownVisit';
@@ -8,56 +7,6 @@ import { TownTrail } from './TownVisit';
  * except navigation to existing quest and adventure experiences.
  * No account writes, equipment grants, or run resets originate here.
  */
-const places = [
-  {
-    name: 'The Noticeboard',
-    kicker: 'YOUR REAL-WORLD QUESTS',
-    description: 'Return to the work that makes your adventurer stronger.',
-    href: '/quests',
-    action: 'View quests',
-    symbol: '✦',
-  },
-  {
-    name: 'The Blacksmith',
-    kicker: 'EQUIPMENT & CHARACTER',
-    description: 'Visit the forge and inspect equipment stations without changing your account.',
-    href: '/play/emberhaven/blacksmith',
-    action: 'Visit the forge',
-    symbol: '⚒',
-  },
-  {
-    name: 'The Hearth',
-    kicker: 'REST & REFLECTION',
-    description: 'Find warmth, reflect on your next quest, and return to the road.',
-    href: '/play/emberhaven/hearth',
-    action: 'Enter the hearth',
-    symbol: '♨',
-  },
-  {
-    name: 'The Lantern Market',
-    kicker: 'A TOWN OF POSSIBILITIES',
-    description: 'Explore the lantern-lit stalls. Trading is not open yet.',
-    href: '/play/emberhaven/market',
-    action: 'Explore the market',
-    symbol: '✧',
-  },
-  {
-    name: 'The Waystone',
-    kicker: 'THE ROAD AHEAD',
-    description: 'Discover the paths that lead beyond the town walls.',
-    href: '/play/emberhaven/waystone',
-    action: 'Inspect the waystone',
-    symbol: '◇',
-  },
-  {
-    name: 'The Trail Gate',
-    kicker: 'ADVENTURES',
-    description: 'Visit the adventure map. Crypt availability depends on the deployed game version.',
-    href: '/play',
-    action: 'Explore destinations',
-    symbol: '◇',
-  },
-] as const;
 
 export default function EmberhavenPage() {
   return (
@@ -80,31 +29,6 @@ export default function EmberhavenPage() {
       </div>
       <EmberhavenMap />
       <TownTrail />
-      <section aria-label="Town destinations" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 12, marginTop: 24 }}>
-        {places.map((place) => (
-          <article key={place.name} style={{
-            border: '1px solid var(--border)',
-            borderRadius: 16,
-            background: 'linear-gradient(145deg, #3b3029, #191d21)',
-            padding: 16, minHeight: 235,
-          }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <span aria-hidden="true" style={{
-                width: 46, height: 46, flexShrink: 0, display: 'grid', placeItems: 'center',
-                border: '1px solid #506a60', borderRadius: 12, color: '#f0c181', fontSize: 24,
-              }}>{place.symbol}</span>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ color: 'var(--mint)', fontSize: 10, letterSpacing: '.12em', fontWeight: 700 }}>{place.kicker}</p>
-                <h2 style={{ margin: '5px 0 6px', fontSize: '1.14rem' }}>{place.name}</h2>
-                <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 14 }}>{place.description}</p>
-                <Link className="btn" href={place.href} style={{ width: '100%', minHeight: 44 }}>
-                  {place.action} <span aria-hidden="true" style={{ marginLeft: 8 }}>→</span>
-                </Link>
-              </div>
-            </div>
-          </article>
-        ))}
-      </section>
 
       <p className="foot" style={{ textAlign: 'center', marginTop: 22 }}>
         Six town destinations · No shop, crafting, or rewards are active here.
