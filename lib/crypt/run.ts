@@ -1,7 +1,7 @@
 import { eventNode, FIGHT_ID, EVENT_ID, GUARDIAN_ID, fillTemplate, PLAYER, RAT, SENTINEL, TREASURE_ID, treasureNode } from './content.ts';
 import { act, createBattle, type ActionId, type BattleState } from './engine.ts';
 
-/** In-tab preview state. Nothing here is persisted or awarded as XP. */
+/** Run state is pure and may be serialized by the preview save adapter; no XP awarded here. */
 export type Phase = 'intro' | 'gate' | 'map' | 'fight' | 'event' | 'treasure' | 'end';
 
 export type RunState = {
@@ -31,7 +31,6 @@ export type RunCommand =
   | { type: 'back' }
   | { type: 'open'; nodeId: string }
   | { type: 'combat'; action: ActionId }
-  | { type: 'retry-fight' }
   | { type: 'choose'; choiceId: string }
   | { type: 'choose-relic'; choice: 'take' | 'leave' }
   | { type: 'restart'; seed: number };
@@ -132,6 +131,7 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     if (state.phase === 'gate') return { ...state, phase: 'intro' };
     if (state.phase === 'map') return { ...state, phase: 'gate' };
     if (state.phase === 'fight') {
+      if (state.battle?.status === 'lost') return state;
       if (state.battle?.status === 'won') return { ...state, phase: 'map', battle: null, encounterId: null };
       // After defeat, restore full HP so Back cannot strand the player at an unwinnable checkpoint.
       // Retreating from an ongoing fight still restores only the pre-fight HP.
@@ -176,15 +176,6 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
       guardianCleared: battle.status === 'won' && state.encounterId === GUARDIAN_ID ? true : state.guardianCleared,
       sigilCollected: battle.status === 'won' && state.encounterId === GUARDIAN_ID ? true : state.sigilCollected,
     };
-  }
-
-  if (command.type === 'retry-fight') {
-    if (state.phase !== 'fight' || state.battle?.status !== 'lost') return state;
-    // A guardian entered at critically low HP can be impossible to win, even on retry.
-    // Restore full HP at this fight checkpoint without resetting earlier run progress.
-    const hp = state.maxHp;
-    const next = { ...state, hp, hpAtFightStart: hp, fightCleared: state.encounterId === FIGHT_ID ? false : state.fightCleared, fightAttempt: state.fightAttempt + 1, battle: null };
-    return { ...next, battle: startBattle(next) };
   }
 
   if (command.type === 'choose-relic') {
