@@ -1,22 +1,24 @@
+import Link from 'next/link';
 export default function PlayPage() {
-  return (
-    <main className="screen play-screen">
-      <p className="page-brand">LIFE ASCENSION</p>
-      <h1>Play</h1>
-      <p className="lede">Adventures open here. They stay shut until your real-life quests have earned the way in.</p>
-      <article className="lock-card" aria-disabled="true">
-        <div className="lock-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <rect x="6" y="10.5" width="12" height="8.5" rx="1.5" />
-            <path d="M8.5 10.5V8.2a3.5 3.5 0 0 1 7 0v2.3" />
-          </svg>
-        </div>
-        <p className="lock-kicker">Locked</p>
-        <h2>Forgotten Crypt</h2>
-        <p className="soon-pill">Coming soon</p>
-        <p className="muted">This delve is not open. Nothing on this screen grants XP.</p>
-      </article>
-      <p className="play-note">Real-life quests earn XP. Play is the adventure those quests will open. Finish a quest on your board to move your level. Play itself does not.</p>
-    </main>
-  );
+ return <main className="screen play-screen">
+  <p className="page-brand">LIFE ASCENSION · ADVENTURE HUB</p>
+  <h1>Hub</h1>
+  <p className="lede">Your home between adventures. Real-life quests strengthen your character; the Hub never awards XP on its own.</p>
+  <section className="panel" aria-label="Hub destinations">
+   <h2>Choose your destination</h2>
+   <p className="muted">Adventure integration is being verified separately; your quest progress is preserved.</p>
+   <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+    <Link className="btn" href="/quest-board-v3">Quest Board</Link>
+    <Link className="btn ghost" href="/character">Character</Link>
+    <Link className="btn ghost" href="/companion">Companion</Link>
+    <Link className="btn ghost" href="/">Home</Link>
+   </div>
+  </section>
+  <article className="lock-card" aria-disabled="true">
+   <p className="lock-kicker">Adventure preview</p>
+   <h2>Forgotten Crypt</h2>
+   <p className="soon-pill">Coming soon</p>
+   <p className="muted">This adventure is not enabled on this release branch. Your quests and XP remain saved when navigating here.</p>
+  </article>
+ </main>;
 }

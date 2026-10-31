@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import '../../preview/preview.css';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
@@ -94,6 +95,7 @@ export default function CharacterPage() {
   return (
     <main className="screen character-screen">
       <p className="page-brand">LIFE ASCENSION</p>
+      <nav aria-label="Character navigation" style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}><Link className="btn ghost" href="/play">← Hub</Link><Link className="btn ghost" href="/quest-board-v3">Quest Board</Link><Link className="btn ghost" href="/">Home</Link></nav>
       {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
       <section className="panel" aria-label="Your character progress">
         <h1>{state.name}</h1>
