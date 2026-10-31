@@ -50,7 +50,7 @@ begin
  if not found then raise exception 'Instance not found'; end if;
  if inst.status='completed' then return 'completed'; end if;
  if p_action='complete' then
-  if exists(select 1 from public.quest_companion_assignments where owner_id=auth.uid() and quest_id=inst.quest_id and active) then v_amount:=2; end if;
+  if exists(select 1 from public.quest_companion_assignments where owner_id=auth.uid() and quest_id=inst.quest_id and active and created_at<=now()) then v_amount:=2; end if;
   update public.quest_instances set status='completed',completed_at=now() where id=inst.id;
   insert into public.xp_ledger(owner_id,instance_id,amount) values(auth.uid(),inst.id,v_amount) on conflict(instance_id) do nothing;
   insert into public.quest_events(owner_id,instance_id,event_type) values(auth.uid(),inst.id,'completed');
