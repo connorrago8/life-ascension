@@ -1,5 +1,5 @@
 -- Review-only migration: apply to isolated QA before any production consideration.
--- Browser clients may SELECT and INSERT only their own runs. Writes to existing
+-- Browser clients may SELECT only their own runs. Writes to existing
 -- runs go through a compare-and-swap RPC, preventing stale-device overwrites.
 create table if not exists public.adventure_run_saves (
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -20,7 +20,7 @@ create policy adventure_run_read_own on public.adventure_run_saves
 create or replace function public.save_adventure_run(
   p_adventure_id text, p_state jsonb, p_version integer, p_expected_revision bigint
 ) returns bigint
-language plpgsql security definer set search_path = '' as $
+language plpgsql security definer set search_path = '' as $run$
 declare v_owner uuid := (select auth.uid()); v_revision bigint;
 begin
   if v_owner is null then raise exception 'Authentication required' using errcode = '28000'; end if;
@@ -45,7 +45,7 @@ begin
   end if;
   if v_revision is null then raise exception 'Stale save revision; reload before retrying' using errcode = '40001'; end if;
   return v_revision;
-end $$;
+end $run$;
 revoke execute on function public.save_adventure_run(text,jsonb,integer,bigint) from public, anon;
 grant execute on function public.save_adventure_run(text,jsonb,integer,bigint) to authenticated;
 -- Review function owner, grants, RLS and stale-revision behavior in QA.
