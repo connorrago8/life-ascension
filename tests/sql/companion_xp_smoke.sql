@@ -75,4 +75,17 @@ begin
   if sqlerrm='Cross-owner assignment unexpectedly succeeded' then raise; end if;
  end;
 end $$;
+-- Cross-owner retirement must not alter the original owner's assignment.
+do $unauthorized_retire$
+declare v_assignment uuid;
+begin
+ select id into v_assignment from public.quest_companion_assignments
+ where quest_id='c0000000-0000-4000-8000-000000000103'::uuid;
+ if public.quest_companion_retire_assignment(v_assignment) then
+  raise exception 'Cross-owner retirement unexpectedly succeeded';
+ end if;
+ if not exists(select 1 from public.quest_companion_assignments where id=v_assignment and active) then
+  raise exception 'Cross-owner retirement changed the assignment';
+ end if;
+end $unauthorized_retire$;
 rollback;
