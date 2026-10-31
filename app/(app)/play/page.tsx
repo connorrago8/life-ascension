@@ -10,6 +10,7 @@ export default function PlayPage() {
    <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
     <Link className="btn" href="/quest-board-v3">Quest Board</Link>
     <Link className="btn ghost" href="/character">Character</Link>
+    <Link className="btn ghost" href="/play/emberhaven">Visit Emberhaven Town →</Link>
     <Link className="btn ghost" href="/companion">Companion</Link>
     <Link className="btn ghost" href="/">Home</Link>
    </div>
