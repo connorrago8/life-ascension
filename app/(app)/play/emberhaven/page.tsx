@@ -10,7 +10,7 @@ const places = [
     name: 'The Noticeboard',
     kicker: 'YOUR REAL-WORLD QUESTS',
     description: 'Return to the work that makes your adventurer stronger.',
-    href: '/',
+    href: '/quests',
     action: 'View quests',
     symbol: '✦',
   },
