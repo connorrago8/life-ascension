@@ -85,3 +85,12 @@ test('Town map uses existing navigation without changing account or active run s
   assert.match(map, /href: '\/quests'/);
   assert.doesNotMatch(map, /supabase\(|\.rpc\(|localStorage\.|sessionStorage\.|fetch\(|clearActiveRun\(|saveActiveRun\(/);
 });
+
+test('Town walking has movement controls and keyboard support', () => {
+  assert.match(map, /setPosition/);
+  assert.match(map, /onKeyDown/);
+  assert.match(map, /Walk north/);
+  assert.match(map, /Walk south/);
+  assert.match(map, /Walk east/);
+  assert.match(map, /Walk west/);
+});
