@@ -32,3 +32,25 @@ test('defeat cannot be retried or escaped into the same run', () => {
   assert.equal(newRun.seed, 100);
   assert.equal(newRun.fightCleared, false);
 });
+
+test('resume preserves branching choices and does not grant a free checkpoint', () => {
+  let run = createRun(314159);
+  run = reduceRun(run, { type: 'continue' });
+  run = reduceRun(run, { type: 'continue' });
+  assert.equal(run.phase, 'map');
+  const saved = serializeCryptSave(run, new Date('2026-10-31T12:00:00Z'));
+  const resumed = parseCryptSave(saved)?.run;
+  assert.deepEqual(resumed, run);
+  assert.equal(resumed?.fightCleared, false);
+  assert.equal(resumed?.guardianCleared, false);
+  assert.equal(resumed?.relicChoice, null);
+});
+
+test('a defeated run survives serialization as defeated, not an automatic retry', () => {
+  const run = { ...createRun(501), phase: 'fight', encounterId: 'rat', hp: 0,
+    battle: { status: 'lost' } };
+  const restored = parseCryptSave(serializeCryptSave(run))?.run;
+  assert.equal(restored?.hp, 0);
+  assert.equal(restored?.battle?.status, 'lost');
+  assert.equal(reduceRun(restored, { type: 'back' }), restored);
+});
