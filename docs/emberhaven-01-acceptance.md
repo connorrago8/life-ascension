@@ -85,3 +85,7 @@ The town square now includes a six-landmark selectable map with path connections
 ## Walkable map prototype
 
 A visible avatar can move in four directions using on-screen touch controls or arrow keys while the map itself has focus. Movement is clamped to the map and a nearby landmark is identified using proximity. Location selection and entry remain available independently of proximity for accessibility. Verify mobile touch, keyboard focus, VoiceOver announcements, avatar bounds and selection-to-entry routing. This is a 2D town-map walking prototype, not a full collision-based world or multiplayer scene.
+
+## Town movement polish
+
+The avatar tracks facing and local step count, adds simple directional pose changes, and distinguishes being at a selected landmark from viewing one at a distance. Foliage accents enrich the map. Step count is ephemeral UI feedback only: it is not XP, a quest, an achievement, or persistent account data. Check map focus and mobile controls during QA.
