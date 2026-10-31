@@ -20,7 +20,7 @@ create policy adventure_run_read_own on public.adventure_run_saves
 create or replace function public.save_adventure_run(
   p_adventure_id text, p_state jsonb, p_version integer, p_expected_revision bigint
 ) returns bigint
-language plpgsql security invoker set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $
 declare v_owner uuid := (select auth.uid()); v_revision bigint;
 begin
   if v_owner is null then raise exception 'Authentication required' using errcode = '28000'; end if;
@@ -30,7 +30,7 @@ begin
     or pg_catalog.octet_length(p_state::text) > 262144 then
     raise exception 'Invalid adventure save' using errcode = '22023';
   end if;
-  -- Invoker rights require scoped write grants; RLS policies constrain ownership.
+  -- SECURITY DEFINER is needed to enforce atomic CAS without granting clients direct writes.\n  -- auth.uid() is checked and owner_id is never supplied by the caller.
   if p_expected_revision = 0 then
     insert into public.adventure_run_saves(owner_id,adventure_id,state,version)
       values (v_owner,p_adventure_id,p_state,p_version)
@@ -45,16 +45,6 @@ begin
   if v_revision is null then raise exception 'Stale save revision; reload before retrying' using errcode = '40001'; end if;
   return v_revision;
 end $$;
-create policy adventure_run_insert_own on public.adventure_run_saves
-  for insert to authenticated with check (owner_id = (select auth.uid()));
-create policy adventure_run_update_own on public.adventure_run_saves
-  for update to authenticated using (owner_id = (select auth.uid()))
-  with check (owner_id = (select auth.uid()));
-grant insert (owner_id,adventure_id,state,version) on public.adventure_run_saves to authenticated;
-grant update (state,version,revision,updated_at) on public.adventure_run_saves to authenticated;
 revoke execute on function public.save_adventure_run(text,jsonb,integer,bigint) from public, anon;
 grant execute on function public.save_adventure_run(text,jsonb,integer,bigint) to authenticated;
--- SECURITY NOTE: column grants also allow direct authenticated writes, so
--- production integration must move the CAS function into a dedicated private
--- SECURITY DEFINER service boundary or use a server-only authenticated endpoint.
--- DO NOT DEPLOY THIS DRAFT MIGRATION AS WRITTEN.
+-- Before applying: independent review of function owner, grants, RLS, and\n-- adversarial cross-account/revision tests in isolated QA. No production changes.\n
