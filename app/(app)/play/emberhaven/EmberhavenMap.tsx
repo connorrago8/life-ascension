@@ -49,6 +49,9 @@ export function EmberhavenMap() {
         </div>
         <span aria-hidden="true" style={{ position: 'absolute', top: '10%', left: '8%', fontSize: 24, opacity: 0.65 }}>♣</span>
         <span aria-hidden="true" style={{ position: 'absolute', bottom: '12%', right: '8%', fontSize: 24, opacity: 0.65 }}>♣</span>
+        {TOWN_OBSTACLES.map((obstacle, index) => (
+          <span key={index} aria-hidden="true" style={{ position: 'absolute', left: `${obstacle.x}%`, top: `${obstacle.y}%`, transform: 'translate(-50%, -50%)', width: `${obstacle.radius * 2}%`, height: `${obstacle.radius * 2}%`, borderRadius: '40%', background: 'radial-gradient(circle, #46513d, #202d29)', border: '2px solid #607052', pointerEvents: 'none' }} />
+        ))}
         {landmarks.map((landmark) => (
           <button key={landmark.id} type="button" aria-pressed={selected === landmark.id} aria-label={`Inspect ${landmark.label}`} onClick={() => setSelected(landmark.id)} style={{ position: 'absolute', left: `${landmark.x}%`, top: `${landmark.y}%`, transform: 'translate(-50%, -50%)', display: 'grid', placeItems: 'center', width: 44, height: 44, borderRadius: 12, border: selected === landmark.id ? '3px solid #ffe4ad' : '2px solid #a98c62', background: selected === landmark.id ? '#79552d' : '#293238', color: '#ffe0a6', fontSize: 23, cursor: 'pointer', boxShadow: selected === landmark.id ? '0 0 20px #f2b35d88' : '0 2px 8px #0008' }}>{landmark.icon}</button>
         ))}
