@@ -11,6 +11,7 @@ export default function CompanionMode(){
  const [ready,setReady]=useState(false),[signedIn,setSignedIn]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const [name,setName]=useState("Izzy"),[title,setTitle]=useState(""),[cadence,setCadence]=useState<Habit["cadence"]>("daily");
  const [consent,setConsent]=useState(false);
+ const [assignment,setAssignment]=useState("");
  const today=questDay(new Date()),week=questWeek(new Date());
  const load=useCallback(async()=>{
   const client=supabase();const {data:{user}}=await client.auth.getUser();
@@ -41,6 +42,14 @@ export default function CompanionMode(){
   if(user){const {error}=await client.from("quest_companion_habits").insert({owner_id:user.id,companion_id:profile.id,title:title.trim(),cadence});setMessage(error?.message||"Habit added.");if(!error)setTitle("");}
   await load();setBusy(false);
  }
+ async function assignToConnor(){
+  if(!profile||!assignment.trim()||busy)return;
+  setBusy(true);
+  const {data,error}=await supabase().rpc("quest_companion_assign_to_owner",{p_companion_id:profile.id,p_title:assignment.trim()});
+  setMessage(error?.message||(data?"💜 Quest assigned to Connor · +2 XP when completed.":"Unable to assign quest."));
+  if(!error)setAssignment("");
+  setBusy(false);
+ }
  async function log(h:Habit){
   if(!profile||busy)return;setBusy(true);
   const period=h.cadence==="weekly"?week:h.cadence==="daily"?today:"1970-01-01";
@@ -56,6 +65,10 @@ export default function CompanionMode(){
  <section className="panel"><div className="eyebrow">COMPANION PROGRESSION</div><h2>{logs.length} XP <small>from recorded completions</small></h2><p className="muted">{current.length} completions logged in the last 7 days · Missing entries are unknown, not failures.</p><Link className="btn ghost" href="/quest-board-v3">← My Quest Board</Link></section>
  <section className="panel"><h2>Log {profile.display_name}'s quests</h2>{habits.map(h=>{const period=h.cadence==="weekly"?week:h.cadence==="daily"?today:"1970-01-01";const done=logs.some(l=>l.habit_id===h.id&&l.period_start===period);return <div className="quest" key={h.id}><div className="quest-main"><div className="quest-title">{h.title}</div><div className="muted">{h.cadence} · +1 companion XP · {done?"Logged this period":"Not logged this period"}</div></div><button className="btn" disabled={busy||done} onClick={()=>log(h)}>{done?"✓ Logged":"Log completion"}</button></div>})}</section>
  <section className="panel"><h2>Add a manual quest</h2><input className="field" value={title} onChange={e=>setTitle(e.target.value)} maxLength={120} placeholder="e.g. Workout class"/><select className="field" value={cadence} onChange={e=>setCadence(e.target.value as Habit["cadence"])}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="once">One-time</option></select><button className="btn" disabled={busy||!title.trim()} onClick={addHabit}>Add quest</button></section>
+ <section className="panel"><h2>💜 Quests from Izzy → Connor</h2>
+ <p className="muted">Type a task for Connor. Matching existing or AI-created quests are upgraded instead of duplicated. Future eligible completions award 2 XP; previous XP stays unchanged.</p>
+ <input className="field" value={assignment} maxLength={120} onChange={e=>setAssignment(e.target.value)} placeholder="e.g. Fold and put away laundry" aria-label="Quest for Connor"/>
+ <button className="btn" disabled={busy||!assignment.trim()} onClick={assignToConnor}>Assign to Connor · 2 XP</button></section>
  <section className="panel"><h2>Weekly activity snapshot</h2><p className="muted">{current.length} recorded completions in the past seven days. This is a descriptive count, not an automatic AI assessment.</p>{habits.map(h=><p key={h.id}>{h.title}: {current.filter(l=>l.habit_id===h.id).length} logged</p>)}</section>
  </>}
  {message&&<p className="message" role="status">{message}</p>}
