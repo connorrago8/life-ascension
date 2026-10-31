@@ -138,3 +138,35 @@ export function calendarPendingInputs(events: CalendarSuggestion[], existing: Pe
     createdAt: now.toISOString()
   }));
 }
+
+/** The board can freeze daily picks for the whole gameplay day in persistent storage. */
+export interface DailySelection { day: string; questIds: string[]; }
+export function getOrCreateDailySelection(quests: Quest[], now: Date, existing?: DailySelection): DailySelection {
+  const day = questDay(now);
+  if (existing?.day === day) return existing;
+  return { day, questIds: selectDailyQuests(quests, now).map(q => q.id) };
+}
+/** A streak counts consecutive completed cadence periods, not just visits to the board. */
+export function individualStreak(quest: Quest, completions: Completion[], now: Date): number {
+  if (quest.cadence === "once") return isCompleted(quest, completions, now) ? 1 : 0;
+  const periods = new Set(completions.filter(c => c.questId === quest.id).map(c => c.period));
+  let cursor = periodFor(quest, now);
+  const step = quest.cadence === "weekly" ? -7 : -1;
+  if (!periods.has(cursor)) cursor = dayShift(cursor, step);
+  let streak = 0;
+  while (periods.has(cursor)) { streak++; cursor = dayShift(cursor, step); }
+  return streak;
+}
+/** Stable XP curve: existing levels are not rebalanced by Quest Board 3. */
+export const LEVEL_XP = [0, 10, 25, 45, 70, 100, 135, 175, 220, 270] as const;
+/** Quest management helpers preserve completion history and XP. */
+export function archiveQuest(state: QuestBoardState, questId: string): QuestBoardState {
+  return { ...state, quests: state.quests.map(q => q.id === questId ? { ...q, enabled: false } : q) };
+}
+export function updateQuest(state: QuestBoardState, questId: string, patch: Partial<Pick<Quest,"title"|"priority"|"category">>): QuestBoardState {
+  if (patch.title !== undefined && (patch.title.trim().length < 1 || patch.title.length > 120)) throw new Error("Invalid quest title");
+  return { ...state, quests: state.quests.map(q => q.id === questId ? { ...q, ...patch } : q) };
+}
+export function rewardPreview(reward: Reward, expanded: boolean): { label: string; stats?: Record<string, number> } {
+  return expanded ? { label: reward.estimatedLabel, stats: reward.previewStats } : { label: reward.estimatedLabel };
+}
