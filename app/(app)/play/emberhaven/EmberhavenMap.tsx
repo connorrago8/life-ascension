@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
+import { TOWN_OBSTACLES, townDistance, walkTown, type TownDirection } from '@/lib/emberhavenMovement';
 
 const landmarks = [
   { id: 'board', label: 'Noticeboard', icon: '✦', x: 19, y: 28, href: '/quests', story: 'The noticeboard carries your real-world quests. Every completed task begins outside the game.' },
@@ -16,19 +17,18 @@ export function EmberhavenMap() {
   const [selected, setSelected] = useState<(typeof landmarks)[number]['id']>('hearth');
   const [position, setPosition] = useState({ x: 47, y: 43 });
   const [steps, setSteps] = useState(0);
-  const [facing, setFacing] = useState<'north' | 'south' | 'east' | 'west'>('south');
-  const move = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
+  const [facing, setFacing] = useState<TownDirection>('south');
+  const move = useCallback((direction: TownDirection) => {
     setFacing(direction);
-    const x = Math.max(8, Math.min(92, position.x + (direction === 'east' ? 8 : direction === 'west' ? -8 : 0)));
-    const y = Math.max(8, Math.min(92, position.y + (direction === 'south' ? 8 : direction === 'north' ? -8 : 0)));
-    if (x !== position.x || y !== position.y) {
-      setPosition({ x, y });
+    const next = walkTown(position, direction);
+    if (next !== position) {
+      setPosition(next);
       setSteps((count) => count + 1);
     }
   }, [position]);
-  const nearby = landmarks.find((landmark) => Math.hypot(position.x - landmark.x, position.y - landmark.y) < 14);
+  const nearby = landmarks.find((landmark) => townDistance(position, landmark) < 14);
   const active = landmarks.find((landmark) => landmark.id === selected) ?? landmarks[2];
-  const atSelected = Math.hypot(position.x - active.x, position.y - active.y) < 14;
+  const atSelected = townDistance(position, active) < 14;
 
   return (
     <section aria-labelledby="ember-map-title" style={{ marginTop: 22 }}>
