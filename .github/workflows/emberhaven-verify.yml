@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -52,7 +52,8 @@ jobs:
           QA_BASE_URL: http://127.0.0.1:3128
         run: |
           set -euo pipefail
-          unset NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY
+          export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY=emberhaven-local-placeholder
           npm run dev -- --hostname 127.0.0.1 --port 3128 > /tmp/emberhaven-next.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
