@@ -32,5 +32,6 @@ export function walkTown(position: TownPoint, direction: TownDirection): TownPoi
     x: Math.max(TOWN_BOUNDS.min, Math.min(TOWN_BOUNDS.max, position.x + delta.x)),
     y: Math.max(TOWN_BOUNDS.min, Math.min(TOWN_BOUNDS.max, position.y + delta.y)),
   };
+  if (next.x === position.x && next.y === position.y) return position;
   return canOccupyTownPoint(next) ? next : position;
 }

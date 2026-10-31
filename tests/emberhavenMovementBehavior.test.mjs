@@ -26,6 +26,7 @@ test('movement clamps to the town perimeter', () => {
   const corner = { x: 8, y: 8 };
   assert.deepEqual(walkTown(corner, 'north'), corner);
   assert.deepEqual(walkTown(corner, 'west'), corner);
+  assert.equal(walkTown(corner, 'north'), corner, 'blocked movement preserves identity so the UI does not count a step');
   assert.equal(canOccupyTownPoint({ x: 7, y: 50 }), false);
   assert.equal(canOccupyTownPoint({ x: 93, y: 50 }), false);
 });

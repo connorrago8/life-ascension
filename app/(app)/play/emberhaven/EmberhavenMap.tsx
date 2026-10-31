@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
-import { TOWN_OBSTACLES, townDistance, walkTown, type TownDirection } from '@/lib/emberhavenMovement';
+import { TOWN_OBSTACLES, townDistance, walkTown, type TownDirection } from '../../../../lib/emberhavenMovement';
 
 const landmarks = [
   { id: 'board', label: 'Noticeboard', icon: '✦', x: 19, y: 28, href: '/quests', story: 'The noticeboard carries your real-world quests. Every completed task begins outside the game.' },

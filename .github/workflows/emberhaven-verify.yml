@@ -9,6 +9,8 @@ on:
       - 'lib/emberhavenMovement.ts'
       - 'tests/emberhaven*.test.mjs'
       - '.github/workflows/emberhaven-verify.yml'
+      - 'tests/browser/emberhaven.qa.mjs'
+      - 'vercel.json'
   workflow_dispatch:
 
 permissions:
@@ -40,3 +42,23 @@ jobs:
         run: node --test tests/emberhaven*.test.mjs
       - name: Entire repository test suite
         run: npm test
+      - name: Install isolated Chromium runner
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Verify local town in Chromium without backend credentials
+        shell: bash
+        env:
+          QA_BASE_URL: http://127.0.0.1:3128
+        run: |
+          set -euo pipefail
+          unset NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY
+          npm run dev -- --hostname 127.0.0.1 --port 3128 > /tmp/emberhaven-next.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail "$QA_BASE_URL/play/emberhaven" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --silent --show-error --fail "$QA_BASE_URL/play/emberhaven" >/dev/null
+          node tests/browser/emberhaven.qa.mjs
