@@ -34,10 +34,8 @@ export default function QuestBoardV3Connected(){
    setAssignments((assigned||[]).map((item:{quest_id:string})=>item.quest_id));
    // The existing RPC is authoritative for instance creation and XP.
    // Do not create instances for future scheduled quests or completed one-time quests.
-   const eligible=q.filter(item=>!item.scheduled_for||item.scheduled_for<=today);
-   const ensured=await Promise.all(eligible.map(item=>client.rpc("ensure_quest_instance",{p_quest_id:item.id,p_date:today})));
-   const failed=ensured.find(result=>result.error);
-   if(failed?.error)throw failed.error;
+   const {error:ensureError}=await client.rpc("quest_board_v3_ensure_instances",{p_day:today});
+   if(ensureError)throw ensureError;
    const [{data:history,error:he},{data:ledger,error:le}]=await Promise.all([
     client.from("quest_instances").select("id,quest_id,due_date,status,completed_at").eq("owner_id",user.id).order("due_date",{ascending:false}).limit(2000),
     client.rpc("get_lifetime_xp")
