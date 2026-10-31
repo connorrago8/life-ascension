@@ -133,9 +133,8 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     if (state.phase === 'fight') {
       if (state.battle?.status === 'lost') return state;
       if (state.battle?.status === 'won') return { ...state, phase: 'map', battle: null, encounterId: null };
-      // After defeat, restore full HP so Back cannot strand the player at an unwinnable checkpoint.
-      // Retreating from an ongoing fight still restores only the pre-fight HP.
-      const hp = state.battle?.status === 'lost' ? state.maxHp : state.hpAtFightStart ?? state.maxHp;
+      // Retreating from an ongoing fight restores only pre-fight HP.
+      const hp = state.hpAtFightStart ?? state.maxHp;
       return { ...state, phase: 'map', battle: null, encounterId: null, hp };
     }
     if (state.phase === 'event' || state.phase === 'treasure') return { ...state, phase: 'map', outcomeNote: null };
