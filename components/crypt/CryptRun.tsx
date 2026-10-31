@@ -106,6 +106,9 @@ export function CryptRun() {
         setSaveStatus('Browser-local preview save');
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Browser storage unavailable.');
+        // Preserve playability even when private browsing disables localStorage.
+        setRun(createRun(freshSeed()));
+        setSaveStatus('Unsaved preview — keep this tab open');
       }
       if (!cancelled) setSaveReady(true);
     }
@@ -175,7 +178,7 @@ export function CryptRun() {
         <p className="page-brand">LIFE ASCENSION</p>
         <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
         <p className="muted">{saveError ?? FLOOR.loading}</p>
-        {saveError && <button type="button" className="btn" onClick={restart}>Discard incompatible local save and start a new run</button>}
+        {saveError && !cloudAccount.current && <button type="button" className="btn" onClick={restart}>Start a new local run</button>}
       </main>
     );
   }
