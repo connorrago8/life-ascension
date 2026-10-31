@@ -37,7 +37,7 @@ test('Blacksmith makes no false account-inventory promises', () => {
   assert.doesNotMatch(forge, /supabase\(|\.rpc\(|localStorage\.|sessionStorage\.|fetch\(/);
 });
 
-test('Town adventure gate acknowledges the locked Crypt', () => {
-  assert.match(source, /Crypt may still be locked/);
+test('Town adventure gate does not assert Crypt unlock state', () => {
+  assert.match(source, /Crypt availability depends on the deployed game version/);
   assert.match(source, /No shop, crafting, or rewards are active here/);
 });
