@@ -77,7 +77,7 @@ export default function CompanionMode(){
  <p className="muted">Type a task for Connor. Matching existing or AI-created quests are upgraded instead of duplicated. Future eligible completions award 2 XP; previous XP stays unchanged.</p>
  <input className="field" value={assignment} maxLength={120} onChange={e=>setAssignment(e.target.value)} placeholder="e.g. Fold and put away laundry" aria-label="Quest for Connor"/>
  <button className="btn" disabled={busy||!assignment.trim()} onClick={assignToConnor}>Assign to Connor · 2 XP</button>
- {assignments.length>0&&<div style={{marginTop:16}}><h3>Assigned quests</h3>{assignments.map(a=><div className="quest" key={a.id}><div className="quest-main"><div className="quest-title">💜 {a.requested_title}</div><div className="muted">Assigned to Connor · +2 XP on eligible completion</div></div></div>)}</div>}</section>
+ {assignments.length>0&&<div style={{marginTop:16}}><h3>Assigned quests</h3>{assignments.map(a=><div className="quest" key={a.id}><div className="quest-main"><div className="quest-title">💜 {a.requested_title}</div><div className="muted">Assigned to Connor · +2 XP on eligible completion</div></div><button className="btn ghost" disabled={busy} onClick={()=>retireAssignment(a.id)}>Retire</button></div>)}</div>}</section>
  <section className="panel"><h2>Weekly activity snapshot</h2><p className="muted">{current.length} recorded completions in the past seven days. This is a descriptive count, not an automatic AI assessment.</p>{habits.map(h=><p key={h.id}>{h.title}: {current.filter(l=>l.habit_id===h.id).length} logged</p>)}</section>
  </>}
  {message&&<p className="message" role="status">{message}</p>}
