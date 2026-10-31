@@ -2,7 +2,8 @@
 
 **Owner:** ChatGPT — World & Experience Developer  
 **Feature branch:** `chatgpt/emberhaven-town-slice-20261031`  
-**PR:** #61 (draft)  
+**Verification PR:** #63 (draft; 0.1 CI passed)  
+**World expansion PR:** #64 (draft; exact-head verification pending)  
 **Scope:** standalone `/play/emberhaven` town navigation route. No database, progression, loot, combat, or existing navigation modifications.
 
 ## Implemented
@@ -15,10 +16,10 @@
 
 ## Evidence and limitations
 
-- GitHub PR diff is **two files** relative to the Grok branch at review.
-- Automated workflow execution for this feature is **not yet confirmed**.
+- PR #63 is the isolated 0.1 baseline (three files); PR #64 contains the expanded town and forge (four files) against `main`.
+- PR #63 exact head `f8fe58c240a4a03bebdcea1df4405c1d84f14e0b` passed existing CI run `41177390880` (TypeScript, unit, SQL, build). This does **not** certify PR #64's changed head.
 - Source inspection is **not** an iPhone screenshot or browser test.
-- Route exists but is deliberately **not linked from the current AdventureHub** until Founder approval.
+- Town route remains deliberately **unlinked from current AdventureHub** until Founder approval. Grok's active adventure branch uses `/play` and `/play/delve`; current `main` still shows a locked Crypt.
 - All checks below are **PENDING** until actually executed. Do not mark PASS based on this document.
 
 ## Gate A — Build and tests
@@ -51,3 +52,10 @@
 - Grok owns Quest Board, Character, Crypt and AdventureHub; this PR must remain separate.
 - Before integration, compare against the *current* Grok head, not a stale SHA.
 - Any merge requires independent QA and Founder authorization.
+
+## Future integration boundary (not implemented)
+
+- Do not bypass Grok's `AdventureHub` entry handler or directly create a Crypt run from town.
+- On the playable branch, the map routes to `/play/delve` and tracks unfinished runs with `ACTIVE_RUN_KEY`. Keep that existing logic authoritative.
+- Verify Crypt exit → town only after a compatible return route is implemented and tested. Never assume returning to town saves rewards; validate persistence with independent QA.
+- Do not describe demo Character gear as account-synced inventory.
