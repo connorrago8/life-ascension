@@ -18,7 +18,8 @@ export default function QuestBoardV3Connected(){
  const [assignments,setAssignments]=useState<string[]>([]);
  const [completedOpen,setCompletedOpen]=useState(false);
  const [showAll,setShowAll]=useState(false);
- const today=questDay(new Date());
+ const [today,setToday]=useState(()=>questDay(new Date()));
+ useEffect(()=>{const timer=window.setInterval(()=>{const next=questDay(new Date());setToday(old=>old===next?old:next)},30000);return()=>window.clearInterval(timer)},[]);
  const {selection,message:selectionMessage}=useQuestBoardV3Selection();
  const load=useCallback(async()=>{
   try{
