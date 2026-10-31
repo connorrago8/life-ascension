@@ -103,7 +103,14 @@ test('Town exploration includes directional feedback and local proximity cues', 
 });
 
 test('Town walking counts actual movement without nested state updates', () => {
-  assert.match(map, /x !== position.x \|\| y !== position.y/);
+  assert.match(map, /next !== position/);
   assert.match(map, /setSteps/);
   assert.doesNotMatch(map, /setPosition\(\(old\) =>/);
+});
+
+test('Town map includes obstacles and inspect dialogue', () => {
+  assert.match(map, /TOWN_OBSTACLES/);
+  assert.match(map, /walkTown/);
+  assert.match(map, /aria-expanded/);
+  assert.match(map, /Talk \/ inspect/);
 });
