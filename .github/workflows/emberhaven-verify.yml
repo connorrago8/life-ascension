@@ -11,6 +11,12 @@ on:
       - '.github/workflows/emberhaven-verify.yml'
       - 'tests/browser/emberhaven.qa.mjs'
       - 'vercel.json'
+      - 'scripts/verify-deployment-env.mjs'
+      - 'scripts/verify-qa-browser-bundle-after-build.mjs'
+      - 'scripts/verify-qa-preview-env-metadata.mjs'
+      - 'lib/supabaseRuntimeConfig.ts'
+      - 'tests/deployment-env.test.mjs'
+      - 'tests/qa-browser-bundle-after-build.test.mjs'
   workflow_dispatch:
 
 permissions:

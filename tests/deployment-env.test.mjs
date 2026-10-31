@@ -284,3 +284,20 @@ test('runtime config leaves non-Vercel local development unchanged', async () =>
   assert.equal(local?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
   assert.equal(local?.key, qaKey);
 });
+
+
+test('Emberhaven preview is pinned to QA at build and runtime and rejects lookalike branches', async () => {
+  const branch = 'chatgpt/emberhaven-crypt-integration-20261031';
+  const candidate = { ...qa, VERCEL_GIT_COMMIT_REF: branch };
+  assert.equal(validateDeploymentEnv(candidate), true);
+  assert.equal((await runtimePublicConfig(candidate))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  for (const changed of [
+    { VERCEL_GIT_COMMIT_REF: branch + '/other' },
+    { NEXT_PUBLIC_SUPABASE_URL: prod.NEXT_PUBLIC_SUPABASE_URL },
+    { SUPABASE_PUBLIC_KEY_SHA256: '0'.repeat(64) },
+    { SUPABASE_SERVICE_ROLE_KEY: 'synthetic-forbidden-key' },
+  ]) {
+    assert.throws(() => validateDeploymentEnv({ ...candidate, ...changed }));
+    assert.equal(await runtimePublicConfig({ ...candidate, ...changed }), null);
+  }
+});

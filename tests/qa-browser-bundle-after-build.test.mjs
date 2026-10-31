@@ -46,3 +46,11 @@ test('protected QA Preview propagates scanner failure instead of passing', async
     inspect: async () => { throw new Error('foreign Supabase target'); },
   }), /foreign Supabase target/);
 });
+
+
+test('Emberhaven preview runs the QA scanner and rejects a lookalike ref', async () => {
+  const env = { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'chatgpt/emberhaven-crypt-integration-20261031' };
+  const result = await verifyQaBrowserBundleAfterBuild({ env, inspect: async () => ({ inspected: 1, qaMatches: 1 }) });
+  assert.equal(result.skipped, false);
+  await assert.rejects(verifyQaBrowserBundleAfterBuild({ env: { ...env, VERCEL_GIT_COMMIT_REF: env.VERCEL_GIT_COMMIT_REF + '/other' } }), /protected QA branch/);
+});
