@@ -34,7 +34,7 @@ export default function QuestBoardV3Connected(){
    setAssignments((assigned||[]).map((item:{quest_id:string})=>item.quest_id));
    // The existing RPC is authoritative for instance creation and XP.
    // Do not create instances for future scheduled quests or completed one-time quests.
-   const eligible=q.filter(item=>item.quest_type!=="goal"&&(!item.scheduled_for||item.scheduled_for<=today));
+   const eligible=q.filter(item=>!item.scheduled_for||item.scheduled_for<=today);
    const ensured=await Promise.all(eligible.map(item=>client.rpc("ensure_quest_instance",{p_quest_id:item.id,p_date:today})));
    const failed=ensured.find(result=>result.error);
    if(failed?.error)throw failed.error;
@@ -61,7 +61,7 @@ export default function QuestBoardV3Connected(){
  },[quests,instances,today]);
  const active=rows.filter(r=>r.instance.status!=="completed");
  const completed=rows.filter(r=>r.instance.status==="completed");
- const daily=active.filter(r=>r.quest.cadence==="daily");
+ const daily=active.filter(r=>r.quest.cadence==="daily"&&r.quest.quest_type!=="goal");
  const selectedIds=new Set(selection?.questIds||[]);
  const selectedDaily=selection?.persisted?daily.filter(r=>selectedIds.has(r.quest.id)):daily;
  const goals=active.filter(r=>r.quest.quest_type==="goal");
@@ -76,7 +76,7 @@ export default function QuestBoardV3Connected(){
  }
  if(signedIn===null)return <main className="wrap">Loading Quest Board 3.0…</main>;
  if(!signedIn)return <main className="wrap"><h1>Quest Board 3.0</h1><p className="muted">Sign in to see your real quests.</p><Link className="btn" href="/login?next=%2Fquest-board-v3">Sign in</Link></main>;
- const visible=showAll?active:active.slice(0,10);
+ const visibleDaily=showAll?selectedDaily:selectedDaily.slice(0,10);
  const izzyOneTime=active.filter(r=>assignedIds.has(r.quest.id)&&r.quest.cadence!=="daily"&&r.quest.quest_type!=="goal");
  return <main className="wrap">
   <div className="eyebrow">LIFE ASCENSION · CONNECTED DEVELOPMENT BOARD</div>
@@ -84,8 +84,8 @@ export default function QuestBoardV3Connected(){
   <p className="muted">Your existing quests, completion history and XP. This experimental view uses the current database; new AI/calendar features are not enabled.</p>
   <section className="panel"><div className="eyebrow">{today} · Chicago 5 AM reset</div><h2>{completed.length} completed · {active.length} available</h2><p className="muted">Lifetime XP: {xp??"—"} · Existing XP rules preserved</p></section>
   <section className="panel"><h2>Daily Quests</h2><p className="muted">{selectedDaily.length} selected daily habits · Individual streaks</p>{selectionMessage&&<p className="muted" role="status">{selectionMessage}</p>}
-   {visible.filter(r=>r.quest.cadence==="daily"&&r.quest.quest_type!=="goal"&&(!selection?.persisted||selectedIds.has(r.quest.id))).map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">🔥 {row.streak}-day streak · {assignedIds.has(row.quest.id)?"💜 Izzy · +2 XP":"+1 XP"}</div></div><div className="actions"><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div></div>)}
-   {!showAll&&active.length>10&&<button className="btn ghost" onClick={()=>setShowAll(true)}>Show all active quests</button>}
+   {visibleDaily.filter(r=>r.quest.quest_type!=="goal").map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">🔥 {row.streak}-day streak · {assignedIds.has(row.quest.id)?"💜 Izzy · +2 XP":"+1 XP"}</div></div><div className="actions"><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div></div>)}
+   {!showAll&&selectedDaily.length>10&&<button className="btn ghost" onClick={()=>setShowAll(true)}>Show all active quests</button>}
    <button className="btn ghost" style={{marginTop:14}} aria-expanded={completedOpen} onClick={()=>setCompletedOpen(v=>!v)}>{completedOpen?"▾":"▸"} Completed Today ({completed.length})</button>
    {completedOpen&&completed.map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">✓ Complete · 🔥 {row.streak} streak</div></div></div>)}
   </section>
