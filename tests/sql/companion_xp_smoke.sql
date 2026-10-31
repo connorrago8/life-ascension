@@ -29,13 +29,20 @@ begin
 end $$;
 -- Bulk instance creation must be idempotent and scoped to the owner.
 do $bulk$
-declare v_before integer; v_after integer;
+declare v_before integer; v_after integer; v_first integer; v_second integer;
 begin
  select count(*) into v_before from public.quest_instances where owner_id=auth.uid();
- perform public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date);
- perform public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date);
+ select public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date) into v_first;
+ select public.quest_board_v3_ensure_instances(((now()-interval '5 hours') at time zone 'America/Chicago')::date) into v_second;
+ if v_first<>v_second or v_first<1 then raise exception 'Bulk ensure returned inconsistent count'; end if;
  select count(*) into v_after from public.quest_instances where owner_id=auth.uid();
  if v_after < v_before then raise exception 'Bulk ensure removed instances'; end if;
+ begin
+  perform public.quest_board_v3_ensure_instances('2000-01-01'::date);
+  raise exception 'Invalid bulk day unexpectedly accepted';
+ exception when raise_exception then
+  if sqlerrm='Invalid bulk day unexpectedly accepted' then raise; end if;
+ end;
 end $bulk$;
 -- Normal quest still awards exactly 1 XP.
 insert into public.quests(id,owner_id,title,domain,cadence)
