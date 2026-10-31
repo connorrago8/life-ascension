@@ -24,27 +24,22 @@ const presentation = files
   .map((path) => readFileSync(path, 'utf8'))
   .join('\n');
 
-test('crypt code does not call Supabase, grant XP, or store progress', () => {
+test('Crypt gameplay remains reward-free; persistence is isolated and cloud saves default off', () => {
   assert.ok(files.length >= 4);
-  const forbidden = [
-    [/supabase/i, 'supabase'],
-    [/\.rpc\s*\(/, 'rpc'],
-    [/get_lifetime_xp/, 'get_lifetime_xp'],
-    [/create_scheduled_quest/, 'create_scheduled_quest'],
-    [/set_quest_instance_status/, 'set_quest_instance_status'],
-    [/add_quest_progress/, 'add_quest_progress'],
-    [/localStorage|sessionStorage|indexedDB/, 'browser storage'],
-    [/\.from\s*\(/, 'from('],
-    [/\binsert\s*\(/, 'insert'],
-    [/\bupsert\s*\(/, 'upsert'],
-    [/\bupdate\s*\(/, 'update'],
-    [/\bfetch\s*\(/, 'fetch'],
-    [/Bone King/, 'Bone King'],
-  ];
-  for (const [pattern, label] of forbidden) {
-    assert.doesNotMatch(blob, pattern, label);
-  }
-  assert.match(blob, /Preview — progress is not saved and earns no XP/);
+  const pureFiles = files.filter((path) => !path.endsWith(join('lib', 'crypt', 'cloudSave.ts'))
+    && !path.endsWith(join('components', 'crypt', 'CryptRun.tsx')));
+  const pureBlob = pureFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
+  for (const [pattern, label] of [
+    [/supabase/i, 'supabase in pure gameplay'], [/\\.rpc\\s*\\(/, 'rpc in pure gameplay'],
+    [/localStorage|sessionStorage|indexedDB/, 'browser storage in pure gameplay'],
+    [/\\.from\\s*\\(/, 'database query in pure gameplay'],
+    [/\\bfetch\\s*\\(/, 'network fetch in pure gameplay'],
+  ]) assert.doesNotMatch(pureBlob, pattern, label);
+  for (const pattern of [/get_lifetime_xp/, /create_scheduled_quest/, /set_quest_instance_status/,
+    /add_quest_progress/, /grantXp/, /Bone King/]) assert.doesNotMatch(blob, pattern);
+  const screen = readFileSync(join(root, 'components/crypt/CryptRun.tsx'), 'utf8');
+  assert.match(screen, /NEXT_PUBLIC_CRYPT_CLOUD_SAVE_ENABLED\\s*===\\s*'true'/);
+  assert.match(screen, /LOCAL_PREVIEW_SAVE_KEY/);
   assert.match(blob, /endCardParagraphs/);
   assert.match(blob, /broken compass/);
   assert.doesNotMatch(presentation, /broken compass/);
