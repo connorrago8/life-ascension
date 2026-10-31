@@ -81,3 +81,7 @@ Town square uses responsive destination columns and a warmer card palette; Black
 ## Interactive map acceptance
 
 The town square now includes a six-landmark selectable map with path connections, active landmark description, and an Enter action. Verify pointer, keyboard, VoiceOver button names, pressed state, focus indication, live description announcement, and that each link reaches its existing destination. The map is a selection interface, not free-roaming movement or a simulation. No run or account writes are introduced.
+
+## Walkable map prototype
+
+A visible avatar can move in four directions using on-screen touch controls or arrow keys while the map itself has focus. Movement is clamped to the map and a nearby landmark is identified using proximity. Location selection and entry remain available independently of proximity for accessibility. Verify mobile touch, keyboard focus, VoiceOver announcements, avatar bounds and selection-to-entry routing. This is a 2D town-map walking prototype, not a full collision-based world or multiplayer scene.
