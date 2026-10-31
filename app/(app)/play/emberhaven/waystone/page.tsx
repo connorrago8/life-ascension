@@ -19,11 +19,11 @@ export default function WaystonePage() {
   return (
     <main className="screen" aria-labelledby="waystone-title" style={{ paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
       <Link className="btn" href="/play/emberhaven" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>← Emberhaven square</Link>
-      <header style={{ textAlign: 'center', padding: '32px 0 22px' }}>
+      <header style={{ textAlign: 'center', padding: '32px 0 22px', background: 'radial-gradient(ellipse at center, #50687a30, transparent 70%)' }}>
         <div aria-hidden="true" style={{ fontSize: 48, color: '#e9ae68' }}>◇</div>
         <p className="eyebrow">THE ROAD AHEAD</p>
         <h1 id="waystone-title">The Waystone</h1>
-        <p className="lede">Every journey begins with a choice. The old stone points toward the adventure map.</p>
+        <p className="lede">An ancient marker stands beyond the walls. The active Crypt journey begins through the adventure map.</p>
       </header>
       <section aria-label="The Waystone landmarks" style={{ display: 'grid', gap: 14 }}>
         {features.map((feature, index) => (
