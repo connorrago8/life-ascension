@@ -17,15 +17,15 @@ const places = [
   {
     name: 'The Blacksmith',
     kicker: 'EQUIPMENT & CHARACTER',
-    description: 'Inspect the equipment you have earned and the slots still ahead.',
-    href: '/character',
-    action: 'View equipment',
+    description: 'Visit the forge and inspect equipment stations without changing your account.',
+    href: '/play/emberhaven/blacksmith',
+    action: 'Visit the forge',
     symbol: '⚒',
   },
   {
     name: 'The Trail Gate',
     kicker: 'ADVENTURES',
-    description: 'Choose an available destination from the existing adventure map.',
+    description: 'Check the adventure map. The Crypt may still be locked in this build.',
     href: '/play',
     action: 'Explore destinations',
     symbol: '◇',
@@ -44,6 +44,12 @@ export default function EmberhavenPage() {
         </p>
       </div>
 
+      <div aria-hidden="true" style={{ height: 52, margin: '10px auto 0', maxWidth: 320, position: 'relative', overflow: 'hidden', borderBottom: '3px solid #806346' }}>
+        <div style={{ position: 'absolute', bottom: 0, left: '7%', width: '27%', height: 28, background: '#423b37', clipPath: 'polygon(0 35%, 50% 0, 100% 35%, 100% 100%, 0 100%)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: '38%', width: '26%', height: 44, background: '#554439', clipPath: 'polygon(0 32%, 50% 0, 100% 32%, 100% 100%, 0 100%)' }} />
+        <div style={{ position: 'absolute', bottom: 0, right: '6%', width: '25%', height: 34, background: '#423b37', clipPath: 'polygon(0 35%, 50% 0, 100% 35%, 100% 100%, 0 100%)' }} />
+        <span style={{ position: 'absolute', bottom: 15, left: '50%', width: 8, height: 14, background: '#e9ae68', boxShadow: '0 0 22px 8px #c77c3455' }} />
+      </div>
       <section aria-label="Town destinations" style={{ display: 'grid', gap: 12, marginTop: 24 }}>
         {places.map((place) => (
           <article key={place.name} style={{
@@ -71,7 +77,7 @@ export default function EmberhavenPage() {
       </section>
 
       <p className="foot" style={{ textAlign: 'center', marginTop: 22 }}>
-        Early town preview · Destinations reuse existing screens. No shop, crafting, or rewards are active here.
+        Early town preview · The forge is read-only; no shop, crafting, or rewards are active here.
       </p>
     </main>
   );
