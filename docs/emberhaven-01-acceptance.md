@@ -77,3 +77,7 @@ This checklist is not evidence of execution. No merge or deployment is authorize
 ## Visual cohesion batch
 
 Town square uses responsive destination columns and a warmer card palette; Blacksmith stations now include lore, and Hearth, Market, and Waystone have distinct atmospheric lighting. Verify contrast, text scaling, 320px layout, keyboard focus and reduced-motion behavior during integrated QA. These are presentation improvements, not a functional shop or inventory system.
+
+## Interactive map acceptance
+
+The town square now includes a six-landmark selectable map with path connections, active landmark description, and an Enter action. Verify pointer, keyboard, VoiceOver button names, pressed state, focus indication, live description announcement, and that each link reaches its existing destination. The map is a selection interface, not free-roaming movement or a simulation. No run or account writes are introduced.
