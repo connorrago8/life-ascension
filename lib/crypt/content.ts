@@ -4,8 +4,8 @@ import type { ActionId } from './engine.ts';
 export const PREVIEW_BANNER = 'Preview — progress is not saved and earns no XP';
 
 export const HUB = {
-  title: 'Adventure',
-  lede: 'Choose your path.',
+  title: 'Hub',
+  lede: 'Choose a destination.',
   enter: 'Enter →',
   locked: 'Locked',
   soon: 'Coming soon',
@@ -24,11 +24,11 @@ export const HUB = {
     {
       id: 'town',
       name: 'Town',
-      kind: 'locked' as const,
+      kind: 'town' as const,
       icon: 'house' as const,
       x: 74,
       y: 18,
-      blurb: 'Locked. Coming soon.',
+      blurb: 'Explore Emberhaven, meet its neighbors, or follow the Lantern Route.',
     },
     {
       id: 'whispering-woods',

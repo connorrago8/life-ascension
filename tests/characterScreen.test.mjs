@@ -17,8 +17,8 @@ const hubSource = readFileSync(new URL('../components/play/AdventureHub.tsx', im
 const cryptContent = readFileSync(new URL('../lib/crypt/content.ts', import.meta.url), 'utf8');
 
 test('primary nav is Home, Quests, Play, Character, and More', () => {
-  assert.deepEqual(NAV_ITEMS.map((item) => item.label), ['Home', 'Quests', 'Play', 'Character', 'More']);
-  assert.equal(NAV_ITEMS.find((item) => item.label === 'Play')?.href, '/play');
+  assert.deepEqual(NAV_ITEMS.map((item) => item.label), ['Home', 'Quests', 'Hub', 'Character', 'More']);
+  assert.equal(NAV_ITEMS.find((item) => item.label === 'Hub')?.href, '/play');
   assert.equal(NAV_ITEMS.some((item) => item.label === 'Health' || item.href === '/health'), false);
   assert.match(navSource, /NAV_ITEMS/);
   assert.match(navSource, /nav-play/);

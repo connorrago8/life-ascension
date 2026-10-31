@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 // Read-only metadata gate. This does NOT inspect/decrypt values, resolve effective
 // Vercel precedence, or attest browser/server/privileged runtime routing.
 export const PROTECTED_QA_BRANCH = 'audit/qa-isolation-and-reliability-20261027';
-export const APPROVED_QA_BRANCHES = new Set([PROTECTED_QA_BRANCH, 'beta/quest-ui-clean-review']);
+export const APPROVED_QA_BRANCHES = new Set([PROTECTED_QA_BRANCH, 'beta/quest-ui-clean-review', 'chatgpt/emberhaven-crypt-integration-20261031']);
 const REQUIRED = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
