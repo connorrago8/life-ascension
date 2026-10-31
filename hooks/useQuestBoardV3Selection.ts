@@ -32,6 +32,6 @@ export function useQuestBoardV3Selection(){
   setSelection({day,questIds:frozen as string[],persisted:true});setMessage("");
 
  },[]);
- useEffect(()=>{void refresh()},[refresh]);
+ useEffect(()=>{void refresh();const timer=window.setInterval(()=>{if(selection?.day!==questDay(new Date()))void refresh()},30000);return()=>window.clearInterval(timer)},[refresh,selection?.day]);
  return {selection,message,refresh};
 }
