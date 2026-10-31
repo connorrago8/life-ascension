@@ -33,7 +33,8 @@ export type RunCommand =
   | { type: 'combat'; action: ActionId }
   | { type: 'choose'; choiceId: string }
   | { type: 'choose-relic'; choice: 'take' | 'leave' }
-  | { type: 'restart'; seed: number };
+  | { type: 'restart'; seed: number }
+  | { type: 'retry-fight' };
 
 export type NodeAccess = 'done' | 'ready' | 'locked';
 
@@ -175,6 +176,12 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
       guardianCleared: battle.status === 'won' && state.encounterId === GUARDIAN_ID ? true : state.guardianCleared,
       sigilCollected: battle.status === 'won' && state.encounterId === GUARDIAN_ID ? true : state.sigilCollected,
     };
+  }
+
+  if (command.type === 'retry-fight') {
+    if (state.phase !== 'fight' || state.battle?.status !== 'lost' || !state.encounterId) return state;
+    const next = { ...state, hp: state.maxHp, hpAtFightStart: state.maxHp, fightAttempt: state.fightAttempt + 1 };
+    return { ...next, battle: startBattle(next) };
   }
 
   if (command.type === 'choose-relic') {
