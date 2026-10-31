@@ -77,6 +77,7 @@ export default function QuestBoardV3Connected(){
  if(signedIn===null)return <main className="wrap">Loading Quest Board 3.0…</main>;
  if(!signedIn)return <main className="wrap"><h1>Quest Board 3.0</h1><p className="muted">Sign in to see your real quests.</p><Link className="btn" href="/login?next=%2Fquest-board-v3">Sign in</Link></main>;
  const visible=showAll?active:active.slice(0,10);
+ const izzyOneTime=active.filter(r=>assignedIds.has(r.quest.id)&&r.quest.cadence!=="daily"&&r.quest.quest_type!=="goal");
  return <main className="wrap">
   <div className="eyebrow">LIFE ASCENSION · CONNECTED DEVELOPMENT BOARD</div>
   <h1>Quest Board 3.0</h1>
@@ -90,8 +91,8 @@ export default function QuestBoardV3Connected(){
   </section>
   <section className="panel"><h2>Other Habits</h2><p className="muted">Habits outside today’s selection remain eligible for completion. Izzy-assigned quests earn +2 XP.</p>{selection?.persisted&&daily.filter(r=>!selectedIds.has(r.quest.id)).map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">Off-board · 🔥 {row.streak}-day streak · {assignedIds.has(row.quest.id)?"💜 Izzy · +2 XP":"+1 XP"}</div></div><button className="btn ghost" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div>)}</section>
   <section className="panel"><h2>💜 Quests from Izzy</h2><p className="muted">Assigned quests appear here even if they are not part of today's daily selection.</p>
-   {active.filter(r=>assignedIds.has(r.quest.id)&&r.quest.cadence!=="daily"&&r.quest.quest_type!=="goal").map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">💜 Izzy · +2 XP when completed</div></div><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div>)}
-   {active.filter(r=>assignedIds.has(r.quest.id)).length===0&&<p className="muted">No outstanding Izzy quests.</p>}
+   {izzyOneTime.map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">💜 Izzy · +2 XP when completed</div></div><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div>)}
+   {izzyOneTime.length===0&&<p className="muted">No outstanding one-time Izzy quests. Assigned daily habits appear above.</p>}
    <Link className="btn ghost" href="/companion">Open Companion Mode</Link></section>
   <section className="panel"><h2>Main Quests & Goals</h2>{goals.length===0&&<p className="muted">No active goals currently.</p>}
    {goals.map(row=><div className="quest" key={row.instance.id}><div className="quest-main"><div className="quest-title">{row.quest.title}</div><div className="muted">Goal · {row.quest.scheduled_for||"No deadline"} · {assignedIds.has(row.quest.id)?"💜 Izzy · +2 XP":"+1 XP"} on completion</div></div><button className="btn" disabled={!!busy} onClick={()=>complete(row)}>Complete</button></div>)}
