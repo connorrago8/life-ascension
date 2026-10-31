@@ -131,10 +131,10 @@ export function reduceRun(state: RunState, command: RunCommand): RunState {
     if (state.phase === 'gate') return { ...state, phase: 'intro' };
     if (state.phase === 'map') return { ...state, phase: 'gate' };
     if (state.phase === 'fight') {
-      if (state.battle?.status === 'lost') return state;
+
       if (state.battle?.status === 'won') return { ...state, phase: 'map', battle: null, encounterId: null };
-      // Retreating from an ongoing fight restores only pre-fight HP.
-      const hp = state.hpAtFightStart ?? state.maxHp;
+      // Defeat retreats to a fresh-health checkpoint; ongoing retreat preserves pre-fight HP.
+      const hp = state.battle?.status === 'lost' ? state.maxHp : state.hpAtFightStart ?? state.maxHp;
       return { ...state, phase: 'map', battle: null, encounterId: null, hp };
     }
     if (state.phase === 'event' || state.phase === 'treasure') return { ...state, phase: 'map', outcomeNote: null };
