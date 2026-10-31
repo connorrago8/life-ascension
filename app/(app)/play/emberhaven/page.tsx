@@ -25,7 +25,7 @@ const places = [
   {
     name: 'The Trail Gate',
     kicker: 'ADVENTURES',
-    description: 'Check the adventure map. The Crypt may still be locked in this build.',
+    description: 'Visit the adventure map. Crypt availability depends on the deployed game version.',
     href: '/play',
     action: 'Explore destinations',
     symbol: '◇',
