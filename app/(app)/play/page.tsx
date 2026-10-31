@@ -6,6 +6,7 @@ export default function PlayPage() {
   <p className="lede">Your home between adventures. Real-life quests strengthen your character; the Hub never awards XP on its own.</p>
   <section className="panel" aria-label="Hub destinations">
    <h2>Choose your destination</h2>
+   <p className="muted">Adventure integration is being verified separately; your quest progress is preserved.</p>
    <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
     <Link className="btn" href="/quest-board-v3">Quest Board</Link>
     <Link className="btn ghost" href="/character">Character</Link>
