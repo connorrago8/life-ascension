@@ -58,7 +58,7 @@ export function EmberhavenMap() {
           <button key={landmark.id} type="button" aria-pressed={selected === landmark.id} aria-label={`Inspect ${landmark.label}`} onClick={() => { setSelected(landmark.id); setInteraction(false); }} style={{ position: 'absolute', left: `${landmark.x}%`, top: `${landmark.y}%`, transform: 'translate(-50%, -50%)', display: 'grid', placeItems: 'center', width: 44, height: 44, borderRadius: 12, border: selected === landmark.id ? '3px solid #ffe4ad' : '2px solid #a98c62', background: selected === landmark.id ? '#79552d' : '#293238', color: '#ffe0a6', fontSize: 23, cursor: 'pointer', boxShadow: selected === landmark.id ? '0 0 20px #f2b35d88' : '0 2px 8px #0008' }}>{landmark.icon}</button>
         ))}
       </div>
-      <div aria-label="Town movement controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 52px)', justifyContent: 'center', gap: 6, marginTop: 14 }}>
+      <div aria-label="Town movement controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 52px))', justifyContent: 'center', gap: 6, marginTop: 14 }}>
         <span /><button type="button" aria-label="Walk north" onClick={() => move('north')} style={{ minHeight: 44 }}>↑</button><span />
         <button type="button" aria-label="Walk west" onClick={() => move('west')} style={{ minHeight: 44 }}>←</button>
         <button type="button" aria-label="Walk south" onClick={() => move('south')} style={{ minHeight: 44 }}>↓</button>

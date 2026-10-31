@@ -89,7 +89,8 @@ try {
     assert.match(await avatar.evaluate(el => getComputedStyle(el).transitionDuration), /0\.16s/);
     // CSS layout zoom checks reflow; this is not native Safari zoom or VoiceOver.
     await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, '200% layout zoom must not cause horizontal overflow');
+    const zoomOverflow = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth, offenders: [...document.querySelectorAll('main *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).slice(0, 8).map(el => ({ tag: el.tagName, text: el.textContent?.slice(0, 50), right: el.getBoundingClientRect().right })) }));
+    assert.ok(zoomOverflow.scroll <= zoomOverflow.width, `200% layout zoom overflow: ${JSON.stringify(zoomOverflow)}`);
     for (const control of await page.locator('section[aria-labelledby="ember-map-title"] button').all()) {
       assert.ok(await control.isVisible(), 'town controls must remain visible at 200% layout zoom');
     }
