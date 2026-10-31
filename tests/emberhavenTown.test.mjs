@@ -66,3 +66,22 @@ test('Waystone directs the player to the existing map, never bypasses Crypt run 
   assert.match(room, /href="\/play"/);
   assert.doesNotMatch(room, /href="\/play\/delve"/);
 });
+
+const map = readFileSync(new URL('../app/(app)/play/emberhaven/EmberhavenMap.tsx', import.meta.url), 'utf8');
+
+test('Interactive town map offers all six landmarks and accessible selection', () => {
+  assert.match(source, /<EmberhavenMap \/>/);
+  for (const name of ['Noticeboard', 'Blacksmith', 'Hearth', 'Market', 'Waystone', 'Trail Gate']) {
+    assert.match(map, new RegExp(`label: '${name}'`));
+  }
+  assert.match(map, /aria-pressed/);
+  assert.match(map, /aria-live="polite"/);
+  assert.match(map, /type="button"/);
+  assert.match(map, /minHeight: 44/);
+});
+
+test('Town map uses existing navigation without changing account or active run state', () => {
+  assert.match(map, /href: '\/play'/);
+  assert.match(map, /href: '\/quests'/);
+  assert.doesNotMatch(map, /supabase\(|\.rpc\(|localStorage\.|sessionStorage\.|fetch\(|clearActiveRun\(|saveActiveRun\(/);
+});
