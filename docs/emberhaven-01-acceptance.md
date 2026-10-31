@@ -73,3 +73,7 @@ The integrated town now has six linked destinations: Noticeboard, Blacksmith, He
 5. Review AdventureHub's one-link change with Grok before any integration or merge.
 
 This checklist is not evidence of execution. No merge or deployment is authorized.
+
+## Visual cohesion batch
+
+Town square uses responsive destination columns and a warmer card palette; Blacksmith stations now include lore, and Hearth, Market, and Waystone have distinct atmospheric lighting. Verify contrast, text scaling, 320px layout, keyboard focus and reduced-motion behavior during integrated QA. These are presentation improvements, not a functional shop or inventory system.
