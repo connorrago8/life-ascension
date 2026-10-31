@@ -1,9 +1,9 @@
 import Link from 'next/link';
 
 const slots = [
-  { name: 'Weapon', icon: '⚔', detail: 'Inspect your current weapon on the Character screen.' },
-  { name: 'Armor', icon: '⬡', detail: 'Review your current character presentation.' },
-  { name: 'Accessory', icon: '✧', detail: 'Account-linked equipment comparisons are not available yet.' },
+  { name: 'Weapon', icon: '⚔', detail: 'Review the weapon slot and its visual presentation on the Character screen.', lore: 'A blade is only as true as the hand that carries it.' },
+  { name: 'Armor', icon: '⬡', detail: 'Inspect your armor presentation before returning to the road.', lore: 'The forge keeps the memory of every shield.' },
+  { name: 'Accessory', icon: '✧', detail: 'Account-linked equipment comparisons are not available yet.', lore: 'Small charms carry stories bigger than kingdoms.' },
 ] as const;
 
 /**
@@ -35,6 +35,7 @@ export default function EmberhavenBlacksmithPage() {
             <div>
               <h3 style={{ margin: '0 0 6px' }}>{slot.name}</h3>
               <p style={{ color: 'var(--muted)', margin: 0 }}>{slot.detail}</p>
+              <p style={{ color: '#e3b983', fontStyle: 'italic', marginTop: 10 }}>{slot.lore}</p>
             </div>
           </article>
         ))}
