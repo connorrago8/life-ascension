@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
-if (process.getuid?.() === 0) throw new Error('Run Chromium as an unprivileged user.');
+if (process.getuid?.() === 0) throw new Error('Run browser QA as an unprivileged user.');
 const base = process.env.QA_BASE_URL || 'http://127.0.0.1:3128';
 const origin = new URL(base).origin;
 assert.equal(new URL(base).hostname, '127.0.0.1');
-const browser = await chromium.launch({ headless: true, chromiumSandbox: true });
+const engine = process.env.QA_BROWSER || 'chromium';
+assert.ok(['chromium', 'webkit'].includes(engine), 'QA_BROWSER must be chromium or webkit');
+const browser = await (engine === 'webkit'
+  ? webkit.launch({ headless: true })
+  : chromium.launch({ headless: true, chromiumSandbox: true }));
 try {
   for (const width of [320, 375, 390, 430]) {
     const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: true });
@@ -130,7 +134,7 @@ try {
     assert.deepEqual((await readRun()).state, original.state, 'reload must preserve the complete run state');
     assert.deepEqual(errors, []);
     assert.deepEqual(violations, []);
-    console.log(`PASS ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, guest Crypt resume and reload, no external requests or network writes`);
+    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, guest Crypt resume and reload, no external requests or network writes`);
     await context.close();
   }
 } finally {

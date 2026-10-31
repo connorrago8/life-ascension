@@ -42,11 +42,11 @@ jobs:
         run: node --test tests/emberhaven*.test.mjs
       - name: Entire repository test suite
         run: npm test
-      - name: Install isolated Chromium runner
+      - name: Install isolated Chromium and WebKit runners
         run: |
           npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.62.1
-          npx playwright install --with-deps chromium
-      - name: Verify local town in Chromium without backend credentials
+          npx playwright install --with-deps chromium webkit
+      - name: Verify local town in Chromium and WebKit without backend credentials
         shell: bash
         env:
           QA_BASE_URL: http://127.0.0.1:3128
@@ -62,4 +62,5 @@ jobs:
             sleep 1
           done
           curl --silent --show-error --fail "$QA_BASE_URL/play/emberhaven" >/dev/null
-          node tests/browser/emberhaven.qa.mjs
+          QA_BROWSER=chromium node tests/browser/emberhaven.qa.mjs
+          QA_BROWSER=webkit node tests/browser/emberhaven.qa.mjs
