@@ -1123,3 +1123,51 @@ code { font-family: ui-monospace, monospace; }
 .return-dismiss { flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: none; color: var(--muted);
   font-size: 1.4rem; line-height: 1; cursor: pointer; }
 .return-dismiss:focus-visible { outline: 3px solid var(--mint); outline-offset: 1px; }
+
+/* ---------- Crypt: deck transparency (pile counts, pile sheet, synergy cues, reward deck info) ---------- */
+.delve-status-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+.delve-status-row .delve-status { flex: 1 1 auto; min-width: 0; }
+.delve-piles { display: flex; gap: 4px; margin-left: auto; }
+.delve-pile-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 50px; min-height: 44px; padding: 2px 6px;
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: inherit; cursor: pointer; line-height: 1.05;
+  -webkit-tap-highlight-color: transparent; }
+.delve-pile-btn:focus-visible { outline: 3px solid #f2c46d; outline-offset: 2px; }
+.delve-pile-btn-label { font-size: 0.62rem; letter-spacing: 0.04em; color: var(--muted); }
+.delve-pile-btn-num { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.delve-pile-btn.pile-exhaust .delve-pile-btn-num { color: #c9a0ff; }
+.delve-pile-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(8, 10, 12, 0.6); border: 0; padding: 0; }
+.delve-pile-sheet { position: fixed; z-index: 41; left: 10px; right: 10px; bottom: calc(12px + env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain;
+  padding: 12px; background: #23272d; border: 1px solid var(--border); border-radius: 16px; }
+@media (max-width: 719px) {
+  .delve-pile-sheet { bottom: calc(78px + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 110px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+}
+@media (min-width: 720px) {
+  .delve-pile-sheet { left: 50%; right: auto; width: min(480px, calc(100vw - 32px)); transform: translateX(-50%); }
+}
+.delve-pile-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.delve-pile-head h3 { margin: 0; font-size: 1rem; }
+.delve-pile-close { min-height: 44px; min-width: 64px; }
+.delve-pile-note { margin: 4px 0 8px; }
+.delve-pile-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.delve-pile-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; align-items: start; padding: 6px 8px; border-radius: 10px; background: #262b33; }
+.delve-pile-cost { width: 22px; height: 22px; border-radius: 50%; background: #f2c46d; color: var(--ink); font-weight: 800; font-size: 0.78rem; display: grid; place-items: center; }
+.delve-pile-main { display: grid; gap: 2px; min-width: 0; }
+.delve-pile-name { font-weight: 700; font-size: 0.9rem; }
+.delve-pile-name.upgraded { color: #9fe39f; }
+.delve-pile-count { color: var(--muted); font-weight: 600; }
+.delve-pile-text { color: var(--muted); font-size: 0.78rem; line-height: 1.25; overflow-wrap: anywhere; }
+.delve-card-cues { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; }
+.delve-cue { font-size: 0.62rem; line-height: 1.2; padding: 0 4px; border-radius: 6px; background: rgba(242, 196, 109, 0.14); color: #f2c46d; }
+.delve-cue.cue-exposed, .delve-cue.cue-focus { background: rgba(116, 192, 252, 0.14); color: #74c0fc; }
+.delve-cue.cue-hexed, .delve-cue.warn { background: rgba(255, 122, 69, 0.14); color: #ff9a70; }
+.delve-foe-marks { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 2px 0 0; }
+.delve-foe-mark.mark-exposed { color: #74c0fc; }
+.delve-foe-mark.mark-weak { color: #9fe39f; }
+.delve-intent-weak { color: #9fe39f; font-size: 0.85em; }
+.delve-reward-deck { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.delve-reward-deck p { margin: 0; }
+.delve-view-deck { min-height: 44px; }
+.delve-card-have { margin-top: auto; font-size: 0.72rem; color: var(--muted); }
+.delve-deck-full { padding: 8px 10px; border-radius: 10px; border: 1px solid #f0c060; background: rgba(240, 192, 96, 0.1); }

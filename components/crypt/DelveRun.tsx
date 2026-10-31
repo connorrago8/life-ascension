@@ -4,11 +4,11 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
 import {
-  bigHitComing, canPlay, cardCritChance, comboReady, ENERGY_PER_TURN, foeIntent, incomingDamage, INTENT_ICON, intentText,
+  bigHitComing, canPlay, cardCritChance, cardCues, comboReady, ENERGY_PER_TURN, foeIntent, incomingDamage, INTENT_ICON, intentText,
   PASSIVE_TEXT, previewDamage, previewHits, upcomingIntent, describeIntent, WORN_DOWN_PER_END, WORN_DOWN_TURN, type Battle, type Proc,
 } from '../../lib/crypt/delve/battle';
 import {
-  CARDS, cardDef, COMBO_AT, comboBonus, effectiveness, ELEMENT_LABEL, isUpgraded, resistancesOf, TYPE_LABEL, upgradeDef, weaknessesOf,
+  CARDS, cardDef, COMBO_AT, comboBonus, effectiveness, ELEMENT_LABEL, isUpgraded, MAX_DECK_SIZE, resistancesOf, TYPE_LABEL, upgradeDef, weaknessesOf,
   type CardDef, type DeckCard,
 } from '../../lib/crypt/delve/cards';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
@@ -16,6 +16,7 @@ import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/g
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
 import { pathOptions, type PathOption } from '../../lib/crypt/delve/pathLabels';
+import { copiesInDeck, deckIsFull, pileSummary, type PileEntry } from '../../lib/crypt/delve/piles';
 import { runRecap, type RunRecap, type SaveMode } from '../../lib/crypt/delve/recap';
 import { RunRecapView } from './RunRecap';
 import {
@@ -559,6 +560,7 @@ function IntentPanel({ battle }: { battle: Battle }) {
     <div className={`delve-intent intent-${kindClass}${telegraph ? ' delve-bighit' : ''}`} aria-label={`Next move: ${intentText(battle)}`}>
       <p className="delve-intent-next">
         <span aria-hidden="true">{INTENT_ICON[intent.kind]} </span>Next: <strong>{intentText(battle)}</strong>
+        {intent.kind === 'attack' && battle.foe.weak > 0 ? <span className="delve-intent-weak"> (Weakened −25%)</span> : null}
         {incoming ? (
           <span className="delve-incoming">
             {' '}· You take <strong>{incoming.afterBlock}</strong>{incoming.total !== incoming.afterBlock ? ` (${incoming.total} − Block)` : ''}
@@ -598,7 +600,83 @@ function ProcFloaters({ battle }: { battle: Battle }) {
   );
 }
 
+/** A grouped, sorted card list. Never in draw order. */
+function PileList({ entries }: { entries: PileEntry[] }) {
+  return (
+    <ul className="delve-pile-list">
+      {entries.map((entry) => (
+        <li key={entry.key} className="delve-pile-row">
+          <span className="delve-pile-cost" aria-label={`Costs ${entry.cost}`}>{entry.cost}</span>
+          <span className="delve-pile-main">
+            <span className={`delve-pile-name${entry.upgraded ? ' upgraded' : ''}`}>
+              {entry.name}{entry.count > 1 ? <span className="delve-pile-count"> ×{entry.count}</span> : null}
+            </span>
+            <span className="delve-pile-text">{entry.text}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+type PileKind = 'draw' | 'discard' | 'exhaust' | 'deck';
+const PILE_TITLE: Record<PileKind, string> = { draw: 'Draw pile', discard: 'Discard pile', exhaust: 'Exhausted', deck: 'Your deck' };
+const PILE_NOTE: Record<PileKind, string> = {
+  draw: 'Sorted by cost, then name. Not the order you will draw.',
+  discard: 'Shuffled back into your draw pile when it runs out.',
+  exhaust: 'Used up for this fight. Back in your deck next fight.',
+  deck: 'Your whole deck for this run, sorted by cost.',
+};
+
+/** Bottom sheet listing one pile. Sits above the bottom nav and inside the safe area. */
+function PileSheet({ kind, cards, onClose }: { kind: PileKind; cards: readonly ({ id: DeckCard } | DeckCard)[]; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const closeLatest = useRef(onClose);
+  closeLatest.current = onClose;
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeLatest.current(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const entries = pileSummary(cards);
+  return (
+    <>
+      <button type="button" className="delve-pile-backdrop" aria-label="Close" tabIndex={-1} onClick={onClose} />
+      <div className="delve-pile-sheet" role="dialog" aria-modal="true" aria-labelledby="delve-pile-title">
+        <div className="delve-pile-head">
+          <h3 id="delve-pile-title">{PILE_TITLE[kind]} · {cards.length} {cards.length === 1 ? 'card' : 'cards'}</h3>
+          <button ref={closeRef} type="button" className="btn ghost delve-pile-close" onClick={onClose}>Close</button>
+        </div>
+        <p className="delve-small muted delve-pile-note">{PILE_NOTE[kind]}</p>
+        {entries.length > 0 ? <PileList entries={entries} /> : <p className="delve-small muted">No cards here.</p>}
+      </div>
+    </>
+  );
+}
+
+/** Draw / Discard / Exhaust counts as tappable buttons next to the Statuses pill. */
+function PileButtons({ battle, onOpen }: { battle: Battle; onOpen: (kind: PileKind) => void }) {
+  const piles: [PileKind, string, number][] = [
+    ['draw', 'Draw', battle.drawPile.length],
+    ['discard', 'Discard', battle.discard.length],
+    ['exhaust', 'Exhaust', battle.exhausted.length],
+  ];
+  return (
+    <div className="delve-piles" role="group" aria-label="Card piles">
+      {piles.map(([kind, label, count]) => (
+        <button key={kind} type="button" className={`delve-pile-btn pile-${kind}`} onClick={() => onOpen(kind)}
+          aria-label={`${label} pile: ${count} ${count === 1 ? 'card' : 'cards'}. Show list.`}>
+          <span className="delve-pile-btn-label" aria-hidden="true">{label}</span>
+          <span className="delve-pile-btn-num" aria-hidden="true">{count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function CombatScreen({ state, battle, send }: { state: DelveState; battle: Battle; send: (command: DelveCommand) => void }) {
+  const [pile, setPile] = useState<PileKind | null>(null);
   const foe = battle.foe;
   const fb = battle.feedback;
   const lastLog = battle.log.slice(-3);
@@ -614,6 +692,12 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
           <p className="delve-small muted">
             Weak to {weakTo}{resists ? ` · Resists ${resists}` : ''}{battle.enraged ? ' · ENRAGED' : ''}
           </p>
+          {foe.vulnerable > 0 || foe.weak > 0 ? (
+            <p className="delve-small delve-foe-marks">
+              {foe.vulnerable > 0 ? <span className="delve-foe-mark mark-exposed">🎯 Exposed {foe.vulnerable}: your hits ×1.5</span> : null}
+              {foe.weak > 0 ? <span className="delve-foe-mark mark-weak">↓ Weakened {foe.weak}: its hits −25%</span> : null}
+            </p>
+          ) : null}
           <IntentPanel battle={battle} />
         </div>
         <div className="delve-monster" key={`foe-${fb.seq}`}>
@@ -638,11 +722,18 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
           <p className="delve-energy" aria-label={`Energy ${battle.energy} of ${ENERGY_PER_TURN}`}>
             {[0, 1, 2].map((i) => <span key={i} className={i < battle.energy ? 'on' : ''} aria-hidden="true">◆</span>)}
             {battle.energy > ENERGY_PER_TURN ? <span className="on" aria-hidden="true">+{battle.energy - ENERGY_PER_TURN}</span> : null}
-            <span className="delve-small muted"> Turn {battle.turn} · Draw {battle.drawPile.length} · Discard {battle.discard.length}</span>
+            <span className="delve-small muted"> Turn {battle.turn}</span>
           </p>
         </div>
       </div>
-      <StatusPanel battle={battle} />
+      <div className="delve-status-row">
+        <StatusPanel battle={battle} />
+        <PileButtons battle={battle} onOpen={setPile} />
+      </div>
+      {pile ? (
+        <PileSheet kind={pile} onClose={() => setPile(null)}
+          cards={pile === 'draw' ? battle.drawPile : pile === 'discard' ? battle.discard : battle.exhausted} />
+      ) : null}
 
       {/* Turn log for screen readers only; buffs show as chips under Statuses instead of a floating line. */}
       <div className="delve-log sr-only" role="log" aria-live="polite">
@@ -682,15 +773,23 @@ function CardButton({ id, battle, disabled, onPlay }: { id: DeckCard; battle: Ba
   const count = previewHits(battle, id);
   const hits = count > 1 ? `×${count}` : '';
   const combo = comboReady(battle) && (damage !== null || !!def.block);
+  const cues = cardCues(battle, id).filter((cue) => damage !== null || cue.key === 'slam' || cue.warn || cue.label.endsWith('Block'));
+  const slamZero = !!def.bodySlam && damage === null;
   return (
     <button type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}${combo ? ' combo' : ''}`} disabled={disabled} onClick={onPlay}
-      aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}${damage !== null && effect === 'super' ? ' Super effective.' : ''}${damage !== null && effect === 'resisted' ? ' Resisted.' : ''}${combo ? ' Combo bonus.' : ''}`}>
+      aria-label={`${def.name}, costs ${def.cost}. ${def.text}${damage !== null ? ` Deals ${damage}${hits} now.` : ''}${damage !== null && effect === 'super' ? ' Super effective.' : ''}${damage !== null && effect === 'resisted' ? ' Resisted.' : ''}${combo ? ' Combo bonus.' : ''}${cues.length ? ` ${cues.map((cue) => cue.label).join(', ')}.` : ''}`}>
       <CardFace def={def} upgraded={isUpgraded(id)} />
       {combo ? <span className="delve-card-mark" aria-hidden="true" title="Combo bonus">⛓</span> : null}
       {damage !== null ? (
         <span className={`delve-card-dmg eff-${effect}`}>
           <span className="delve-dmg-num">{damage}{hits}</span>
           {effect !== 'normal' ? <sup className="delve-dmg-eff" aria-hidden="true" title={effect === 'super' ? 'Super effective' : 'Resisted'}>{effect === 'super' ? '↑' : '↓'}</sup> : null}
+        </span>
+      ) : null}
+      {slamZero ? <span className="delve-card-dmg"><span className="delve-dmg-num">0</span></span> : null}
+      {cues.length > 0 ? (
+        <span className="delve-card-cues" aria-hidden="true">
+          {cues.map((cue) => <span key={cue.key + cue.label} className={`delve-cue cue-${cue.key}${cue.warn ? ' warn' : ''}`}>{cue.label}</span>)}
         </span>
       ) : null}
     </button>
@@ -733,25 +832,39 @@ function StartPickView({ state, send }: { state: DelveState; send: (command: Del
 }
 
 function RewardView({ state, send }: { state: DelveState; send: (command: DelveCommand) => void }) {
+  const [showDeck, setShowDeck] = useState(false);
   const reward = state.reward;
   if (!reward) return null;
+  const full = deckIsFull(state.deck);
   return (
     <section aria-labelledby="delve-reward-title">
       <h2 id="delve-reward-title">Victory!</h2>
       <LootLine itemId={reward.loot} equipped={reward.equipped} />
-      <p>Add one card to your deck:</p>
+      <div className="delve-reward-deck">
+        <p className="delve-small">Deck <strong>{state.deck.length}/{MAX_DECK_SIZE}</strong></p>
+        <button type="button" className="btn ghost delve-view-deck" onClick={() => setShowDeck(true)}>View deck</button>
+      </div>
+      {full ? (
+        <p className="delve-deck-full" role="status">Your deck is full ({MAX_DECK_SIZE} cards). New cards can&apos;t be added — remove cards at a campfire.</p>
+      ) : (
+        <p>Add one card to your deck:</p>
+      )}
       <div className="delve-hand">
         {reward.cards.map((id) => {
           const def = CARDS[id];
+          const have = copiesInDeck(state.deck, id);
           return (
             <button key={id} type="button" className={`delve-card kind-${def.kind}${def.element ? ` el-${def.element}` : ''}`}
-              onClick={() => send({ type: 'pick-card', cardId: id })}>
+              disabled={full} onClick={() => send({ type: 'pick-card', cardId: id })}
+              aria-label={`Take ${def.name}, costs ${def.cost}. ${def.text} You have ${have}.`}>
               <CardFace def={def} />
+              <span className="delve-card-have">You have {have}</span>
             </button>
           );
         })}
       </div>
-      <button type="button" className="btn ghost" onClick={() => send({ type: 'pick-card', cardId: null })}>Skip card</button>
+      <button type="button" className="btn ghost" onClick={() => send({ type: 'pick-card', cardId: null })}>{full ? 'Continue' : 'Skip card'}</button>
+      {showDeck ? <PileSheet kind="deck" cards={state.deck} onClose={() => setShowDeck(false)} /> : null}
     </section>
   );
 }

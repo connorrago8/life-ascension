@@ -279,18 +279,60 @@ export function cardCritChance(battle: Battle, def: CardDef): number {
   return Math.min(1, critChance(battle.attributes) + (def.critBonus ?? 0) + (battle.passives.includes('keen-eye') ? 0.1 : 0));
 }
 
+/**
+ * Per-hit parts of a card's damage before multipliers: the card itself (or Body Slam's Block),
+ * Momentum, Might (Battle Cry) and the combo bonus. `baseHit` is exactly their sum, so the
+ * synergy tags on a card always add up to the hit that lands. All zero when the card deals nothing.
+ */
+export type HitParts = { card: number; momentum: number; might: number; combo: number };
+
+export function hitParts(def: CardDef, battle: Pick<Battle, 'attributes' | 'block' | 'played' | 'might'>): HitParts {
+  const attributes = battle.attributes;
+  let card = 0;
+  if (def.bodySlam) card = battle.block + luckBonus(attributes) + (def.upgradedSlam ?? 0);
+  else if (def.damage) card = cardHitDamage(def, attributes);
+  else if (def.counter) card = def.counter + strengthBonus(attributes) + luckBonus(attributes);
+  if (!card) return { card: 0, momentum: 0, might: 0, combo: 0 };
+  return {
+    card,
+    momentum: def.momentum ? def.momentum * battle.played : 0,
+    might: def.kind === 'attack' ? battle.might : 0,
+    combo: comboReady(battle) ? comboBonus(attributes) : 0,
+  };
+}
+
 /** Per-hit damage from the card, attributes and battle effects (Battle Cry, Momentum, Body Slam). */
 function baseHit(def: CardDef, battle: Battle): number {
-  const attributes = battle.attributes;
-  let base = 0;
-  if (def.bodySlam) base = battle.block + luckBonus(attributes) + (def.upgradedSlam ?? 0);
-  else if (def.damage) base = cardHitDamage(def, attributes);
-  else if (def.counter) base = def.counter + strengthBonus(attributes) + luckBonus(attributes);
-  if (!base) return 0;
-  if (def.momentum) base += def.momentum * battle.played;
-  if (def.kind === 'attack') base += battle.might;
-  if (comboReady(battle)) base += comboBonus(attributes);
-  return base;
+  const parts = hitParts(def, battle);
+  return parts.card + parts.momentum + parts.might + parts.combo;
+}
+
+/** A short, display-only reason the number on a card changed. */
+export type CardCue = { key: 'might' | 'momentum' | 'combo' | 'focus' | 'exposed' | 'hexed' | 'slam'; label: string; warn?: boolean };
+
+/**
+ * Synergy cues for a card in hand, built from `hitParts` and the same flags `hitAfterModifiers`
+ * reads, so a tag never claims a bonus the hit will not get.
+ */
+export function cardCues(battle: Battle, id: DeckCard): CardCue[] {
+  const def = cardDef(id);
+  const parts = hitParts(def, battle);
+  const cues: CardCue[] = [];
+  const hits = parts.card > 0;
+  if (def.bodySlam) {
+    cues.push(hits ? { key: 'slam', label: `= Block ${battle.block}` } : { key: 'slam', label: 'No Block: 0', warn: true });
+    if (!hits && def.kind === 'attack' && battle.focused) cues.push({ key: 'focus', label: 'Wastes Focus', warn: true });
+  }
+  if (parts.might > 0) cues.push({ key: 'might', label: `Might +${parts.might}` });
+  if (parts.momentum > 0) cues.push({ key: 'momentum', label: `Momentum +${parts.momentum}` });
+  if (parts.combo > 0) cues.push({ key: 'combo', label: `Combo +${parts.combo}` });
+  else if (comboReady(battle) && !def.damage && !def.bodySlam && cardBlock(def, battle.attributes) > 0) {
+    cues.push({ key: 'combo', label: `Combo +${comboBonus(battle.attributes)} Block` });
+  }
+  if (hits && def.kind === 'attack' && battle.focused) cues.push({ key: 'focus', label: 'Focus ×2' });
+  if (hits && battle.foe.vulnerable > 0) cues.push({ key: 'exposed', label: 'Exposed ×1.5' });
+  if (hits && battle.weak > 0) cues.push({ key: 'hexed', label: 'Hexed −25%' });
+  return cues;
 }
 
 function hitAfterModifiers(base: number, element: CardDefElement, battle: Battle, focused: boolean): number {

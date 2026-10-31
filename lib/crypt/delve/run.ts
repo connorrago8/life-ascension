@@ -211,8 +211,13 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
     if (state.phase !== 'reward' || !state.reward || state.reward.picked) return state;
     const valid = command.cardId === null || state.reward.cards.includes(command.cardId);
     if (!valid) return state;
-    const deck = command.cardId && state.deck.length < MAX_DECK_SIZE ? [...state.deck, command.cardId] : state.deck;
-    const note = command.cardId ? `${CARDS[command.cardId].name} added to your deck.` : 'You skip the card.';
+    const added = !!command.cardId && state.deck.length < MAX_DECK_SIZE;
+    const deck = added && command.cardId ? [...state.deck, command.cardId] : state.deck;
+    const note = !command.cardId
+      ? 'You skip the card.'
+      : added
+        ? `${CARDS[command.cardId].name} added to your deck.`
+        : `Your deck is full (${MAX_DECK_SIZE} cards), so ${CARDS[command.cardId].name} was not added.`;
     return { ...advance({ ...state, deck }), note };
   }
 
