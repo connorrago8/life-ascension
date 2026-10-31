@@ -59,3 +59,17 @@
 - On the playable branch, the map routes to `/play/delve` and tracks unfinished runs with `ACTIVE_RUN_KEY`. Keep that existing logic authoritative.
 - Verify Crypt exit → town only after a compatible return route is implemented and tested. Never assume returning to town saves rewards; validate persistence with independent QA.
 - Do not describe demo Character gear as account-synced inventory.
+
+## Emberhaven 1.0 town exploration batch (PR #65)
+
+The integrated town now has six linked destinations: Noticeboard, Blacksmith, Hearth, Lantern Market, Waystone, and Trail Gate. Hearth, Market, and Waystone are exploratory destinations; they do not grant XP, modify inventory, heal, or touch active Crypt state. The adventure map links back to Emberhaven; the Trail Gate and Waystone link through `/play` rather than bypassing the existing Crypt entry logic.
+
+### Batch acceptance (one integrated gate)
+
+1. Visit `/play` → Emberhaven → each of six destinations; check return navigation and 320/375/390/430px layouts.
+2. Visit Emberhaven → Trail Gate → playable Crypt via the existing AdventureHub. Start an unfinished run, leave using the supported Crypt exit, visit town, return through the map, and confirm the same run resumes.
+3. Complete a run and independently verify the existing server-controlled loot/floor-clear path and no extra XP or item claims from town.
+4. Verify signed-out, authenticated, preview and reduced-motion accessibility. Check no unexpected account mutations or network requests on town pages.
+5. Review AdventureHub's one-link change with Grok before any integration or merge.
+
+This checklist is not evidence of execution. No merge or deployment is authorized.
