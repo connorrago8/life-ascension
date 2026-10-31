@@ -30,7 +30,10 @@ export function EmberhavenMap() {
     <section aria-labelledby="ember-map-title" style={{ marginTop: 22 }}>
       <h2 id="ember-map-title" style={{ textAlign: 'center', fontSize: '1.3rem' }}>Explore the town</h2>
       <p className="muted" style={{ textAlign: 'center', fontSize: 13, marginBottom: 14 }}>Move your adventurer with the controls or select a landmark. Approach a location to enter.</p>
-      <div aria-label="Interactive Emberhaven map" style={{ position: 'relative', height: 300, borderRadius: 18, overflow: 'hidden', border: '2px solid #82613e', background: 'radial-gradient(ellipse at 50% 45%, #584a37 0%, #303c39 53%, #17262a 100%)' }}>
+      <div aria-label="Interactive Emberhaven map. Focus here and use arrow keys to walk." tabIndex={0} onKeyDown={(event) => {
+        const direction = ({ ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east' } as const)[event.key as 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'];
+        if (direction && event.target === event.currentTarget) { event.preventDefault(); move(direction); }
+      }} style={{ position: 'relative', height: 300, borderRadius: 18, overflow: 'hidden', border: '2px solid #82613e', background: 'radial-gradient(ellipse at 50% 45%, #584a37 0%, #303c39 53%, #17262a 100%)' }}>
         <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
           <path d="M50 43 L19 28 M50 43 L76 25 M50 43 L21 72 M50 43 L74 73 M50 43 L50 91" fill="none" stroke="#d8b47a" strokeWidth="1.5" strokeDasharray="2 2" opacity=".65" />
           <path d="M4 6 Q50 -2 96 6 L96 96 Q50 103 4 96 Z" fill="none" stroke="#8d7759" strokeWidth="2" />
