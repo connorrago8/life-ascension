@@ -14,7 +14,7 @@ test('Emberhaven has three unique destinations and does not promise a live shop'
   for (const title of ['The Noticeboard', 'The Blacksmith', 'The Trail Gate']) {
     assert.equal(source.split(`name: '${title}'`).length - 1, 1);
   }
-  assert.match(source, /No shop, crafting, or rewards are active here/);
+  assert.match(source, /no shop, crafting, or rewards are active here/);
 });
 
 test('Emberhaven is navigation-only with no account or run mutations', () => {
@@ -39,5 +39,5 @@ test('Blacksmith makes no false account-inventory promises', () => {
 
 test('Town adventure gate does not assert Crypt unlock state', () => {
   assert.match(source, /Crypt availability depends on the deployed game version/);
-  assert.match(source, /No shop, crafting, or rewards are active here/);
+  assert.match(source, /no shop, crafting, or rewards are active here/);
 });
