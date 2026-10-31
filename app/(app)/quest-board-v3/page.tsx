@@ -79,6 +79,7 @@ export default function QuestBoardV3Connected(){
  return <main className="wrap">
   <div className="eyebrow">LIFE ASCENSION · CONNECTED DEVELOPMENT BOARD</div>
   <h1>Quest Board 3.0</h1>
+  <nav aria-label="Quest Board navigation" style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}><Link className="btn ghost" href="/">← Home</Link><Link className="btn ghost" href="/play">Hub</Link><Link className="btn ghost" href="/character">Character</Link></nav>
   <p className="muted">Your existing quests, completion history and XP. This experimental view uses the current database; new AI/calendar features are not enabled.</p>
   <section className="panel"><div className="eyebrow">{today} · Chicago 5 AM reset</div><h2>{completed.length} completed · {active.length} available</h2><p className="muted">Lifetime XP: {xp??"—"} · Existing XP rules preserved</p></section>
   <section className="panel"><h2>Daily Quests</h2><p className="muted">{selectedDaily.length} selected daily habits · Individual streaks</p>{selectionMessage&&<p className="muted" role="status">{selectionMessage}</p>}
