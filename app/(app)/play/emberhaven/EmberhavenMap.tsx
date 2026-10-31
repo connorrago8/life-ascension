@@ -46,6 +46,8 @@ export function EmberhavenMap() {
           <div style={{ width: 22, height: 15, background: '#56766e', border: '2px solid #252b32', borderRadius: 4 }} />
           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}><span style={{ width: 6, height: 7, background: '#343f4c' }} /><span style={{ width: 6, height: 7, background: '#343f4c' }} /></div>
         </div>
+        <span aria-hidden="true" style={{ position: 'absolute', top: '10%', left: '8%', fontSize: 24, opacity: 0.65 }}>♣</span>
+        <span aria-hidden="true" style={{ position: 'absolute', bottom: '12%', right: '8%', fontSize: 24, opacity: 0.65 }}>♣</span>
         {landmarks.map((landmark) => (
           <button key={landmark.id} type="button" aria-pressed={selected === landmark.id} aria-label={`Inspect ${landmark.label}`} onClick={() => setSelected(landmark.id)} style={{ position: 'absolute', left: `${landmark.x}%`, top: `${landmark.y}%`, transform: 'translate(-50%, -50%)', display: 'grid', placeItems: 'center', width: 44, height: 44, borderRadius: 12, border: selected === landmark.id ? '3px solid #ffe4ad' : '2px solid #a98c62', background: selected === landmark.id ? '#79552d' : '#293238', color: '#ffe0a6', fontSize: 23, cursor: 'pointer', boxShadow: selected === landmark.id ? '0 0 20px #f2b35d88' : '0 2px 8px #0008' }}>{landmark.icon}</button>
         ))}
