@@ -153,8 +153,8 @@ export function CryptRun() {
     const originSeed = run?.seed;
     const originEncounterId = run?.encounterId;
     const originFightAttempt = run?.fightAttempt;
-    const fightAction = command.type === 'combat'
-      || ((command.type === 'continue' || command.type === 'back' || command.type === 'retry-fight') && expectedPhase === 'fight');
+    const fightAction = command.type === 'combat' || command.type === 'retry-fight'
+      || ((command.type === 'continue' || command.type === 'back') && expectedPhase === 'fight');
     setRun((current) => {
       if (!current || current.seed !== originSeed || (expectedPhase && current.phase !== expectedPhase)
         || (fightAction && (current.encounterId !== originEncounterId
@@ -310,8 +310,8 @@ export function CryptRun() {
           battle={run.battle}
           onAction={(action) => dispatch({ type: 'combat', action })}
           onContinue={() => dispatch({ type: 'continue' }, run.phase)}
-          onRetry={() => dispatch({ type: 'retry-fight' }, 'fight')}
-          onRetreat={() => dispatch({ type: 'back' }, 'fight')}
+          onRetry={() => dispatch({ type: 'retry-fight' }, run.phase)}
+          onRetreat={() => dispatch({ type: 'back' }, run.phase)}
         />
       )}
 
