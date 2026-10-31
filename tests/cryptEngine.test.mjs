@@ -218,7 +218,7 @@ test('the preview run has a rat, inscription, charm, and gated sentinel encounte
   assert.equal(SENTINEL.maxHp, 16);
   assert.equal(SIGIL.name, 'Sentinel Sigil');
   assert.deepEqual(COMBAT.actions.map((action) => action.id), [...ACTION_IDS]);
-  assert.deepEqual(HUB.locations.map((location) => location.kind), ['preview', 'locked', 'locked']);
+  assert.deepEqual(HUB.locations.map((location) => location.kind), ['preview', 'town', 'locked']);
   const joined = JSON.stringify(NODES);
   assert.doesNotMatch(joined, /Bone King/);
 });

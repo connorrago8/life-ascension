@@ -187,13 +187,15 @@ code { font-family: ui-monospace, monospace; }
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: var(--mint);
-  color: var(--ink);
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
   display: grid;
   place-items: center;
   flex: none;
 }
-.nav-play-orb svg { width: 22px; height: 22px; stroke: var(--ink); }
+.nav-play-orb svg { width: 22px; height: 22px; stroke: currentColor; }
+.nav-play[aria-current="page"] .nav-play-orb { background: var(--mint); color: var(--ink); border-color: var(--mint); }
 .nav-play[aria-current="page"] .nav-play-orb { box-shadow: 0 0 0 3px rgba(126, 217, 184, 0.35); }
 
 .screen { width: min(440px, 100%); margin: 0 auto; padding: 18px 16px 28px; min-width: 0; }
@@ -423,7 +425,7 @@ code { font-family: ui-monospace, monospace; }
     width: 58px;
     height: 58px;
     margin-top: -28px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+    box-shadow: none;
   }
   .nav-play-orb svg { width: 26px; height: 26px; }
   .shell-main { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { TownBackLink } from '../TownBackLink';
 import { TownConversation } from '../TownVisit';
 
 const slots = [
@@ -13,9 +14,7 @@ const slots = [
 export default function EmberhavenBlacksmithPage() {
   return (
     <main className="screen" aria-labelledby="forge-title" style={{ paddingBottom: 'calc(36px + env(safe-area-inset-bottom))', overflowWrap: 'anywhere' }}>
-      <Link href="/play/emberhaven" className="btn" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
-        ← Back to Emberhaven
-      </Link>
+      <TownBackLink href="/play/emberhaven" />
       <header style={{ textAlign: 'center', padding: '30px 0 18px' }}>
         <div aria-hidden="true" style={{ fontSize: 52, lineHeight: 1.3 }}>⚒</div>
         <p className="eyebrow">EMBERHAVEN · THE FORGE</p>

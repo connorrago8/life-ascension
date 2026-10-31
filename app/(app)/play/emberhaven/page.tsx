@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { TownBackLink } from './TownBackLink';
 import { EmberhavenMap } from './EmberhavenMap';
 import { TownTrail } from './TownVisit';
 
@@ -61,6 +62,7 @@ const places = [
 export default function EmberhavenPage() {
   return (
     <main className="screen" aria-labelledby="emberhaven-title" style={{ paddingBottom: 'calc(36px + env(safe-area-inset-bottom))', overflowWrap: 'anywhere' }}>
+      <TownBackLink href="/play" label="Back to Hub" />
       <div style={{ textAlign: 'center', padding: '22px 0 16px' }}>
         <p className="eyebrow" style={{ marginBottom: 12 }}>THE LIVING DARK · EMBERHAVEN SQUARE</p>
         <div aria-hidden="true" style={{ fontSize: 44, lineHeight: 1.3, color: 'var(--mint)' }}>✧</div>

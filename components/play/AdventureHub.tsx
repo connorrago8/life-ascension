@@ -55,10 +55,12 @@ export function AdventureHub() {
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
     if (location.kind === 'preview') router.push(entryHref);
+    if (location.kind === 'town') router.push('/play/emberhaven');
   }
 
   return (
     <main className="screen play-screen" data-screen="hub">
+      <Link className="btn ghost" href="/" style={{ minHeight: 44, marginBottom: 12 }}>← Back to Home</Link>
       <div className="adv-brand">
         <div className="adv-logo" aria-hidden="true"><Star /></div>
         <p className="page-brand">LIFE ASCENSION</p>
@@ -83,17 +85,17 @@ export function AdventureHub() {
             <button
               key={location.id}
               type="button"
-              className={location.kind === 'preview' ? 'adv-node is-preview' : 'adv-node is-locked'}
+              className={locked ? 'adv-node is-locked' : 'adv-node is-preview'}
               style={{ left: `${location.x}%`, top: `${location.y}%` }}
               aria-pressed={location.id === selected.id}
-              aria-label={locked ? `${location.name}, ${HUB.locked}` : `${location.name}, ${HUB.preview}`}
+              aria-label={locked ? `${location.name}, ${HUB.locked}` : location.kind === 'town' ? 'Town, open Emberhaven' : `${location.name}, ${HUB.preview}`}
               onClick={() => choose(location)}
             >
               <span className="adv-node-orb">
                 <PixelArt rows={SPRITES[location.icon]} />
               </span>
               <span className="adv-node-name">{location.name}</span>
-              {location.kind === 'preview'
+              {location.kind === 'town' ? <span className="soon-pill">Open</span> : location.kind === 'preview'
                 ? <span className="soon-pill">{HUB.preview}</span>
                 : <span className="adv-node-note">{HUB.locked}<span className="adv-node-soon">{HUB.soon}</span></span>}
             </button>
@@ -107,12 +109,14 @@ export function AdventureHub() {
       <p className="adv-blurb">{selected.blurb}</p>
       {selected.kind === 'preview' ? (
         <Link className="btn adv-enter" href={entryHref}>{hasRun ? 'Continue run' : HUB.enter}</Link>
+      ) : selected.kind === 'town' ? (
+        <Link className="btn adv-enter" href="/play/emberhaven">Visit Emberhaven town →</Link>
       ) : (
         <button type="button" className="btn adv-enter" disabled>{HUB.enter}</button>
       )}
-      <Link className="btn" href="/play/emberhaven" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 12 }}>
+      {selected.kind !== 'town' && <Link className="btn" href="/play/emberhaven" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 12 }}>
         Visit Emberhaven town →
-      </Link>
+      </Link>}
       <p className="play-note">{HUB.note}</p>
     </main>
   );

@@ -25,6 +25,17 @@ try {
     });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
+    await page.goto(`${base}/`);
+    const homeTab = page.getByRole('link', { name: 'Home', exact: true });
+    assert.equal(await homeTab.getAttribute('aria-current'), 'page');
+    const hubTab = page.getByRole('link', { name: 'Hub', exact: true });
+    assert.equal(await hubTab.getAttribute('aria-current'), null);
+    assert.equal(await page.locator('.nav-play-orb').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
+    await hubTab.click();
+    await page.getByRole('heading', { name: 'Hub', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Town, open Emberhaven', exact: true }).click();
+    await page.waitForURL(url => url.pathname === '/play/emberhaven');
+
     await page.goto(`${base}/play/emberhaven`);
     await page.getByRole('heading', { name: 'Emberhaven', exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -79,7 +90,12 @@ try {
       await enter.click();
       await page.waitForURL(url => url.pathname === path);
       if (path.startsWith('/play/emberhaven/')) {
-        await page.locator('main a[href="/play/emberhaven"]').click();
+        assert.equal(await page.getByText(/0[123] · EMBERHAVEN/).count(), 0, 'no numbered placeholder cards');
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        const back = page.getByRole('link', { name: '← Back to Town', exact: true });
+        const backBox = await back.boundingBox();
+        assert.ok(backBox && backBox.y >= 0 && backBox.y < 844, 'Back to Town remains visible while scrolling');
+        await back.click();
       } else if (path === '/play') {
         await page.getByRole('link', { name: 'Visit Emberhaven town →', exact: true }).click();
       } else {
@@ -156,7 +172,7 @@ try {
     assert.equal(await page.getByRole('link', { name: 'Play', exact: true }).count(), 0);
     assert.deepEqual(errors, []);
     assert.deepEqual(violations, []);
-    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, Lantern Route clue collection and puzzle retry/completion, guest Crypt resume and reload, per-quest badges and Hub navigation, no external requests or network writes`);
+    console.log(`PASS ${engine} ${width}px: touch, keyboard focus, 44px targets, 200% layout zoom, movement, collision, return links, reduced motion, Lantern Route clue collection and puzzle retry/completion, guest Crypt resume and reload, per-quest badges, Home selection, open Town node and sticky Back navigation, no external requests or network writes`);
     await context.close();
   }
 } finally {
