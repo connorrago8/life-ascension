@@ -15,9 +15,11 @@ const landmarks = [
 export function EmberhavenMap() {
   const [selected, setSelected] = useState<(typeof landmarks)[number]['id']>('hearth');
   const [position, setPosition] = useState({ x: 47, y: 43 });
+  const [steps, setSteps] = useState(0);
   const [facing, setFacing] = useState<'north' | 'south' | 'east' | 'west'>('south');
   const move = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
     setFacing(direction);
+    setSteps((count) => count + 1);
     setPosition((old) => ({
       x: Math.max(8, Math.min(92, old.x + (direction === 'east' ? 8 : direction === 'west' ? -8 : 0))),
       y: Math.max(8, Math.min(92, old.y + (direction === 'south' ? 8 : direction === 'north' ? -8 : 0))),
@@ -38,7 +40,7 @@ export function EmberhavenMap() {
           <path d="M50 43 L19 28 M50 43 L76 25 M50 43 L21 72 M50 43 L74 73 M50 43 L50 91" fill="none" stroke="#d8b47a" strokeWidth="1.5" strokeDasharray="2 2" opacity=".65" />
           <path d="M4 6 Q50 -2 96 6 L96 96 Q50 103 4 96 Z" fill="none" stroke="#8d7759" strokeWidth="2" />
         </svg>
-        <div aria-hidden="true" style={{ position: 'absolute', left: `${position.x}%`, top: `${position.y}%`, transform: 'translate(-50%, -50%)', zIndex: 2, width: 24, height: 34, transition: 'left 160ms linear, top 160ms linear', pointerEvents: 'none', filter: 'drop-shadow(0 3px 3px #0009)' }}>
+        <div aria-hidden="true" data-facing={facing} style={{ position: 'absolute', left: `${position.x}%`, top: `${position.y}%`, transform: 'translate(-50%, -50%)', zIndex: 2, width: 24, height: 34, transition: 'left 160ms linear, top 160ms linear', pointerEvents: 'none', filter: 'drop-shadow(0 3px 3px #0009)', rotate: facing === 'west' ? '-8deg' : facing === 'east' ? '8deg' : '0deg' }}>
           <div style={{ margin: '0 auto', width: 13, height: 12, background: '#e3b98d', border: '2px solid #272a37', borderRadius: 3 }} />
           <div style={{ width: 22, height: 15, background: '#56766e', border: '2px solid #252b32', borderRadius: 4 }} />
           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}><span style={{ width: 6, height: 7, background: '#343f4c' }} /><span style={{ width: 6, height: 7, background: '#343f4c' }} /></div>
@@ -53,7 +55,7 @@ export function EmberhavenMap() {
         <button type="button" aria-label="Walk south" onClick={() => move('south')} style={{ minHeight: 44 }}>↓</button>
         <button type="button" aria-label="Walk east" onClick={() => move('east')} style={{ minHeight: 44 }}>→</button>
       </div>
-      <p className="muted" role="status" style={{ textAlign: 'center', marginTop: 8, fontSize: 12 }}>Facing {facing}. {nearby ? `Near ${nearby.label}. Select it to enter.` : 'Walk toward a landmark.'}</p>
+      <p className="muted" role="status" style={{ textAlign: 'center', marginTop: 8, fontSize: 12 }}>Facing {facing}. Steps {steps}. {nearby ? `Near ${nearby.label}. Select it to enter.` : 'Walk toward a landmark.'}</p>
       <div aria-live="polite" style={{ marginTop: 12, padding: 18, borderRadius: 14, border: '1px solid #82613e', background: 'linear-gradient(135deg, #302b27, #1c2226)' }}>
         <p style={{ fontSize: 11, letterSpacing: '.1em', color: '#f0c181' }}>SELECTED LANDMARK</p>
         <h3 style={{ margin: '7px 0' }}>{active.label}</h3>
