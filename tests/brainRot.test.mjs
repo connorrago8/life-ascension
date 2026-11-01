@@ -13,3 +13,6 @@ test('paused simulation does not advance',()=>{const state=games.createGame('fla
 test('boss rotates every 15 seconds and credits only completed intervals',()=>{let b=core.newBoss(9);const first=b.queue[0];b=core.advanceBoss(b,14999,9);assert.equal(b.seconds[first],0);b=core.advanceBoss(b,1,9);assert.equal(b.seconds[first],15);assert.equal(b.segmentMs,0);});
 test('boss clears after four visits to every game',()=>{let b=core.newBoss(13);for(let i=0;i<40;i++)b=core.advanceBoss(b,15000,13);assert.equal(b.won,true);assert.ok(Object.values(b.seconds).every(n=>n===60));});
 test('rune fusion combines equal tiles without duplicate merges',()=>{const before=[2,2,2,2,...Array(12).fill(0)];const after=games.moveTiles(before,'left',11);assert.equal(after[0],4);assert.equal(after[1],4);});
+
+test('boss visits all ten portals once before repeating',()=>{let b=core.newBoss(71);const seen=[];for(let i=0;i<10;i++){seen.push(b.queue[b.index]);b=core.advanceBoss(b,15000,71);}assert.equal(new Set(seen).size,10);assert.ok(seen.every(id=>b.seconds[id]===15));});
+test('boss checkpoint retains exact segment time',()=>{let b=core.newBoss(71);b=core.advanceBoss(b,8000,71);const restored=JSON.parse(JSON.stringify(b));assert.equal(restored.segmentMs,8000);const first=restored.queue[restored.index];const next=core.advanceBoss(restored,7000,71);assert.equal(next.seconds[first],15);});
