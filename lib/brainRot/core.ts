@@ -48,6 +48,23 @@ export function failBossSegment(boss:Boss):{boss:Boss;restore:unknown|null;reset
  const restore=boss.snapshots[id]===undefined?null:structuredClone(boss.snapshots[id]);
  return {boss:{...boss,hearts,segmentMs:0,states:{...boss.states,[id]:restore??undefined},snapshots:{...boss.snapshots,[id]:undefined}},restore,reset:false};
 }
+export type DungeonCheckpoint={version:1;run:Run;active:{level:number;state:unknown}|null;revision:number};
+export const CHECKPOINT_KEY='life-ascension:brain-rot:checkpoint:v1';
+export function saveCheckpoint(run:Run,active:{level:number;state:unknown}|null):void{
+ try{const previous=readCheckpoint();const checkpoint:DungeonCheckpoint={version:1,run,active,revision:(previous?.revision??0)+1};localStorage.setItem(CHECKPOINT_KEY,JSON.stringify(checkpoint));}catch{/* storage unavailable */}
+}
+export function readCheckpoint():DungeonCheckpoint|null{
+ try{const raw=localStorage.getItem(CHECKPOINT_KEY);if(!raw)return null;const c=JSON.parse(raw) as DungeonCheckpoint;
+ if(c.version!==1||!Number.isInteger(c.revision)||c.revision<1||!validRun(c.run))return null;
+ if(c.active!==null&&(!c.active||c.active.level!==c.run.level||typeof c.active.state!=='object'||c.active.state===null))return null;
+ return c;}catch{return null;}
+}
+export function validRun(r:Run):boolean{
+ if(!r||r.version!==1||!Array.isArray(r.order)||r.order.length!==30||!Number.isInteger(r.level)||r.level<1||r.level>31||!Number.isInteger(r.seed)||!Number.isInteger(r.hearts)||r.hearts<1||r.hearts>3)return false;
+ const ids=GAMES.map(g=>g.id);for(let cycle=0;cycle<3;cycle++){const slice=r.order.slice(cycle*10,cycle*10+10);if(new Set(slice).size!==10||slice.some(id=>!ids.includes(id)))return false;}
+ if(r.level===31){const b=r.boss;if(!b||!Array.isArray(b.queue)||!Number.isInteger(b.index)||b.index<0||b.index>=b.queue.length||!Number.isFinite(b.segmentMs)||b.segmentMs<0||b.segmentMs>15000||!Number.isInteger(b.hearts)||b.hearts<1||b.hearts>3||!b.seconds||b.queue.some(id=>!ids.includes(id)))return false;for(const id of ids){const n=b.seconds[id];if(!Number.isInteger(n)||n<0||n>60||n%15!==0)return false;}}
+ return true;
+}
 export const SAVE_KEY='life-ascension:brain-rot:v1';
 export const ACTIVE_KEY='life-ascension:brain-rot:active:v1';
 export function readActive():unknown|null{try{const raw=localStorage.getItem(ACTIVE_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
