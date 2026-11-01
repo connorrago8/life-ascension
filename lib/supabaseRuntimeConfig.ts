@@ -7,6 +7,7 @@ const PROTECTED_QA_BRANCHES = new Set([
   'beta/crypt-intro-exit-accessibility-20261029',
   'chatgpt/emberhaven-crypt-integration-20261031',
   'grok/release-candidate-1',
+  'grok/rc1-smoke-fixes',
 ]);
 const PRIVILEGED_NONPRODUCTION_KEYS = [
   'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',

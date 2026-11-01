@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, 'beta/quest-ui-clean-review', 'beta/crypt-intro-exit-accessibility-20261029']
   pull_request:
-    branches: [main, 'beta/quest-ui-clean-review']
+    branches: [main, 'beta/quest-ui-clean-review', 'grok/release-candidate-1']
 permissions:
   contents: read
 jobs:

@@ -8,7 +8,8 @@ import { PALETTE } from '../spriteArt';
 import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
 import { PixelArt } from '../crypt/PixelArt';
 import { SPRITES } from '../../lib/crypt/art';
-import { HUB, PLAYER, PREVIEW_BANNER } from '../../lib/crypt/content';
+import { HUB, PLAYER } from '../../lib/crypt/content';
+import { InAppBackLink } from '../InAppBackLink';
 import { WayfarerMark } from './WayfarerMark';
 import { ACTIVE_RUN_KEY } from '../../lib/cryptActiveRun';
 
@@ -60,12 +61,11 @@ export function AdventureHub() {
 
   return (
     <main className="screen play-screen" data-screen="hub">
-      <Link className="btn ghost" href="/" style={{ minHeight: 44, marginBottom: 12 }}>← Back to Home</Link>
+      <InAppBackLink className="btn ghost" href="/" style={{ minHeight: 44, marginBottom: 12 }}>← Back to Home</InAppBackLink>
       <div className="adv-brand">
         <div className="adv-logo" aria-hidden="true"><Star /></div>
         <p className="page-brand">LIFE ASCENSION</p>
       </div>
-      <p className="preview-banner" role="status">{PREVIEW_BANNER}</p>
       <WayfarerMark />
       <h1>{HUB.title}</h1>
       <p className="lede">{HUB.lede}</p>
@@ -108,7 +108,10 @@ export function AdventureHub() {
 
       <p className="adv-blurb">{selected.blurb}</p>
       {selected.kind === 'preview' ? (
-        <Link className="btn adv-enter" href={entryHref}>{hasRun ? 'Continue run' : HUB.enter}</Link>
+        <>
+          <p className="preview-banner" role="status">Crypt preview: earns no XP.</p>
+          <Link className="btn adv-enter" href={entryHref}>{hasRun ? 'Continue run' : HUB.enter}</Link>
+        </>
       ) : selected.kind === 'town' ? (
         <Link className="btn adv-enter" href="/play/emberhaven">Visit Emberhaven town →</Link>
       ) : (

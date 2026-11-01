@@ -10,7 +10,7 @@ import { TownTrail } from './TownVisit';
 
 export default function EmberhavenPage() {
   return (
-    <main className="screen" aria-labelledby="emberhaven-title" style={{ paddingBottom: 'calc(36px + env(safe-area-inset-bottom))', overflowWrap: 'anywhere' }}>
+    <main className="screen town-screen" aria-labelledby="emberhaven-title" style={{ paddingBottom: 'calc(128px + env(safe-area-inset-bottom, 0px))', overflowWrap: 'anywhere' }}>
       <TownBackLink href="/play" label="Back to Hub" />
       <div style={{ textAlign: 'center', padding: '22px 0 16px' }}>
         <p className="eyebrow" style={{ marginBottom: 12 }}>THE LIVING DARK · EMBERHAVEN SQUARE</p>

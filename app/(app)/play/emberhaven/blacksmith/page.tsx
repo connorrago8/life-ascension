@@ -13,7 +13,7 @@ const slots = [
  */
 export default function EmberhavenBlacksmithPage() {
   return (
-    <main className="screen" aria-labelledby="forge-title" style={{ paddingBottom: 'calc(36px + env(safe-area-inset-bottom))', overflowWrap: 'anywhere' }}>
+    <main className="screen town-screen" aria-labelledby="forge-title" style={{ paddingBottom: 'calc(128px + env(safe-area-inset-bottom, 0px))', overflowWrap: 'anywhere' }}>
       <TownBackLink href="/play/emberhaven" />
       <header style={{ textAlign: 'center', padding: '30px 0 18px' }}>
         <div aria-hidden="true" style={{ fontSize: 52, lineHeight: 1.3 }}>⚒</div>

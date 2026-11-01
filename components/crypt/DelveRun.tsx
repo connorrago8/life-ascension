@@ -21,6 +21,7 @@ import { copiesInDeck, deckIsFull, pileSummary, type PileEntry } from '../../lib
 import { runRecap, type RunRecap, type SaveMode } from '../../lib/crypt/delve/recap';
 import { STARTER_DECKS, starterSummary, type StarterId } from '../../lib/crypt/delve/starters';
 import { RunRecapView } from './RunRecap';
+import { InAppBackLink } from '../InAppBackLink';
 import {
   canRemoveCard, canUpgradeCard, canWearDrop, createDelve, currentRoomChoices, effectiveAttributes, MIN_DECK_SIZE, reduceDelve, removalPreview, runLoadout,
   wearPreview,
@@ -247,7 +248,7 @@ function Camp(props: {
   return (
     <main className="wrap delve" aria-label="Forgotten Crypt camp">
       <div className="delve-top">
-        <a className="btn ghost delve-leave" href={props.exitHref}>← Back</a>
+        <InAppBackLink className="btn ghost delve-leave" href={props.exitHref}>← Back</InAppBackLink>
         <h1 className="delve-title">Forgotten Crypt</h1>
       </div>
       <p className="muted">

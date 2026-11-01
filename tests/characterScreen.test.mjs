@@ -97,7 +97,8 @@ test('character and play screens do not invent stats, wellness, or XP', () => {
   // Stats are the real Crypt allocation (read-only RPC) or a dash; no "Coming soon" tiles.
   assert.doesNotMatch(characterSource, /Coming soon/);
   assert.match(characterSource, /client\.rpc\('get_crypt_profile'\)/);
-  assert.match(characterSource, /attributeEntries\(state\.stats\)/);
+  assert.match(characterSource, /PlayerStatPanel/);
+  assert.match(characterSource, /playerStatRow\(profile/);
   assert.match(characterSource, /WELLNESS_EMPTY|Not connected yet/);
   assert.match(characterSource, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   assert.match(characterSource, /client\.rpc\('get_earned_gear'\)/);
@@ -108,7 +109,8 @@ test('character and play screens do not invent stats, wellness, or XP', () => {
   assert.match(viewerSource, /aria-label="Close"/);
   assert.match(viewerSource, /returnFocusRef/);
   assert.match(playSource, /AdventureHub/);
-  assert.match(hubSource, /PREVIEW_BANNER/);
+  assert.match(hubSource, /Crypt preview: earns no XP\./);
+  assert.doesNotMatch(hubSource, /PREVIEW_BANNER|progress is not saved/);
   assert.match(cryptContent, /Forgotten Crypt/);
   assert.match(cryptContent, /Coming soon/);
   assert.match(cryptContent, /Locked/);

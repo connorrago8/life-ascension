@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { InAppBackLink } from '../../../../components/InAppBackLink';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {GAMES,newRun,readRun,writeRun,currentGame,completeLevel,newBoss,advanceBoss,beginBossSegment,failBossSegment,tier,readActive,writeActive,readCheckpoint,saveCheckpoint,type Run,type GameId} from '../../../../lib/brainRot/core';
 import {createGame,step,type State,type Input} from '../../../../lib/brainRot/games';
@@ -38,7 +38,7 @@ export default function BrainRotDungeon(){
  const gameId:GameId=run?.level===31?(run.boss?.queue[run.boss.index]??GAMES[0].id):run?currentGame(run):GAMES[0].id;
  const game=GAMES.find(g=>g.id===gameId)!;
  return <main style={{maxWidth:600,margin:'0 auto',padding:'18px 16px 100px',color:'#f4f6f8'}}>
- <Link href="/play" style={{color:'#f0c86b'}}>← Back to Hub</Link>
+ <InAppBackLink href="/play" style={{color:'#f0c86b'}}>← Back to Hub</InAppBackLink>
  <h1 style={{fontSize:32,marginBottom:4}}>🧠 Brain Rot</h1><p style={{color:'#bac4bd'}}>30 arcade levels. Ten games. One impossible king.</p>
  <div style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap',margin:'14px 0',fontWeight:700}}><span>Level {run?.level??1}/31</span><span>❤️ {run?.level===31?run.boss?.hearts:run?.hearts}</span><span>{run?.level===31?'👑 Final Boss':'Cycle '+(run?tier(run.level):1)}</span></div>
  <h2>{game.name}</h2>{run?.level===31&&run.boss&&<p>King's rotation: {run.boss.seconds[gameId]}/60 seconds · {run.boss.queue.length} portals remaining · {Math.ceil((15000-run.boss.segmentMs)/1000)}s until switch</p>}
