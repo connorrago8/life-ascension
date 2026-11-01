@@ -1,9 +1,9 @@
 name: Verify application build
 on:
   push:
-    branches: [main]
+    branches: [main, 'integration/questboard-emberhaven-crypt-20261031']
   pull_request:
-    branches: [main]
+    branches: [main, 'feature/quest-board-3-unified-20261031']
 permissions:
   contents: read
 jobs:
