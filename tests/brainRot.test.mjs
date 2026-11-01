@@ -57,3 +57,6 @@ test('Endless Crossing scores forward hops while Frog King requires reaching ban
 
 test('Endless Crossing forward hop scrolls traffic downward',()=>{let s=games.createGame('endless-crossing',1,8);s.entities=[{x:.2,y:.24,vx:0,vy:0,type:0}];const n=games.step(s,'up');assert.equal(n.progress,1);assert.equal(n.entities[0].y,.36);assert.equal(n.player.y,.5);});
 test('Frog King forward hop does not scroll traffic',()=>{let s=games.createGame('frog-kings-crossing',1,8);s.entities=[{x:.2,y:.24,vx:0,vy:0,type:0}];const n=games.step(s,'up');assert.equal(n.entities[0].y,.24);assert.equal(n.progress,0);});
+
+test('Endless Crossing traffic accelerates as distance increases',()=>{let low=games.createGame('endless-crossing',1,5);low.tick=44;let high=games.createGame('endless-crossing',1,5);high.tick=44;high.progress=35;const a=games.step(low,null).entities[0];const b=games.step(high,null).entities[0];assert.ok(Math.abs(b.vx)>Math.abs(a.vx));});
+test('Frog King traffic velocity stays constant across crossing count',()=>{let low=games.createGame('frog-kings-crossing',1,5);low.tick=44;let high=games.createGame('frog-kings-crossing',1,5);high.tick=44;high.progress=35;assert.equal(Math.abs(games.step(low,null).entities[0].vx),Math.abs(games.step(high,null).entities[0].vx));});
