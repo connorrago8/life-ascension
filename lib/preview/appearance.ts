@@ -66,7 +66,7 @@ export const TRAVELERS_HOOD: VisibleItem = {
 export const WAYFARER_COAT: VisibleItem = {
   id: 'wayfarer-coat',
   slot: 'chest',
-  name: 'Wayfarer Coat',
+  name: 'Travel Coat',
   motif: 'coat',
   accent: '#1F6B52',
   accentLight: '#3D946C',
@@ -84,7 +84,7 @@ export const WALKING_STAFF: VisibleItem = {
 export const WAYFARER_LANTERN: VisibleItem = {
   id: 'wayfarer-lantern',
   slot: 'main-hand',
-  name: 'Wayfarer Lantern',
+  name: 'Travel Lantern',
   motif: 'lantern',
   accent: '#E2A23A',
   accentLight: '#FFE7A3',

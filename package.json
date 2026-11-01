@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/verify-deployment-env.mjs && next build && node scripts/verify-qa-browser-bundle-after-build.mjs",
     "start": "next start",
     "test": "node --test tests/*.test.mjs",
     "lint": "tsc --noEmit"

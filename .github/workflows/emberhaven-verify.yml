@@ -1,0 +1,81 @@
+name: Emberhaven isolated verification
+
+on:
+  push:
+    branches:
+      - chatgpt/emberhaven-crypt-integration-20261031
+    paths:
+      - 'app/(app)/play/emberhaven/**'
+      - 'lib/emberhavenMovement.ts'
+      - 'tests/emberhaven*.test.mjs'
+      - '.github/workflows/emberhaven-verify.yml'
+      - 'tests/browser/emberhaven.qa.mjs'
+      - 'vercel.json'
+      - 'scripts/verify-deployment-env.mjs'
+      - 'scripts/verify-qa-browser-bundle-after-build.mjs'
+      - 'scripts/verify-qa-preview-env-metadata.mjs'
+      - 'lib/supabaseRuntimeConfig.ts'
+      - 'tests/deployment-env.test.mjs'
+      - 'app/(app)/quests/page.tsx'
+      - 'lib/nav.ts'
+      - 'lib/crypt/content.ts'
+      - 'components/play/AdventureHub.tsx'
+      - 'app/style.css'
+      - 'tests/cryptEngine.test.mjs'
+      - 'tests/questStreaks.test.mjs'
+      - 'tests/characterScreen.test.mjs'
+      - 'supabase/migrations/*per_quest_streak_badges.sql'
+      - 'tests/qa-browser-bundle-after-build.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no lockfile currently tracked)
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run lint
+      - name: Emberhaven behavior and contract tests
+        run: node --test tests/emberhaven*.test.mjs
+      - name: Entire repository test suite
+        run: npm test
+      - name: Install isolated Chromium and WebKit runners
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          npx playwright install --with-deps chromium webkit
+      - name: Verify local town in Chromium and WebKit without backend credentials
+        shell: bash
+        env:
+          QA_BASE_URL: http://127.0.0.1:3128
+        run: |
+          set -euo pipefail
+          export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY=emberhaven-local-placeholder
+          npm run dev -- --hostname 127.0.0.1 --port 3128 > /tmp/emberhaven-next.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail "$QA_BASE_URL/play/emberhaven" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --silent --show-error --fail "$QA_BASE_URL/play/emberhaven" >/dev/null
+          QA_BROWSER=chromium node tests/browser/emberhaven.qa.mjs
+          QA_BROWSER=webkit node tests/browser/emberhaven.qa.mjs

@@ -13,10 +13,12 @@ const characterSource = readFileSync(new URL('../app/(app)/character/page.tsx', 
 const viewerSource = readFileSync(new URL('../components/CharacterViewer.tsx', import.meta.url), 'utf8');
 const spriteSource = readFileSync(new URL('../components/AdventurerSprite.tsx', import.meta.url), 'utf8');
 const playSource = readFileSync(new URL('../app/(app)/play/page.tsx', import.meta.url), 'utf8');
+const hubSource = readFileSync(new URL('../components/play/AdventureHub.tsx', import.meta.url), 'utf8');
+const cryptContent = readFileSync(new URL('../lib/crypt/content.ts', import.meta.url), 'utf8');
 
 test('primary nav is Home, Quests, Play, Character, and More', () => {
-  assert.deepEqual(NAV_ITEMS.map((item) => item.label), ['Home', 'Quests', 'Play', 'Character', 'More']);
-  assert.equal(NAV_ITEMS.find((item) => item.label === 'Play')?.href, '/play');
+  assert.deepEqual(NAV_ITEMS.map((item) => item.label), ['Home', 'Quests', 'Hub', 'Character', 'More']);
+  assert.equal(NAV_ITEMS.find((item) => item.label === 'Hub')?.href, '/play');
   assert.equal(NAV_ITEMS.some((item) => item.label === 'Health' || item.href === '/health'), false);
   assert.match(navSource, /NAV_ITEMS/);
   assert.match(navSource, /nav-play/);
@@ -44,12 +46,12 @@ test('equipment slots start empty unless the player owns that item', () => {
 
 test('attribute cells stay a placeholder until the profile has real values', () => {
   const pending = attributeEntries(null);
-  assert.equal(pending.length, 4);
-  assert.deepEqual(pending.map((entry) => entry.short), ['STR', 'INT', 'VIT', 'DIS']);
+  assert.equal(pending.length, 5);
+  assert.deepEqual(pending.map((entry) => entry.short), ['STR', 'AGI', 'INT', 'END', 'LCK']);
   assert.equal(pending.every((entry) => entry.pending && entry.value === ATTRIBUTE_PLACEHOLDER), true);
   assert.equal(attributeValue({ display_name: 'Ada' }, 'strength'), ATTRIBUTE_PLACEHOLDER);
-  const recorded = attributeEntries({ strength: 3, intelligence: 2, vitality: 0, discipline: '4' });
-  assert.deepEqual(recorded.map((entry) => entry.value), ['3', '2', '0', '4']);
+  const recorded = attributeEntries({ strength: 3, agility: 1, intelligence: 2, endurance: 0, luck: '4' });
+  assert.deepEqual(recorded.map((entry) => entry.value), ['3', '1', '2', '0', '4']);
   assert.equal(recorded.some((entry) => entry.pending), false);
 });
 
@@ -57,8 +59,11 @@ test('wellness stays disconnected unless real readings exist', () => {
   assert.equal(WELLNESS_EMPTY, 'Not connected yet');
   assert.deepEqual(wellnessSnapshot(null), { connected: false });
   assert.deepEqual(wellnessSnapshot({ display_name: 'Ada' }), { connected: false });
-  assert.deepEqual(wellnessSnapshot({ sleep_hours: 7.2, steps: 6400 }), {
+  // Readings come from wellness_readings rows (dated), not profile fields.
+  assert.deepEqual(wellnessSnapshot({ sleep_hours: 7.2, steps: 6400 }), { connected: false });
+  assert.deepEqual(wellnessSnapshot([{ reading_date: '2026-10-29', sleep_hours: 7.2, steps: 6400 }]), {
     connected: true,
+    date: '2026-10-29',
     sleepHours: 7.2,
     steps: 6400,
   });
@@ -89,17 +94,24 @@ test('slot silhouettes share one 16 by 16 pixel grid', () => {
 });
 
 test('character and play screens do not invent stats, wellness, or XP', () => {
-  assert.match(characterSource, /Coming soon/);
+  // Stats are the real Crypt allocation (read-only RPC) or a dash; no "Coming soon" tiles.
+  assert.doesNotMatch(characterSource, /Coming soon/);
+  assert.match(characterSource, /client\.rpc\('get_crypt_profile'\)/);
+  assert.match(characterSource, /attributeEntries\(state\.stats\)/);
   assert.match(characterSource, /WELLNESS_EMPTY|Not connected yet/);
-  assert.match(characterSource, /<CharacterScreen displayName=\{state\.name\} hideSampleStats\s*\/>/);
+  assert.match(characterSource, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
+  assert.match(characterSource, /client\.rpc\('get_earned_gear'\)/);
+  assert.match(characterSource, /client\.rpc\('get_lifetime_xp'\)/);
   assert.doesNotMatch(characterSource, /7\.2|6,400|STR 4/);
   assert.match(viewerSource, /role="dialog"/);
   assert.match(viewerSource, /aria-modal="true"/);
   assert.match(viewerSource, /aria-label="Close"/);
   assert.match(viewerSource, /returnFocusRef/);
-  assert.match(playSource, /Forgotten Crypt/);
-  assert.match(playSource, /Coming soon/);
-  assert.match(playSource, /Locked/);
-  assert.match(playSource, /Real-life quests earn XP/);
-  assert.doesNotMatch(playSource, /get_lifetime_xp|create_scheduled_quest/);
+  assert.match(playSource, /AdventureHub/);
+  assert.match(hubSource, /PREVIEW_BANNER/);
+  assert.match(cryptContent, /Forgotten Crypt/);
+  assert.match(cryptContent, /Coming soon/);
+  assert.match(cryptContent, /Locked/);
+  assert.match(cryptContent, /Real-life quests earn XP/);
+  assert.doesNotMatch(playSource + hubSource + cryptContent, /get_lifetime_xp|create_scheduled_quest/);
 });

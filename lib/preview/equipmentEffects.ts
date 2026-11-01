@@ -34,6 +34,8 @@ const CATALOG: Record<string, CatalogEntry> = {
   'wayfarer-lantern': { bonuses: { luck: 2 }, abilities: ['Guiding Light'] },
   'trail-trousers': { bonuses: { agility: 1 }, abilities: [] },
   'worn-boots': { bonuses: {}, abilities: [] },
+  // Real-quest earned armor. Same numbers the Crypt delve uses (lib/crypt/delve/loot.ts EARNED_GEAR).
+  'ashen-hood': { bonuses: { intelligence: 1, endurance: 1 }, abilities: [] },
 };
 
 function emptyBonuses(): Record<EffectStat, number> {

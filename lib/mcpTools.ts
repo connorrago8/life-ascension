@@ -76,6 +76,22 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
     return { ok: true, result: { id: saved.data, quest_id: args.quest_id, saved: true, xp_awarded: false } };
   }
 
+  if (name === 'log_quest_progress') {
+    if (typeof args.instance_id !== 'string' || typeof args.request_id !== 'string'
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(args.instance_id)
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(args.request_id)
+      || typeof args.delta !== 'number' || !Number.isInteger(args.delta) || args.delta === 0
+      || Math.abs(args.delta) > 1000000) return bad('Valid instance_id, request_id UUID, and nonzero integer delta are required');
+    const saved = await userRpc(input, 'log_quest_progress', 'log_quest_progress_as_user', {
+      p_instance_id: args.instance_id,
+      p_request_id: args.request_id,
+      p_delta: args.delta,
+    });
+    if (saved.error) return crashed(saved.error.message);
+    const row = Array.isArray(saved.data) ? saved.data[0] : saved.data;
+    return {ok:true,result:{instance_id:args.instance_id,request_id:args.request_id,...(row && typeof row==='object'?row:{})}};
+  }
+
   if (name === 'submit_completion') {
     if (typeof args.quest_id !== 'string' || args.confirmed_complete !== true) return bad('Quest ID and explicit confirmed_complete=true required');
     if (args.due_date !== undefined && !isoDate(args.due_date)) return bad('Invalid due date');
@@ -114,14 +130,14 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
   if (name === 'list_quests') {
     const date = args.due_date === undefined ? today : args.due_date;
     if (!isoDate(date)) return bad('Invalid due date');
-    const questRows = await db.from('quests').select('id,title,domain,cadence,quest_type,scheduled_for,active').eq('owner_id', userId).eq('active', true);
+    const questRows = await db.from('quests').select('id,title,domain,cadence,quest_type,scheduled_for,active,target_amount,progress_unit,progress_increment').eq('owner_id', userId).eq('active', true);
     if (questRows.error) return crashed(questRows.error.message);
     const activeIds = (Array.isArray(questRows.data) ? questRows.data : [])
       .map((quest: { id?: unknown } | null) => (quest && typeof quest === 'object' ? quest.id : null))
       .filter((id: unknown): id is string => typeof id === 'string');
     let instanceData: unknown[] = [];
     if (activeIds.length > 0) {
-      let instances = db.from('quest_instances').select('id,quest_id,due_date,status').eq('owner_id', userId).in('quest_id', activeIds);
+      let instances = db.from('quest_instances').select('id,quest_id,due_date,status,current_amount').eq('owner_id', userId).in('quest_id', activeIds);
       if (args.include_history !== true) instances = instances.eq('due_date', date);
       const instanceRows = await instances.limit(500);
       if (instanceRows.error) return crashed(instanceRows.error.message);
