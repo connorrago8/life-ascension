@@ -36,5 +36,9 @@ export function advanceBoss(boss:Boss,deltaMs:number,seed:number):Boss{
  return {...boss,seconds,queue,index:0,segmentMs:0};
 }
 export const SAVE_KEY='life-ascension:brain-rot:v1';
+export const ACTIVE_KEY='life-ascension:brain-rot:active:v1';
+export function readActive():unknown|null{try{const raw=localStorage.getItem(ACTIVE_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
+export function writeActive(value:unknown){try{if(value===null)localStorage.removeItem(ACTIVE_KEY);else localStorage.setItem(ACTIVE_KEY,JSON.stringify(value));}catch{/* unavailable */}}
+
 export function readRun():Run|null{try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const r=JSON.parse(raw) as Run;if(r.version!==1||!Array.isArray(r.order)||r.order.length!==30||!Number.isInteger(r.level)||r.level<1||r.level>31)return null;return r;}catch{return null;}}
 export function writeRun(run:Run){try{localStorage.setItem(SAVE_KEY,JSON.stringify(run));}catch{/* storage unavailable */}}
