@@ -19,27 +19,27 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  const s:State={...state,tick:state.tick+1,seed:(Math.imul(state.seed,1664525)+1013904223)>>>0,player:{...state.player},entities:state.entities.map(e=>({...e})),grid:[...state.grid],lastInput:input};
  const kind=game(s.id).kind,random=rng(s.seed),speed=dt*(0.16+Math.min(3,s.goal/35)*0.045);
  if(kind==='merge'){
-  if(input&&['left','right','up','down'].includes(input)&&state.lastInput!==input){s.grid=moveTiles(s.grid,input,s.seed);s.score=s.grid.reduce((a,b)=>a+b,0);s.progress=Math.max(...s.grid);if(s.progress>=s.goal)s.won=true;else if(!s.grid.includes(0)&&!(['left','right','up','down'] as Input[]).some(d=>{const v=moveTiles(s.grid,d,s.seed);return v.some((n,i)=>n!==s.grid[i]);}))s.lost=true;}
+  if(input&&['left','right','up','down'].includes(input)){s.grid=moveTiles(s.grid,input,s.seed);s.score=s.grid.reduce((a,b)=>a+b,0);s.progress=Math.max(...s.grid);if(s.progress>=s.goal)s.won=true;else if(!s.grid.includes(0)&&!(['left','right','up','down'] as Input[]).some(d=>{const v=moveTiles(s.grid,d,s.seed);return v.some((n,i)=>n!==s.grid[i]);}))s.lost=true;}
   return s;
  }
  if(kind==='crossing'){
-  if(input&&['left','right','up','down'].includes(input)&&state.lastInput!==input){s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),0.05,0.95);if(input==='up'){s.progress++;s.score++;}if(input==='down')s.progress=Math.max(0,s.progress-1);}
+  if(input&&['left','right','up','down'].includes(input)){s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),0.05,0.95);if(input==='up'){s.progress++;s.score++;}if(input==='down')s.progress=Math.max(0,s.progress-1);}
   if(s.tick%45===0){const fromLeft=random()<.5;s.entities.push({x:fromLeft?-.1:1.1,y:.5,vx:fromLeft?.006:-.006,vy:0,type:0});}
   s.entities=s.entities.filter(e=>e.x>-.2&&e.x<1.2).slice(-16);for(const e of s.entities)e.x+=e.vx;
   if(s.progress>2&&s.entities.some(e=>Math.abs(e.x-s.player.x)<0.055&&Math.abs(e.y-0.5)<0.08))s.lost=true;
  }else if(kind==='slice'){
   if(s.tick%28===0)s.entities.push({x:random(),y:1,vx:(random()-.5)*.012,vy:-.024-random()*.008,type:random()<.15?1:0});
   for(const e of s.entities){e.x+=e.vx;e.y+=e.vy;e.vy+=.00065;}
-  if(input==='slice'&&state.lastInput!=='slice'){const candidates=s.entities.filter(e=>e.y>.15&&e.y<.85);const target=candidates[0];if(target){if(target.type===1)s.lost=true;else{s.progress++;s.score+=10;}s.entities=s.entities.filter(e=>e!==target);}}
+  if(input==='slice'){const candidates=s.entities.filter(e=>e.y>.15&&e.y<.85);const target=candidates[0];if(target){if(target.type===1)s.lost=true;else{s.progress++;s.score+=10;}s.entities=s.entities.filter(e=>e!==target);}}
   s.entities=s.entities.filter(e=>e.y<1.2);
  }else{
   if(input==='left')s.player.x=clamp(s.player.x-.045,.07,.93);
   if(input==='right')s.player.x=clamp(s.player.x+.045,.07,.93);
-  if(kind==='flap'){if(input==='tap'&&state.lastInput!=='tap')s.player.vy=-.012;s.player.vy+=.00065;s.player.y+=s.player.vy;if(s.player.y<=.06||s.player.y>=.94)s.lost=true;}
+  if(kind==='flap'){if(input==='tap')s.player.vy=-.012;s.player.vy+=.00065;s.player.y+=s.player.vy;if(s.player.y<=.06||s.player.y>=.94)s.lost=true;}
   else if(kind==='jetpack'){s.player.vy+=(input==='hold'?-.00075:.0006);s.player.vy=clamp(s.player.vy,-.012,.012);s.player.y+=s.player.vy;if(s.player.y<=.06||s.player.y>=.94)s.player.vy=0;}
-  else if(kind==='climber'){s.player.vy+=.0005;if(input==='up'&&state.lastInput!=='up')s.player.vy=-.016;s.player.y+=s.player.vy;if(s.player.y>.83){s.player.y=.83;s.player.vy=-.014;}}
+  else if(kind==='climber'){s.player.vy+=.0005;if(input==='up')s.player.vy=-.016;s.player.y+=s.player.vy;if(s.player.y>.83){s.player.y=.83;s.player.vy=-.014;}}
   else if(kind==='glide'){s.player.vy+=(input==='hold'?.0009:-.00025);s.player.vy=clamp(s.player.vy,-.012,.014);s.player.y+=s.player.vy;if(s.player.y>.83){s.player.y=.83;s.player.vy=-.009;}}
-  else if(kind==='runner'){if(input==='up'&&state.lastInput!=='up')s.player.y=.28;else s.player.y+=(0.72-s.player.y)*.06;}
+  else if(kind==='runner'){if(input==='up')s.player.y=.28;else s.player.y+=(0.72-s.player.y)*.06;}
   s.player.y=clamp(s.player.y,.06,.94);
   if(s.tick%Math.max(35,90-Math.floor(s.goal/2))===0){const y=kind==='runner'?.72:kind==='flap'?.18+random()*.64:kind==='jetpack'?.16+random()*.68:.2+random()*.6;s.entities.push({x:1.08,y,vx:-speed,vy:0,type:0});}
   for(const e of s.entities)e.x+=e.vx;
