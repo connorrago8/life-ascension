@@ -316,6 +316,7 @@ test('QA preview allowlists match and still fail closed', async () => {
     'beta/crypt-intro-exit-accessibility-20261029',
     'beta/quest-ui-clean-review',
     'chatgpt/emberhaven-crypt-integration-20261031',
+    'grok/rc1-smoke-fixes',
     'grok/release-candidate-1',
   ];
   const files = [
@@ -328,6 +329,9 @@ test('QA preview allowlists match and still fail closed', async () => {
   const release = { ...qa, VERCEL_GIT_COMMIT_REF: 'grok/release-candidate-1' };
   assert.equal(validateDeploymentEnv(release), true);
   assert.equal((await runtimePublicConfig(release))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  const smokeFixes = { ...qa, VERCEL_GIT_COMMIT_REF: 'grok/rc1-smoke-fixes' };
+  assert.equal(validateDeploymentEnv(smokeFixes), true);
+  assert.equal((await runtimePublicConfig(smokeFixes))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
   const scanned = await verifyQaBrowserBundleAfterBuild({
     env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'grok/release-candidate-1' },
     inspect: async () => ({ inspected: 1, qaMatches: 1 }),
