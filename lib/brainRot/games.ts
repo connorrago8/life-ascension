@@ -24,9 +24,9 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  }
  if(kind==='crossing'){
   if(input&&['left','right','up','down'].includes(input)){s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),0.05,0.95);if(input==='up'){s.progress++;s.score++;s.player.y=clamp(s.player.y-.055,.08,.92);}if(input==='down'){s.progress=Math.max(0,s.progress-1);s.player.y=clamp(s.player.y+.055,.08,.92);}}
-  if(s.tick%45===0){const fromLeft=random()<.5;s.entities.push({x:fromLeft?-.1:1.1,y:.5,vx:fromLeft?.006:-.006,vy:0,type:0});}
+  if(s.tick%45===0){const fromLeft=random()<.5;const lane=(s.tick/45)%5;s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?.006:-.006,vy:0,type:0});}
   s.entities=s.entities.filter(e=>e.x>-.2&&e.x<1.2).slice(-16);for(const e of s.entities)e.x+=e.vx;
-  if(s.progress>2&&s.entities.some(e=>Math.abs(e.x-s.player.x)<0.055&&Math.abs(e.y-0.5)<0.08))s.lost=true;
+  if(s.progress>2&&s.entities.some(e=>Math.abs(e.x-s.player.x)<0.055&&Math.abs(e.y-s.player.y)<0.065))s.lost=true;
  }else if(kind==='slice'){
   if(s.tick%28===0)s.entities.push({x:random(),y:1,vx:(random()-.5)*.012,vy:-.024-random()*.008,type:random()<.15?1:0});
   for(const e of s.entities){e.x+=e.vx;e.y+=e.vy;e.vy+=.00065;}
