@@ -54,3 +54,6 @@ test('jetpack spawned pickups follow current altitude',()=>{let s=games.createGa
 test('Frog King scores only after reaching far bank and resets to starting bank',()=>{let s=games.createGame('frog-kings-crossing',1,3);s.player.y=.2;const before=games.step(s,'up');assert.equal(before.progress,0);const reached=games.step(before,'up');assert.equal(reached.progress,1);assert.equal(reached.score,10);assert.equal(reached.player.y,.92);});
 
 test('Endless Crossing scores forward hops while Frog King requires reaching bank',()=>{let endless=games.createGame('endless-crossing',1,19);let frog=games.createGame('frog-kings-crossing',1,19);endless=games.step(endless,'up');frog=games.step(frog,'up');assert.equal(endless.progress,1);assert.equal(endless.score,2);assert.equal(frog.progress,0);assert.ok(frog.player.y<.5);});
+
+test('Endless Crossing forward hop scrolls traffic downward',()=>{let s=games.createGame('endless-crossing',1,8);s.entities=[{x:.2,y:.24,vx:0,vy:0,type:0}];const n=games.step(s,'up');assert.equal(n.progress,1);assert.equal(n.entities[0].y,.36);assert.equal(n.player.y,.5);});
+test('Frog King forward hop does not scroll traffic',()=>{let s=games.createGame('frog-kings-crossing',1,8);s.entities=[{x:.2,y:.24,vx:0,vy:0,type:0}];const n=games.step(s,'up');assert.equal(n.entities[0].y,.24);assert.equal(n.progress,0);});
