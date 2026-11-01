@@ -25,10 +25,10 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  if(kind==='crossing'){
   if(input&&['left','right','up','down'].includes(input)){
    s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),.05,.95);
-   if(input==='up'){if(s.id==='endless-crossing'){s.progress++;s.score+=2;s.player.y=.5;}else s.player.y=clamp(s.player.y-.12,.08,.92);}
+   if(input==='up'){if(s.id==='endless-crossing'){s.progress++;s.score+=2;s.player.y=.5;for(const e of s.entities)e.y+=.12;}else s.player.y=clamp(s.player.y-.12,.08,.92);}
    if(input==='down')s.player.y=clamp(s.player.y+.12,.08,.92);
   }
-  if(s.tick%45===0){const fromLeft=random()<.5;const lane=(s.tick/45)%5;s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?.006:-.006,vy:0,type:0});}
+  if(s.tick%45===0){const fromLeft=random()<.5;const lane=s.id==='endless-crossing'?Math.floor(random()*5):(s.tick/45)%5;s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?.006:-.006,vy:0,type:0});}
   s.entities=s.entities.filter(e=>e.x>-.2&&e.x<1.2).slice(-16);for(const e of s.entities)e.x+=e.vx;
   if(s.entities.some(e=>Math.abs(e.x-s.player.x)<.055&&Math.abs(e.y-s.player.y)<.065))s.lost=true;
   if(s.id==='frog-kings-crossing'&&s.player.y<=.08&&!s.lost){s.progress++;s.score+=10;s.player.y=.92;}
