@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import ts from 'typescript';
 import vm from 'node:vm';
 const cache=new Map();
-function load(path){if(cache.has(path))return cache.get(path);const source=fs.readFileSync(path,'utf8');const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};vm.runInNewContext(js,{exports,require:(name)=>{if(name==='./core')return load('lib/brainRot/core.ts');throw Error(name);},localStorage:undefined});cache.set(path,exports);return exports;}
+function load(path){if(cache.has(path))return cache.get(path);const source=fs.readFileSync(path,'utf8');const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};vm.runInNewContext(js,{exports,require:(name)=>{if(name==='./core')return load('lib/brainRot/core.ts');throw Error(name);},localStorage:undefined,structuredClone});cache.set(path,exports);return exports;}
 const core=load('lib/brainRot/core.ts'),games=load('lib/brainRot/games.ts');
 test('all thirty levels contain each of ten games exactly once per cycle',()=>{for(let seed=1;seed<101;seed++){const list=core.order(seed);assert.equal(list.length,30);for(let cycle=0;cycle<3;cycle++)assert.equal(new Set(list.slice(cycle*10,cycle*10+10)).size,10);assert.notEqual(list[9],list[10]);assert.notEqual(list[19],list[20]);}});
 test('level thirty unlocks boss and does not exceed 31',()=>{let run=core.newRun(42);for(let i=0;i<31;i++)run=core.completeLevel(run);assert.equal(run.level,31);assert.equal(run.best,31);});
