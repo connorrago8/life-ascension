@@ -59,7 +59,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
     if(e.type===2&&e.x<s.player.x&&e.x+0.0045>=s.player.x){s.progress++;s.score+=10;}
    }
   }else{
-   if(s.entities.some(e=>e.type!==1&&Math.abs(e.x-s.player.x)<.045&&Math.abs(e.y-s.player.y)<.09))s.lost=true;
+   if(s.entities.some(e=>(kind!=='jetpack'||e.type!==1)&&Math.abs(e.x-s.player.x)<.045&&Math.abs(e.y-s.player.y)<.09))s.lost=true;
    if(kind==='jetpack'){
     for(const e of s.entities){if(e.type===1&&Math.abs(e.x-s.player.x)<.07&&Math.abs(e.y-s.player.y)<.09){s.progress++;s.score+=10;e.type=2;}}
     s.entities=s.entities.filter(e=>e.type!==2);
