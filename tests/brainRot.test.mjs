@@ -26,3 +26,5 @@ test('crossing hazard velocity always points into the playfield',()=>{let s=game
 
 test('repeated rune swipes work even when previous input matches',()=>{let s=games.createGame('rune-fusion',1,12);s.grid=[2,0,2,0,...Array(12).fill(0)];s.lastInput='left';const n=games.step(s,'left');assert.equal(n.grid[0],4);});
 test('repeated crossing swipes advance even after matching prior direction',()=>{let s=games.createGame('frog-kings-crossing',1,12);s.lastInput='up';const n=games.step(s,'up');assert.equal(n.progress,1);});
+
+test('completing objective and touching hazard on same tick is a win',()=>{let s=games.createGame('goblin-jetpack',1,42);s.progress=s.goal-1;s.tick=59;s.entities=[{x:.5,y:.5,vx:0,vy:0,type:0}];const n=games.step(s,null);assert.equal(n.won,true);assert.equal(n.lost,false);});
