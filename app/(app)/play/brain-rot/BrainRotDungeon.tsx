@@ -9,7 +9,7 @@ function Surface({state}:{state:State}){
  return <div style={{position:'relative',width:'100%',height:360,overflow:'hidden',borderRadius:18,background:'linear-gradient(160deg,#1d273a,#142923)',border:'2px solid #806b4a',touchAction:'none'}}>
  {kind==='merge'?<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:7,padding:18,height:'100%'}}>{state.grid.map((n,i)=><div key={i} style={{display:'grid',placeItems:'center',borderRadius:9,background:n?'#866c45':'#334139',fontSize:25,fontWeight:800,color:'#fff'}}>{n||''}</div>)}</div>:<>
  {kind==='crossing'&&Array.from({length:8},(_,i)=><div key={i} style={{position:'absolute',top:i*45,height:2,width:'100%',background:'#5a6255'}}/>)}
- {state.entities.map((e,i)=><div key={i} style={{position:'absolute',left:(e.x*100)+'%',top:(e.y*100)+'%',width:28,height:28,borderRadius:e.type?2:9,background:e.type?'#e94b65':palette[i%palette.length],transform:'translate(-50%,-50%)',boxShadow:'0 0 10px #0008'}}/>)}
+ {state.entities.map((e,i)=><div key={i} style={{position:'absolute',left:(e.x*100)+'%',top:(e.y*100)+'%',width:kind==='flap'&&e.type>=2?42:28,height:kind==='flap'&&e.type>=2?110:28,borderRadius:e.type?2:9,background:kind==='flap'&&e.type>=2?'linear-gradient(90deg,#477e61,#a0d1a3,#477e61)':e.type?'#e94b65':palette[i%palette.length],transform:kind==='flap'&&e.type===2?'translate(-50%,-100%)':kind==='flap'&&e.type===3?'translate(-50%,0)':'translate(-50%,-50%)',boxShadow:'0 0 10px #0008'}}/>)}
  <div style={{position:'absolute',left:(state.player.x*100)+'%',top:(state.player.y*100)+'%',fontSize:36,transform:'translate(-50%,-50%)'}}>{kind==='flap'?'🐉':kind==='jetpack'?'🚀':kind==='climber'?'🐸':kind==='crossing'?'🐔':kind==='slice'?'⚔️':kind==='glide'?'🪽':'🏃'}</div>
  </>}
  </div>;
