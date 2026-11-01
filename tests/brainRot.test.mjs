@@ -41,3 +41,5 @@ test('crossing traffic uses distinct lanes',()=>{let s=games.createGame('frog-ki
 test('crossing collision requires matching player lane',()=>{let s=games.createGame('frog-kings-crossing',1,15);s.progress=3;s.player.y=.5;s.entities=[{x:.5,y:.24,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,false);s.entities=[{x:.5,y:.5,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
 
 test('crossing collision is active even before three hops',()=>{let s=games.createGame('frog-kings-crossing',1,15);s.progress=0;s.entities=[{x:s.player.x,y:s.player.y,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
+
+test('run validation rejects duplicate games and malformed boss',()=>{const r=core.newRun(12);assert.equal(core.validRun(r),true);r.order[1]=r.order[0];assert.equal(core.validRun(r),false);const b=core.newRun(12);b.level=31;b.boss=core.newBoss(12);assert.equal(core.validRun(b),true);b.boss.segmentMs=17000;assert.equal(core.validRun(b),false);});
