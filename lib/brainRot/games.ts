@@ -46,7 +46,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
    s.entities.push({x:1.08,y:center-.22,vx:-.0045,vy:0,type:2},{x:1.08,y:center+.22,vx:-.0045,vy:0,type:3});
   }else if(kind!=='flap'&&s.tick%Math.max(35,90-Math.floor(s.goal/2))===0){
    const y=kind==='runner'?.72:kind==='jetpack'?.16+random()*.68:.2+random()*.6;
-   s.entities.push({x:1.08,y,vx:-speed,vy:0,type:0});
+   s.entities.push({x:1.08,y,vx:-speed,vy:0,type:kind==='jetpack'&&s.tick%2===0?1:0});
   }
   for(const e of s.entities)e.x+=e.vx;
   s.entities=s.entities.filter(e=>e.x>-.1);
@@ -59,8 +59,11 @@ export function step(state:State,input:Input|null,dt=1/60):State{
     if(e.type===2&&e.x<s.player.x&&e.x+0.0045>=s.player.x){s.progress++;s.score+=10;}
    }
   }else{
-   if(s.entities.some(e=>Math.abs(e.x-s.player.x)<.045&&Math.abs(e.y-s.player.y)<.09))s.lost=true;
-   if(s.tick%60===0)s.progress++;
+   if(s.entities.some(e=>e.type!==1&&Math.abs(e.x-s.player.x)<.045&&Math.abs(e.y-s.player.y)<.09))s.lost=true;
+   if(kind==='jetpack'){
+    for(const e of s.entities){if(e.type===1&&Math.abs(e.x-s.player.x)<.07&&Math.abs(e.y-s.player.y)<.09){s.progress++;s.score+=10;e.type=2;}}
+    s.entities=s.entities.filter(e=>e.type!==2);
+   }else if(s.tick%60===0)s.progress++;
   }
  }
  if(s.progress>=s.goal){s.won=true;s.lost=false;}
