@@ -28,3 +28,7 @@ test('repeated rune swipes work even when previous input matches',()=>{let s=gam
 test('repeated crossing swipes advance even after matching prior direction',()=>{let s=games.createGame('frog-kings-crossing',1,12);s.lastInput='up';const n=games.step(s,'up');assert.equal(n.progress,1);});
 
 test('completing objective and touching hazard on same tick is a win',()=>{let s=games.createGame('goblin-jetpack',1,42);s.progress=s.goal-1;s.tick=59;s.entities=[{x:.5,y:.5,vx:0,vy:0,type:0}];const n=games.step(s,null);assert.equal(n.won,true);assert.equal(n.lost,false);});
+
+test('wyvern spawns paired upper and lower gates',()=>{let s=games.createGame('flappy-wyvern',1,42);s.player.y=.5;s.player.vy=0;for(let i=0;i<100;i++){if(s.lost)break;s=games.step(s,i%18===0?'tap':null);}assert.ok(s.entities.some(e=>e.type===2),'upper gate should spawn');assert.ok(s.entities.some(e=>e.type===3),'lower gate should spawn');});
+test('wyvern scores on gate passage rather than elapsed seconds',()=>{let s=games.createGame('flappy-wyvern',1,42);s.tick=150;s.player.y=.5;s.player.vy=0;s.entities=[{x:.502,y:.2,vx:-.0045,vy:0,type:2},{x:.502,y:.8,vx:-.0045,vy:0,type:3}];const n=games.step(s,null);assert.equal(n.progress,1);assert.equal(n.score,10);assert.equal(n.lost,false);});
+test('wyvern collides with upper gate outside gap',()=>{let s=games.createGame('flappy-wyvern',1,42);s.player.y=.25;s.entities=[{x:.5,y:.2,vx:0,vy:0,type:2}];assert.equal(games.step(s,null).lost,true);});
