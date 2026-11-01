@@ -24,7 +24,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  }
  if(kind==='crossing'){
   if(input&&['left','right','up','down'].includes(input)&&state.lastInput!==input){s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),0.05,0.95);if(input==='up'){s.progress++;s.score++;}if(input==='down')s.progress=Math.max(0,s.progress-1);}
-  if(s.tick%35===0)s.entities.push({x:random(),y:random(),vx:random()<0.5?0.007:-0.007,vy:0,type:0});
+  if(s.tick%35===0)s.entities.push({x:random()<.5?-.1:1.1,y:.5,vx:random()<.5?0.007:-0.007,vy:0,type:0});
   s.entities=s.entities.filter(e=>e.x>-.2&&e.x<1.2).slice(-16);for(const e of s.entities)e.x+=e.vx;
   if(s.progress>2&&s.entities.some(e=>Math.abs(e.x-s.player.x)<0.055&&Math.abs(e.y-0.5)<0.08))s.lost=true;
  }else if(kind==='slice'){
