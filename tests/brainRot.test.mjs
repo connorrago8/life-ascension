@@ -52,3 +52,5 @@ test('collision defeats simultaneous collectible goal completion',()=>{let s=gam
 test('jetpack spawned pickups follow current altitude',()=>{let s=games.createGame('goblin-jetpack',1,22);s.player.y=.7;const interval=Math.max(35,90-Math.floor(s.goal/2));s.tick=interval*2-1;const n=games.step(s,null);const pickup=n.entities.find(e=>e.type===1);assert.ok(pickup);assert.equal(pickup.y,n.player.y);});
 
 test('Frog King scores only after reaching far bank and resets to starting bank',()=>{let s=games.createGame('frog-kings-crossing',1,3);s.player.y=.2;const before=games.step(s,'up');assert.equal(before.progress,0);const reached=games.step(before,'up');assert.equal(reached.progress,1);assert.equal(reached.score,10);assert.equal(reached.player.y,.92);});
+
+test('Endless Crossing scores forward hops while Frog King requires reaching bank',()=>{let endless=games.createGame('endless-crossing',1,19);let frog=games.createGame('frog-kings-crossing',1,19);endless=games.step(endless,'up');frog=games.step(frog,'up');assert.equal(endless.progress,1);assert.equal(endless.score,2);assert.equal(frog.progress,0);assert.ok(frog.player.y<.5);});
