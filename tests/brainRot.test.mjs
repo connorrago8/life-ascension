@@ -23,3 +23,6 @@ test('boss failure after three hearts resets attempt',()=>{let b=core.newBoss(10
 test('flappy wyvern fails on floor contact',()=>{let s=games.createGame('flappy-wyvern',1,4);s.player.y=.939;s.player.vy=.012;const next=games.step(s,null);assert.equal(next.lost,true);});
 test('goblin jetpack stays inside arena and zeroes velocity at edge',()=>{let s=games.createGame('goblin-jetpack',1,4);s.player.y=.94;s.player.vy=.01;const next=games.step(s,null);assert.equal(next.player.y,.94);assert.equal(next.player.vy,0);});
 test('crossing hazard velocity always points into the playfield',()=>{let s=games.createGame('frog-kings-crossing',1,12);for(let i=0;i<45;i++)s=games.step(s,null);assert.ok(s.entities.length>0);for(const e of s.entities)assert.ok(e.x<0?e.vx>0:e.x>1?e.vx<0:true);});
+
+test('repeated rune swipes work even when previous input matches',()=>{let s=games.createGame('rune-fusion',1,12);s.grid=[2,0,2,0,...Array(12).fill(0)];s.lastInput='left';const n=games.step(s,'left');assert.equal(n.grid[0],4);});
+test('repeated crossing swipes advance even after matching prior direction',()=>{let s=games.createGame('frog-kings-crossing',1,12);s.lastInput='up';const n=games.step(s,'up');assert.equal(n.progress,1);});
