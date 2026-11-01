@@ -25,7 +25,7 @@ test('goblin jetpack stays inside arena and zeroes velocity at edge',()=>{let s=
 test('crossing hazard velocity always points into the playfield',()=>{let s=games.createGame('frog-kings-crossing',1,12);for(let i=0;i<45;i++)s=games.step(s,null);assert.ok(s.entities.length>0);for(const e of s.entities)assert.ok(e.x<0?e.vx>0:e.x>1?e.vx<0:true);});
 
 test('repeated rune swipes work even when previous input matches',()=>{let s=games.createGame('rune-fusion',1,12);s.grid=[2,0,2,0,...Array(12).fill(0)];s.lastInput='left';const n=games.step(s,'left');assert.equal(n.grid[0],4);});
-test('repeated crossing swipes advance even after matching prior direction',()=>{let s=games.createGame('frog-kings-crossing',1,12);s.lastInput='up';const n=games.step(s,'up');assert.equal(n.progress,1);});
+test('repeated crossing swipes move the character rather than granting unearned progress',()=>{let s=games.createGame('frog-kings-crossing',1,12);s.lastInput='up';const n=games.step(s,'up');assert.ok(n.player.y<s.player.y);assert.equal(n.progress,0);});
 
 test('jetpack hazard collision cannot be bypassed by passive goal progress',()=>{let s=games.createGame('goblin-jetpack',1,42);s.progress=s.goal-1;s.tick=59;s.entities=[{x:.5,y:.5,vx:0,vy:0,type:0}];const n=games.step(s,null);assert.equal(n.won,false);assert.equal(n.lost,true);});
 
@@ -35,7 +35,7 @@ test('wyvern collides with upper gate outside gap',()=>{let s=games.createGame('
 
 test('rune opening tiles are deterministic, distinct and seed dependent',()=>{const a=games.createGame('rune-fusion',1,42).grid;const b=games.createGame('rune-fusion',1,42).grid;assert.equal(JSON.stringify(a),JSON.stringify(b));assert.equal(a.filter(Boolean).length,2);assert.ok(a.every(n=>n===0||n===2));const variants=new Set(Array.from({length:12},(_,i)=>JSON.stringify(games.createGame('rune-fusion',1,i).grid)));assert.ok(variants.size>1);});
 
-test('crossing up and down visibly move player with progress',()=>{const s=games.createGame('frog-kings-crossing',1,9);const up=games.step(s,'up');assert.ok(up.player.y<s.player.y);assert.equal(up.progress,1);const down=games.step(up,'down');assert.ok(down.player.y>up.player.y);assert.equal(down.progress,0);});
+test('crossing up and down visibly move player with progress',()=>{const s=games.createGame('frog-kings-crossing',1,9);const up=games.step(s,'up');assert.ok(up.player.y<s.player.y);assert.equal(up.progress,0);const down=games.step(up,'down');assert.ok(down.player.y>up.player.y);assert.equal(down.progress,0);});
 
 test('crossing traffic uses distinct lanes',()=>{let s=games.createGame('frog-kings-crossing',1,15);for(let i=0;i<180;i++){s=games.step(s,null);if(s.lost)break;}assert.ok(new Set(s.entities.map(e=>e.y)).size>=3);});
 test('crossing collision requires matching player lane',()=>{let s=games.createGame('frog-kings-crossing',1,15);s.progress=3;s.player.y=.5;s.entities=[{x:.5,y:.24,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,false);s.entities=[{x:.5,y:.5,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
@@ -50,3 +50,5 @@ test('jetpack hazards still damage player',()=>{let s=games.createGame('goblin-j
 
 test('collision defeats simultaneous collectible goal completion',()=>{let s=games.createGame('goblin-jetpack',1,22);s.progress=s.goal-1;s.entities=[{x:.5,y:.5,vx:0,vy:0,type:1},{x:.5,y:.5,vx:0,vy:0,type:0}];const n=games.step(s,null);assert.equal(n.progress,s.goal);assert.equal(n.lost,true);assert.equal(n.won,false);});
 test('jetpack spawned pickups follow current altitude',()=>{let s=games.createGame('goblin-jetpack',1,22);s.player.y=.7;const interval=Math.max(35,90-Math.floor(s.goal/2));s.tick=interval*2-1;const n=games.step(s,null);const pickup=n.entities.find(e=>e.type===1);assert.ok(pickup);assert.equal(pickup.y,n.player.y);});
+
+test('Frog King scores only after reaching far bank and resets to starting bank',()=>{let s=games.createGame('frog-kings-crossing',1,3);s.player.y=.2;const before=games.step(s,'up');assert.equal(before.progress,0);const reached=games.step(before,'up');assert.equal(reached.progress,1);assert.equal(reached.score,10);assert.equal(reached.player.y,.92);});
