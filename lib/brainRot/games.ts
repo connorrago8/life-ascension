@@ -41,7 +41,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
     const x=.08+track*.21;
     const rawDepth=.14+random()*.48;
     const depth=Math.abs(rawDepth-s.player.y)<.08?s.player.y-.18:rawDepth;
-    if(!s.entities.some(e=>Math.abs(e.y-depth)<.10&&Math.abs(e.x-x)<.12))
+    if(!s.entities.some(e=>Math.abs(e.y-depth)<.10&&Math.abs(e.x-x)<.12)&&!s.entities.some(e=>Math.abs(e.y-depth)<.065&&Math.abs(e.x-s.player.x)<.055))
      s.entities.push({x,y:depth,vx:(fromLeft?1:-1)*velocity,vy:0,type:0});
    }else s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?velocity:-velocity,vy:0,type:0});
   }
