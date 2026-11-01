@@ -7,7 +7,7 @@ create table if not exists public.izzy_approved_assignments (
   owner_id uuid not null references auth.users(id) on delete cascade,
   quest_id uuid not null,
   quest_instance_id uuid not null unique,
-  proposal_id uuid not null unique references public.izzy_submission_proposals(id),
+  proposal_id bigint not null unique references public.izzy_submission_proposals(id),
   origin text not null default 'izzy' check (origin = 'izzy'),
   approved_at timestamptz not null default now(),
   consent_at timestamptz,
