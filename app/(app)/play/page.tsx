@@ -15,11 +15,12 @@ export default function PlayPage() {
     <Link className="btn ghost" href="/">Home</Link>
    </div>
   </section>
-  <article className="lock-card" aria-disabled="true">
+  <article className="lock-card">
    <p className="lock-kicker">Adventure preview</p>
    <h2>Forgotten Crypt</h2>
-   <p className="soon-pill">Integration preview</p>
-   <p className="muted">Crypt gameplay is undergoing integration checks before this entrance opens.</p>
+   <p className="soon-pill">Playable preview</p>
+   <p className="muted">Explore the Crypt in this isolated integration preview. An unfinished run resumes on this device.</p>
+   <Link className="btn" href="/play/delve">Enter Forgotten Crypt →</Link>
   </article>
  </main>;
 }
