@@ -5,7 +5,7 @@ export type State = {id:GameId;tick:number;seed:number;progress:number;goal:numb
 const game=(id:GameId)=>GAMES.find(g=>g.id===id)!;
 export function createGame(id:GameId,tier:number,seed:number):State{
  const kind=game(id).kind;const goals:Record<string,number[]>={runner:[35,55,75],climber:[25,45,65],flap:[10,20,30],jetpack:[35,55,75],crossing:[12,24,36],slice:[15,30,45],glide:[35,55,75],merge:[128,256,512]};
- const grid=Array(16).fill(0);if(kind==='merge'){grid[0]=2;grid[5]=2;}
+ const grid=Array(16).fill(0);if(kind==='merge'){const random=rng(seed);const first=Math.floor(random()*16);let second=Math.floor(random()*15);if(second>=first)second++;grid[first]=2;grid[second]=2;}
  return {id,tick:0,seed,progress:0,goal:goals[kind][Math.min(2,tier-1)],score:0,player:{x:0.5,y:0.5,vx:0,vy:0},entities:[],grid,lost:false,won:false,pressed:false,lastInput:null};
 }
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
