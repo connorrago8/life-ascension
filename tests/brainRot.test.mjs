@@ -70,3 +70,5 @@ test('Endless Crossing lethal forward hop never awards distance',()=>{let s=game
 test('Endless Crossing backward input does not detach player from camera',()=>{let s=games.createGame('endless-crossing',1,33);const y=s.player.y;const n=games.step(s,'down');assert.equal(n.player.y,y);assert.equal(n.progress,0);});
 
 test('Endless Crossing suppresses same-direction traffic on an occupied nearby corridor',()=>{let s=games.createGame('endless-crossing',1,91);s.tick=44;s.entities=[{x:-.1,y:.32,vx:.006,vy:0,type:0},{x:1.1,y:.32,vx:-.006,vy:0,type:0}];const n=games.step(s,null);assert.ok(n.entities.length<=3);});
+
+test('Crossing games keep horizontal movement within screen margins',()=>{for(const id of ['endless-crossing','frog-kings-crossing']){let s=games.createGame(id,1,17);for(let i=0;i<20;i++)s=games.step(s,'left');assert.ok(s.player.x>=.08);for(let i=0;i<40;i++)s=games.step(s,'right');assert.ok(s.player.x<=.92);}});
