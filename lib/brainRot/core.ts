@@ -37,6 +37,17 @@ export function advanceBoss(boss:Boss,deltaMs:number,seed:number):Boss{
  if(queue.length>1&&queue[0]===game)[queue[0],queue[1]]=[queue[1],queue[0]];
  return {...boss,seconds,queue,index:0,segmentMs:0};
 }
+export function beginBossSegment(boss:Boss,game:GameId,state:unknown):Boss{
+ if(boss.queue[boss.index]!==game||boss.won)return boss;
+ if(boss.segmentMs>0||boss.snapshots[game]!==undefined)return boss;
+ return {...boss,snapshots:{...boss.snapshots,[game]:structuredClone(state)}};
+}
+export function failBossSegment(boss:Boss):{boss:Boss;restore:unknown|null;reset:boolean}{
+ const id=boss.queue[boss.index];const hearts=boss.hearts-1;
+ if(hearts<=0)return {boss:newBoss(0),restore:null,reset:true};
+ const restore=boss.snapshots[id]===undefined?null:structuredClone(boss.snapshots[id]);
+ return {boss:{...boss,hearts,segmentMs:0,states:{...boss.states,[id]:restore??undefined},snapshots:{...boss.snapshots,[id]:undefined}},restore,reset:false};
+}
 export const SAVE_KEY='life-ascension:brain-rot:v1';
 export const ACTIVE_KEY='life-ascension:brain-rot:active:v1';
 export function readActive():unknown|null{try{const raw=localStorage.getItem(ACTIVE_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
