@@ -3,7 +3,8 @@ import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {supabase} from '../../../../lib/supabase';
 
-type Quest={id:string;title:string;domain:string;cadence:string;scheduled_for:string|null;active:boolean};
+type Quest={id:string;title:string;domain:string;cadence:string;scheduled_for:string|null;active:boolean;fixed_reveal?:boolean|null;weekly_weekday?:number|null};
+const WEEKDAYS=['','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 function chicagoToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 export default function ManageQuests(){
  const [quests,setQuests]=useState<Quest[]>([]);
@@ -16,7 +17,7 @@ export default function ManageQuests(){
   const {data:{user}}=await client.auth.getUser();
   setSignedIn(!!user);
   if(!user){setLoading(false);return}
-  const {data,error}=await client.from('quests').select('id,title,domain,cadence,scheduled_for,active').eq('owner_id',user.id).eq('active',true).order('created_at',{ascending:false}).limit(200);
+  const {data,error}=await client.from('quests').select('id,title,domain,cadence,scheduled_for,active,fixed_reveal,weekly_weekday').eq('owner_id',user.id).eq('active',true).order('created_at',{ascending:false}).limit(200);
   if(error)setMessage('Unable to load quests. Please try again.');
   else setQuests(data||[]);
   setLoading(false);
@@ -44,6 +45,6 @@ export default function ManageQuests(){
  return <main className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Manage quests</h1><p className="muted">Rename, change dates, or archive active quests. Archiving never removes earned XP.</p>
  <p><Link href="/quests">← Back to Quest Board</Link></p>
  {loading?<p>Loading quests…</p>:!signedIn?<p>Please <Link href="/login?next=%2Fquests%2Fmanage">sign in</Link> to manage quests.</p>:<section className="panel"><h2>Active quests</h2>{quests.length===0&&<p>No active quests.</p>}
- {quests.map(q=><div className="quest" key={q.id}><div className="quest-main"><div className="quest-title">{q.title}</div><div className="muted">{q.domain} · {q.cadence} · {q.scheduled_for||'No date set'}</div></div><div className="actions"><button className="btn ghost" disabled={!!busy} onClick={()=>void rename(q)}>Rename</button><button className="btn ghost" disabled={!!busy} onClick={()=>void reschedule(q)}>Reschedule</button><button className="btn ghost" disabled={!!busy} onClick={()=>void archive(q)}>Archive</button></div></div>)}
+ {quests.map(q=><div className="quest" key={q.id}><div className="quest-main"><div className="quest-title">{q.title}</div><div className="muted">{q.domain} · {q.cadence==='weekly'&&q.fixed_reveal&&WEEKDAYS[q.weekly_weekday??0]?`weekly · ${WEEKDAYS[q.weekly_weekday??0]}`:q.cadence} · {q.scheduled_for||'No date set'}</div></div><div className="actions"><button className="btn ghost" disabled={!!busy} onClick={()=>void rename(q)}>Rename</button><button className="btn ghost" disabled={!!busy} onClick={()=>void reschedule(q)}>Reschedule</button><button className="btn ghost" disabled={!!busy} onClick={()=>void archive(q)}>Archive</button></div></div>)}
  </section>}<p className="message" role="status" aria-live="polite">{message}</p></main>;
 }

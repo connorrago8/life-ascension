@@ -12,8 +12,10 @@
  *    integers as floor(xp × (10 + F) / 10). No cap.
  *  - Daily board: up to DAILY_BOARD_SIZE daily quests a day, picked per user per
  *    local day (stable across reloads). Off-board completions still count.
- *  - Weekly quests appear at a seeded time between Monday 00:00 and Thursday 12:00
- *    local time and stay until done or the week ends (Sunday 23:59).
+ *  - Weekly quests with no fixed reveal appear at a seeded time between Monday
+ *    00:00 and Thursday 12:00 local time and stay until done or Sunday 23:59.
+ *  - A weekly quest with fixed_reveal appears at local midnight on its assigned
+ *    weekday (Monday when that weekday is 1) and can be completed from then.
  *  - Local day: the profile's time zone when one is stored; today there is no such
  *    column, so every account uses America/Chicago, the same day boundary as every
  *    existing completion window.
@@ -96,8 +98,14 @@ export function weekStart(date: string): string {
   return addDays(date, 1 - isoDow);
 }
 
+export type WeeklyReveal = { fixedReveal?: boolean | null; weekday?: number | null };
+
 /** Minutes after Monday 00:00 local when a weekly quest appears. Same as SQL. */
-export function weeklyAppearOffset(userId: string, questId: string, week: string): number {
+export function weeklyAppearOffset(userId: string, questId: string, week: string, reveal?: WeeklyReveal): number {
+  if (reveal?.fixedReveal) {
+    const weekday = reveal.weekday != null && reveal.weekday >= 1 && reveal.weekday <= 7 ? Math.floor(reveal.weekday) : 1;
+    return (weekday - 1) * 1440;
+  }
   return fnv1a32(`${userId}:${questId}:${week}`) % WEEKLY_WINDOW_MINUTES;
 }
 
@@ -108,9 +116,9 @@ export function minutesIntoWeek(date: string, minutesOfDay: number): number {
 }
 
 /** Whether a weekly quest is on this week's board at local `date` + `minutesOfDay`. */
-export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number): boolean {
+export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number, reveal?: WeeklyReveal): boolean {
   const week = weekStart(date);
-  return minutesIntoWeek(date, minutesOfDay) >= weeklyAppearOffset(userId, questId, week);
+  return minutesIntoWeek(date, minutesOfDay) >= weeklyAppearOffset(userId, questId, week, reveal);
 }
 
 /** "Thu 9:41 AM" style label for when a weekly quest appears. */

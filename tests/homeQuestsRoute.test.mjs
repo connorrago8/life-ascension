@@ -49,8 +49,10 @@ test('Home is character-first, read-only, and does not duplicate the nav', () =>
   assert.equal((home.match(/<Link /g) ?? []).length, 1);
   assert.match(home, /<Link href="\/quests" className="hub-card hub-today"/);
   assert.doesNotMatch(home, /Enter (the )?Crypt|Go to Quest Board|href="\/play/i);
-  // Home never writes: no completes, ensures, equips, or inserts.
-  assert.doesNotMatch(home, /set_quest_instance_status|ensure_quest_instance|equip_earned_armor|\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
+  // Home opens due instances in the player's local date. It still never completes, equips, or writes rows directly.
+  assert.match(home, /ensure_quest_instance/);
+  assert.doesNotMatch(home, /quest_board_v3_ensure_instances/);
+  assert.doesNotMatch(home, /set_quest_instance_status|equip_earned_armor|\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });
 
 test('Home and board keep 44px taps and clear the bottom nav and safe areas', () => {

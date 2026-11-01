@@ -4,7 +4,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review', 'beta/crypt-intro-exit-accessibility-20261029', 'chatgpt/emberhaven-crypt-integration-20261031', 'grok/release-candidate-1', 'grok/rc1-smoke-fixes']);
+const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review', 'beta/crypt-intro-exit-accessibility-20261029', 'chatgpt/emberhaven-crypt-integration-20261031', 'grok/release-candidate-1', 'grok/rc1-smoke-fixes', 'grok/weekly-autopilot']);
 const PRIVILEGED_NONPRODUCTION_KEYS = Object.freeze([
   'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
   'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'SUPABASE_DB_PASSWORD',

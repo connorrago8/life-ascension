@@ -18,12 +18,13 @@ import {localToday,playerTimeZone} from '../../../lib/playerTimeZone';
 import {readQuestProgress,writeQuestProgress} from '../../../lib/questProgressSnapshot';
 import {forgetPendingComplete,pendingCompletes,rememberPendingComplete} from '../../../lib/pendingQuestComplete';
 import {previewBoard} from '../../../lib/questBoardPreview';
-type Quest={id:string;title:string;domain:string;cadence:'once'|'daily'|'weekly';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
+import {ISO_WEEKDAYS,PHARMACY_WEEKLY_TITLES} from '../../../lib/questAutopilot';
+type Quest={id:string;title:string;domain:string;cadence:'once'|'daily'|'weekly';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null;fixed_reveal?:boolean|null;weekly_weekday?:number|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
 const DOMAINS=[['hygiene','Hygiene & appearance'],['home','Home & environment'],['mental_health','Mental health & recovery'],['personal_growth','Growth & hobbies'],['finance','Financial health'],['career','Career & productivity'],['relationships','Relationships'],['physical_health','Physical health']];
 function todayLocal(){return localToday(new Date(),playerTimeZone())}
 export default function QuestBoard(){
- const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState<number|null>(null),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'|'weekly'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2Fquests');
+ const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState<number|null>(null),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'|'weekly'>('daily'),[weekday,setWeekday]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[mode,setMode]=useState<'daily'|'adventure'>('daily'),[loginHref,setLoginHref]=useState('/login?next=%2Fquests');
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  // The streak is tagged with its account so a sign-out or account switch can never show another account's fire.
@@ -44,7 +45,7 @@ export default function QuestBoard(){
  // Recover only journal-backed older completed instances owned by this signed-in user.
  // Never query arbitrary history or trust a browser key without server owner filtering.
  let pendingIds:string[]=[];try{pendingIds=pendingProgressInstanceIds(localStorage)}catch{/* Storage getter denied; never query broad history. */}
- const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(epoch!==loadEpoch.current)return false;if(qe){setMessage(qe.message);return false}const all=q||[];const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));if(epoch!==loadEpoch.current)return false;const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return false}const today=todayLocal();
+ const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment,fixed_reveal,weekly_weekday').eq('active',true).order('created_at',{ascending:true});if(epoch!==loadEpoch.current)return false;if(qe){setMessage(qe.message);return false}const all=q||[];const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));if(epoch!==loadEpoch.current)return false;const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return false}const today=todayLocal();
 const goalIds=all.filter(q=>q.quest_type==='goal').map(q=>q.id);
 const onceIds=all.filter(q=>q.quest_type==='scheduled'&&q.cadence==='once').map(q=>q.id);
 // Weekly quests: one instance per local week, keyed by its Monday (see lib/questStreak.ts).
@@ -65,7 +66,7 @@ if(te||ge||oe||le||re||we){setMessage(te?.message||ge?.message||oe?.message||le?
 // Fetch metadata only for server-confirmed, owner-scoped recovered instances.
 const missingRecoveryQuestIds=[...new Set((recoveries||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
 const {data:missingRecoveryQuests,error:missingRecoveryError}=missingRecoveryQuestIds.length
- ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
+ ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment,fixed_reveal,weekly_weekday').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
  :{data:[] as Quest[],error:null};
 if(epoch!==loadEpoch.current)return false;
 if(missingRecoveryError){setMessage(missingRecoveryError.message);return false}
@@ -118,14 +119,17 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
   setBusy(true);
   try {
    const payload={p_title:title.trim(),p_domain:domain,p_cadence:cadence,p_date:dueDate||todayLocal(),p_quest_type:questType};
+   const weeklyDay=cadence==='weekly'&&questType!=='goal'&&/^[1-7]$/.test(weekday)?Number(weekday):0;
    const {error}=trackProgress
     ? await supabase().rpc('create_tracked_quest',{...payload,p_target:Number(targetAmount),p_unit:progressUnit.trim(),p_increment:Number(progressIncrement)})
+    : weeklyDay
+    ? await supabase().rpc('create_weekly_autopilot_quest',{p_title:title.trim(),p_domain:domain,p_weekday:weeklyDay})
     : await supabase().rpc('create_scheduled_quest',payload);
    // An old account's response must not update the newly signed-in account's UI.
    if(accountRef.current!==operationAccount)return;
    if(error){setMessage(error.message);return}
    setMessage('Quest scheduled.');
-   setTitle('');setDueDate('');setQuestType('scheduled');setTrackProgress(false);
+   setTitle('');setDueDate('');setQuestType('scheduled');setWeekday('');setTrackProgress(false);
    try {
     await load();
    } catch {
@@ -135,6 +139,26 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
   } catch {
    // A lost response may follow a successful server commit; never auto-repeat creation.
    if(accountRef.current===operationAccount)setMessage('Quest creation not confirmed. Refresh your board before trying again.');
+  } finally {
+   questCreateInFlight.current=false;
+   setBusy(false);
+  }
+ }
+ async function applyPharmacyPack(){
+  if(layoutPreview){setMessage('Layout preview. Sign in to save quests.');return}
+  if(busy||!user||questCreateInFlight.current)return;
+  questCreateInFlight.current=true;
+  const operationAccount=accountRef.current;
+  setBusy(true);
+  try {
+   const {data,error}=await supabase().rpc('apply_pharmacy_weekly_pack');
+   if(accountRef.current!==operationAccount)return;
+   if(error){setMessage(error.message);return}
+   const added=typeof data==='number'?data:0;
+   setMessage(added===0?'Pharmacy weekly is already on your board.':`Added ${added} Monday quest${added===1?'':'s'}. Titles you already have were skipped.`);
+   try { await load(); } catch { if(accountRef.current===operationAccount)setMessage('Quest pack saved, but board refresh failed. Refresh to view it.'); }
+  } catch {
+   if(accountRef.current===operationAccount)setMessage('Quest pack was not confirmed. Refresh before trying again.');
   } finally {
    questCreateInFlight.current=false;
    setBusy(false);
@@ -234,7 +258,8 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  const streak=streakFor&&streakFor.owner===user?streakFor.state:null;
  const today=todayLocal();const nowLocal=localParts(new Date(),playerTimeZone());const thisWeek=weekStart(today);
  // Weekly quests stay hidden until their seeded appearance time (server enforces the same window).
- const weeklyOpen=(q:Quest)=>q.cadence!=='weekly'||weeklyVisible(user,q.id,today,nowLocal.date===today?nowLocal.minutes:0);
+ const revealOf=(q:Quest)=>({fixedReveal:q.fixed_reveal===true,weekday:q.weekly_weekday??null});
+ const weeklyOpen=(q:Quest)=>q.cadence!=='weekly'||weeklyVisible(user,q.id,today,nowLocal.date===today?nowLocal.minutes:0,revealOf(q));
  const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):q.cadence==='weekly'?instances.find(i=>i.quest_id===q.id&&i.due_date===thisWeek):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&weeklyOpen(x.quest)&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.quest.cadence==='weekly'||x.instance!.status!=='completed'||x.instance!.due_date===today));
  const weeklyHidden=quests.filter(q=>q.cadence==='weekly'&&instances.some(i=>i.quest_id===q.id&&i.due_date===thisWeek)&&!weeklyOpen(q)).length;
  // Daily board: up to 5 daily quests a day, seeded per user and local day; the rest stay one tap away and still count.
@@ -243,7 +268,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  // Today = daily quests and anything due today or overdue; This Week = due in the next 7 days; Upcoming = later.
  const weekEnd=addDays(today,7);
  const sectionFor=(due:string)=>due<=today?'today':due<=weekEnd?'week':'upcoming';
- const weeklyQuests=activeQuests.filter(x=>x.quest.cadence==='weekly').sort((a,b)=>weeklyAppearOffset(user,a.quest.id,thisWeek)-weeklyAppearOffset(user,b.quest.id,thisWeek));
+ const weeklyQuests=activeQuests.filter(x=>x.quest.cadence==='weekly').sort((a,b)=>weeklyAppearOffset(user,a.quest.id,thisWeek,revealOf(a.quest))-weeklyAppearOffset(user,b.quest.id,thisWeek,revealOf(b.quest)));
  const offBoardQuests=activeQuests.filter(x=>x.quest.cadence==='daily'&&!boardIds.has(x.quest.id));
  const todayQuests=[...activeQuests.filter(x=>(x.quest.cadence==='daily'&&boardIds.has(x.quest.id))||(x.quest.cadence!=='daily'&&x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='today')),...weeklyQuests];
  const weekQuests=activeQuests.filter(x=>x.quest.cadence!=='daily'&&x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='week');
@@ -268,7 +293,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  <div className="board-section" aria-label="Upcoming"><h3>Upcoming <span className="muted">({laterQuests.length+laterNotStarted.length})</span></h3><p className="muted">Scheduled quests and deadlines after this week.</p>{laterQuests.length+laterNotStarted.length===0?<p className="muted">Nothing scheduled later.</p>:<>{laterQuests.map(questCard)}{laterNotStarted.slice(0,20).map(notStartedCard)}</>}</div>
  {completed>0&&<div className="board-section board-completed" aria-label="Completed"><button type="button" className="btn ghost completed-board-toggle" aria-expanded={showCompleted} aria-controls="completed-quests-list" onClick={()=>setShowCompleted(v=>!v)}><span aria-hidden="true">{showCompleted?'▾':'▸'}</span> Completed ({completed})</button>{showCompleted&&<div id="completed-quests-list">{completedQuests.map(({quest,instance})=><div className="quest quest-tappable" key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}<div className="muted">Completed · {instance?.due_date}</div><QuestDetails quest={quest} instance={instance!}/></div><div className="actions"><span className="tag">✓ Done</span></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance!} disabled={busy} onLog={logProgress}/></div>)}</div>}</div>}</section>
  {earlierRecoveries.length>0&&<section className="panel"><h2>Completed quests with pending saves</h2><p className="muted">Review the original saved request before logging new progress. Retry never creates another request ID.</p>{earlierRecoveries.map(({quest,instance})=><div className="quest" key={instance.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">Completed · {instance.due_date}</div></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/></div>)}</section>}
- <section className="panel board-create"><button type="button" className="btn ghost board-create-toggle" aria-expanded={showQuestForm} aria-controls="quest-create-form" onClick={()=>{openQuestFormOnRender.current=!showQuestForm;setShowQuestForm(value=>!value)}}>{showQuestForm?'▾ Hide quest creator':'+ Create a quest'}</button>{showQuestForm&&<form id="quest-create-form" ref={questFormRef} className="quest-create-form" onSubmit={add}><h2>Create or approve a quest</h2><p className="muted">Quests proposed in ChatGPT can open here prefilled. Review before saving.</p><label htmlFor="quest-title">What real-world action will you take?</label><input id="quest-title" className="field" maxLength={120} required placeholder="e.g. Fold and put away laundry" value={title} onChange={e=>setTitle(e.target.value)}/><div className="form-row"><label>Life domain<select className="field" value={domain} onChange={e=>setDomain(e.target.value)}>{DOMAINS.map(d=><option key={d[0]} value={d[0]}>{d[1]}</option>)}</select></label><label>Frequency<select className="field" value={cadence} disabled={questType==='goal'} onChange={e=>setCadence(e.target.value as 'once'|'daily'|'weekly')}><option value="daily">Every day</option><option value="weekly">Once a week</option><option value="once">One-time</option></select></label></div><label>Quest type<select className="field" value={questType} onChange={e=>{const v=e.target.value as 'scheduled'|'goal';setQuestType(v);if(v==='goal')setCadence('once')}}><option value="scheduled">Scheduled chore / habit</option><option value="goal">Goal with deadline (early completion allowed)</option></select></label><label htmlFor="quest-date">{questType==='goal'?'Goal deadline':'First due date'}</label><input id="quest-date" className="field" type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><label style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" checked={trackProgress} onChange={e=>setTrackProgress(e.target.checked)}/> Track partial progress (optional)</label>{trackProgress&&<div className="form-row"><label>Target amount<input className="field" type="number" min={1} max={1000000} step={1} value={targetAmount} onChange={e=>setTargetAmount(e.target.value)}/></label><label>Unit<input className="field" maxLength={32} value={progressUnit} onChange={e=>setProgressUnit(e.target.value)}/></label><label>Quick-log increment<input className="field" type="number" min={1} max={targetAmount||1} step={1} value={progressIncrement} onChange={e=>setProgressIncrement(e.target.value)}/></label></div>}<button className="btn" disabled={busy||!title.trim()||(trackProgress&&(!Number.isInteger(Number(targetAmount))||Number(targetAmount)<1||Number(targetAmount)>1000000||!progressUnit.trim()||!Number.isInteger(Number(progressIncrement))||Number(progressIncrement)<1||Number(progressIncrement)>Number(targetAmount)))}>Schedule quest</button></form>}</section>
+ <section className="panel board-create"><button type="button" className="btn ghost board-create-toggle" aria-expanded={showQuestForm} aria-controls="quest-create-form" onClick={()=>{openQuestFormOnRender.current=!showQuestForm;setShowQuestForm(value=>!value)}}>{showQuestForm?'▾ Hide quest creator':'+ Create a quest'}</button>{showQuestForm&&<form id="quest-create-form" ref={questFormRef} className="quest-create-form" onSubmit={add}><h2>Create or approve a quest</h2><p className="muted">Quests proposed in ChatGPT can open here prefilled. Review before saving.</p><label htmlFor="quest-title">What real-world action will you take?</label><input id="quest-title" className="field" maxLength={120} required placeholder="e.g. Fold and put away laundry" value={title} onChange={e=>setTitle(e.target.value)}/><div className="form-row"><label>Life domain<select className="field" value={domain} onChange={e=>setDomain(e.target.value)}>{DOMAINS.map(d=><option key={d[0]} value={d[0]}>{d[1]}</option>)}</select></label><label>Frequency<select className="field" value={cadence} disabled={questType==='goal'} onChange={e=>setCadence(e.target.value as 'once'|'daily'|'weekly')}><option value="daily">Every day</option><option value="weekly">Once a week</option><option value="once">One-time</option></select></label>{cadence==='weekly'&&questType!=='goal'&&<label>Appears<select className="field" value={weekday} onChange={e=>setWeekday(e.target.value)}><option value="">Varies during the week</option>{ISO_WEEKDAYS.map(day=><option key={day.value} value={day.value}>{day.label} at midnight</option>)}</select></label>}</div><label>Quest type<select className="field" value={questType} onChange={e=>{const v=e.target.value as 'scheduled'|'goal';setQuestType(v);if(v==='goal')setCadence('once')}}><option value="scheduled">Scheduled chore / habit</option><option value="goal">Goal with deadline (early completion allowed)</option></select></label><label htmlFor="quest-date">{questType==='goal'?'Goal deadline':'First due date'}</label><input id="quest-date" className="field" type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><label style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" checked={trackProgress} onChange={e=>setTrackProgress(e.target.checked)}/> Track partial progress (optional)</label>{trackProgress&&<div className="form-row"><label>Target amount<input className="field" type="number" min={1} max={1000000} step={1} value={targetAmount} onChange={e=>setTargetAmount(e.target.value)}/></label><label>Unit<input className="field" maxLength={32} value={progressUnit} onChange={e=>setProgressUnit(e.target.value)}/></label><label>Quick-log increment<input className="field" type="number" min={1} max={targetAmount||1} step={1} value={progressIncrement} onChange={e=>setProgressIncrement(e.target.value)}/></label></div>}<button className="btn" disabled={busy||!title.trim()||(trackProgress&&(!Number.isInteger(Number(targetAmount))||Number(targetAmount)<1||Number(targetAmount)>1000000||!progressUnit.trim()||!Number.isInteger(Number(progressIncrement))||Number(progressIncrement)<1||Number(progressIncrement)>Number(targetAmount)))}>Schedule quest</button><div className="quest-pack"><h3>Quest packs</h3><p className="muted">One tap adds a weekly set. A title you already have is skipped.</p><p className="muted" id="pharmacy-weekly-pack">Pharmacy weekly (Monday)</p><ul className="quest-pack-list">{PHARMACY_WEEKLY_TITLES.map(name=><li key={name}>{name}</li>)}</ul><button type="button" className="btn" disabled={busy} aria-describedby="pharmacy-weekly-pack" onClick={()=>void applyPharmacyPack()}>Add Pharmacy weekly</button></div></form>}</section>
  <p className="message" role="status" aria-live="polite">{message}</p><p className="foot board-foot">Self-reported MVP. Health, finance, and AI integrations are not active. <a href="/quests/journal">Quest notes</a> · <a href="/settings/api-keys">API keys</a> · <a href="/settings/password">Set or change password</a></p></main>
 }
 function dateString(){return todayLocal()}
