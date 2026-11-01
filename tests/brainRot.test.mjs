@@ -62,3 +62,5 @@ test('Endless Crossing traffic accelerates as distance increases',()=>{let low=g
 test('Frog King traffic velocity stays constant across crossing count',()=>{let low=games.createGame('frog-kings-crossing',1,5);low.tick=44;let high=games.createGame('frog-kings-crossing',1,5);high.tick=44;high.progress=35;assert.equal(Math.abs(games.step(low,null).entities[0].vx),Math.abs(games.step(high,null).entities[0].vx));});
 
 test('Endless Crossing generated traffic varies in depth and stays in upcoming viewport',()=>{let s=games.createGame('endless-crossing',1,91);const depths=[];for(let i=0;i<400;i++){s=games.step(s,null);if(s.lost)break;if(s.tick%45===0){const e=s.entities[s.entities.length-1];if(e)depths.push(e.y);}}assert.ok(depths.length>=4);assert.ok(new Set(depths).size>=3);assert.ok(depths.every(y=>y>=.14&&y<.62));});
+
+test('Endless Crossing spawn preserves clearance around player altitude',()=>{let s=games.createGame('endless-crossing',1,91);s.tick=44;s.player.y=.5;const n=games.step(s,null);assert.ok(n.entities.length>0);assert.ok(Math.abs(n.entities[0].y-n.player.y)>=.08);});
