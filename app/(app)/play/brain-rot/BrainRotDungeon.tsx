@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {GAMES,newRun,readRun,writeRun,currentGame,completeLevel,newBoss,advanceBoss,tier,type Run,type GameId} from '@/lib/brainRot/core';
-import {createGame,step,type State,type Input} from '@/lib/brainRot/games';
+import {GAMES,newRun,readRun,writeRun,currentGame,completeLevel,newBoss,advanceBoss,tier,type Run,type GameId} from '../../../../lib/brainRot/core';
+import {createGame,step,type State,type Input} from '../../../../lib/brainRot/games';
 const palette=['#f0c86b','#7ed6ba','#ba9cfa','#ff9580','#9ad1ff'];
 function Surface({state}:{state:State}){
  const kind=GAMES.find(g=>g.id===state.id)?.kind;
