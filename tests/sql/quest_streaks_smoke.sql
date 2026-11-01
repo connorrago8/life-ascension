@@ -1,6 +1,6 @@
 -- Quest & streak rules (202610310001). Run after every migration, in a disposable database only.
 -- Values marked "TS parity" are produced by lib/questStreak.ts (tests/questStreaks.test.mjs).
-\set ON_ERROR_STOP on
+-- Plain SQL: the caller enables ON_ERROR_STOP. This file has no psql meta-commands.
 
 -- Pure helpers ---------------------------------------------------------------------------
 do $$

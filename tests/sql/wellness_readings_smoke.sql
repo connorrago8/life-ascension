@@ -10,6 +10,19 @@ declare
   v_sleep numeric;
   v_steps integer;
 begin
+  -- Local prelude auth.users has only id. Hosted auth.users requires email.
+  if not exists (select 1 from information_schema.columns
+      where table_schema = 'auth' and table_name = 'users' and column_name = 'email') then
+    alter table auth.users add column email text;
+  end if;
+  if not exists (select 1 from information_schema.columns
+      where table_schema = 'auth' and table_name = 'users' and column_name = 'aud') then
+    alter table auth.users add column aud text;
+  end if;
+  if not exists (select 1 from information_schema.columns
+      where table_schema = 'auth' and table_name = 'users' and column_name = 'role') then
+    alter table auth.users add column role text;
+  end if;
   insert into auth.users (id, email, aud, role) values
     (a, 'wellness-a@example.invalid', 'authenticated', 'authenticated'),
     (b, 'wellness-b@example.invalid', 'authenticated', 'authenticated');

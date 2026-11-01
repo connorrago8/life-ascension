@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { validateDeploymentEnv } from '../scripts/verify-deployment-env.mjs';
+import { verifyQaBrowserBundleAfterBuild } from '../scripts/verify-qa-browser-bundle-after-build.mjs';
 
 const qaRef = 'njqwwimzrsunheehnnnt';
 const qaBranch = 'audit/qa-isolation-and-reliability-20261027';
@@ -300,4 +301,46 @@ test('Emberhaven preview is pinned to QA at build and runtime and rejects lookal
     assert.throws(() => validateDeploymentEnv({ ...candidate, ...changed }));
     assert.equal(await runtimePublicConfig({ ...candidate, ...changed }), null);
   }
+});
+
+function protectedQaBranches(source) {
+  const start = source.indexOf('PROTECTED_QA_BRANCHES');
+  assert.ok(start >= 0, 'missing PROTECTED_QA_BRANCHES');
+  const slice = source.slice(start, source.indexOf(');', start));
+  return [...slice.matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
+}
+
+test('QA preview allowlists match and still fail closed', async () => {
+  const expected = [
+    'audit/qa-isolation-and-reliability-20261027',
+    'beta/crypt-intro-exit-accessibility-20261029',
+    'beta/quest-ui-clean-review',
+    'chatgpt/emberhaven-crypt-integration-20261031',
+    'grok/release-candidate-1',
+  ];
+  const files = [
+    'scripts/verify-deployment-env.mjs',
+    'scripts/verify-qa-browser-bundle-after-build.mjs',
+    'lib/supabaseRuntimeConfig.ts',
+  ];
+  const lists = files.map((file) => protectedQaBranches(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')));
+  for (const list of lists) assert.deepEqual(list, expected);
+  const release = { ...qa, VERCEL_GIT_COMMIT_REF: 'grok/release-candidate-1' };
+  assert.equal(validateDeploymentEnv(release), true);
+  assert.equal((await runtimePublicConfig(release))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  const scanned = await verifyQaBrowserBundleAfterBuild({
+    env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'grok/release-candidate-1' },
+    inspect: async () => ({ inspected: 1, qaMatches: 1 }),
+  });
+  assert.equal(scanned.skipped, false);
+  assert.throws(() => validateDeploymentEnv({ ...release, VERCEL_GIT_COMMIT_REF: 'main' }), /protected QA branch/);
+  assert.equal(await runtimePublicConfig({ ...release, VERCEL_GIT_COMMIT_REF: 'feature/not-listed' }), null);
+  await assert.rejects(verifyQaBrowserBundleAfterBuild({
+    env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'feature/not-listed' },
+    inspect: async () => { throw new Error('must not scan an unlisted branch'); },
+  }), /protected QA branch/);
+  assert.equal(validateDeploymentEnv({ ...prod, VERCEL_GIT_COMMIT_REF: 'grok/release-candidate-1' }), true);
+  assert.throws(() => validateDeploymentEnv({
+    ...release, VERCEL_ENV: 'production', NEXT_PUBLIC_SUPABASE_URL: qa.NEXT_PUBLIC_SUPABASE_URL,
+  }), /Blocked production/);
 });

@@ -8,18 +8,19 @@ select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000101'
 -- Simulate confirmed consent; no companion account is created.
 insert into public.quest_companions(id,owner_id,display_name,consent_confirmed_at)
 values('b0000000-0000-4000-8000-000000000101','a0000000-0000-4000-8000-000000000101','Test Companion',now());
--- The real assignment RPC deduplicates an existing quest.
-insert into public.quests(id,owner_id,title,domain,cadence)
-values('c0000000-0000-4000-8000-000000000101','a0000000-0000-4000-8000-000000000101','Fold Laundry','home','daily');
+-- The real assignment RPC deduplicates an existing quest created by the app RPC.
 do $$
-declare v_quest uuid; v_instance uuid; v_xp int; v_count int;
+declare v_day date := (now() at time zone 'America/Chicago')::date;
+ v_existing uuid; v_quest uuid; v_instance uuid; v_xp int; v_count int;
 begin
+ v_existing:=public.create_scheduled_quest('Fold Laundry','home','daily',v_day);
+ perform set_config('smoke.fold', v_existing::text, true);
  v_quest:=public.quest_companion_assign_to_owner('b0000000-0000-4000-8000-000000000101',' fold   laundry ');
- if v_quest <> 'c0000000-0000-4000-8000-000000000101'::uuid then raise exception 'Failed to deduplicate existing quest'; end if;
+ if v_quest <> v_existing then raise exception 'Failed to deduplicate existing quest'; end if;
  v_quest:=public.quest_companion_assign_to_owner('b0000000-0000-4000-8000-000000000101','Fold Laundry');
  select count(*) into v_count from public.quest_companion_assignments where quest_id=v_quest;
  if v_count<>1 then raise exception 'Duplicate assignment inserted'; end if;
- v_instance:=public.ensure_quest_instance(v_quest,current_date);
+ v_instance:=public.ensure_quest_instance(v_quest,v_day);
  perform public.set_quest_instance_status(v_instance,'complete');
  perform public.set_quest_instance_status(v_instance,'complete');
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
@@ -44,27 +45,26 @@ begin
   if sqlerrm='Invalid bulk day unexpectedly accepted' then raise; end if;
  end;
 end $bulk$;
--- Normal quest still awards exactly 1 XP.
-insert into public.quests(id,owner_id,title,domain,cadence)
-values('c0000000-0000-4000-8000-000000000102','a0000000-0000-4000-8000-000000000101','Brush Teeth','hygiene','daily');
+-- Normal quest still awards exactly 1 XP. Create it through the same RPC the app uses.
 do $$
-declare v_instance uuid; v_xp int;
+declare v_day date := (now() at time zone 'America/Chicago')::date; v_quest uuid; v_instance uuid; v_xp int;
 begin
- v_instance:=public.ensure_quest_instance('c0000000-0000-4000-8000-000000000102',current_date);
+ v_quest:=public.create_scheduled_quest('Brush Teeth','hygiene','daily',v_day);
+ v_instance:=public.ensure_quest_instance(v_quest,v_day);
  perform public.set_quest_instance_status(v_instance,'complete');
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
  if v_xp<>1 then raise exception 'Normal quest expected 1 XP, got %',v_xp; end if;
 end $$;
 -- Assigning an already-completed quest must not retroactively change its 1 XP.
-insert into public.quests(id,owner_id,title,domain,cadence)
-values('c0000000-0000-4000-8000-000000000103','a0000000-0000-4000-8000-000000000101','Wash Dishes','home','daily');
 do $audit$
-declare v_instance uuid; v_quest uuid; v_xp int;
+declare v_day date := (now() at time zone 'America/Chicago')::date; v_created uuid; v_instance uuid; v_quest uuid; v_xp int;
 begin
- v_instance:=public.ensure_quest_instance('c0000000-0000-4000-8000-000000000103',current_date);
+ v_created:=public.create_scheduled_quest('Wash Dishes','home','daily',v_day);
+ perform set_config('smoke.wash', v_created::text, true);
+ v_instance:=public.ensure_quest_instance(v_created,v_day);
  perform public.set_quest_instance_status(v_instance,'complete');
  v_quest:=public.quest_companion_assign_to_owner('b0000000-0000-4000-8000-000000000101','Wash Dishes');
- if v_quest<>'c0000000-0000-4000-8000-000000000103'::uuid then raise exception 'Failed to reuse completed quest'; end if;
+ if v_quest<>v_created then raise exception 'Failed to reuse completed quest'; end if;
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
  if v_xp<>1 then raise exception 'Historical XP was modified'; end if;
 end $audit$;
@@ -73,10 +73,10 @@ do $retire$
 declare v_assignment uuid; v_instance uuid; v_xp int;
 begin
  select id into v_assignment from public.quest_companion_assignments
- where quest_id='c0000000-0000-4000-8000-000000000101'::uuid;
+ where quest_id=current_setting('smoke.fold')::uuid;
  if not public.quest_companion_retire_assignment(v_assignment) then raise exception 'Retirement failed'; end if;
  if public.quest_companion_retire_assignment(v_assignment) then raise exception 'Repeated retirement should be idempotent'; end if;
- v_instance:=public.ensure_quest_instance('c0000000-0000-4000-8000-000000000101'::uuid,current_date+1);
+ v_instance:=public.ensure_quest_instance(current_setting('smoke.fold')::uuid,((now() at time zone 'America/Chicago')::date + 1));
  perform public.set_quest_instance_status(v_instance,'complete');
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
  if v_xp<>1 then raise exception 'Retired assignment should award 1 XP'; end if;
@@ -107,7 +107,7 @@ do $unauthorized_retire$
 declare v_assignment uuid;
 begin
  select id into v_assignment from public.quest_companion_assignments
- where quest_id='c0000000-0000-4000-8000-000000000103'::uuid;
+ where quest_id=current_setting('smoke.wash')::uuid;
  if public.quest_companion_retire_assignment(v_assignment) then
   raise exception 'Cross-owner retirement unexpectedly succeeded';
  end if;

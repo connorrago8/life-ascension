@@ -83,6 +83,10 @@ do $$ begin
  if exists (select 1 from public.xp_ledger l join xp_before b using (owner_id) group by l.owner_id, b.n having count(*) <> b.n) then
   raise exception 'Crypt changed xp_ledger';
  end if;
- if (select count(*) from public.xp_ledger) <> 12 then raise exception 'Crypt inserted real XP'; end if;
+ -- Other fixtures may already have ledger rows. Only this smoke's two users count.
+ if (select count(*) from public.xp_ledger where owner_id in (
+      '00000000-0000-0000-0000-0000000c0001', '00000000-0000-0000-0000-0000000c0002')) <> 12 then
+  raise exception 'Crypt changed this user''s XP';
+ end if;
 end $$;
 select 'crypt delve smoke passed' as result;
