@@ -43,3 +43,7 @@ test('crossing collision requires matching player lane',()=>{let s=games.createG
 test('crossing collision is active even before three hops',()=>{let s=games.createGame('frog-kings-crossing',1,15);s.progress=0;s.entities=[{x:s.player.x,y:s.player.y,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
 
 test('run validation rejects duplicate games and malformed boss',()=>{const r=core.newRun(12);assert.equal(core.validRun(r),true);r.order[1]=r.order[0];assert.equal(core.validRun(r),false);const b=core.newRun(12);b.level=31;b.boss=core.newBoss(12);assert.equal(core.validRun(b),true);b.boss.segmentMs=17000;assert.equal(core.validRun(b),false);});
+
+test('jetpack collectible grants progress and score without causing damage',()=>{let s=games.createGame('goblin-jetpack',1,7);s.entities=[{x:s.player.x,y:s.player.y,vx:0,vy:0,type:1}];const n=games.step(s,null);assert.equal(n.progress,1);assert.equal(n.score,10);assert.equal(n.lost,false);assert.equal(n.entities.length,0);});
+test('jetpack does not grant progress from idle time',()=>{let s=games.createGame('goblin-jetpack',1,7);for(let i=0;i<120;i++){s=games.step(s,null);if(s.lost)break;}assert.equal(s.progress,0);});
+test('jetpack hazards still damage player',()=>{let s=games.createGame('goblin-jetpack',1,7);s.entities=[{x:s.player.x,y:s.player.y,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
