@@ -154,9 +154,9 @@ test('swapping an equipped item updates both renders and bonuses come only from 
   assert.notEqual(homeBefore.signature, homeAfter.signature);
   assert.notEqual(adventureBefore.overlaySignature, adventureAfter.overlaySignature);
   assert.equal(homeBefore.itemNames.includes('Walking Staff'), true);
-  assert.equal(homeAfter.itemNames.includes('Wayfarer Lantern'), true);
+  assert.equal(homeAfter.itemNames.includes('Travel Lantern'), true);
   assert.equal(adventureBefore.itemNames.includes('Walking Staff'), true);
-  assert.equal(adventureAfter.itemNames.includes('Wayfarer Lantern'), true);
+  assert.equal(adventureAfter.itemNames.includes('Travel Lantern'), true);
 
   assert.equal(homeBefore.hair, adventureBefore.hair);
   assert.equal(homeBefore.skin, adventureBefore.skin);
@@ -186,7 +186,7 @@ test('swapping an equipped item updates both renders and bonuses come only from 
   assert.equal('strength' in adventureAfter, false);
   assert.deepEqual(structuredClone(SAMPLE_PROGRESSION), SAMPLE_PROGRESSION);
   assert.equal(SAMPLE_PROGRESSION.level, 7);
-  assert.equal(levelTitle(SAMPLE_PROGRESSION), 'LEVEL 7 — WAYFARER');
+  assert.equal(levelTitle(SAMPLE_PROGRESSION), 'LEVEL 7 — ADVENTURER');
   assert.equal(xpLabel(SAMPLE_PROGRESSION), '720 / 1,000');
 
   const hoodOnly = withEquippedItem(before, TRAVELERS_HOOD);
@@ -297,7 +297,7 @@ test('completion feedback displays the sample quest XP and does not change progr
 
 test('level-up plays only when XP crosses a level threshold', () => {
   assert.equal(progressFromXp(720).level, 7);
-  assert.equal(progressFromXp(720).title, 'Wayfarer');
+  assert.equal(progressFromXp(720).title, 'Adventurer');
   assert.equal(progressFromXp(720).xpInto, 720);
   assert.equal(crossedLevelThreshold(720, 880), false);
   assert.equal(levelUpView(720, 880), null);

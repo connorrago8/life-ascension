@@ -127,7 +127,9 @@ try {
     await page.getByRole('heading', { name: 'Choose your path', exact: true }).waitFor();
     assert.deepEqual((await readRun()).state, original.state, 'reload must preserve the complete run state');
     await page.goto(`${base}/play/emberhaven`);
-    await page.getByRole('button', { name: 'Begin the Lantern Route', exact: true }).waitFor();
+    await page.getByText('Lantern Route complete.', { exact: true }).waitFor();
+    await page.reload();
+    await page.getByText('Lantern Route complete.', { exact: true }).waitFor();
     await page.goto(`${base}/quests?preview=1`);
     await page.getByText('Layout preview. Sign in to load your quests.', { exact: true }).waitFor();
     assert.equal(await page.locator('header .streak-badge').count(), 0, 'no global daily streak');

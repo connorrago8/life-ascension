@@ -251,14 +251,14 @@ export function generateFloor(seed: Rng): { rows: Room[][]; rng: Rng } {
 export const ENCOUNTERS_PER_RUN = FLOOR_ROWS + 1;
 
 export const ROOM_LABEL: Record<RoomKind, string> = {
-  fight: 'Fight', elite: 'Elite', treasure: 'Treasure', event: 'Event', rest: 'Campfire',
+  fight: 'Fight', elite: 'Elite', treasure: 'Treasure', event: 'Event', rest: 'Rest',
 };
 
 export function roomTitle(room: Room): string {
   if (room.kind === 'fight' || room.kind === 'elite') return foeById(room.foeId).name;
   if (room.kind === 'event') return eventById(room.eventId).title;
   if (room.kind === 'treasure') return 'Old chest';
-  return 'Campfire';
+  return 'Campfire: heal or remove a card';
 }
 
 export function roomHint(room: Room): string {

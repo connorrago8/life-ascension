@@ -62,6 +62,21 @@ export function fireFromDays(daysWithCompletion: Iterable<string>, today: string
   return fire;
 }
 
+/**
+ * Player-visible streak for one quest. Today's completion counts, so the first
+ * finish of a new quest shows 🔥 1. A missed calendar day resets that quest only.
+ * No grace day is granted: the approved allowance is zero, which is inside the
+ * cap of at most one grace day per seven days.
+ */
+export function perQuestFire(daysWithCompletion: Iterable<string>, today: string): number {
+  const days = new Set(daysWithCompletion);
+  const anchor = days.has(today) ? today : addDays(today, -1);
+  if (!days.has(anchor)) return 0;
+  let fire = 0;
+  for (let day = anchor; days.has(day); day = addDays(day, -1)) fire += 1;
+  return fire;
+}
+
 /** Local calendar date (YYYY-MM-DD) and minutes since local midnight for an instant. */
 export function localParts(instant: Date, timeZone: string = QUEST_TIME_ZONE): { date: string; minutes: number; isoDow: number } {
   const parts = new Intl.DateTimeFormat('en-CA', {

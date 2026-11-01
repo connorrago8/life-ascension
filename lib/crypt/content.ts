@@ -49,7 +49,7 @@ export const HUB = {
 
 export const PLAYER = {
   id: 'wayfarer',
-  name: 'Wayfarer',
+  name: 'Adventurer',
   maxHp: 20,
   attack: 4,
   heavy: 8,
@@ -79,7 +79,7 @@ export const INTRO = {
   speaker: 'Mira',
   role: 'Guide',
   lines: [
-    'You are a Wayfarer, new on the road into Brackenlight.',
+    'You are an adventurer, new on the road into Brackenlight.',
     'I am Mira. I keep the paths the town would rather forget, and I can walk you to the crypt gate.',
     'Go lightly. Nothing past this threshold is written down.',
   ],

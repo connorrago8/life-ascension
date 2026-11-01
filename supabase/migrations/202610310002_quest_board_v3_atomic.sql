@@ -1,5 +1,5 @@
 -- Quest Board 3.0: concurrency-safe, immutable daily selections.
--- Apply only after review and after 202610310001_quest_board_v3_storage.sql.
+-- Apply only after review and after 202610310000_quest_board_v3_storage.sql.
 create or replace function public.quest_board_v3_freeze_selection(p_day date, p_quest_ids uuid[])
 returns uuid[] language plpgsql security definer set search_path = ''
 as $$

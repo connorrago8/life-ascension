@@ -32,7 +32,7 @@ test('reachable map node labels match the option list on every row of many floor
         if (room.kind === 'elite') assert.equal(option.short, `Elite: ${roomTitle(room)}`);
         if (room.kind === 'treasure') assert.equal(option.short, 'Chest');
         if (room.kind === 'event') assert.equal(option.short, 'Mystery');
-        if (room.kind === 'rest') assert.equal(option.short, 'Campfire');
+        if (room.kind === 'rest') assert.equal(option.short, 'Rest');
         assert.equal(option.ariaLabel, `Path ${option.badge}: ${option.kind}, ${option.title}`);
       });
     }

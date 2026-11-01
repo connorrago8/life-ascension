@@ -15,7 +15,6 @@ export default function HearthPage() {
       </header>
       <TownConversation stop="hearth" />
       <Link className="btn ghost" href="/quests" style={{ minHeight: 44, width: '100%', marginTop: 18 }}>View quests →</Link>
-      <Link className="btn" href="/play" style={{ minHeight: 44, width: '100%', marginTop: 22 }}>Back to Hub →</Link>
       <p className="foot" style={{ textAlign: 'center', marginTop: 16 }}>Town locations are exploratory. No XP, currency, equipment or Crypt run state changes here.</p>
     </main>
   );

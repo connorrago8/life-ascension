@@ -17,9 +17,9 @@ export type CatalogItem = {
 
 export const PREVIEW_CATALOG: readonly CatalogItem[] = [
   { id: 'travelers-hood', name: "Traveler's Hood", category: 'equipment', slot: 'head' },
-  { id: 'wayfarer-coat', name: 'Wayfarer Coat', category: 'equipment', slot: 'chest' },
+  { id: 'wayfarer-coat', name: 'Travel Coat', category: 'equipment', slot: 'chest' },
   { id: 'walking-staff', name: 'Walking Staff', category: 'equipment', slot: 'main-hand' },
-  { id: 'wayfarer-lantern', name: 'Wayfarer Lantern', category: 'equipment', slot: 'main-hand' },
+  { id: 'wayfarer-lantern', name: 'Travel Lantern', category: 'equipment', slot: 'main-hand' },
   { id: 'trail-trousers', name: 'Trail Trousers', category: 'equipment', slot: 'legs' },
   { id: 'worn-boots', name: 'Worn Boots', category: 'equipment', slot: 'feet' },
   { id: 'ashen-hood', name: 'Ashen Hood', category: 'equipment', slot: 'head' },

@@ -77,8 +77,8 @@ try {
   await page.getByText(/broken compass/i).first().waitFor();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.locator('[data-phase="map"]').waitFor();
-  await page.getByRole('button', { name: 'Open Wayfarer field journal' }).click();
-  const journal = page.getByRole('complementary', { name: 'Wayfarer field journal' });
+  await page.getByRole('button', { name: 'Open Adventurer field journal' }).click();
+  const journal = page.getByRole('complementary', { name: 'Adventurer field journal' });
   assert.match(await journal.innerText(), /broken compass/i,
     'Inscription clue must remain visible after Continue');
 
@@ -169,7 +169,7 @@ try {
     'Leaving the Ember Charm must not grant the run-only bonus');
   await leavePage.getByRole('button', { name: /^Guardian: Crypt Sentinel/ }).click();
   await leavePage.locator('[data-phase="fight"]').waitFor();
-  const wayfarer = leavePage.locator('.fighter').filter({ has: leavePage.getByRole('heading', { name: 'Wayfarer', exact: true }) });
+  const wayfarer = leavePage.locator('.fighter').filter({ has: leavePage.getByRole('heading', { name: 'Adventurer', exact: true }) });
   await wayfarer.locator('.hp-readout').filter({ hasText: /^\d+\/\d+$/ }).waitFor();
   assert.equal(await leavePage.locator('.crypt-status').filter({ hasText: /Run damage \+2/ }).count(), 0,
     'Sentinel fight status must not show the unchosen charm bonus');

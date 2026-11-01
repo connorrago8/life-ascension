@@ -13,7 +13,9 @@ import { ADVENTURER_CLASS } from '../../lib/character';
 import { levelFor, levelProgress } from '../../lib/level';
 import { verifiedLifetimeXp } from '../../lib/characterXpProof';
 import { GEAR_SLOTS, SERVER_EQUIPPABLE_ITEMS } from '../../lib/gearSlots';
-import { chicagoToday, todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
+import { todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
+import { localToday, playerTimeZone } from '../../lib/playerTimeZone';
+import { readHomeProgress, writeHomeProgress } from '../../lib/questProgressSnapshot';
 import { supabase } from '../../lib/supabase';
 import { localParts, parseStreak, type StreakState } from '../../lib/questStreak';
 import { starterSlots } from '../../lib/starterLook';
@@ -52,15 +54,22 @@ export default function Home() {
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      commit({ status: 'ready', name: 'Adventurer', xp: 7, stats: { strength: 3, agility: 2, intelligence: 1, endurance: 2, luck: 1 }, gear: null, today: { left: 2, done: 1 }, streak: { fire: 7, doneToday: true, today: chicagoToday(), timeZone: 'America/Chicago' }, preview: true });
+      commit({ status: 'ready', name: 'Adventurer', xp: 7, stats: { strength: 3, agility: 2, intelligence: 1, endurance: 2, luck: 1 }, gear: null, today: { left: 2, done: 1 }, streak: { fire: 7, doneToday: true, today: localToday(), timeZone: playerTimeZone() }, preview: true });
       return;
     }
+    let showedCache = false;
     try {
       const client = supabase();
       const { data: authData, error: authError } = await client.auth.getUser();
       const user = authError ? null : authData.user;
       if (!user) { commit({ status: 'signed-out' }); return; }
-      const today = chicagoToday();
+      const cached = readHomeProgress(user.id);
+      if (cached) {
+        showedCache = true;
+        commit({ status: 'ready', name: cached.name, xp: cached.xp, stats: cached.stats, gear: cached.gear as AuthenticatedGearSnapshot | null, today: cached.today, streak: cached.streak, preview: false });
+      }
+      try { await client.rpc('set_player_timezone', { p_tz: playerTimeZone() }); } catch { /* Zone storage is optional until the migration is applied. */ }
+      const today = localToday(new Date(), playerTimeZone());
       const [xpResult, profileResult, gearResult, statsResult, questsResult, instancesResult, streakResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
@@ -73,25 +82,27 @@ export default function Home() {
       ]);
       const verifiedXp = xpResult.error ? null : verifiedLifetimeXp(xpResult.data);
       if (verifiedXp === null) {
-        commit({ status: 'error', message: 'Could not verify lifetime XP. Your quests are unchanged.' });
+        if (!cached) commit({ status: 'error', message: 'Could not verify lifetime XP. Your quests are unchanged.' });
         return;
       }
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
       const glance = questsResult.error || instancesResult.error
         ? null
-        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date()).minutes });
-      commit({
-        status: 'ready',
+        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date(), playerTimeZone()).minutes });
+      const next = {
+        status: 'ready' as const,
         name: adventurerName(user.email, profile?.display_name),
         xp: verifiedXp,
         stats: statsResult.error ? null : parseCryptProfile(statsResult.data).attributes,
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
         today: glance,
-        streak: streakResult.error ? null : parseStreak(streakResult.data),
+        streak: streakResult.error ? (cached?.streak ?? null) : parseStreak(streakResult.data),
         preview: false,
-      });
+      };
+      writeHomeProgress({ owner: user.id, name: next.name, xp: next.xp, stats: next.stats, gear: next.gear, today: next.today, streak: next.streak });
+      commit(next);
     } catch {
-      commit({ status: 'error', message: 'Could not load your adventurer. Your quests are unchanged.' });
+      if (!showedCache) commit({ status: 'error', message: 'Could not load your adventurer. Your quests are unchanged.' });
     }
   }, []);
 
@@ -99,10 +110,8 @@ export default function Home() {
     void load();
     const refresh = () => { if (document.visibilityState === 'visible') void load(); };
     document.addEventListener('visibilitychange', refresh);
-    window.addEventListener('focus', refresh);
     return () => {
       document.removeEventListener('visibilitychange', refresh);
-      window.removeEventListener('focus', refresh);
       loadSeq.current += 1;
     };
   }, [load]);

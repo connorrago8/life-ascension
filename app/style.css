@@ -180,7 +180,7 @@ code { font-family: ui-monospace, monospace; }
   stroke-linejoin: round;
 }
 .nav-link:hover { color: var(--text); }
-.nav-link[aria-current="page"] { color: var(--mint); background: transparent; box-shadow: none; }
+.nav-link[aria-current="page"] { color: var(--mint); background: rgba(126, 217, 184, 0.16); box-shadow: inset 0 -3px 0 var(--mint); }
 .nav-signout { margin-top: 8px; }
 .nav-more, .more-sheet, .more-backdrop { display: none; }
 .nav-play-orb {
@@ -428,7 +428,8 @@ code { font-family: ui-monospace, monospace; }
     box-shadow: none;
   }
   .nav-play-orb svg { width: 26px; height: 26px; }
-  .shell-main { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .shell-main { padding-bottom: calc(140px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+  .shell-main a, .shell-main button { scroll-margin-bottom: 140px; }
   .shell-main .wrap { padding-bottom: 20px; }
   .more-backdrop { display: block; position: fixed; inset: 0; z-index: 25; background: rgba(8, 10, 12, 0.55); border: 0; padding: 0; }
   .more-sheet {

@@ -23,7 +23,7 @@ begin
  perform public.set_quest_instance_status(v_instance,'complete');
  perform public.set_quest_instance_status(v_instance,'complete');
  select amount into v_xp from public.xp_ledger where instance_id=v_instance;
- if v_xp<>2 then raise exception 'Expected exactly 2 XP, got %',v_xp; end if;
+ if v_xp<>1 then raise exception 'Companion quests still award exactly 1 XP, got %',v_xp; end if;
  select count(*) into v_count from public.xp_ledger where instance_id=v_instance;
  if v_count<>1 then raise exception 'Duplicate XP ledger row'; end if;
 end $$;

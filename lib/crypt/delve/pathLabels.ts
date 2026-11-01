@@ -10,7 +10,7 @@ export type PathOption = {
   index: number;
   /** A, B, C… shown on the list button and on its map node. */
   badge: string;
-  /** "Fight", "Elite", "Treasure", "Event", "Campfire" or "Boss". */
+  /** "Fight", "Elite", "Treasure", "Event", "Rest" or "Boss". */
   kind: string;
   /** Full room title, e.g. "Grave Bat". */
   title: string;
@@ -30,7 +30,7 @@ export function shortRoomLabel(room: Room, boss = false): string {
   if (room.kind === 'elite') return `Elite: ${roomTitle(room)}`;
   if (room.kind === 'treasure') return 'Chest';
   if (room.kind === 'event') return 'Mystery';
-  return 'Campfire';
+  return 'Rest';
 }
 
 export function pathOptions(rooms: readonly Room[], boss = false): PathOption[] {

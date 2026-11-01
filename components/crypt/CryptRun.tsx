@@ -160,10 +160,10 @@ export function CryptRun() {
           )}
           <button type="button" className="btn ghost crypt-block" aria-expanded={fieldNotesOpen}
             onClick={() => setShowFieldNotes((current) => toggleScopedRunFlag(current, run.seed))}>
-            {fieldNotesOpen ? 'Hide' : 'Open'} Wayfarer field journal
+            {fieldNotesOpen ? 'Hide' : 'Open'} Adventurer field journal
           </button>
           {fieldNotesOpen && (
-            <aside className="crypt-journal" aria-label="Wayfarer field journal">
+            <aside className="crypt-journal" aria-label="Adventurer field journal">
               <h2>Field journal</h2>
               <p><strong>Crypt Rat:</strong> {run.fightCleared ? 'Defeated. The first passage is clear.' : 'Unexplored. Something skitters ahead.'}</p>
               <p><strong>Inscription:</strong> {run.eventCleared ? run.hint ?? (run.eventChoiceId === 'bargain' ? 'Ember bargain accepted: 2 HP exchanged for +1 run-only damage.' : run.eventChoiceId === 'mend' ? 'Mending words restored health.' : 'A warning about the sealed door.') : 'Its meaning remains hidden.'}</p>
@@ -287,7 +287,7 @@ export function CryptRun() {
           {run.hint ? <p className="muted">{run.hint}</p> : null}
           <p className="crypt-status">{runStatus(run.hp, run.maxHp, run.attackBonus)}</p>
           <section className="crypt-epilogue" aria-label="Sealed door choices">
-            <h3>What will the Wayfarer do?</h3>
+            <h3>What will you do?</h3>
             {activeEndingChoice === null ? (
               <div className="choice-list">
                 <button type="button" className="btn ghost crypt-block" onClick={() => setEndingChoice(scopeRunValue(run.seed, 'inspect'))}>Inspect the compass</button>

@@ -16,8 +16,8 @@ alter table public.quest_companion_assignments enable row level security;
 create policy companion_assignments_owner_read on public.quest_companion_assignments for select to authenticated using(owner_id=(select auth.uid()));
 revoke all on public.quest_companion_assignments from anon,authenticated;
 grant select on public.quest_companion_assignments to authenticated;
-alter table public.xp_ledger drop constraint if exists xp_ledger_amount_check;
-alter table public.xp_ledger add constraint xp_ledger_amount_check check(amount in (1,2));
+-- Companion assignment does not change the +1 XP contract. Completion stays on
+-- set_quest_instance_status / _award_quest_xp, which mint one ledger row of 1 XP.
 create or replace function public.quest_companion_assign_to_owner(p_companion_id uuid,p_title text)
 returns uuid language plpgsql security definer set search_path='' as $$
 declare v_owner uuid := auth.uid(); v_title text := btrim(p_title); v_quest uuid;
@@ -42,36 +42,8 @@ begin
 end $$;
 revoke all on function public.quest_companion_assign_to_owner(uuid,text) from public,anon;
 grant execute on function public.quest_companion_assign_to_owner(uuid,text) to authenticated;
-create or replace function public.set_quest_instance_status(p_instance_id uuid,p_action text)
-returns text language plpgsql security definer set search_path='' as $$
-declare inst public.quest_instances%rowtype; v_amount integer := 1;
-begin
- if auth.uid() is null then raise exception 'Authentication required'; end if;
- if p_action not in ('complete','defer','resume') then raise exception 'Unsupported action'; end if;
- select * into inst from public.quest_instances where id=p_instance_id and owner_id=auth.uid() for update;
- if not found then raise exception 'Instance not found'; end if;
- if inst.status='completed' then return 'completed'; end if;
- if p_action='complete' then
-  if exists(select 1 from public.quest_companion_assignments where owner_id=auth.uid() and quest_id=inst.quest_id and active and created_at<=now()) then v_amount:=2; end if;
-  update public.quest_instances set status='completed',completed_at=now() where id=inst.id;
-  insert into public.xp_ledger(owner_id,instance_id,amount) values(auth.uid(),inst.id,v_amount) on conflict(instance_id) do nothing;
-  insert into public.quest_events(owner_id,instance_id,event_type) values(auth.uid(),inst.id,'completed');
-  return 'completed';
- elsif p_action='defer' and inst.status='available' then
-  update public.quest_instances set status='deferred' where id=inst.id;
-  insert into public.quest_events(owner_id,instance_id,event_type) values(auth.uid(),inst.id,'deferred');
-  return 'deferred';
- elsif p_action='resume' and inst.status='deferred' then
-  update public.quest_instances set status='available' where id=inst.id;
-  insert into public.quest_events(owner_id,instance_id,event_type) values(auth.uid(),inst.id,'resumed');
-  return 'available';
- end if;
- return inst.status;
-end $$;
-revoke all on function public.set_quest_instance_status(uuid,text) from public,anon;
-grant execute on function public.set_quest_instance_status(uuid,text) to authenticated;
 
--- Owner-controlled assignment retirement. Future completions revert to ordinary XP.
+-- Owner-controlled assignment retirement. Past ledger rows stay as they were.
 create or replace function public.quest_companion_retire_assignment(p_assignment_id uuid)
 returns boolean language plpgsql security definer set search_path='' as $$
 declare v_owner uuid := auth.uid();

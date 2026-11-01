@@ -57,7 +57,7 @@ test('Home and board keep 44px taps and clear the bottom nav and safe areas', ()
   assert.match(css, /\.hub-today \{[^}]*min-height: 52px/);
   assert.match(css, /\.home-hub \{[^}]*env\(safe-area-inset-top/);
   assert.match(css, /\.quest-board-page \.board-foot a \{[^}]*min-height: 44px/);
-  assert.match(css, /\.shell-main \{ padding-bottom: calc\(86px \+ env\(safe-area-inset-bottom\)\); \}/);
+  assert.match(css, /\.shell-main \{ padding-bottom: calc\(140px \+ env\(safe-area-inset-bottom\)\); scroll-padding-bottom: calc\(140px \+ env\(safe-area-inset-bottom\)\); \}/);
   assert.match(css, /\.completed-board-toggle \{ min-height: 44px; \}/);
 });
 

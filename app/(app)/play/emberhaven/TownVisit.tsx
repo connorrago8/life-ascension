@@ -1,28 +1,54 @@
 'use client';
 
 import Link from 'next/link';
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  EMPTY_LANTERN, LANTERN_PURPOSE, LANTERN_RESET_COPY, lanternClueCount,
+  readLanternProgress, writeLanternProgress, type LanternProgress, type LanternStop,
+} from '../../../../lib/lanternRoute';
 
-type Stop = 'hearth' | 'forge' | 'market';
-type Visit = { started: boolean; clues: Stop[]; solved: boolean; start: () => void; discover: (stop: Stop) => void; solve: () => void; reset: () => void };
+type Visit = LanternProgress & {
+  start: () => void;
+  discover: (stop: LanternStop) => void;
+  place: (stop: LanternStop) => void;
+  clearPlaced: () => void;
+  reset: () => void;
+};
 const VisitContext = createContext<Visit | null>(null);
 const clues = {
   hearth: { name: 'The Hearth', title: 'Warmth', text: 'Begin where the town gathers for warmth.' },
   forge: { name: 'The Blacksmith', title: 'Craft', text: 'After warmth comes the work of careful hands.' },
   market: { name: 'The Lantern Market', title: 'Light', text: 'When the work is done, carry a light toward the road.' },
 } as const;
-const order: Stop[] = ['hearth', 'forge', 'market'];
+const order: LanternStop[] = ['hearth', 'forge', 'market'];
 
 export function TownVisitProvider({ children }: { children: ReactNode }) {
-  const [started, setStarted] = useState(false);
-  const [found, setFound] = useState<Stop[]>([]);
-  const [solved, setSolved] = useState(false);
-  return <VisitContext.Provider value={{ started, clues: found, solved,
-    start: () => setStarted(true),
-    discover: stop => setFound(current => current.includes(stop) ? current : [...current, stop]),
-    solve: () => setSolved(true),
-    reset: () => { setStarted(false); setFound([]); setSolved(false); },
-  }}>{children}</VisitContext.Provider>;
+  const [progress, setProgress] = useState<LanternProgress>(EMPTY_LANTERN);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setProgress(readLanternProgress(window.localStorage));
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (ready) writeLanternProgress(window.localStorage, progress);
+  }, [progress, ready]);
+  function update(patch: Partial<LanternProgress>) {
+    setProgress((current) => ({ ...current, ...patch }));
+  }
+  const visit: Visit = {
+    ...progress,
+    start: () => update({ started: true }),
+    discover: (stop) => setProgress((current) => current.clues.includes(stop) ? current : { ...current, started: true, clues: [...current.clues, stop] }),
+    place: (stop) => setProgress((current) => {
+      if (current.solved || current.placed.includes(stop) || current.placed.length === 3 || !current.clues.includes(stop)) return current;
+      const placed = [...current.placed, stop];
+      const solved = placed.length === 3 && placed.every((value, index) => value === order[index]);
+      return { ...current, placed, solved, kept: current.kept || solved };
+    }),
+    clearPlaced: () => update({ placed: [] }),
+    reset: () => setProgress((current) => ({ ...EMPTY_LANTERN, kept: current.kept })),
+  };
+  return <VisitContext.Provider value={visit}>{children}</VisitContext.Provider>;
 }
 
 function useVisit() {
@@ -36,15 +62,19 @@ const action = { minHeight: 44, minWidth: 44, whiteSpace: 'normal' as const, wid
 
 export function TownTrail() {
   const visit = useVisit();
-  return <section aria-labelledby="lantern-route-title" style={panel}>
-    <p className="eyebrow">OPTIONAL TOWN STORY · PLAYTEST</p>
+  const found = lanternClueCount(visit);
+  const nextStop = order.find((stop) => !visit.clues.includes(stop));
+  return <section aria-labelledby="lantern-route-title" data-lantern-kept={visit.kept ? 'yes' : 'no'} style={panel}>
+    <p className="eyebrow">TOWN STORY</p>
     <h2 id="lantern-route-title">The Lantern Route</h2>
-    <p>Three neighbors remember the order of an old walking route. Gather their clues, then arrange the signs at the Waystone.</p>
-    <p className="muted">This story grants no XP, items, healing or streak credit. It stays with this town visit; leaving town or reloading starts fresh.</p>
+    <p>{LANTERN_PURPOSE}</p>
+    {visit.kept && <p role="status">Lantern kept. The square lantern stays lit. This is a keepsake, not XP.</p>}
+    <p className="muted">{LANTERN_RESET_COPY}</p>
     {!visit.started ? <button type="button" className="btn" style={action} onClick={visit.start}>Begin the Lantern Route</button> : <>
-      <p role="status">{visit.solved ? 'Lantern Route complete.' : `${visit.clues.length} of 3 clues found.`}</p>
+      <p role="status">{visit.solved ? 'Lantern Route complete.' : `${found} of 3 clues found.`}</p>
       <ul>{order.map(stop => <li key={stop}>{clues[stop].name}: {visit.clues.includes(stop) ? clues[stop].text : 'Talk to the neighbor here to find a clue.'}</li>)}</ul>
-      <Link className="btn" style={action} href={visit.clues.length === 3 ? '/play/emberhaven/waystone' : `/play/emberhaven/${order.find(stop => !visit.clues.includes(stop)) || 'waystone'}`}>{visit.solved ? 'Visit the Waystone' : visit.clues.length === 3 ? 'Arrange the signs at the Waystone' : 'Seek the next clue'} →</Link>
+      <Link className="btn" style={action} href={found === 3 ? '/play/emberhaven/waystone' : `/play/emberhaven/${nextStop || 'waystone'}`}>{visit.solved ? 'Visit the Waystone' : found === 3 ? 'Arrange the signs at the Waystone' : 'Seek the next clue'} →</Link>
+      <button type="button" className="btn ghost" style={action} onClick={visit.reset}>Reset the Lantern Route</button>
     </>}
   </section>;
 }
@@ -55,53 +85,53 @@ const dialogue = {
   market: { name: 'Lantern keeper', greeting: 'Take a look around. Nothing here needs to be bought.', topic: 'About the lanterns', response: 'A light in the window tells a traveler that someone is still awake.' },
 } as const;
 
-export function TownConversation({ stop }: { stop: Stop }) {
+export function TownConversation({ stop }: { stop: LanternStop }) {
   const visit = useVisit();
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState<'about' | 'clue' | null>(null);
   const npc = dialogue[stop];
   return <section aria-label={`Conversation with ${npc.name}`} style={panel}>
     <h2>{npc.name}</h2>
-    <p className="muted">Optional story playtest. Conversation changes no equipment or adventure state.</p>
+    <p className="muted">A conversation here changes no equipment, XP, or adventure state.</p>
     <button type="button" className="btn ghost" style={action} aria-expanded={open} aria-controls={`conversation-${stop}`} onClick={() => { setOpen(value => !value); setTopic(null); }}>Talk to {npc.name}</button>
     {open && <div id={`conversation-${stop}`}>
       <p style={{ marginTop: 12 }}>{npc.greeting}</p>
       <button type="button" className="btn ghost" style={action} onClick={() => setTopic('about')}>{npc.topic}</button>
       {visit.started && !visit.solved && <button type="button" className="btn" style={action} onClick={() => { visit.discover(stop); setTopic('clue'); }}>Ask about the Lantern Route</button>}
       <div aria-live="polite" aria-atomic="true" style={{ marginTop: 12 }}>{topic && <p>{topic === 'about' ? npc.response : clues[stop].text}</p>}</div>
-      {topic === 'clue' && <p role="status">Clue recorded: {clues[stop].title}. {visit.clues.length} of 3 found.</p>}
+      {topic === 'clue' && <p role="status">Clue recorded: {clues[stop].title}. {lanternClueCount(visit)} of 3 found.</p>}
     </div>}
   </section>;
 }
 
 export function WaystonePuzzle() {
   const visit = useVisit();
-  const [placed, setPlaced] = useState<Stop[]>([]);
   const [feedback, setFeedback] = useState('');
-  function choose(stop: Stop) {
-    const next = [...placed, stop];
-    setPlaced(next);
-    setFeedback('');
-    if (next.length === 3) {
-      if (next.every((value, index) => value === order[index])) {
-        visit.solve();
-        setFeedback('Warmth, craft, then light. The Lantern Route is complete. The road waits whenever you are ready.');
-      } else setFeedback('Those signs do not match the clues. Read them again and try another order. Nothing is lost.');
+  function choose(stop: LanternStop) {
+    const before = visit.placed.length;
+    visit.place(stop);
+    const nextLength = before + (visit.placed.includes(stop) ? 0 : 1);
+    if (nextLength < 3) { setFeedback(''); return; }
+    const next = visit.placed.includes(stop) ? visit.placed : [...visit.placed, stop];
+    if (next.length === 3 && next.every((value, index) => value === order[index])) {
+      setFeedback('Warmth, craft, then light. The Lantern Route is complete. The square lantern stays lit. No XP, items, or streaks were changed.');
+    } else if (next.length === 3) {
+      setFeedback('Those signs do not match the clues. Read them again and try another order. Nothing is lost.');
     }
   }
   return <section aria-labelledby="waystone-puzzle-title" style={panel}>
     <h2 id="waystone-puzzle-title">Arrange the route signs</h2>
-    {!visit.started ? <p>Begin the optional Lantern Route in Emberhaven square to discover this story.</p> : visit.clues.length < 3 ? <p>Find the three clues at the Hearth, Blacksmith and Lantern Market first. You have {visit.clues.length} of 3.</p> : <>
+    {!visit.started ? <p>Begin the Lantern Route in Emberhaven square. {LANTERN_PURPOSE}</p> : visit.clues.length < 3 ? <p>Find the three clues at the Hearth, Blacksmith and Lantern Market first. You have {visit.clues.length} of 3.</p> : <>
       <ol>{order.map(stop => <li key={stop}>{clues[stop].text}</li>)}</ol>
       <p>Choose the signs in the order described by your neighbors.</p>
-      <p aria-live="polite">Your order: {placed.length ? placed.map(stop => clues[stop].title).join(' → ') : 'No signs placed.'}</p>
-      {!visit.solved && <div>{(['market', 'hearth', 'forge'] as Stop[]).map(stop => <button type="button" className="btn ghost" style={action} key={stop} disabled={placed.includes(stop) || placed.length === 3} onClick={() => choose(stop)}>Place {clues[stop].title}</button>)}</div>}
+      <p aria-live="polite">Your order: {visit.placed.length ? visit.placed.map(stop => clues[stop].title).join(' → ') : 'No signs placed.'}</p>
+      {!visit.solved && <div>{(['market', 'hearth', 'forge'] as LanternStop[]).map(stop => <button type="button" className="btn ghost" style={action} key={stop} disabled={visit.placed.includes(stop) || visit.placed.length === 3} onClick={() => choose(stop)}>Place {clues[stop].title}</button>)}</div>}
       <p role="status">{feedback || (visit.solved ? 'Lantern Route complete. No rewards or account changes were made.' : '')}</p>
-      {!visit.solved && placed.length > 0 && <button type="button" className="btn" style={action} onClick={() => { setPlaced([]); setFeedback('Signs cleared. Choose a new order.'); }}>Rearrange signs</button>}
+      {!visit.solved && visit.placed.length > 0 && <button type="button" className="btn" style={action} onClick={() => { visit.clearPlaced(); setFeedback('Signs cleared. Choose a new order.'); }}>Rearrange signs</button>}
       {visit.solved && <>
-        <p>No XP or items awarded. This was a story for this visit.</p>
+        <p>Lantern kept. The square remembers this route. No XP or items were awarded.</p>
         <Link className="btn" style={action} href="/play/emberhaven">Return to Emberhaven →</Link>
-        <button type="button" className="btn ghost" style={action} onClick={() => { visit.reset(); setPlaced([]); setFeedback(''); }}>Replay the town story</button>
+        <button type="button" className="btn ghost" style={action} onClick={() => { visit.reset(); setFeedback(''); }}>Reset the Lantern Route</button>
       </>}
     </>}
   </section>;

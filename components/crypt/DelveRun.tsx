@@ -1096,7 +1096,7 @@ function RestView({ state, send }: { state: DelveState; send: (command: DelveCom
     .sort((a, b) => a.def.cost - b.def.cost || a.def.name.localeCompare(b.def.name) || a.index - b.index);
   return (
     <section aria-labelledby="delve-rest-title">
-      <h2 id="delve-rest-title">Campfire</h2>
+      <h2 id="delve-rest-title">Campfire: heal or remove a card</h2>
       <p>The fire is low but warm. Choose one: heal, or remove a card.</p>
       {preview && picked !== null ? (
         <div className="delve-remove-confirm" role="group" aria-labelledby="delve-remove-title">

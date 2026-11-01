@@ -207,7 +207,7 @@ test('the preview run has a rat, inscription, charm, and gated sentinel encounte
   assert.ok(RAT.maxHp < PLAYER.maxHp);
   assert.ok(RAT.attack < PLAYER.attack);
   assert.equal(INTRO.lines.length, 3);
-  assert.match(INTRO.lines.join(' '), /Wayfarer/);
+  assert.match(INTRO.lines.join(' '), /adventurer/);
   assert.equal(INTRO.speaker, 'Mira');
   assert.equal(INTRO.place, 'Brackenlight');
   assert.equal(eventNode().choices.length, 3);

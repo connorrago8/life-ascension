@@ -17,7 +17,7 @@ export type Progression = {
 
 export const SAMPLE_PROGRESSION: Progression = Object.freeze({
   level: 7,
-  title: 'Wayfarer',
+  title: 'Adventurer',
   xp: 720,
   xpToNext: 1000,
   strength: 4,
@@ -64,7 +64,7 @@ type LevelStep = {
 const PREVIEW_LEVELS: readonly LevelStep[] = [
   {
     level: 7,
-    title: 'Wayfarer',
+    title: 'Adventurer',
     strength: 4,
     agility: 5,
     intelligence: 3,

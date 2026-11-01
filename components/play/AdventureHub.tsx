@@ -97,7 +97,7 @@ export function AdventureHub() {
               <span className="adv-node-name">{location.name}</span>
               {location.kind === 'town' ? <span className="soon-pill">Open</span> : location.kind === 'preview'
                 ? <span className="soon-pill">{HUB.preview}</span>
-                : <span className="adv-node-note">{HUB.locked}<span className="adv-node-soon">{HUB.soon}</span></span>}
+                : <span className="adv-node-note">Locked. Coming soon.</span>}
             </button>
           );
         })}
@@ -117,6 +117,12 @@ export function AdventureHub() {
       {selected.kind !== 'town' && <Link className="btn" href="/play/emberhaven" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 12 }}>
         Visit Emberhaven town →
       </Link>}
+      <article className="lock-card" aria-label="Brain Rot">
+        <p className="lock-kicker">Arcade dungeon</p>
+        <h2>Brain Rot</h2>
+        <p className="muted">Ten mini-games across 30 levels, then the Brain Rot King. Your quest XP is not spent here.</p>
+        <Link className="btn" href="/play/brain-rot" style={{ minHeight: 44 }}>Enter Brain Rot</Link>
+      </article>
       <p className="play-note">{HUB.note}</p>
     </main>
   );
