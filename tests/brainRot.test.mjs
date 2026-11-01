@@ -75,3 +75,5 @@ test('Crossing games keep horizontal movement within screen margins',()=>{for(co
 
 test('Endless Crossing track generator keeps player track clear at spawn',()=>{for(let seed=1;seed<=30;seed++){let s=games.createGame('endless-crossing',1,seed);s.tick=44;const n=games.step(s,null);assert.ok(n.entities.length>0);assert.ok(Math.abs(n.entities[0].x-n.player.x)>.1);assert.ok(Math.abs(n.entities[0].y-n.player.y)>=.08);}});
 test('Endless Crossing lateral input changes which traffic track is protected',()=>{let s=games.createGame('endless-crossing',1,15);s=games.step(s,'right');s.tick=44;const n=games.step(s,null);assert.ok(n.entities.length>0);assert.ok(Math.abs(n.entities[0].x-n.player.x)>.1);});
+
+test('Endless Crossing keeps an adjacent dodge track open for generated traffic',()=>{for(let seed=1;seed<=50;seed++){for(const x of [.08,.29,.5,.71,.92]){let s=games.createGame('endless-crossing',1,seed);s.player.x=x;s.tick=44;const n=games.step(s,null);assert.ok(n.entities.length>0);const track=Math.round((n.entities[0].x-.08)/.21);const playerTrack=Math.round((x-.08)/.21);assert.ok(Math.abs(track-playerTrack)>1);}}});
