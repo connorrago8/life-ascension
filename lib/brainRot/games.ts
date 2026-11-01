@@ -47,7 +47,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
   if(s.entities.some(e=>Math.abs(e.x-s.player.x)<.045&&Math.abs(e.y-s.player.y)<.09))s.lost=true;
   if(s.tick%60===0)s.progress++;
  }
- if(s.progress>=s.goal)s.won=true;
+ if(s.progress>=s.goal){s.won=true;s.lost=false;}
  return s;
 }
 export function serialize(state:State){return JSON.stringify(state);}
