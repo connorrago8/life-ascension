@@ -46,7 +46,8 @@ export function step(state:State,input:Input|null,dt=1/60):State{
    s.entities.push({x:1.08,y:center-.22,vx:-.0045,vy:0,type:2},{x:1.08,y:center+.22,vx:-.0045,vy:0,type:3});
   }else if(kind!=='flap'&&s.tick%Math.max(35,90-Math.floor(s.goal/2))===0){
    const y=kind==='runner'?.72:kind==='jetpack'?clamp(s.player.y+(random()-.5)*.24,.16,.84):.2+random()*.6;
-   s.entities.push({x:1.08,y,vx:-speed,vy:0,type:kind==='jetpack'&&Math.floor(s.tick/Math.max(35,90-Math.floor(s.goal/2)))%2===0?1:0});
+   const collectible=kind==='jetpack'&&Math.floor(s.tick/Math.max(35,90-Math.floor(s.goal/2)))%2===0;
+   s.entities.push({x:1.08,y:collectible?s.player.y:y,vx:-speed,vy:0,type:collectible?1:0});
   }
   for(const e of s.entities)e.x+=e.vx;
   s.entities=s.entities.filter(e=>e.x>-.1);
