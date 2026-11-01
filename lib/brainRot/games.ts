@@ -67,7 +67,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
    }else if(s.tick%60===0)s.progress++;
   }
  }
- if(s.progress>=s.goal){s.won=true;s.lost=false;}
+ if(s.progress>=s.goal&&!s.lost)s.won=true;
  return s;
 }
 export function serialize(state:State){return JSON.stringify(state);}
