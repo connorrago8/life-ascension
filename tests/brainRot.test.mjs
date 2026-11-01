@@ -66,3 +66,5 @@ test('Endless Crossing generated traffic varies in depth and stays in upcoming v
 test('Endless Crossing spawn preserves clearance around player altitude',()=>{let s=games.createGame('endless-crossing',1,91);s.tick=44;s.player.y=.5;const n=games.step(s,null);assert.ok(n.entities.length>0);assert.ok(Math.abs(n.entities[0].y-n.player.y)>=.08);});
 
 test('Endless Crossing lethal forward hop never awards distance',()=>{let s=games.createGame('endless-crossing',1,17);s.entities=[{x:s.player.x,y:s.player.y-.12,vx:0,vy:0,type:0}];const n=games.step(s,'up');assert.equal(n.lost,true);assert.equal(n.progress,0);assert.equal(n.score,0);});
+
+test('Endless Crossing backward input does not detach player from camera',()=>{let s=games.createGame('endless-crossing',1,33);const y=s.player.y;const n=games.step(s,'down');assert.equal(n.player.y,y);assert.equal(n.progress,0);});
