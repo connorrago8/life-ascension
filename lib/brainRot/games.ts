@@ -1,7 +1,7 @@
 import { GAMES, type GameId, rng } from './core';
 export type Input = 'left'|'right'|'up'|'down'|'tap'|'hold'|'release'|'slice';
 export type Entity = {x:number;y:number;vx:number;vy:number;type:number};
-export type State = {id:GameId;tick:number;seed:number;progress:number;goal:number;score:number;player:{x:number;y:number;vx:number;vy:number};entities:Entity[];grid:number[];lost:boolean;won:boolean;pressed:boolean;lastInput:Input|null};
+export type State = {id:GameId;tick:number;seed:number;progress:number;goal:number;score:number;player:{x:number;y:number;vx:number;vy:number};entities:Entity[];grid:number[];lost:boolean;won:boolean;pressed:boolean;lastInput:Input|null;lastMeaningfulTick?:number};
 const game=(id:GameId)=>GAMES.find(g=>g.id===id)!;
 export function createGame(id:GameId,tier:number,seed:number):State{
  const kind=game(id).kind;const goals:Record<string,number[]>={runner:[35,55,75],climber:[25,45,65],flap:[10,20,30],jetpack:[35,55,75],crossing:[12,24,36],slice:[15,30,45],glide:[35,55,75],merge:[128,256,512]};
@@ -19,7 +19,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  const s:State={...state,tick:state.tick+1,seed:(Math.imul(state.seed,1664525)+1013904223)>>>0,player:{...state.player},entities:state.entities.map(e=>({...e})),grid:[...state.grid],lastInput:input};
  const kind=game(s.id).kind,random=rng(s.seed),speed=dt*(0.16+Math.min(3,s.goal/35)*0.045);
  if(kind==='merge'){
-  if(input&&['left','right','up','down'].includes(input)){s.grid=moveTiles(s.grid,input,s.seed);s.score=s.grid.reduce((a,b)=>a+b,0);s.progress=Math.max(...s.grid);if(s.progress>=s.goal)s.won=true;else if(!s.grid.includes(0)&&!(['left','right','up','down'] as Input[]).some(d=>{const v=moveTiles(s.grid,d,s.seed);return v.some((n,i)=>n!==s.grid[i]);}))s.lost=true;}
+  if(input&&['left','right','up','down'].includes(input)){s.grid=moveTiles(s.grid,input,s.seed);if(s.grid.some((value,index)=>value!==state.grid[index]))s.lastMeaningfulTick=s.tick;s.score=s.grid.reduce((a,b)=>a+b,0);s.progress=Math.max(...s.grid);if(s.progress>=s.goal)s.won=true;else if(!s.grid.includes(0)&&!(['left','right','up','down'] as Input[]).some(d=>{const v=moveTiles(s.grid,d,s.seed);return v.some((n,i)=>n!==s.grid[i]);}))s.lost=true;}
   return s;
  }
  if(kind==='crossing'){
