@@ -19,6 +19,7 @@ import {
 } from '../../lib/gearSlots';
 import { HomeCharacter } from './HomeCharacter';
 import { starterItemForSlot } from '../../lib/starterLook';
+import { PlayerStatPanel } from '../PlayerStatPanel';
 import { usePreviewAppearance } from './usePreviewAppearance';
 
 type SheetItem = { id: string; name: string; boosts: string; equipped: boolean };
@@ -225,11 +226,7 @@ export function CharacterScreen({
           </div>
         </>
       ) : null}
-      {gearView.canChange && !hideSampleStats && <section className="character-stats" aria-label="Sample character attributes">
-        <span>STR <strong>{base.strength}</strong></span><span>AGI <strong>{base.agility}</strong></span>
-        <span>INT <strong>{base.intelligence}</strong></span><span>END <strong>{base.endurance}</strong></span>
-        <span>LCK <strong>{base.luck}</strong></span>
-      </section>}
+      {gearView.canChange && !hideSampleStats && <PlayerStatPanel row={base} variant="sample" />}
     </div>
   );
 }

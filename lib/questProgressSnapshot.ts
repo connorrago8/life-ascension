@@ -49,7 +49,7 @@ export type HomeSnapshot = {
   stats: Record<string, unknown> | null;
   gear: unknown;
   today: { left: number; done: number } | null;
-  streak: { fire: number; doneToday: boolean; today: string; timeZone: string } | null;
+  streak: { questsOnStreak: number } | null;
 };
 
 const HOME_KEY = 'life-ascension:home-progress:v1';

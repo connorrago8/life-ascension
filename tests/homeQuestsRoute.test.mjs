@@ -41,7 +41,7 @@ test('quest board back-links point at /quests, not Home', () => {
 test('Home is character-first, read-only, and does not duplicate the nav', () => {
   assert.match(home, /export default function Home\(\)/);
   assert.match(home, /<HomeCharacter /);
-  assert.match(home, /attributeEntries\(/);
+  assert.match(home, /PlayerStatPanel/);
   assert.match(home, /role="progressbar"/);
   assert.match(home, /get_lifetime_xp/);
   assert.match(home, /verifiedLifetimeXp\(/);

@@ -999,9 +999,9 @@ code { font-family: ui-monospace, monospace; }
 .collapsible-chevron.is-open { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .collapsible-chevron { transition: none; } }
 
-/* Character: compact STR/AGI/INT/END/LCK row and one slim level bar at the top. */
+/* Character: locked STR / INT / VIT / DIS row and one slim level bar at the top. */
 .character-summary { display: grid; gap: 8px; margin: 0 0 12px; }
-.character-stat-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.character-stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .character-stat {
   display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px;
   border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; background: rgba(255, 255, 255, 0.04);
@@ -1037,7 +1037,7 @@ code { font-family: ui-monospace, monospace; }
 .hub-xp-fill { display: block; height: 100%; background: linear-gradient(90deg, #5fc79f, var(--mint)); border-radius: inherit; transition: width .4s ease; }
 .hub-lifetime { margin: 0; font-size: 0.8rem; text-align: right; }
 .hub-card { border: 1px solid var(--border); border-radius: 16px; background: #20242a; padding: 12px 14px; }
-.hub-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.hub-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .hub-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-radius: 10px; background: #1a1d22; }
 .hub-stat-label { font-size: 0.7rem; letter-spacing: 0.12em; color: var(--muted); font-weight: 650; }
 .hub-stat-value { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -1296,5 +1296,8 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .quest-board-page .board-offboard { margin-top: 10px; }
 .quest-board-page .offboard-toggle { min-height: 44px; width: 100%; justify-content: flex-start; gap: 8px; }
 .quest-board-page #offboard-quests-list > p.muted { padding: 8px 4px 0; font-size: 0.85rem; }
-.hub-today .hub-streak { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hub-today .hub-streak { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+@media (max-width: 719px) {
+  .town-screen :is(a, button) { scroll-margin-bottom: calc(148px + env(safe-area-inset-bottom, 0px)); }
+}
 .hub-today .hub-streak.lit { color: #ffb070; }

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
-import { attributeEntries, adventurerName } from '../../../lib/attributes';
-import { parseCryptProfile } from '../../../lib/cryptVault';
+import { adventurerName, playerStatRow } from '../../../lib/attributes';
+import { PlayerStatPanel } from '../../../components/PlayerStatPanel';
 import { levelFor, levelProgress } from '../../../lib/level';
 import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
@@ -54,7 +54,7 @@ export default function CharacterPage() {
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
-        // Read-only: your STR/AGI/INT/END/LCK allocation (set in the Crypt camp, capped by level server-side).
+        // Read-only crypt profile. STR and INT come from its attributes; VIT and DIS are kept when that payload or the profile row has them.
         client.rpc('get_crypt_profile'),
         // Read-only: your latest Apple Health Shortcut reading (RLS: your own rows only).
         client.from('wellness_readings').select(WELLNESS_READING_COLUMNS).order('reading_date', { ascending: false }).limit(1),
@@ -75,7 +75,7 @@ export default function CharacterPage() {
         xp: verifiedXp,
         profile,
         wellness: wellnessResult.error ? { connected: false } : wellnessSnapshot(wellnessResult.data),
-        stats: statsResult.error ? null : parseCryptProfile(statsResult.data).attributes,
+        stats: playerStatRow(profile, statsResult.error ? null : statsResult.data),
         preview: false,
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
       });
@@ -160,8 +160,7 @@ export default function CharacterPage() {
 
   const progress = levelFor(state.xp);
   const fraction = levelProgress(state.xp);
-  // Allocated stats when the account has them; otherwise the placeholder dash.
-  const attributes = attributeEntries(state.stats);
+  // Locked stats when the account has them; otherwise the placeholder dash.
   const wellness = state.wellness;
   const armorMilestone = state.preview ? null : earnedArmorMilestone(state.xp, state.gear);
 
@@ -170,14 +169,7 @@ export default function CharacterPage() {
       <h1 className="sr-only">{state.name}</h1>
       {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
       <section className="character-summary" aria-label="Level and stats">
-        <div className="character-stat-row" role="list" aria-label="Stats">
-          {attributes.map((attribute) => (
-            <div key={attribute.key} className="character-stat" role="listitem" aria-label={attribute.pending ? `${attribute.label}, not set` : `${attribute.label} ${attribute.value}`}>
-              <span className="character-stat-label" aria-hidden="true">{attribute.short}</span>
-              <span className="character-stat-value" aria-hidden="true">{attribute.value}</span>
-            </div>
-          ))}
-        </div>
+        <PlayerStatPanel row={state.stats} variant="character" />
         <div className="character-level-line">
           <span className="character-level">Lv {progress.level}</span>
           <div className="xp-track character-xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label={`Level ${progress.level}: ${progress.xpIntoLevel} of ${progress.xpForNext} XP to next level`}><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>

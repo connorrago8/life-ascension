@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { AppNav } from './AppNav';
+import { AppPathStack } from '../../components/AppPathStack';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '/';
@@ -15,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="shell">
+      <AppPathStack />
       <AppNav />
       <div className="shell-main">{children}</div>
     </div>

@@ -7,8 +7,8 @@ import { homeCharacterModel } from '../../lib/preview/characterRender';
 import { appearanceFromLoadout } from '../../lib/preview/appearance';
 import { catalogItem } from '../../lib/preview/catalog';
 import { characterGearView, parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../lib/preview/characterGearView';
-import { attributeEntries, adventurerName } from '../../lib/attributes';
-import { parseCryptProfile } from '../../lib/cryptVault';
+import { adventurerName, playerStatRow } from '../../lib/attributes';
+import { PlayerStatPanel } from '../../components/PlayerStatPanel';
 import { ADVENTURER_CLASS } from '../../lib/character';
 import { levelFor, levelProgress } from '../../lib/level';
 import { verifiedLifetimeXp } from '../../lib/characterXpProof';
@@ -17,7 +17,8 @@ import { todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, t
 import { localToday, playerTimeZone } from '../../lib/playerTimeZone';
 import { readHomeProgress, writeHomeProgress } from '../../lib/questProgressSnapshot';
 import { supabase } from '../../lib/supabase';
-import { localParts, parseStreak, type StreakState } from '../../lib/questStreak';
+import { localParts } from '../../lib/questStreak';
+import { cachedQuestStreakCount, countQuestsOnStreak, homeStreakLabel } from '../../lib/homeStreak';
 import { starterSlots } from '../../lib/starterLook';
 import { ReturnBanner } from '../../components/home/ReturnBanner';
 
@@ -32,7 +33,7 @@ type HomeState =
       stats: Record<string, unknown> | null;
       gear: AuthenticatedGearSnapshot | null;
       today: TodayGlance | null;
-      streak: StreakState | null;
+      streak: { questsOnStreak: number } | null;
       preview: boolean;
     };
 
@@ -54,7 +55,7 @@ export default function Home() {
       && typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('preview') === '1';
     if (preview) {
-      commit({ status: 'ready', name: 'Adventurer', xp: 7, stats: { strength: 3, agility: 2, intelligence: 1, endurance: 2, luck: 1 }, gear: null, today: { left: 2, done: 1 }, streak: { fire: 7, doneToday: true, today: localToday(), timeZone: playerTimeZone() }, preview: true });
+      commit({ status: 'ready', name: 'Adventurer', xp: 7, stats: { strength: 3, intelligence: 1, vitality: 2, discipline: 1 }, gear: null, today: { left: 2, done: 1 }, streak: { questsOnStreak: 1 }, preview: true });
       return;
     }
     let showedCache = false;
@@ -66,19 +67,20 @@ export default function Home() {
       const cached = readHomeProgress(user.id);
       if (cached) {
         showedCache = true;
-        commit({ status: 'ready', name: cached.name, xp: cached.xp, stats: cached.stats, gear: cached.gear as AuthenticatedGearSnapshot | null, today: cached.today, streak: cached.streak, preview: false });
+        const cachedCount = cachedQuestStreakCount(cached.streak);
+        commit({ status: 'ready', name: cached.name, xp: cached.xp, stats: cached.stats, gear: cached.gear as AuthenticatedGearSnapshot | null, today: cached.today, streak: cachedCount === null ? null : { questsOnStreak: cachedCount }, preview: false });
       }
       try { await client.rpc('set_player_timezone', { p_tz: playerTimeZone() }); } catch { /* Zone storage is optional until the migration is applied. */ }
       const today = localToday(new Date(), playerTimeZone());
       const [xpResult, profileResult, gearResult, statsResult, questsResult, instancesResult, streakResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
-        client.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
+        client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
         client.rpc('get_crypt_profile'),
         client.from('quests').select('id,cadence,quest_type,scheduled_for').eq('active', true).limit(1000),
         client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).lte('due_date', today).or(`status.eq.available,due_date.eq.${today}`).limit(1000),
-        // Optional: a database without get_quest_streak just hides the badge.
-        Promise.resolve(client.rpc('get_quest_streak')).catch(() => ({ data: null, error: true })),
+        // Same per-quest rows the quest board uses for its streak badges.
+        Promise.resolve(client.rpc('get_quest_streaks')).catch(() => ({ data: null, error: true })),
       ]);
       const verifiedXp = xpResult.error ? null : verifiedLifetimeXp(xpResult.data);
       if (verifiedXp === null) {
@@ -86,17 +88,20 @@ export default function Home() {
         return;
       }
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
-      const glance = questsResult.error || instancesResult.error
+      const quests = questsResult.error ? null : ((questsResult.data ?? []) as GlanceQuest[]);
+      const glance = !quests || instancesResult.error
         ? null
-        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date(), playerTimeZone()).minutes });
+        : todayGlance(quests, (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date(), playerTimeZone()).minutes });
+      const counted = !quests || streakResult.error ? null : countQuestsOnStreak(streakResult.data, quests);
+      const questsOnStreak = counted === null ? cachedQuestStreakCount(cached?.streak) : counted;
       const next = {
         status: 'ready' as const,
         name: adventurerName(user.email, profile?.display_name),
         xp: verifiedXp,
-        stats: statsResult.error ? null : parseCryptProfile(statsResult.data).attributes,
+        stats: playerStatRow(profile, statsResult.error ? null : statsResult.data),
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
         today: glance,
-        streak: streakResult.error ? (cached?.streak ?? null) : parseStreak(streakResult.data),
+        streak: questsOnStreak === null ? null : { questsOnStreak },
         preview: false,
       };
       writeHomeProgress({ owner: user.id, name: next.name, xp: next.xp, stats: next.stats, gear: next.gear, today: next.today, streak: next.streak });
@@ -140,7 +145,6 @@ export default function Home() {
 
   const progress = levelFor(state.xp);
   const fraction = levelProgress(state.xp);
-  const attributes = attributeEntries(state.stats);
   const gearView = characterGearView(state.gear ? 'verified' : 'unverified', FALLBACK_APPEARANCE, state.gear);
   const model = homeCharacterModel({ ...gearView.appearance, name: state.name });
   const equipped = (state.gear?.equippedItemIds ?? [])
@@ -152,6 +156,7 @@ export default function Home() {
     ...[starter.weapon, starter.armor].flatMap((item) => (item ? [{ id: item.id, key: item.slot as string, name: item.name, slot: item.slotLabel }] : [])),
     ...equipped,
   ];
+  const streakLabel = homeStreakLabel(state.streak?.questsOnStreak);
 
   return (
     <main className="wrap home-hub">
@@ -181,14 +186,7 @@ export default function Home() {
       </section>
 
       <section className="hub-card hub-summary" aria-label="Adventurer summary">
-        <ul className="hub-stats" aria-label="Stats">
-          {attributes.map((attribute) => (
-            <li key={attribute.key} className="hub-stat" aria-label={attribute.pending ? `${attribute.label}, not set` : `${attribute.label} ${attribute.value}`}>
-              <span className="hub-stat-label" aria-hidden="true">{attribute.short}</span>
-              <span className="hub-stat-value" aria-hidden="true">{attribute.value}</span>
-            </li>
-          ))}
-        </ul>
+        <PlayerStatPanel row={state.stats} variant="home" />
         <div className="hub-gear" aria-label="Equipped gear">
           <span className="hub-gear-label">Gear</span>
           {state.gear === null && !state.preview ? (
@@ -200,10 +198,10 @@ export default function Home() {
       </section>
 
       {state.today && (
-        <Link href="/quests" className="hub-card hub-today" aria-label={`Today: ${todayGlanceLabel(state.today)}.${state.streak ? ` Streak ${state.streak.fire} days.` : ''} Open quests`}>
+        <Link href="/quests" className="hub-card hub-today" aria-label={`Today: ${todayGlanceLabel(state.today)}.${streakLabel ? ` ${streakLabel}.` : ''} Open quests`}>
           <span className="hub-today-label">Today</span>
           <span className="hub-today-value">{todayGlanceLabel(state.today)}</span>
-          {state.streak && <span className={'hub-streak' + (state.streak.fire > 0 ? ' lit' : '')} aria-hidden="true">🔥 {state.streak.fire}</span>}
+          {streakLabel && <span className="hub-streak lit" aria-hidden="true">{streakLabel}</span>}
           <span className="hub-today-chevron" aria-hidden="true">›</span>
         </Link>
       )}

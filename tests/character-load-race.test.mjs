@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { playerStatRow } from '../lib/attributes.ts';
 import { createLatestCharacterLoadGate } from '../lib/preview/latestCharacterLoadGate.ts';
 import { SERVER_EQUIPPABLE_ITEMS, canRequestEquip, isSlotUnlocked, levelForVerifiedXp, slotLockText } from './helpers/gearSlotsModule.mjs';
 
@@ -79,7 +80,7 @@ function scenario(oldGearPromise, equipPromise = null) {
     verifiedLifetimeXp: (value) => value,
     parseAuthenticatedGearSnapshot: (value) => value,
     parseCryptProfile: (value) => ({ attributes: value?.attributes ?? null }),
-    adventurerName: () => 'Adventurer', loginHref: () => '/login',
+    adventurerName: () => 'Adventurer', loginHref: () => '/login', playerStatRow,
     WELLNESS_READING_COLUMNS: 'reading_date,sleep_hours,steps,source,updated_at',
     wellnessSnapshot: () => ({ connected: false }),
   });
