@@ -7,7 +7,7 @@ const sql = readFileSync(new URL('../supabase/migrations/202611010005_izzy_appro
 test('approved assignments bind to owner, quest, occurrence, and proposal', () => {
   assert.match(sql, /owner_id uuid not null references auth\.users\(id\)/i);
   assert.match(sql, /quest_instance_id uuid not null unique/i);
-  assert.match(sql, /proposal_id uuid not null unique references public\.izzy_submission_proposals\(id\)/i);
+  assert.match(sql, /proposal_id bigint not null unique references public\.izzy_submission_proposals\(id\)/i);
   assert.match(sql, /unique \(id, owner_id, quest_id, quest_instance_id\)/i);
 });
 
