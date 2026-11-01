@@ -36,7 +36,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
     // Procedural rows use five discrete tracks. Keep the player track open at spawn,
     // and reject a row when it would overlap traffic already occupying that track.
     const playerTrack=Math.round((s.player.x-.08)/.21);
-    const available=[0,1,2,3,4].filter(track=>track!==playerTrack);
+    const available=[0,1,2,3,4].filter(track=>Math.abs(track-playerTrack)>1);
     const track=available[Math.floor(random()*available.length)];
     const x=.08+track*.21;
     const rawDepth=.14+random()*.48;
