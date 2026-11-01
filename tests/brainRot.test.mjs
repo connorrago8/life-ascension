@@ -72,3 +72,6 @@ test('Endless Crossing backward input does not detach player from camera',()=>{l
 test('Endless Crossing suppresses same-direction traffic on an occupied nearby corridor',()=>{let s=games.createGame('endless-crossing',1,91);s.tick=44;s.entities=[{x:-.1,y:.32,vx:.006,vy:0,type:0},{x:1.1,y:.32,vx:-.006,vy:0,type:0}];const n=games.step(s,null);assert.ok(n.entities.length<=3);});
 
 test('Crossing games keep horizontal movement within screen margins',()=>{for(const id of ['endless-crossing','frog-kings-crossing']){let s=games.createGame(id,1,17);for(let i=0;i<20;i++)s=games.step(s,'left');assert.ok(s.player.x>=.08);for(let i=0;i<40;i++)s=games.step(s,'right');assert.ok(s.player.x<=.92);}});
+
+test('Endless Crossing track generator keeps player track clear at spawn',()=>{for(let seed=1;seed<=30;seed++){let s=games.createGame('endless-crossing',1,seed);s.tick=44;const n=games.step(s,null);assert.ok(n.entities.length>0);assert.ok(Math.abs(n.entities[0].x-n.player.x)>.1);assert.ok(Math.abs(n.entities[0].y-n.player.y)>=.08);}});
+test('Endless Crossing lateral input changes which traffic track is protected',()=>{let s=games.createGame('endless-crossing',1,15);s=games.step(s,'right');s.tick=44;const n=games.step(s,null);assert.ok(n.entities.length>0);assert.ok(Math.abs(n.entities[0].x-n.player.x)>.1);});
