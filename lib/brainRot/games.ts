@@ -24,7 +24,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  }
  if(kind==='crossing'){
   if(input&&['left','right','up','down'].includes(input)){
-   s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),.05,.95);
+   s.player.x=clamp(s.player.x+(input==='left'?-0.12:input==='right'?0.12:0),.08,.92);
    if(input==='up'){if(s.id==='endless-crossing'){s.player.y=.5;for(const e of s.entities)e.y+=.12;}else s.player.y=clamp(s.player.y-.12,.08,.92);}
    if(input==='down'&&s.id!=='endless-crossing')s.player.y=clamp(s.player.y+.12,.08,.92);
   }
