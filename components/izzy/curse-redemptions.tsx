@@ -9,7 +9,7 @@ export type CurseRedemption = {
   state: 'revealed';
 };
 
-type Action = 'fulfill' | 'decline' | 'forgive';
+type Action = 'fulfill' | 'decline';
 
 type Props = {
   curses: CurseRedemption[];
