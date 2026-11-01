@@ -39,9 +39,10 @@ export function step(state:State,input:Input|null,dt=1/60):State{
     const available=[0,1,2,3,4].filter(track=>track!==playerTrack);
     const track=available[Math.floor(random()*available.length)];
     const x=.08+track*.21;
-    const depth=.14+random()*.48;
+    const rawDepth=.14+random()*.48;
+    const depth=Math.abs(rawDepth-s.player.y)<.08?s.player.y-.18:rawDepth;
     if(!s.entities.some(e=>Math.abs(e.y-depth)<.10&&Math.abs(e.x-x)<.12))
-     s.entities.push({x,y:depth,vx:0,vy:0,type:0});
+     s.entities.push({x,y:depth,vx:(fromLeft?1:-1)*velocity,vy:0,type:0});
    }else s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?velocity:-velocity,vy:0,type:0});
   }
   s.entities=s.entities.filter(e=>e.x>-.2&&e.x<1.2&&(s.id!=='endless-crossing'||e.y<1.2)).slice(-16);for(const e of s.entities)e.x+=e.vx;
