@@ -28,7 +28,22 @@ export function step(state:State,input:Input|null,dt=1/60):State{
    if(input==='up'){if(s.id==='endless-crossing'){s.player.y=.5;for(const e of s.entities)e.y+=.12;}else s.player.y=clamp(s.player.y-.12,.08,.92);}
    if(input==='down'&&s.id!=='endless-crossing')s.player.y=clamp(s.player.y+.12,.08,.92);
   }
-  if(s.tick%45===0){const fromLeft=random()<.5;const lane=(s.tick/45)%5;const velocity=.006*(s.id==='endless-crossing'?1+Math.min(1.5,s.progress/35):1);const depth=s.id==='endless-crossing'?.14+random()*.48:.24+lane*.12;const safeDepth=s.id==='endless-crossing'&&Math.abs(depth-s.player.y)<.08?s.player.y-.18:depth;if(s.id!=='endless-crossing'||!s.entities.some(e=>Math.abs(e.y-safeDepth)<.09&&Math.sign(e.vx)===Math.sign(fromLeft?velocity:-velocity)))s.entities.push({x:fromLeft?-.1:1.1,y:safeDepth,vx:fromLeft?velocity:-velocity,vy:0,type:0});}
+  if(s.tick%45===0){
+   const fromLeft=random()<.5;
+   const lane=(s.tick/45)%5;
+   const velocity=.006*(s.id==='endless-crossing'?1+Math.min(1.5,s.progress/35):1);
+   if(s.id==='endless-crossing'){
+    // Procedural rows use five discrete tracks. Keep the player track open at spawn,
+    // and reject a row when it would overlap traffic already occupying that track.
+    const playerTrack=Math.round((s.player.x-.08)/.21);
+    const available=[0,1,2,3,4].filter(track=>track!==playerTrack);
+    const track=available[Math.floor(random()*available.length)];
+    const x=.08+track*.21;
+    const depth=.14+random()*.48;
+    if(!s.entities.some(e=>Math.abs(e.y-depth)<.10&&Math.abs(e.x-x)<.12))
+     s.entities.push({x,y:depth,vx:0,vy:0,type:0});
+   }else s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?velocity:-velocity,vy:0,type:0});
+  }
   s.entities=s.entities.filter(e=>e.x>-.2&&e.x<1.2&&(s.id!=='endless-crossing'||e.y<1.2)).slice(-16);for(const e of s.entities)e.x+=e.vx;
   if(s.entities.some(e=>Math.abs(e.x-s.player.x)<.055&&Math.abs(e.y-s.player.y)<.065))s.lost=true;
   if(s.id==='endless-crossing'&&input==='up'&&!s.lost){s.progress++;s.score+=2;}
