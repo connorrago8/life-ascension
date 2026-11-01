@@ -98,9 +98,11 @@ test('character and play screens do not invent stats, wellness, or XP', () => {
   assert.match(viewerSource, /aria-label="Close"/);
   assert.match(viewerSource, /returnFocusRef/);
   assert.match(playSource, /Forgotten Crypt/);
-  assert.match(playSource, /Coming soon/);
+  assert.match(playSource, /Playable preview/);
+  assert.match(playSource, /href="\/play\/delve"/);
+  assert.match(playSource, /href="\/play\/emberhaven"/);
   assert.match(playSource, /Hub/);
-  assert.match(playSource, /aria-disabled="true"/);
+  assert.doesNotMatch(playSource, /aria-disabled="true"/);
   assert.match(playSource, /Real-life quests strengthen your character/);
   assert.doesNotMatch(playSource, /get_lifetime_xp|create_scheduled_quest/);
 });
