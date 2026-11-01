@@ -24,14 +24,16 @@ export function completeLevel(run:Run):Run{if(run.level>30)return run;const next
 export function newBoss(seed:number):Boss{const ids=GAMES.map(g=>g.id);const seconds=Object.fromEntries(ids.map(id=>[id,0])) as Record<GameId,number>;return {queue:shuffle(ids,rng(seed)),index:0,segmentMs:0,seconds,states:{},snapshots:{},hearts:3,won:false};}
 export function advanceBoss(boss:Boss,deltaMs:number,seed:number):Boss{
  if(boss.won||deltaMs<0||!Number.isFinite(deltaMs))return boss;
- const game=boss.queue[boss.index];if(!game)return {...boss,won:true};
- const step=Math.min(deltaMs,15000-boss.segmentMs);const segmentMs=boss.segmentMs+step;
- if(segmentMs<15000)return {...boss,segmentMs};
+ const game=boss.queue[boss.index];
+ if(!game)return {...boss,won:true};
+ const elapsed=boss.segmentMs+deltaMs;
+ if(elapsed<15000)return {...boss,segmentMs:elapsed};
  const seconds={...boss.seconds,[game]:Math.min(60,boss.seconds[game]+15)};
+ if(GAMES.every(g=>seconds[g.id]===60))return {...boss,seconds,segmentMs:15000,won:true};
+ if(boss.index+1<boss.queue.length)return {...boss,seconds,index:boss.index+1,segmentMs:0};
  const remaining=GAMES.map(g=>g.id).filter(id=>seconds[id]<60);
- if(!remaining.length)return {...boss,seconds,segmentMs:15000,won:true};
- const random=rng(seed+Object.values(seconds).reduce((a,b)=>a+b,0));
- const queue=shuffle(remaining,random);
+ const completedSeconds=Object.values(seconds).reduce((a,b)=>a+b,0);
+ const queue=shuffle(remaining,rng(seed+completedSeconds));
  if(queue.length>1&&queue[0]===game)[queue[0],queue[1]]=[queue[1],queue[0]];
  return {...boss,seconds,queue,index:0,segmentMs:0};
 }
