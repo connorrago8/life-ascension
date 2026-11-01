@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const page = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
 const start = page.indexOf('async function add(e:React.FormEvent)');
-const end = page.indexOf('async function act(', start);
+const end = page.indexOf('async function applyPharmacyPack(', start);
 const handler = page.slice(start, end);
 
 test('quest creation always clears the busy state after RPC rejection', () => {

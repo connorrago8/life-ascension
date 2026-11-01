@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, 'beta/quest-ui-clean-review', 'beta/crypt-intro-exit-accessibility-20261029']
   pull_request:
-    branches: [main, 'beta/quest-ui-clean-review', 'grok/release-candidate-1']
+    branches: [main, 'beta/quest-ui-clean-review', 'grok/release-candidate-1', 'grok/rc1-smoke-fixes']
 permissions:
   contents: read
 jobs:
@@ -152,6 +152,33 @@ jobs:
           bash tests/sql/parallel_progress.sh "$db"
           bash tests/sql/quest_receipt_v2_concurrency.sh
           echo "All six SQL smoke tests, armor ownership smoke, combined v2 contract and both concurrency tests passed"
+
+  weekly-autopilot-sql:
+    name: Weekly autopilot SQL smoke (isolated Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply every migration and run the weekly autopilot smoke
+        shell: bash
+        run: bash tests/sql/run-weekly-autopilot.sh
 
   quest-browser-qa:
     name: Quest progress browser QA (unprivileged, no backend)

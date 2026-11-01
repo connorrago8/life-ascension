@@ -14,6 +14,7 @@ import { levelFor, levelProgress } from '../../lib/level';
 import { verifiedLifetimeXp } from '../../lib/characterXpProof';
 import { GEAR_SLOTS, SERVER_EQUIPPABLE_ITEMS } from '../../lib/gearSlots';
 import { todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
+import { questsDueForInstance } from '../../lib/questAutopilot';
 import { localToday, playerTimeZone } from '../../lib/playerTimeZone';
 import { readHomeProgress, writeHomeProgress } from '../../lib/questProgressSnapshot';
 import { supabase } from '../../lib/supabase';
@@ -40,9 +41,10 @@ type HomeState =
 const FALLBACK_APPEARANCE = appearanceFromLoadout({ equipmentIds: [] });
 
 /**
- * Home: a read-only, character-first screen. Quests are completed on /quests;
- * Home never creates instances, awards XP, or equips gear. Navigation lives in
- * the bottom nav, so this screen adds no duplicate "go to" buttons.
+ * Home: a character-first screen. Quests are completed on /quests.
+ * Opening Home ensures an instance for each active quest that is already due,
+ * in the player's local date (midnight, not the 05:00 Chicago quest-board day).
+ * It never completes a quest, awards XP, or equips gear.
  */
 export default function Home() {
   const [state, setState] = useState<HomeState>({ status: 'loading' });
@@ -71,27 +73,37 @@ export default function Home() {
         commit({ status: 'ready', name: cached.name, xp: cached.xp, stats: cached.stats, gear: cached.gear as AuthenticatedGearSnapshot | null, today: cached.today, streak: cachedCount === null ? null : { questsOnStreak: cachedCount }, preview: false });
       }
       try { await client.rpc('set_player_timezone', { p_tz: playerTimeZone() }); } catch { /* Zone storage is optional until the migration is applied. */ }
-      const today = localToday(new Date(), playerTimeZone());
-      const [xpResult, profileResult, gearResult, statsResult, questsResult, instancesResult, streakResult] = await Promise.all([
+      const zone = playerTimeZone();
+      const today = localToday(new Date(), zone);
+      const minutesOfDay = localParts(new Date(), zone).minutes;
+      const [xpResult, profileResult, gearResult, statsResult, questsResult, streakResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
         client.rpc('get_crypt_profile'),
-        client.from('quests').select('id,cadence,quest_type,scheduled_for').eq('active', true).limit(1000),
-        client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).lte('due_date', today).or(`status.eq.available,due_date.eq.${today}`).limit(1000),
+        client.from('quests').select('id,cadence,quest_type,scheduled_for,fixed_reveal,weekly_weekday').eq('active', true).limit(1000),
         // Same per-quest rows the quest board uses for its streak badges.
         Promise.resolve(client.rpc('get_quest_streaks')).catch(() => ({ data: null, error: true })),
       ]);
+      const loadedQuests = questsResult.error ? null : ((questsResult.data ?? []) as GlanceQuest[]);
+      if (loadedQuests) {
+        const ensured = await Promise.all(questsDueForInstance(loadedQuests, today).map((quest) => client.rpc('ensure_quest_instance', { p_quest_id: quest.id, p_date: today })));
+        if (ensured.some((row) => row.error)) {
+          if (!cached) commit({ status: 'error', message: 'Could not open this week\'s quests. Your quests are unchanged.' });
+          return;
+        }
+      }
+      const instancesResult = await client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).lte('due_date', today).or(`status.eq.available,due_date.eq.${today}`).limit(1000);
       const verifiedXp = xpResult.error ? null : verifiedLifetimeXp(xpResult.data);
       if (verifiedXp === null) {
         if (!cached) commit({ status: 'error', message: 'Could not verify lifetime XP. Your quests are unchanged.' });
         return;
       }
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
-      const quests = questsResult.error ? null : ((questsResult.data ?? []) as GlanceQuest[]);
+      const quests = loadedQuests;
       const glance = !quests || instancesResult.error
         ? null
-        : todayGlance(quests, (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date(), playerTimeZone()).minutes });
+        : todayGlance(quests, (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay });
       const counted = !quests || streakResult.error ? null : countQuestsOnStreak(streakResult.data, quests);
       const questsOnStreak = counted === null ? cachedQuestStreakCount(cached?.streak) : counted;
       const next = {

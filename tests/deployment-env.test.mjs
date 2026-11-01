@@ -318,6 +318,7 @@ test('QA preview allowlists match and still fail closed', async () => {
     'chatgpt/emberhaven-crypt-integration-20261031',
     'grok/rc1-smoke-fixes',
     'grok/release-candidate-1',
+    'grok/weekly-autopilot',
   ];
   const files = [
     'scripts/verify-deployment-env.mjs',
@@ -332,6 +333,9 @@ test('QA preview allowlists match and still fail closed', async () => {
   const smokeFixes = { ...qa, VERCEL_GIT_COMMIT_REF: 'grok/rc1-smoke-fixes' };
   assert.equal(validateDeploymentEnv(smokeFixes), true);
   assert.equal((await runtimePublicConfig(smokeFixes))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
+  const weeklyAutopilot = { ...qa, VERCEL_GIT_COMMIT_REF: 'grok/weekly-autopilot' };
+  assert.equal(validateDeploymentEnv(weeklyAutopilot), true);
+  assert.equal((await runtimePublicConfig(weeklyAutopilot))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
   const scanned = await verifyQaBrowserBundleAfterBuild({
     env: { VERCEL_ENV: 'preview', VERCEL_GIT_COMMIT_REF: 'grok/release-candidate-1' },
     inspect: async () => ({ inspected: 1, qaMatches: 1 }),

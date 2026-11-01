@@ -1,10 +1,17 @@
 /**
- * Read-only "Today" glance for the Home screen. Counts what is left and done
- * today without creating instances (the Quests board owns ensure/complete).
+ * Read-only "Today" glance for the Home screen. The Home page ensures instances
+ * before calling this. This function only counts rows it is given.
  */
 import { dailyBoardIds, weekStart, weeklyVisible } from './questStreak.ts';
 
-export type GlanceQuest = { id: string; cadence: string | null; quest_type: string | null; scheduled_for: string | null };
+export type GlanceQuest = {
+  id: string;
+  cadence: string | null;
+  quest_type: string | null;
+  scheduled_for: string | null;
+  fixed_reveal?: boolean | null;
+  weekly_weekday?: number | null;
+};
 export type GlanceInstance = { quest_id: string; due_date: string; status: string };
 export type TodayGlance = { left: number; done: number };
 /** When given, the glance mirrors the Quest board: today's daily board (up to 5) and visible weekly quests. */
@@ -32,7 +39,11 @@ export function todayGlance(quests: readonly GlanceQuest[], instances: readonly 
     }
     if (quest.cadence === 'weekly' && board) {
       const week = mine.find((instance) => instance.due_date === weekStart(today));
-      if (week?.status === 'available' && weeklyVisible(board.userId, quest.id, today, board.minutesOfDay)) left += 1;
+      const open = weeklyVisible(board.userId, quest.id, today, board.minutesOfDay, {
+        fixedReveal: quest.fixed_reveal === true,
+        weekday: quest.weekly_weekday,
+      });
+      if (week?.status === 'available' && open) left += 1;
       continue;
     }
     for (const instance of mine) {

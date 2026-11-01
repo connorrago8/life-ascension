@@ -1082,6 +1082,9 @@ code { font-family: ui-monospace, monospace; }
 .quest-board-page .board-completed { border-top: 1px solid #343b46; padding-top: 12px; }
 .quest-board-page .completed-board-toggle { width: 100%; justify-content: flex-start; gap: 8px; }
 .quest-board-page .board-create-toggle { width: 100%; }
+.quest-pack { margin-top: 16px; }
+.quest-pack-list { margin: 8px 0 12px; padding-left: 1.2rem; }
+.quest-pack .btn { min-height: 44px; }
 .quest-board-page .board-foot { margin-top: 18px; text-align: center; line-height: 1.9; }
 .quest-board-page .board-foot a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; }
 .wellness-setup h2 { font-size: 1.05rem; margin: 0 0 6px; }
