@@ -1,7 +1,7 @@
 name: Verify application build
 on:
   push:
-    branches: [main, 'integration/questboard-emberhaven-crypt-20261031']
+    branches: [main, 'integration/questboard-emberhaven-crypt-20261031', 'feature/brain-rot-dungeon-20261031']
   pull_request:
     branches: [main, 'feature/quest-board-3-unified-20261031']
 permissions:

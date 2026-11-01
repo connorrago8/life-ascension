@@ -15,7 +15,7 @@ export default function PlayPage() {
     <Link className="btn ghost" href="/">Home</Link>
    </div>
   </section>
-  <article className="lock-card">
+  <article className="lock-card"><p className="lock-kicker">Instantly unlocked · Arcade dungeon</p><h2>🧠 Brain Rot</h2><p className="muted">Ten mini-games across 30 randomized levels, then face the Brain Rot King at Level 31.</p><Link className="btn" href="/play/brain-rot">Enter Brain Rot →</Link></article>\n  <article className="lock-card">
    <p className="lock-kicker">Adventure preview</p>
    <h2>Forgotten Crypt</h2>
    <p className="soon-pill">Playable preview</p>
