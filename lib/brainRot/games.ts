@@ -36,12 +36,12 @@ export function step(state:State,input:Input|null,dt=1/60):State{
     // Procedural rows use five discrete tracks. Keep the player track open at spawn,
     // and reject a row when it would overlap traffic already occupying that track.
     const playerTrack=Math.round((s.player.x-.08)/.21);
-    const available=[0,1,2,3,4].filter(track=>Math.abs(track-playerTrack)>1);
-    const track=available[Math.floor(random()*available.length)];
+    const available=[0,1,2,3,4].filter(track=>Math.abs(track-playerTrack)>1&& !s.entities.some(e=>Math.abs(e.x-(.08+track*.21))<.12&&Math.abs(e.y-s.player.y)<.18));
+    const track=available.length?available[Math.floor(random()*available.length)]:-1;
     const x=.08+track*.21;
     const rawDepth=.14+random()*.48;
     const depth=Math.abs(rawDepth-s.player.y)<.08?s.player.y-.18:rawDepth;
-    if(!s.entities.some(e=>Math.abs(e.y-depth)<.10&&Math.abs(e.x-x)<.12)&&!s.entities.some(e=>Math.abs(e.y-depth)<.065&&Math.abs(e.x-s.player.x)<.055))
+    if(track>=0&&!s.entities.some(e=>Math.abs(e.y-depth)<.10&&Math.abs(e.x-x)<.12)&&!s.entities.some(e=>Math.abs(e.y-depth)<.065&&Math.abs(e.x-s.player.x)<.055))
      s.entities.push({x,y:depth,vx:(fromLeft?1:-1)*velocity,vy:0,type:0});
    }else s.entities.push({x:fromLeft?-.1:1.1,y:.24+lane*.12,vx:fromLeft?velocity:-velocity,vy:0,type:0});
   }
