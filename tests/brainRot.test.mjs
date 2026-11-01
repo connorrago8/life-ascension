@@ -34,3 +34,5 @@ test('wyvern scores on gate passage rather than elapsed seconds',()=>{let s=game
 test('wyvern collides with upper gate outside gap',()=>{let s=games.createGame('flappy-wyvern',1,42);s.player.y=.25;s.entities=[{x:.5,y:.2,vx:0,vy:0,type:2}];assert.equal(games.step(s,null).lost,true);});
 
 test('rune opening tiles are deterministic, distinct and seed dependent',()=>{const a=games.createGame('rune-fusion',1,42).grid;const b=games.createGame('rune-fusion',1,42).grid;assert.equal(JSON.stringify(a),JSON.stringify(b));assert.equal(a.filter(Boolean).length,2);assert.ok(a.every(n=>n===0||n===2));const variants=new Set(Array.from({length:12},(_,i)=>JSON.stringify(games.createGame('rune-fusion',1,i).grid)));assert.ok(variants.size>1);});
+
+test('crossing up and down visibly move player with progress',()=>{const s=games.createGame('frog-kings-crossing',1,9);const up=games.step(s,'up');assert.ok(up.player.y<s.player.y);assert.equal(up.progress,1);const down=games.step(up,'down');assert.ok(down.player.y>up.player.y);assert.equal(down.progress,0);});
