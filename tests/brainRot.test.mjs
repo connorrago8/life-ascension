@@ -39,3 +39,5 @@ test('crossing up and down visibly move player with progress',()=>{const s=games
 
 test('crossing traffic uses distinct lanes',()=>{let s=games.createGame('frog-kings-crossing',1,15);for(let i=0;i<180;i++){s=games.step(s,null);if(s.lost)break;}assert.ok(new Set(s.entities.map(e=>e.y)).size>=3);});
 test('crossing collision requires matching player lane',()=>{let s=games.createGame('frog-kings-crossing',1,15);s.progress=3;s.player.y=.5;s.entities=[{x:.5,y:.24,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,false);s.entities=[{x:.5,y:.5,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
+
+test('crossing collision is active even before three hops',()=>{let s=games.createGame('frog-kings-crossing',1,15);s.progress=0;s.entities=[{x:s.player.x,y:s.player.y,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
