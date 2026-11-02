@@ -13,7 +13,7 @@ export function IzzyReviewInbox() {
   const [status, setStatus] = useState('Loading private proposals…');
   const [busy, setBusy] = useState<number | null>(null);
   const [companionId, setCompanionId] = useState('');\n  const [companions, setCompanions] = useState<{id:string;display_name:string}[]>([]);
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState('');\n  const [consentConfirmed, setConsentConfirmed] = useState(false);\n  const [setupBusy, setSetupBusy] = useState(false);\n  async function setupIzzy() {\n    setSetupBusy(true);\n    try {\n      const response = await fetch('/api/izzy/setup', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmedConsent:consentConfirmed})});\n      if (!response.ok) throw new Error('Setup unavailable');\n      const result = await response.json();\n      setCompanionId(result.companionId);\n      setCompanions([{id:result.companionId,display_name:'Izzy'}]);\n      setStatus('Izzy linked. Reload this page to review the six quests.');\n    } catch { setStatus('Unable to link Izzy. Please try again after verifying consent.'); }\n    finally { setSetupBusy(false); }\n  }
 
   async function approve(proposalId: number | 'all') {
     setBusy(proposalId === 'all' ? -1 : proposalId);
@@ -52,7 +52,7 @@ export function IzzyReviewInbox() {
     return () => controller.abort();
   }, []);
 
-  return <section className="panel" aria-label="Izzy quest proposals">
+  return <section className="panel" aria-label="Izzy quest proposals">\n    <div className="quest-main"><label><input type="checkbox" checked={consentConfirmed} onChange={event=>setConsentConfirmed(event.target.checked)}/> Izzy agreed to participate in LIFE ASCENSION quests.</label><button type="button" disabled={!consentConfirmed||setupBusy} onClick={setupIzzy}>Connect Izzy and load her six quests</button></div>
     <h2>Queen Izzy’s Quest Inbox</h2>
     <p className="muted">Suggestions are private until you review them. Nothing is added automatically.</p>
     {status && <p role="status" className="muted">{status}</p>}
