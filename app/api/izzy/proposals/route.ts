@@ -26,7 +26,7 @@ export async function GET() {
   const admin = createClient(url, secret, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: proposals, error: readError } = await admin.rpc(
+  const { data: companions } = await admin.from('quest_companions').select('id,display_name,consent_confirmed_at').eq('owner_id', data.user.id).not('consent_confirmed_at','is',null);\n  const { data: proposals, error: readError } = await admin.rpc(
     'list_owned_izzy_proposals',
     { p_owner_id: data.user.id },
   );
@@ -34,7 +34,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unable to load inbox' }, { status: 503 });
   }
   return NextResponse.json(
-    { proposals: proposals ?? [] },
+    { proposals: proposals ?? [], companions: companions ?? [] },
     { headers: { 'Cache-Control': 'private, no-store' } },
   );
 }
@@ -55,10 +55,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const body = await request.json().catch(() => null);
-  const proposalId = body?.proposalId;
+  const proposalId = body?.proposalId;\n  const bulk = body?.bulk === true;
   const companionId = body?.companionId;
   const dueDate = body?.dueDate;
-  if (!Number.isSafeInteger(proposalId) || proposalId < 1 ||
+  if ((!bulk && (!Number.isSafeInteger(proposalId) || proposalId < 1)) ||
       typeof companionId !== 'string' ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companionId) ||
       typeof dueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
