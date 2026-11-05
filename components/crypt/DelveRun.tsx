@@ -16,7 +16,7 @@ import {
 } from '../../lib/crypt/delve/cards';
 import { cardFrameClass, cardIcon, GROUP_LABEL, ICONS, INTENT_TYPE, INTENT_TYPE_ICON, intentBadge, playedCard, type IconKey } from '../../lib/crypt/delve/cardArt';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
-import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/gearArt';
+import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
 import { pathOptions, type PathOption } from '../../lib/crypt/delve/pathLabels';
@@ -259,11 +259,11 @@ function Camp(props: {
       </p>
 
       <section className="delve-panel delve-camp-hero">
-        <div className="delve-hero-sprite"><HeroSprite loadout={loadout} label="Your adventurer with Crypt gear" /></div>
+        <div className="delve-hero-sprite"><HeroSprite loadout={loadout} label="Your adventurer preview" /></div>
         <div>
           <p className="delve-level">Level {props.level}</p>
           <p className="muted delve-small">Only real quests level you up. Each level gives {pointsForLevel(props.level + 1) - pointsForLevel(props.level)} more points.</p>
-          <p className="delve-small delve-worn" aria-live="polite" aria-atomic="true">Wearing {wornGearLabels(loadout).join(' · ')}</p>
+          <p className="delve-small delve-worn" aria-live="polite" aria-atomic="true">{Object.values(loadout).length ? `Run gear: ${Object.values(loadout).map(id => lootById(id)?.name).filter(Boolean).join(' · ')}` : 'Run gear: None selected · base outfit shown.'}</p>
           <p className="delve-small">Max HP {maxHpFor(preview, props.level)} · Crit {Math.round(critChance(preview) * 100)}% · Dodge {Math.round(dodgeChance(preview) * 100)}%</p>
         </div>
       </section>
@@ -271,7 +271,7 @@ function Camp(props: {
       {enter}
 
       <section className="delve-panel" aria-labelledby="delve-attr-title">
-        <h2 id="delve-attr-title">Attributes <span className="delve-points">{left} of {total} points left</span></h2>
+        <h2 id="delve-attr-title">Attributes <span className="delve-points" aria-live="polite" aria-atomic="true">{left} of {total} points left</span></h2>
         <ul className="delve-attrs">
           {ATTRIBUTE_KEYS.map((key) => {
             const info = ATTRIBUTE_INFO[key];
@@ -308,7 +308,7 @@ function Camp(props: {
               if (!entry) return null;
               const worn = loadout[entry.slot] === id;
               return (
-                <li key={id} className={`delve-loot rarity-${entry.rarity}`}>
+                <li key={id} className={`delve-loot rarity-${entry.rarity}${worn ? ' camp-gear-worn' : ''}`}>
                   <div className="camp-gear-copy">
                     <strong>{entry.name}</strong>
                     <span className="delve-small">{entry.rarity} · {entry.slot}</span>

@@ -51,3 +51,34 @@ two-application-writer reachability remain unresolved, owned by Gameplay/QA.
 Independent review should compare normal/large-text camp renders and verify focus,
 Wear announcements and bottom safe area on a real iPhone when authorized.
 No native simulator, production merge/data, hosting protection or deployment change.
+
+## Focus and explicit Worn follow-up
+
+The first camp run42096731900 failed after a pointer click followed by programmatic
+focus in its second text-size iteration. That does not establish keyboard modality
+for :focus-visible. The contract now starts at Enter Floor1 and sends an actual
+Tab: disabled Lower Strength is skipped, Raise Strength must become active and
+match :focus-visible, its outline must be visible, and Enter must allocate a point.
+The check runs in both text sizes at every width; no outline assertion is removed.
+
+Worn entries now have a static inset mint frame and quiet surface, in addition to
+the existing Worn text and aria-pressed state. Rarity/slot remain text. No item is
+selected automatically. Remaining point text has a polite atomic live region.
+These states add no animation, equipment mutation or power. Existing handlers,
+attributes, gear bonuses, Start and save semantics remain unchanged.
+
+This child branch contains only presentation/test/docs/workflow-trigger edits,
+with PR109 as base. Full new-head CI and actual eight renders are required; this
+record does not claim they have executed. Independent review remains pending.
+
+The inspected320px baseline also labeled fallback sprite equipment as “Wearing”
+with no vault item selected. Camp now says “Run gear: None selected · base outfit
+shown.” Explicit Wear lists only actual selected vault names; Take off returns to
+the empty summary. Preview art and every equipment handler remain unchanged.
+The browser contract verifies both summaries and adds one selected390px render.
+
+The starter-art regression previously checked literal Wearing copy instead of the
+sprite. It now asserts overlays={gearOverlays(loadout)} directly; Home Rusty piece,
+RUST_COLORS, combat and Hub overlay assertions remain. The browser contract owns
+new gear-summary behavior. Run42130030343 exposed that stale unit assertion
+(888pass/1fail); its result is superseded only after a complete new-head run.

@@ -102,7 +102,7 @@ test('Home SVG draws the Rusty pieces only for empty slots, in sync with RUST_CO
   assert.match(art, /data-starter="rusty-sword"/);
   for (const [key, value] of Object.entries(RUST_COLORS)) assert.match(art, new RegExp(`${key}: '${value}'`));
   // Crypt camp, run and combat sprites use the same overlays.
-  assert.match(read('components/crypt/DelveRun.tsx'), /Wearing \{wornGearLabels\(loadout\)\.join/);
+  assert.match(read('components/crypt/DelveRun.tsx'), /overlays=\{gearOverlays\(loadout\)\}/);
   assert.match(read('components/crypt/CombatView.tsx'), /const STARTER_OVERLAYS = gearOverlays\(\{\}\)/);
   assert.match(read('components/play/AdventureHub.tsx'), /const STARTER_OVERLAYS = gearOverlays\(\{\}\)/);
 });

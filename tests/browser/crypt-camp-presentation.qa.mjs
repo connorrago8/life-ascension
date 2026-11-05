@@ -28,6 +28,7 @@ try {
     await camp.getByText(`${budget} of ${budget} points left`, { exact: true }).waitFor();
     await camp.getByText(`Only real quests level you up. Each level gives ${pointsForLevel(4) - budget} more points.`, { exact: true }).waitFor();
     assert.equal(await camp.locator('.delve-wear[aria-pressed="true"]').count(), 0, 'no automatic Wear');
+    await camp.getByText('Run gear: None selected · base outfit shown.', { exact: true }).waitFor();
     for (const large of [false, true]) {
       await page.evaluate(large => { document.documentElement.style.fontSize = large ? '32px' : ''; }, large);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'no horizontal overflow');
@@ -41,7 +42,12 @@ try {
         assert.ok(await action.evaluate(el => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button,a') === el; }), 'action not covered by bottom navigation');
       }
       const raise = camp.getByRole('button', { name: 'Raise Strength', exact: true });
-      await raise.focus(); assert.notEqual(await raise.evaluate(el => getComputedStyle(el).outlineStyle), 'none');
+      // Establish keyboard modality through real navigation, including after mouse actions.
+      await camp.getByRole('button', { name: 'Enter Floor 1', exact: true }).focus();
+      await page.keyboard.press('Tab');
+      assert.equal(await raise.evaluate(el => document.activeElement === el), true, 'Tab reaches Raise Strength, skipping disabled Lower');
+      assert.equal(await raise.evaluate(el => el.matches(':focus-visible')), true, 'real keyboard focus');
+      assert.notEqual(await raise.evaluate(el => getComputedStyle(el).outlineStyle), 'none');
       await page.keyboard.press('Enter');
       await camp.getByText(`${budget - 1} of ${budget} points left`, { exact: true }).waitFor();
       await camp.getByRole('button', { name: 'Lower Strength', exact: true }).click();
@@ -54,9 +60,14 @@ try {
     await camp.getByRole('button', { name: 'Wear Rusty Shortsword this run', exact: true }).click();
     assert.equal(await camp.getByRole('button', { name: 'Take off Rusty Shortsword', exact: true }).getAttribute('aria-pressed'), 'true');
     await camp.getByRole('button', { name: 'Wear Bone Cleaver this run', exact: true }).click();
+    assert.equal(await camp.locator('.camp-gear-worn').count(), 1, 'one explicit Worn visual state');
+    await camp.getByText('Run gear: Bone Cleaver', { exact: true }).waitFor();
+    if (width === 390) await page.screenshot({ path: 'artifacts/crypt-camp/390-selected-text200.png', fullPage: true });
     assert.equal(await camp.locator('.delve-wear[aria-pressed="true"]').count(), 1, 'same-slot replacement');
     await camp.getByRole('button', { name: 'Wear Rusty Shortsword this run', exact: true }).waitFor();
     await camp.getByRole('button', { name: 'Take off Bone Cleaver', exact: true }).click();
+    assert.equal(await camp.locator('.camp-gear-worn').count(), 0);
+    await camp.getByText('Run gear: None selected · base outfit shown.', { exact: true }).waitFor();
     assert.equal(await camp.locator('.delve-wear[aria-pressed="true"]').count(), 0, 'Take off');
     await camp.getByRole('button', { name: 'Wear Bone Cleaver this run', exact: true }).click();
     await camp.getByRole('button', { name: 'Raise Strength', exact: true }).click();

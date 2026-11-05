@@ -17,6 +17,7 @@
 .crypt-camp .delve-stepper .btn { min-width: 48px; min-height: 48px; font-size: 1.4rem; line-height: 1; }
 .crypt-camp .delve-vault { gap: 12px; }
 .crypt-camp .delve-vault .delve-loot { gap: 12px; align-items: flex-start; border-style: solid; border-width: 1px 1px 1px 3px; border-radius: 8px; padding: 12px; }
+.crypt-camp .camp-gear-worn { background: #1a2b26; box-shadow: inset 0 0 0 2px var(--mint); }
 .crypt-camp .camp-gear-copy { flex: 1 1 10rem; min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
 .crypt-camp .camp-gear-copy strong { line-height: 1.4; }
 .crypt-camp .delve-wear { min-height: 48px; min-width: 96px; margin-left: 0; font-size: 1rem; }
