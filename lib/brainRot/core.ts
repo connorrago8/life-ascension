@@ -48,6 +48,36 @@ export function failBossSegment(boss:Boss):{boss:Boss;restore:unknown|null;reset
  const restore=boss.snapshots[id]===undefined?null:structuredClone(boss.snapshots[id]);
  return {boss:{...boss,hearts,segmentMs:0,states:{...boss.states,[id]:restore??undefined},snapshots:{...boss.snapshots,[id]:undefined}},restore,reset:false};
 }
+/** Validate every structure consumed by the renderer and deterministic stepper. */
+export function validGameState(value:unknown, expectedId?:GameId):boolean {
+ if(!value||typeof value!=='object'||Array.isArray(value))return false;
+ const s=value as Record<string,unknown>;
+ const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
+ const natural=(n:unknown):n is number=>finite(n)&&Number.isSafeInteger(n)&&n>=0;
+ if(!GAMES.some(g=>g.id===s.id)||(expectedId!==undefined&&s.id!==expectedId)||!natural(s.tick)||!Number.isSafeInteger(s.seed)||!natural(s.progress)||!natural(s.score)||!natural(s.goal)||s.goal===0)return false;
+ if(typeof s.won!=='boolean'||typeof s.lost!=='boolean'||typeof s.pressed!=='boolean')return false;
+ if(s.lastInput!==null&&!['left','right','up','down','tap','hold','release','slice'].includes(s.lastInput as string))return false;
+ if(s.lastMeaningfulTick!==undefined&&(!natural(s.lastMeaningfulTick)||s.lastMeaningfulTick>s.tick))return false;
+ const player=s.player as Record<string,unknown>|null;
+ if(!player||typeof player!=='object'||!['x','y','vx','vy'].every(key=>finite(player[key])))return false;
+ if(!Array.isArray(s.entities)||!s.entities.every(e=>e&&typeof e==='object'&&['x','y','vx','vy'].every(key=>finite(e[key]))&&Number.isInteger(e.type)))return false;
+ if(!Array.isArray(s.grid)||s.grid.length!==16||!s.grid.every(n=>natural(n)&&(n===0||Number.isInteger(Math.log2(n)))))return false;
+ return true;
+}
+function expectedGame(run:Run):GameId{return run.level===31?run.boss!.queue[run.boss!.index]:currentGame(run);}
+function validActive(run:Run,value:unknown):value is {level:number;state:unknown}{
+ if(!value||typeof value!=='object')return false;
+ const active=value as {level:number;state:unknown};
+ return active.level===run.level&&validGameState(active.state,expectedGame(run));
+}
+/** Resolve only the snapshot paired with this run; terminal states cannot be replayed. */
+export function resumeGameState(run:Run,active:unknown):unknown|null {
+ if(!validRun(run))return null;
+ const state=validActive(run,active)?active.state:run.level===31?run.boss?.states[expectedGame(run)]:null;
+ if(!validGameState(state,expectedGame(run)))return null;
+ const flags=state as {won:boolean;lost:boolean};
+ return flags.won||flags.lost?null:state;
+}
 export type DungeonCheckpoint={version:1;run:Run;active:{level:number;state:unknown}|null;revision:number};
 export const CHECKPOINT_KEY='life-ascension:brain-rot:checkpoint:v1';
 export function saveCheckpoint(run:Run,active:{level:number;state:unknown}|null):void{
@@ -56,19 +86,22 @@ export function saveCheckpoint(run:Run,active:{level:number;state:unknown}|null)
 export function readCheckpoint():DungeonCheckpoint|null{
  try{const raw=localStorage.getItem(CHECKPOINT_KEY);if(!raw)return null;const c=JSON.parse(raw) as DungeonCheckpoint;
  if(c.version!==1||!Number.isInteger(c.revision)||c.revision<1||!validRun(c.run))return null;
- if(c.active!==null&&(!c.active||c.active.level!==c.run.level||typeof c.active.state!=='object'||c.active.state===null))return null;
- return c;}catch{return null;}
+ // Discard only an invalid active payload; retain the valid run and its hearts.
+ return {...c,active:validActive(c.run,c.active)?c.active:null};}catch{return null;}
 }
 export function validRun(r:Run):boolean{
  if(!r||r.version!==1||!Array.isArray(r.order)||r.order.length!==30||!Number.isInteger(r.level)||r.level<1||r.level>31||!Number.isInteger(r.seed)||!Number.isInteger(r.hearts)||r.hearts<1||r.hearts>3)return false;
  const ids=GAMES.map(g=>g.id);for(let cycle=0;cycle<3;cycle++){const slice=r.order.slice(cycle*10,cycle*10+10);if(new Set(slice).size!==10||slice.some(id=>!ids.includes(id)))return false;}
- if(r.level===31){const b=r.boss;if(!b||!Array.isArray(b.queue)||!Number.isInteger(b.index)||b.index<0||b.index>=b.queue.length||!Number.isFinite(b.segmentMs)||b.segmentMs<0||b.segmentMs>15000||!Number.isInteger(b.hearts)||b.hearts<1||b.hearts>3||!b.seconds||b.queue.some(id=>!ids.includes(id)))return false;for(const id of ids){const n=b.seconds[id];if(!Number.isInteger(n)||n<0||n>60||n%15!==0)return false;}}
+ if(r.level===31){const b=r.boss;if(!b||!Array.isArray(b.queue)||!Number.isInteger(b.index)||b.index<0||b.index>=b.queue.length||!Number.isFinite(b.segmentMs)||b.segmentMs<0||b.segmentMs>15000||!Number.isInteger(b.hearts)||b.hearts<1||b.hearts>3||!b.seconds||b.queue.some(id=>!ids.includes(id)))return false;for(const id of ids){const n=b.seconds[id];if(!Number.isInteger(n)||n<0||n>60||n%15!==0)return false;}
+ if(new Set(b.queue).size!==b.queue.length||typeof b.won!=='boolean')return false;
+ for(const records of [b.states,b.snapshots]){if(!records||typeof records!=='object'||Array.isArray(records))return false;for(const [id,state] of Object.entries(records)){if(!ids.includes(id as GameId)||(state!==undefined&&!validGameState(state,id as GameId)))return false;}}
+ }
  return true;
 }
 export const SAVE_KEY='life-ascension:brain-rot:v1';
 export const ACTIVE_KEY='life-ascension:brain-rot:active:v1';
-export function readActive():unknown|null{try{const raw=localStorage.getItem(ACTIVE_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
+export function readActive():unknown|null{try{const raw=localStorage.getItem(ACTIVE_KEY);if(!raw)return null;const a=JSON.parse(raw);return a&&Number.isInteger(a.level)&&a.level>=1&&a.level<=31&&validGameState(a.state)?a:null;}catch{return null;}}
 export function writeActive(value:unknown){try{if(value===null)localStorage.removeItem(ACTIVE_KEY);else localStorage.setItem(ACTIVE_KEY,JSON.stringify(value));}catch{/* unavailable */}}
 
-export function readRun():Run|null{try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const r=JSON.parse(raw) as Run;if(r.version!==1||!Array.isArray(r.order)||r.order.length!==30||!Number.isInteger(r.level)||r.level<1||r.level>31||!Number.isInteger(r.seed)||!Number.isInteger(r.hearts)||r.hearts<1||r.hearts>3||r.order.some((id:GameId)=>!GAMES.some(g=>g.id===id)))return null;return r;}catch{return null;}}
+export function readRun():Run|null{try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const r=JSON.parse(raw) as Run;return validRun(r)?r:null;}catch{return null;}}
 export function writeRun(run:Run){try{localStorage.setItem(SAVE_KEY,JSON.stringify(run));}catch{/* storage unavailable */}}

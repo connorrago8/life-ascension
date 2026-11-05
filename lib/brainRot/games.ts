@@ -1,4 +1,4 @@
-import { GAMES, type GameId, rng } from './core';
+import { GAMES, type GameId, rng, validGameState } from './core';
 export type Input = 'left'|'right'|'up'|'down'|'tap'|'hold'|'release'|'slice';
 export type Entity = {x:number;y:number;vx:number;vy:number;type:number};
 export type State = {id:GameId;tick:number;seed:number;progress:number;goal:number;score:number;player:{x:number;y:number;vx:number;vy:number};entities:Entity[];grid:number[];lost:boolean;won:boolean;pressed:boolean;lastInput:Input|null;lastMeaningfulTick?:number};
@@ -103,4 +103,4 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  return s;
 }
 export function serialize(state:State){return JSON.stringify(state);}
-export function restore(serialized:string):State{const s=JSON.parse(serialized) as State;if(!GAMES.some(g=>g.id===s.id)||!Array.isArray(s.entities)||!Array.isArray(s.grid)||!Number.isFinite(s.tick))throw Error('Invalid Brain Rot checkpoint');return s;}
+export function restore(serialized:string):State{const s=JSON.parse(serialized) as State;if(!validGameState(s))throw Error('Invalid Brain Rot checkpoint');return s;}
