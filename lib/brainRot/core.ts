@@ -61,6 +61,10 @@ export function validGameState(value:unknown, expectedId?:GameId):boolean {
  if(s.lastMeaningfulTick!==undefined&&(!natural(s.lastMeaningfulTick)||s.lastMeaningfulTick>s.tick))return false;
  const player=s.player as Record<string,unknown>|null;
  if(!player||typeof player!=='object'||!['x','y','vx','vy'].every(key=>finite(player[key])))return false;
+ if(s.glide!==undefined){
+  const g=s.glide as Record<string,unknown>|null;
+  if(s.id!=='hill-glider'||!g||typeof g!=='object'||!finite(g.distance)||g.distance<0||g.distance>1e9||typeof g.grounded!=='boolean'||(!natural(g.stall)||g.stall>90))return false;
+ }
  if(!Array.isArray(s.entities)||!s.entities.every(e=>e&&typeof e==='object'&&['x','y','vx','vy'].every(key=>finite(e[key]))&&Number.isInteger(e.type)))return false;
  if(!Array.isArray(s.grid)||s.grid.length!==16||!s.grid.every(n=>natural(n)&&(n===0||Number.isInteger(Math.log2(n)))))return false;
  return true;
