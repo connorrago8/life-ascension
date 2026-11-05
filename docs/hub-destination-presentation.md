@@ -17,7 +17,10 @@ the unavailable destination retains its existing selection/description behavior.
 Focus has a solid3px mint outline. Reduced motion disables card transitions;
 ordinary motion uses only100ms surface/border changes, without moving content.
 
-Routes, availability, run detection, save keys, XP, mechanics and existing
+The initial browser check reproduced an early Crypt-node click dropping
+?preview=1 before the effect populated entryHref. The node now derives its
+existing destination from the current query at activation. The same route test
+is retained. Availability, run detection, save keys, XP, mechanics and existing
 character/sprite assets are unchanged. This does not resolve QA82's save defects
 or certify the integration candidate. No equipment overlay or animation added.
 

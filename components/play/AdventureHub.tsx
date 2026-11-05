@@ -55,7 +55,7 @@ export function AdventureHub() {
 
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
-    if (location.kind === 'preview') router.push(entryHref);
+    if (location.kind === 'preview') router.push(cryptEntryHref(window.location.search));
     if (location.kind === 'town') router.push('/play/emberhaven');
   }
 
