@@ -1,0 +1,18 @@
+/* Battle-only presentation: no energy, card, intent or persistence rules. */
+.combat.combat { min-width: 0; }
+.combat.combat .energy { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; line-height: 1.4; }
+.value { color: #f2c46d; font-size: .9rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.pips { display: inline-flex; gap: 3px; font-size: .8rem; }
+.turn { margin-left: auto; }
+.combat.combat :global(.delve-hand[role='group']) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: 8px; }
+.combat.combat :global(.delve-card) { min-width: 0; min-height: 7rem; padding: 1.7rem .55rem .6rem; gap: .35rem; }
+.combat.combat :global(.delve-card-cost) { width: 1.25rem; height: 1.25rem; top: .25rem; left: .4rem; }
+.combat.combat :global(.delve-card-name), .combat.combat :global(.delve-card-text) { overflow-wrap: anywhere; line-height: 1.4; }
+.combat.combat :global(.delve-piles) { flex-wrap: wrap; gap: 6px; max-width: 100%; margin-left: 0; }
+.combat.combat :global(.delve-pile-btn) { min-width: 44px; min-height: 44px; padding: 6px 10px; gap: 3px; }
+.combat.combat :global(.delve-pile-btn-label) { font-size: .75rem; letter-spacing: 0; }
+.combat.combat :global(.delve-status-row) { gap: 8px; }
+.combat.combat :global(.delve-end-turn) { min-width: 44px; min-height: 48px; scroll-margin-block: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .combat.combat *, .combat.combat *::before, .combat.combat *::after { animation: none !important; transition: none !important; }
+}

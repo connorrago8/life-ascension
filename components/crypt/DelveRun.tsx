@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import styles from './CryptCombatResources.module.css';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
 import {
@@ -757,7 +758,7 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
   const weakTo = weaknessesOf(foe.type).map((element) => ELEMENT_LABEL[element]).join('/');
   const resists = resistancesOf(foe.type).map((element) => ELEMENT_LABEL[element]).join('/');
   return (
-    <section className="delve-combat" aria-label={`Fight: ${foe.name}`}>
+    <section className={`delve-combat ${styles.combat}`} aria-label={`Fight: ${foe.name}`}>
       <div className={`delve-foe rank-${foe.rank}`}>
         <div className="delve-foe-info">
           <p className="delve-foe-name">{foe.name} <span className={`delve-type type-${foe.type}`}>{typeLabel}</span></p>
@@ -800,10 +801,13 @@ function CombatScreen({ state, battle, send }: { state: DelveState; battle: Batt
               <Icon name="shield" />{fb.taken === null ? `+${fb.blocked}` : `${fb.blocked} blocked`}
             </span>
           ) : null}
-          <p className="delve-energy" aria-label={`Energy ${battle.energy} of ${ENERGY_PER_TURN}`}>
+          <p className={`delve-energy ${styles.energy}`}>
+            <span className={styles.value}>Energy {battle.energy}</span>
+            <span className={styles.pips} aria-hidden="true">
             {[0, 1, 2].map((i) => <span key={i} className={i < battle.energy ? 'on' : ''} aria-hidden="true">◆</span>)}
             {battle.energy > ENERGY_PER_TURN ? <span className="on" aria-hidden="true">+{battle.energy - ENERGY_PER_TURN}</span> : null}
-            <span className="delve-small muted"> Turn {battle.turn}</span>
+            </span>
+            <span className={`delve-small muted ${styles.turn}`}>Turn {battle.turn}</span>
           </p>
         </div>
       </div>
