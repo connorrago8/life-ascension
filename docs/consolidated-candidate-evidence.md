@@ -1,61 +1,53 @@
 # Consolidated candidate evidence — November 5, 2026
 
-Base: gameplay86 debb36f87d221785ed57e9faf6741003a740f75a.
-This isolated integration branch changes verification glue only. It does not
-repair or alter gameplay, UI, quest progression, persistence implementation,
-environment, authentication or hosted protection.
+This integration increment builds on Visual94 `9d10e8dadd5fedf7203554563c8add980f73db97`.
+It changes CI orchestration/evidence only, not application, gameplay, UI, storage,
+quest XP, credentials, hosted configuration or release permissions.
 
-## Why this gate exists
+## Complete execution and complete rejection
 
-Candidate86's scoped CI is green, while QA87's later boss-boundary browser
-contract fails. These are different scopes. The consolidated workflow imports
-QA87's two test files byte-for-byte and runs the current source/build, the
-existing browser journeys and boss-boundary checks as three required families.
-The failure is not marked optional and is not converted to a passing TODO.
+`scripts/browser-contracts.mjs` is the explicit required coverage manifest:
+11 browser-smoke suites and three boss suites. The runner launches each in a
+separate Node process, preserving its existing test arguments and inherited
+blank-backend/localhost/sandbox settings. A failure, launch error, signal or
+180-second child timeout is recorded as failure, and the next suite is attempted.
+No failure becomes optional, skipped, TODO or continue-on-error. A parent job
+cancellation or job timeout still blocks the final gate.
 
-Verified QA87 reproduction (run41967066913, browser job127046416469):
-at Level31/tick60/15s switch the raw checkpoint reports index1, selected
-rune-fusion, but active goblin-jetpack. No renderer error or forbidden request.
-Loss-before-credit and Rune-idle controls passed. Severity: Medium checkpoint
-consistency defect. Visible progress loss and crash/reload impact are still
-unproven; clean pagehide may repair the record. Gameplay owns the repair.
+The runner clears its report first and writes incremental per-suite receipts to
+`browser-contract-evidence/<group>.json`. It records actual full git checkout,
+name, file, result, exit code, signal, error and elapsed duration. It prints a
+`CONTRACT_RESULT` line and an Actions summary table. This allows a failed early
+suite to coexist with useful later render/test evidence. A partially written or
+missing report never qualifies as complete execution.
 
-## Evidence contract
+The existing always-run family receipt step embeds those suite results in its
+uploaded JSON. `verify-release-receipts.mjs` requires all three family receipts,
+actual GitHub job success, and every required suite exactly once at the expected
+full SHA and expected file with clean exit0/no signal/no launch error. Rejection
+aggregates all defects rather than stopping at whichever failed family was read
+first. Wrong-head, missing, duplicate, unknown, swapped-file and misleading
+success-text receipts are rejected. The verifier never authorizes release.
 
-Every family checks out the explicit PR head and uploads a JSON receipt with
-its actual git HEAD, family and outcome. The final job rejects:
+## Current known candidate boundaries
 
-- another checkout SHA, abbreviated/malformed expected SHA;
-- missing, duplicate or unexpected families;
-- failed, skipped or cancelled receipts;
-- a later job/upload failure even if the earlier receipt says success.
+The inherited QA90 completed-boss Resume and QA93 stale-tab level rollback / heart
+restoration tests stay unchanged and blocking. Gameplay owns those repairs; no
+repair is claimed here. Visual94's four-width Crypt renders and World92's guided
+Lantern/continuation checks stay in the complete manifest. Source/build includes
+TypeScript, full unit suite and the guarded synthetic QA build/bundle scan.
 
-The final verifier also reads actual GitHub needs results. It reports
-releaseAuthorized:false even when all evidence passes: CI is not independent
-QA, Founder approval or permission to merge/deploy.
+Linux sandboxed localhost Chromium is not hosted Preview, iPhone Safari,
+VoiceOver, native simulator, Founder playtest, independent QA or a natural full
+run. Per-suite success says only that that process completed its assertions at
+this SHA. It does not change the meaning of fixture-based tests.
 
-The three families are source-build, browser-smoke and boss-boundary. Source
-runs TypeScript, the full suite and the repository's guarded synthetic build.
-Browser smoke covers the unchanged Rune/malformed-save cases, lifecycle,
-Jetpack controls, Lantern failure/retry, cross-feature storage and four-width
-Hub checks. Boss tests are a separate job so its failure cannot hide successful
-controls or be hidden by them. All are local sandboxed Linux Chromium with
-blocked external/write requests, not hosted Preview, Safari, VoiceOver,
-native simulator or Founder playtest.
+## Ownership and maintenance
 
-## Ownership and next verification
-
-Integration owns workflow/receipt verifier/tests here. Gameplay owns the boss
-snapshot ordering; QA owns its unchanged regression contract; UI and
-World/Systems retain their existing source ownership. No self-approval of
-earlier authored PRs is implied.
-
-Smallest next step is a coherent next-run/next-active save in Gameplay's owned
-branch, then rerun this unchanged boss test and the consolidated evidence.
-Keep this integration draft red until that behavior is repaired and reviewed.
-No branch-protection setting is changed; this is a CI evidence gate, not an
-assertion that GitHub has made it a protected-branch required check.
-
-Current candidate SHA, exact run/jobs, actual outcomes and deployment identity
-belong in the GitHub checkpoint. Tests authored here are not claimed executed
-until that evidence is retrieved.
+Integration owns the runner, coverage manifest, workflow, receipt verifier and
+regression tests. Add a new mandatory suite to the explicit manifest when adding
+its CI coverage; the gate then rejects an omitted execution. Preserve existing
+non-root browser checks, request isolation, fail-closed hosted branch guard and
+contents:read permissions. No merge, manual deployment, auth bypass or production
+operation is included. Exact head/run/job outcomes and deployment identity are
+posted in the single run checkpoint after execution, not assumed from this doc.
