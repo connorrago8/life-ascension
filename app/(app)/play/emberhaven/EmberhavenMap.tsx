@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ModeLink as Link } from '../../../../components/ModeLink';
 import styles from './EmberhavenMap.module.css';
 
 // Rectilinear 32px landmarks, drawn on a 2px grid. Decorative, never route authority.

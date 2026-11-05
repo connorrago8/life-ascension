@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ModeLink as Link } from '../../../../../components/ModeLink';
 import { TownBackLink } from '../TownBackLink';
 import { TownConversation } from '../TownVisit';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ModeLink as Link } from '../../../../components/ModeLink';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   EMPTY_LANTERN, LANTERN_PURPOSE, LANTERN_RESET_COPY, LANTERN_SAVED_COPY, lanternClueCount,

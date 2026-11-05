@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import { liveModeHref, useModeHref } from './ModeLink';
 import { performInAppBack } from '../lib/inAppBack';
 
 export function InAppBackLink({
@@ -16,6 +17,7 @@ export function InAppBackLink({
   style?: CSSProperties;
   children: ReactNode;
 }) {
+  const resolvedHref = useModeHref(href);
   let router: { replace: (href: string) => void } | null = null;
   try {
     router = useRouter();
@@ -23,13 +25,15 @@ export function InAppBackLink({
     router = null;
   }
   function onClick(event: MouseEvent<HTMLAnchorElement>) {
+    const target = liveModeHref(href);
+    event.currentTarget.setAttribute('href', target);
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
     event.preventDefault();
     if (!router) {
-      window.location.assign(href);
+      window.location.assign(target);
       return;
     }
-    performInAppBack(router, href);
+    performInAppBack(router, target);
   }
-  return <Link href={href} className={className} style={style} onClick={onClick}>{children}</Link>;
+  return <Link prefetch={false} href={resolvedHref} className={className} style={style} onClick={onClick}>{children}</Link>;
 }
