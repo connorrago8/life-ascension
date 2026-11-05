@@ -67,7 +67,7 @@ try {
     const draw = fight.getByRole('button', { name: /^Draw pile:/ });
     await draw.click();
     await page.getByRole('dialog').waitFor();
-    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
     assert.deepEqual(await snapshot(), before, 'inspection does not spend energy or alter piles');
     await fight.getByRole('button', { name: 'End turn', exact: true }).click();
     await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).state.battle.turn === 2, key);
