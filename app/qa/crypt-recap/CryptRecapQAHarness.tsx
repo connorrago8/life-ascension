@@ -15,17 +15,18 @@ const DEFEAT: RunRecap = {
 };
 
 export function CryptRecapQAHarness() {
-  const [params, setParams] = useState<{ view: string; mode: SaveMode } | null>(null);
+  const [params, setParams] = useState<{ view: string; mode: SaveMode; reward: string; pending: boolean } | null>(null);
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     const mode = search.get('mode');
-    setParams({ view: search.get('view') ?? 'victory', mode: mode === 'visit' || mode === 'preview' ? mode : 'vault' });
+    const reward = search.get('reward') ?? '';
+    setParams({ reward: ['warden-glaive', 'hollow-crown', 'warden-mantle', 'warden-aegis'].includes(reward) ? reward : 'warden-glaive', pending: search.get('pending') === '1', view: search.get('view') ?? 'victory', mode: mode === 'visit' || mode === 'preview' ? mode : 'vault' });
   }, []);
   if (!params) return null;
-  const recap = params.view === 'defeat' ? DEFEAT : VICTORY;
+  const recap = params.view === 'defeat' ? DEFEAT : { ...VICTORY, bossReward: params.reward, found: ['rusty-shortsword', params.reward] };
   return (
     <main className="wrap delve" aria-label="Crypt recap QA (local only)">
-      <RunRecapView recap={recap} mode={params.mode} confirmed={recap.found.length}
+      <RunRecapView recap={recap} mode={params.mode} confirmed={params.pending ? 0 : recap.found.length}
         checkpoint={recap.result === 'conquered' ? 'Checkpoint saved: Floor 1 cleared.' : null}
         onContinue={() => {}} exitHref="/play" />
     </main>
