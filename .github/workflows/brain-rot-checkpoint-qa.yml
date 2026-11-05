@@ -1,0 +1,51 @@
+name: Independent Brain Rot checkpoint QA
+on:
+  pull_request:
+    branches: ['feature/brain-rot-dungeon-20261031']
+permissions:
+  contents: read
+jobs:
+  checkpoint-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Independent checkpoint contracts (failures remain visible)
+        run: node --test tests/brainRotCheckpointReliability.test.mjs
+  checkpoint-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund && npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - name: Actual local component in sandboxed Chromium
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+          QA_BASE_URL: http://127.0.0.1:3138
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$browser"
+          npm run dev -- --hostname 127.0.0.1 --port 3138 > /tmp/checkpoint-qa.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 "$QA_BASE_URL/play/brain-rot" > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true || { cat /tmp/checkpoint-qa.log; exit 1; }
+          CHROMIUM_BIN="$browser" node --test tests/browser/brain-rot-checkpoint.qa.mjs
