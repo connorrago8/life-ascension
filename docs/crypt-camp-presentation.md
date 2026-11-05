@@ -70,3 +70,9 @@ attributes, gear bonuses, Start and save semantics remain unchanged.
 This child branch contains only presentation/test/docs/workflow-trigger edits,
 with PR109 as base. Full new-head CI and actual eight renders are required; this
 record does not claim they have executed. Independent review remains pending.
+
+The inspected320px baseline also labeled fallback sprite equipment as “Wearing”
+with no vault item selected. Camp now says “Run gear: None selected · base outfit
+shown.” Explicit Wear lists only actual selected vault names; Take off returns to
+the empty summary. Preview art and every equipment handler remain unchanged.
+The browser contract verifies both summaries and adds one selected390px render.
