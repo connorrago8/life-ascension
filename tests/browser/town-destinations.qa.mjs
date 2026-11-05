@@ -32,6 +32,7 @@ try {
       if (!localStorage.getItem('visual-save-sentinel')) localStorage.setItem('visual-save-sentinel', 'retain-me');
     });
     await page.goto(`${base}/play/emberhaven`);
+    await page.getByRole('heading', { name: 'Emberhaven', exact: true }).waitFor();
     await page.getByText('1 of 3 clues found.', { exact: true }).waitFor();
     const before = await page.evaluate(() => ({ lantern: localStorage.getItem('life-ascension:lantern-route:v1'), sentinel: localStorage.getItem('visual-save-sentinel') }));
     const nav = page.getByRole('navigation', { name: 'Emberhaven locations', exact: true });
@@ -60,10 +61,23 @@ try {
       }
     }
     await checkCards(false);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `artifacts/town/${width}-normal.png`, fullPage: true });
     if (width === 390) console.log('TOWN_RENDER_390_PNG=' + (await page.screenshot({ fullPage: true })).toString('base64'));
     await page.evaluate(() => { document.documentElement.style.fontSize = '32px'; });
     await checkCards(true);
+    const titleLines = await page.locator('#emberhaven-title').evaluate(el => {
+      const lines = [];
+      for (const node of el.childNodes) {
+        if (node.nodeType !== Node.TEXT_NODE || !node.textContent) continue;
+        const range = document.createRange(); range.selectNodeContents(node);
+        // Each compound part must remain whole; avoid a single orphan letter.
+        lines.push([...range.getClientRects()].length);
+      }
+      return lines;
+    });
+    assert.deepEqual(titleLines, [1, 1], 'Ember and haven must each remain intact at200%text');
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `artifacts/town/${width}-text200.png`, fullPage: true });
     if (width === 390) console.log('TOWN_RENDER_390_TEXT200_PNG=' + (await page.screenshot({ fullPage: true })).toString('base64'));
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });

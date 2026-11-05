@@ -12,6 +12,9 @@ Each link describes its purpose through aria-describedby. Scoped CSS supports
 normal two-column cards and automatic one-column reflow at200%root text. Strong
 mint focus outline,quiet charcoal surfaces,and static reduced-motion feedback.
 No asset request,background animation,new service,power or equipment appearance.
+Actual390px enlarged-text inspection found an orphan final letter in the existing
+title. A soft break between Ember/haven preserves the same accessible name and
+full text size while keeping both compound parts intact. Screenshots start at top.
 
 ## Verification
 Local TypeScript and829source tests passed before publication. Exact-head CI runs
