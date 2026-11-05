@@ -1304,3 +1304,105 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
   .town-screen :is(a, button) { scroll-margin-bottom: calc(148px + env(safe-area-inset-bottom, 0px)); }
 }
 .hub-today .hub-streak.lit { color: #ffb070; }
+
+
+/* Hub destination cards: presentation only; route/selection handlers stay shared. */
+.play-screen[data-screen="hub"] .adv-node:focus-visible {
+  outline: 3px solid #a6e1c8;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+@media (max-width: 600px) {
+  .play-screen[data-screen="hub"] {
+    padding-bottom: calc(144px + env(safe-area-inset-bottom, 0px));
+  }
+  .play-screen[data-screen="hub"] .adv-map {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 12px;
+    height: auto;
+    padding: 16px;
+    margin: 16px 0;
+    border: 2px solid #3d4b46;
+    border-radius: 14px;
+    background: #191f22;
+  }
+  .play-screen[data-screen="hub"] .adv-web { display: none; }
+  .play-screen[data-screen="hub"] .adv-hero {
+    position: static;
+    grid-column: 1 / -1;
+    order: -1;
+    justify-self: center;
+    width: 68px;
+  }
+  .play-screen[data-screen="hub"] .adv-node {
+    position: static;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 120px;
+    height: auto;
+    padding: 14px 10px;
+    gap: 10px;
+    justify-content: flex-start;
+    border: 2px solid #53645c;
+    border-radius: 10px;
+    background: #252d30;
+    color: #edf2ec;
+    overflow-wrap: anywhere;
+    touch-action: manipulation;
+    scroll-margin-block: 16px calc(144px + env(safe-area-inset-bottom, 0px));
+  }
+  .play-screen[data-screen="hub"] .adv-node.is-locked {
+    background: #1e2428;
+    border-style: dashed;
+    border-color: #6f7c75;
+    color: #c2cdc5;
+  }
+  .play-screen[data-screen="hub"] .adv-node-orb {
+    width: 48px;
+    height: 48px;
+    flex: none;
+    border-radius: 6px;
+    background: #131a1c;
+  }
+  .play-screen[data-screen="hub"] .adv-node-name {
+    font-size: 1rem;
+    line-height: 1.35;
+    max-width: 100%;
+  }
+  .play-screen[data-screen="hub"] .adv-node-note {
+    font-size: .8rem;
+    line-height: 1.45;
+    letter-spacing: .02em;
+    text-transform: none;
+  }
+  .play-screen[data-screen="hub"] .adv-node .soon-pill {
+    max-width: 100%;
+    white-space: normal;
+    color: #bcebd5;
+    background: #142b24;
+    border-color: #6b9b85;
+  }
+  .play-screen[data-screen="hub"] .adv-node.is-preview:active {
+    background: #30473d;
+  }
+  .play-screen[data-screen="hub"] .adv-blurb {
+    min-height: 0;
+    line-height: 1.55;
+    border-left: 3px solid #7ed9b8;
+    padding-left: 12px;
+  }
+  .play-screen[data-screen="hub"] :is(.adv-enter, .lock-card .btn) {
+    min-height: 48px;
+    white-space: normal;
+  }
+}
+@media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+  .play-screen[data-screen="hub"] .adv-node {
+    transition: background-color 100ms ease, border-color 100ms ease;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-screen[data-screen="hub"] .adv-node { transition: none; animation: none; }
+}
