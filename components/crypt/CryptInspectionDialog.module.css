@@ -1,0 +1,31 @@
+.sheet {
+  box-sizing: border-box;
+  position: fixed;
+  inset: auto 12px calc(12px + env(safe-area-inset-bottom));
+  width: calc(100% - 24px);
+  max-width: 32rem;
+  max-height: calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid #626e69;
+  border-radius: 16px;
+  background: #23272d;
+  color: #edf2ef;
+  box-shadow: 0 16px 48px #0008;
+  overflow: hidden;
+}
+.sheet[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.sheet::backdrop { background: rgb(8 10 12 / 78%); }
+.header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid #48514f; }
+.header h2 { flex: 1 1 10rem; min-width: 0; margin: 0; font-size: 1.05rem; line-height: 1.4; overflow-wrap: anywhere; }
+.close { flex: 0 0 auto; min-width: 64px; min-height: 44px; margin: 0; }
+.close:focus-visible { outline: 3px solid #8ed5b5; outline-offset: 2px; }
+.content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 16px; }
+.note { color: #c2cbc6; font-size: .85rem; line-height: 1.5; overflow-wrap: anywhere; margin: 12px 0; }
+.sheet :global(.delve-pile-row) { grid-template-columns: 1.5rem minmax(0, 1fr); gap: 10px; }
+.sheet :global(.delve-pile-cost) { width: 1.5rem; height: 1.5rem; font-size: .8rem; }
+.sheet :global(.delve-pile-name), .sheet :global(.delve-pile-text) { line-height: 1.5; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet *, .sheet::backdrop { animation: none !important; transition: none !important; }
+}

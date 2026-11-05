@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './CryptCombatResources.module.css';
+import { CryptInspectionDialog } from './CryptInspectionDialog';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
 import {
@@ -695,32 +696,16 @@ const PILE_NOTE: Record<PileKind, string> = {
   deck: 'Your whole deck for this run, sorted by cost.',
 };
 
-/** Bottom sheet listing one pile. Sits above the bottom nav and inside the safe area. */
+/** The same read-only modal supports combat piles, starter previews and reward decks. */
 function PileSheet({ kind, cards, onClose, title, note }: {
   kind: PileKind; cards: readonly ({ id: DeckCard } | DeckCard)[]; onClose: () => void; title?: string; note?: string;
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const closeLatest = useRef(onClose);
-  closeLatest.current = onClose;
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeLatest.current(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
   const entries = pileSummary(cards);
   return (
-    <>
-      <button type="button" className="delve-pile-backdrop" aria-label="Close" tabIndex={-1} onClick={onClose} />
-      <div className="delve-pile-sheet" role="dialog" aria-modal="true" aria-labelledby="delve-pile-title">
-        <div className="delve-pile-head">
-          <h3 id="delve-pile-title">{title ?? PILE_TITLE[kind]} · {cards.length} {cards.length === 1 ? 'card' : 'cards'}</h3>
-          <button ref={closeRef} type="button" className="btn ghost delve-pile-close" onClick={onClose}>Close</button>
-        </div>
-        <p className="delve-small muted delve-pile-note">{note ?? PILE_NOTE[kind]}</p>
-        {entries.length > 0 ? <PileList entries={entries} /> : <p className="delve-small muted">No cards here.</p>}
-      </div>
-    </>
+    <CryptInspectionDialog title={`${title ?? PILE_TITLE[kind]} · ${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
+      note={note ?? PILE_NOTE[kind]} onClose={onClose}>
+      {entries.length > 0 ? <PileList entries={entries} /> : <p className="delve-small muted">No cards here.</p>}
+    </CryptInspectionDialog>
   );
 }
 
