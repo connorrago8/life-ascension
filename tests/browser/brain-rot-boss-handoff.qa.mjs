@@ -1,3 +1,4 @@
+import {checkpointSaveBarrier} from './brain-rot-save-barrier.mjs';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -37,8 +38,8 @@ async function open(checkpoint) {
   },{key:core.CHECKPOINT_KEY,checkpoint});
   const time=new Date('2026-11-04T18:00:00Z');await page.clock.install({time});await page.clock.pauseAt(time);
   await page.goto(new URL('/play/brain-rot',base).href);
-  await page.getByRole('button',{name:'Resume / Retry',exact:true}).click();
-  const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);
+  await page.getByRole('button',{name:'Resume / Retry',exact:true}).click();await checkpointSaveBarrier(page);
+  const read=async()=>{await checkpointSaveBarrier(page);return page.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);};
   return {context,page,read,errors,forbidden};
 }
 
@@ -53,6 +54,7 @@ test('every boundary write is coherent and an isolated atomic record resumes the
   // Exclude fixture/start writes; inspect every save produced by the boundary tick.
   await f.page.evaluate(()=>window.__bossWrites=[]);
   await f.page.clock.runFor(18);
+  await checkpointSaveBarrier(f.page);
   const writes=await f.page.evaluate(()=>window.__bossWrites);
   assert.ok(writes.length>0);
   for(const c of writes){

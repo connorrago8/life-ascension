@@ -1,3 +1,4 @@
+import {checkpointSaveBarrier} from './brain-rot-save-barrier.mjs';
 /** Real-component, local-only route-exit persistence checks; no account fixture. */
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -44,6 +45,7 @@ try {
     await page.clock.runFor(250); // Exit before the 60-frame periodic checkpoint.
     await page.getByRole('link', {name: '← Back to Hub', exact: true}).click();
     await page.getByRole('heading', {name: 'Hub', exact: true}).waitFor();
+    await checkpointSaveBarrier(page);
     const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), core.CHECKPOINT_KEY);
     assert.ok(saved?.active?.state.tick > 0 && saved.active.state.tick < 60,
       'route exit must save the latest sub-second state');
@@ -62,6 +64,7 @@ try {
     await page.clock.runFor(250);
     await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
     await resume.waitFor();
+    await checkpointSaveBarrier(page);
     const hidden = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), core.CHECKPOINT_KEY);
     assert.ok(hidden.active.state.tick > paused.active.state.tick);
     assert.equal(hidden.run.level, 1);

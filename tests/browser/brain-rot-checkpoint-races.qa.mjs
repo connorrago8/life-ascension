@@ -1,3 +1,4 @@
+import {checkpointSaveBarrier} from './brain-rot-save-barrier.mjs';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -53,11 +54,11 @@ async function session(checkpoint) {
     await p.getByText(`Level ${JSON.parse(await p.evaluate(key => localStorage.getItem(key), core.CHECKPOINT_KEY)).run.level}/31`, { exact: true }).waitFor();
     return p;
   }
-  const read = p => p.evaluate(key => JSON.parse(localStorage.getItem(key)), core.CHECKPOINT_KEY);
+  const read = async p => {await checkpointSaveBarrier(p);return p.evaluate(key => JSON.parse(localStorage.getItem(key)), core.CHECKPOINT_KEY);};
   return { context, page, read, errors, forbidden };
 }
 async function completeRune(page) {
-  await page.getByRole('button', { name: 'Resume / Retry', exact: true }).click();
+  await page.getByRole('button', { name: 'Resume / Retry', exact: true }).click();await checkpointSaveBarrier(page);
   await page.keyboard.down('ArrowLeft'); await page.clock.runFor(18); await page.keyboard.up('ArrowLeft');
   await page.getByText('Level 2/31', { exact: true }).waitFor();
 }
@@ -85,7 +86,7 @@ test('a stale paused tab cannot resurrect a heart spent by another tab', async (
   try {
     const a = await s.page(), stale = await s.page();
     await stale.getByRole('button', { name: 'Resume / Retry', exact: true }).waitFor();
-    await a.getByRole('button', { name: 'Resume / Retry', exact: true }).click();
+    await a.getByRole('button', { name: 'Resume / Retry', exact: true }).click();await checkpointSaveBarrier(a);
     await a.clock.runFor(18);
     const before = await s.read(a); assert.equal(before.run.hearts, 2);
     await stale.evaluate(() => window.dispatchEvent(new Event('pagehide')));
