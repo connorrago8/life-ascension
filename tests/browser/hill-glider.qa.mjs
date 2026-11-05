@@ -26,7 +26,7 @@ try{
   const hold=page.getByRole('button',{name:'Hold to dive',exact:true});
   assert.equal(await toggle.getAttribute('aria-pressed'),'false');
   assert.equal(await page.locator('svg polygon').count(),1,'visible collision terrain');
-  for(const b of [hold,toggle]){await b.scrollIntoViewIfNeeded();const r=await b.boundingBox();assert.ok(r&&r.width>=44&&r.height>=44&&r.x>=0&&r.x+r.width<=width+1);}
+  for(const b of [hold,toggle]){const r=await b.boundingBox();assert.ok(r&&r.width>=44&&r.height>=44&&r.x>=0&&r.x+r.width<=width+1&&r.y+r.height<=844);assert.ok(await b.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el;}),'initial control center is above navigation');}
   await toggle.click();assert.equal(await toggle.getAttribute('aria-pressed'),'true');await page.clock.runFor(400);
   await page.getByRole('button',{name:'Pause & Save',exact:true}).click();await checkpointSaveBarrier(page);
   const checkpoint=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);

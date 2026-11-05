@@ -47,6 +47,8 @@ Surface reuses the existing wing avatar; an SVG terrain polygon is generated fro
 the collision function, not new visual assets. Hill Glider removes unrelated arrow,
 flap and slice controls. Hold to dive captures pointer release/cancel; Toggle dive
 is a tap/keyboard alternative with aria-pressed. Space and arena hold still work.
+The280px Hill Glider arena keeps dive controls above bottom navigation on the
+four tested initial viewports without changing normalized physics.
 Phase and stall cues are textual; no sound/color dependency. Pause and lifecycle
 save paths are unchanged. Press rejects gameplay input while paused.
 
@@ -59,7 +61,7 @@ and paused/terminal immutability. Full local suite901/901 and TypeScript passed
 before publication; final exact-SHA CI results belong in the PR checkpoint.
 
 Mandatory localhost Chromium suite checks320/375/390/430px, actual controls,
-terrain,44px targets, toggle/Space release, paused immutable save, and a fresh
+terrain,44px targets with initial navigation hit-tests, toggle/Space release, paused immutable save, and a fresh
 no-input challenge actually losing one heart without advancing its level.
 It uses authored seeds and a controlled clock, native locks, sandboxed non-root
 Chromium, blank backend configuration and GET/HEAD-only localhost requests.
