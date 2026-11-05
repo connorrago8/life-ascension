@@ -15,7 +15,7 @@ export default function EmberhavenPage() {
       <div style={{ textAlign: 'center', padding: '22px 0 16px' }}>
         <p className="eyebrow" style={{ marginBottom: 12 }}>THE LIVING DARK · EMBERHAVEN SQUARE</p>
         <div aria-hidden="true" style={{ fontSize: 44, lineHeight: 1.3, color: 'var(--mint)' }}>✧</div>
-        <h1 id="emberhaven-title" style={{ fontSize: 'clamp(1.8rem, 7vw, 2.4rem)', marginTop: 8 }}>Emberhaven</h1>
+        <h1 id="emberhaven-title" style={{ fontSize: 'clamp(1.8rem, 7vw, 2.4rem)', marginTop: 8 }}>Ember<wbr />haven</h1>
         <p className="lede" style={{ maxWidth: 310, margin: '12px auto 0' }}>
           Six paths. One living town. Choose where your story goes next.
         </p>
