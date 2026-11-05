@@ -104,7 +104,7 @@ test('Lantern Route explains itself, saves, and does not award XP', () => {
   assert.equal(LANTERN_PURPOSE, 'A short town story. Find 3 clues, then put them in order.');
   assert.match(visit, /LANTERN_PURPOSE/);
   assert.match(visit, /LANTERN_RESET_COPY/);
-  assert.match(LANTERN_RESET_COPY, /Progress is saved on this device/);
+  assert.doesNotMatch(LANTERN_RESET_COPY, /Progress is saved on this device/);
   assert.match(LANTERN_RESET_COPY, /do not change/);
   assert.match(visit, /Lantern kept/);
   assert.doesNotMatch(visit, /reloading starts fresh/);
