@@ -96,8 +96,9 @@ test('third lethal frame resets boss attempt and banks without crediting the fai
 test('completed boss checkpoint cannot consume another heart through its offered Resume action',async()=>{
  const checkpoint=fixture('flappy-wyvern','rune-fusion');
  for(const id of Object.keys(checkpoint.run.boss.seconds))checkpoint.run.boss.seconds[id]=60;
- checkpoint.run.boss.won=true;checkpoint.run.boss.segmentMs=15000;
- const bank=checkpoint.active.state;bank.player.y=.939;bank.player.vy=.012;
+ checkpoint.run.boss.queue=[...core.GAMES.map(g=>g.id).filter(id=>id!=='flappy-wyvern'),'flappy-wyvern'];
+ checkpoint.run.boss.index=9;checkpoint.run.boss.won=true;checkpoint.run.boss.segmentMs=15000;
+ const bank=checkpoint.active.state;bank.tick=2700;bank.player.y=.939;bank.player.vy=.012;
  checkpoint.run.boss.states['flappy-wyvern']=bank;checkpoint.active=null;
  // Simulate recovery of a complete run with a valid nonterminal bank, as retained by prior visits.
  const f=await open(checkpoint,false);

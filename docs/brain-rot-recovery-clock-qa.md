@@ -33,3 +33,16 @@ no guard/auth bypass or alternate probe after prior approval-review usage limit.
 A fixed1000/60 credit per setInterval callback may differ from browser elapsed
 time. Completed run recovery may still expose an active bank since resume/start
 does not explicitly reject boss.won. These require executable evidence.
+
+## First executed evidence
+QA run41993852534, head f4a6cb83e9de8caf56b71a2a4265229df08fad90.
+Source829/829 and browser smoke pass. New recovery browser3pass/1fail:
+terminal save offered Resume; after18ms won remained true but hearts3->2 and
+segmentMs15000->0. No renderer errors or external/write requests.
+Medium checkpoint lifecycle defect,not an account/power exploit.
+Early-credit hypothesis was not reproduced:14999 controlled browser ms still
+had index0/credit0. The inspected stored clock is periodic,so its13999.999 value
+must not be interpreted as a precise live wall-clock measurement.
+Paused30000ms leaves record unchanged;third-heart reset has3hearts/0banks/0credit.
+The terminal fixture is now tightened to natural final-queue index9 and a
+prior-three-visits tick2700 bank; rerun must reproduce before final reporting.
