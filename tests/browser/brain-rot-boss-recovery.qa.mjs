@@ -1,3 +1,4 @@
+import {checkpointSaveBarrier} from './brain-rot-save-barrier.mjs';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,7 +34,7 @@ async function open(checkpoint, start=true) {
   const time=new Date('2026-11-04T18:00:00Z');await page.clock.install({time});await page.clock.pauseAt(time);
   await page.goto(new URL('/play/brain-rot',base).href);
   if(start)await page.getByRole('button',{name:/^(Resume \/ Retry|Start Challenge)$/}).click();
-  const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);
+  const read=async()=>{await checkpointSaveBarrier(page);return page.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);};
   return {context,page,read,errors,forbidden};
 }
 

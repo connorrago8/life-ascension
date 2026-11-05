@@ -35,10 +35,16 @@ export default function BrainRotDungeon(){
  },[]);
  useEffect(()=>{recover();},[recover]);
  const persist=useCallback((r:Run)=>{
-  const result=writerRef.current?.commit(r,activeRef.current?{level:r.level,state:activeRef.current}:null)??'unavailable';
-  if(result==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return false;}
-  runRef.current=r;setRun(r);
-  setSaveWarning(result==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
+  const writer=writerRef.current;
+  if(!writer)return false;
+  // Simulation is synchronous. Storage waits must not drop frames or change
+  // boss timing; each queued operation clones this exact run/active pair.
+  runRef.current=r;setRun(r);setSaveWarning('Saving checkpoint…');
+  void writer.commitExclusive(r,activeRef.current?{level:r.level,state:activeRef.current}:null).then(result=>{
+   if(writerRef.current!==writer)return;
+   if(result==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return;}
+   setSaveWarning(result==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
+  });
   return true;
  },[recover]);
  useEffect(()=>{const changed=(event:StorageEvent)=>{if((event.key===CHECKPOINT_KEY||event.key===null)&&writerRef.current?.isCurrent()===false)recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');};window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);},[recover]);
@@ -60,7 +66,13 @@ export default function BrainRotDungeon(){
   if(wasPlaying&&r&&s&&!r.boss?.won)persist(r.boss?{...r,boss:{...r.boss,states:{...r.boss.states,[s.id]:s}}}:r);
   inputRef.current=null;setInput(null);
  },[persist]);
- useEffect(()=>subscribeLocalRunCheckpoint(document,window,pause),[pause]);
+ useEffect(()=>{
+  const unsubscribe=subscribeLocalRunCheckpoint(document,window,pause);
+  return()=>{
+   // Flush route-exit state before invalidating the writer or playing flag.
+   unsubscribe();writerRef.current=null;playingRef.current=false;
+  };
+ },[pause]);
  useEffect(()=>{const timer=setInterval(()=>{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;if(r.boss?.won){playingRef.current=false;setPlaying(false);return;}const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
  if(next.lost){updateActive(null);playingRef.current=false;setPlaying(false);const hearts=r.level===31?(r.boss?.hearts??3):r.hearts;const remaining=hearts-1;if(r.level===31&&r.boss){const result=failBossSegment(r.boss);if(!persist({...r,boss:result.reset?newBoss(r.seed+31):result.boss}))return;}else{if(!persist({...r,hearts:remaining>0?remaining:3}))return;}setMessage(remaining>0?'Challenge failed — retry!':'All hearts lost — attempt reset.');return;}
  if(r.level===31&&r.boss){
