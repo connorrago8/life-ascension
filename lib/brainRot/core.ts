@@ -43,6 +43,7 @@ export function beginBossSegment(boss:Boss,game:GameId,state:unknown):Boss{
  return {...boss,snapshots:{...boss.snapshots,[game]:structuredClone(state)}};
 }
 export function failBossSegment(boss:Boss):{boss:Boss;restore:unknown|null;reset:boolean}{
+ if(boss.won)return {boss,restore:null,reset:false};
  const id=boss.queue[boss.index];const hearts=boss.hearts-1;
  if(hearts<=0)return {boss:newBoss(0),restore:null,reset:true};
  const restore=boss.snapshots[id]===undefined?null:structuredClone(boss.snapshots[id]);
@@ -72,7 +73,7 @@ function validActive(run:Run,value:unknown):value is {level:number;state:unknown
 }
 /** Resolve only the snapshot paired with this run; terminal states cannot be replayed. */
 export function resumeGameState(run:Run,active:unknown):unknown|null {
- if(!validRun(run))return null;
+ if(!validRun(run)||run.boss?.won)return null;
  const state=validActive(run,active)?active.state:run.level===31?run.boss?.states[expectedGame(run)]:null;
  if(!validGameState(state,expectedGame(run)))return null;
  const flags=state as {won:boolean;lost:boolean};
