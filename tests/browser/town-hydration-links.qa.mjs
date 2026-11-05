@@ -14,11 +14,24 @@ for(const width of [320,375,390,430])for(const [initial,next] of [['?preview=1',
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto(new URL('/play/emberhaven/blacksmith'+initial,base).href,{waitUntil:'commit'});
+   await page.getByText('Open Character →',{exact:true}).waitFor();
    const character=page.getByRole('link',{name:'Open Character →',exact:true});
    const back=page.getByRole('navigation',{name:'Back navigation',exact:true}).getByRole('link');
+   // A query-correct server anchor or an explicitly pending label is safe.
+   // Final implementation intentionally withholds actions through hydration.
    const oldSuffix=initial==='?preview=1'?'?preview=1':'';
-   assert.equal(await character.getAttribute('href'),'/character'+oldSuffix,'server-rendered query must be correct before client scripts');
-   assert.equal(await back.getAttribute('href'),'/play/emberhaven'+oldSuffix);
+   if(await character.count()){
+    assert.equal(await character.getAttribute('href'),'/character'+oldSuffix);
+    assert.equal(await back.getAttribute('href'),'/play/emberhaven'+oldSuffix);
+   }else{
+    const pending=page.getByText('Open Character →',{exact:true});
+    assert.equal(await pending.getAttribute('aria-disabled'),'true');
+    assert.equal(await pending.getAttribute('aria-busy'),'true');
+    assert.equal(await pending.getAttribute('href'),null);
+    const pendingBack=page.getByRole('navigation',{name:'Back navigation',exact:true}).getByText('← Back to Town',{exact:true});
+    assert.equal(await pendingBack.getAttribute('aria-disabled'),'true');
+    assert.equal(await pendingBack.getAttribute('href'),null);
+   }
    await page.evaluate(search=>history.pushState(null,'',location.pathname+search),next);
    const before=await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage)));
    release();await page.waitForLoadState('load');assert.ok(heldScripts>0,'must actually hold application scripts before query change');

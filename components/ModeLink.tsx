@@ -19,14 +19,13 @@ function subscribeBrowserSearch(changed: () => void) {
   };
 }
 
-/** Next supplies SSR/hydration state and normal query-navigation notifications.
- * Recheck the native URL after hydration: a pre-hydration history change may
- * precede Next's History API subscription. No history/router state is patched. */
-export function useModeHref(href: string): string {
-  const search = useSearchParams();
-  const serverSearch = search?.toString() ?? '';
-  const currentSearch = useSyncExternalStore(subscribeBrowserSearch, browserSearch, () => serverSearch);
-  return navigationModeHref(href, currentSearch, process.env.NODE_ENV === 'development');
+/** Keep SSR and the first hydration render independent of a mutable URL.
+ * Next notifies normal query changes; the browser snapshot supplies live mode.
+ * Null means a noninteractive placeholder until client hydration is complete. */
+export function useModeHref(href: string): string | null {
+  useSearchParams();
+  const currentSearch = useSyncExternalStore(subscribeBrowserSearch, browserSearch, () => null);
+  return currentSearch === null ? null : navigationModeHref(href, currentSearch, process.env.NODE_ENV === 'development');
 }
 
 type Props = Omit<ComponentProps<typeof Link>, 'href' | 'onClick'> & { href: string; onClick?: (event: MouseEvent<HTMLAnchorElement>) => void };
@@ -35,6 +34,7 @@ export function ModeLink(props: Props) {
 }
 function ResolvedModeLink({ href, onClick, ...props }: Props) {
   const router = useRouter(), resolved = useModeHref(href);
+  if (resolved === null) return <span className={props.className} style={props.style} aria-disabled="true" aria-busy="true">{props.children}</span>;
   return <Link {...props} href={resolved} prefetch={false} onClick={event => {
     onClick?.(event); if (event.defaultPrevented) return;
     const target = liveModeHref(href);

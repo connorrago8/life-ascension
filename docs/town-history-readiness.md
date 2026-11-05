@@ -8,7 +8,9 @@ QA105 recorded a390px browser URL ending preview=0 while Character/Back hrefs re
 
 ## Implementation
 
-`components/ModeLink.tsx` keeps `useSearchParams` for Next's SSR snapshot and normal query-navigation notifications. React `useSyncExternalStore` reads actual `window.location.search` after hydration, closing a missed pre-mount change without changing the initial server snapshot. Native popstate/pageshow subscriptions refresh browser Back/Forward and restored documents; cleanup removes both listeners. Normal Next query updates still render the hook, which rereads the browser snapshot.
+`components/ModeLink.tsx` keeps `useSearchParams` for normal Next query-navigation notifications. React `useSyncExternalStore` uses a constant null server/hydration snapshot and reads actual `window.location.search` afterward. ModeLink and InAppBackLink render their existing aria-disabled/aria-busy span while null, then a link with the live query. This avoids mismatched server attributes being retained when the URL changes before bootstrap. Native popstate/pageshow subscriptions refresh restored documents; cleanup removes both listeners. Normal Next query updates still render the hook, which rereads the browser snapshot.
+
+Navigation labels remain readable while scripts load, but are intentionally not actionable until hydration. If scripts never load, these client navigation controls remain noninteractive. No query-dependent link is advertised during this pending phase. No fixed delay is imposed.
 
 No global pushState/replaceState patch, synthetic router event, internal Next history-state mutation, URL timer/polling, storage write, route change or dependency is added. `InAppBackLink` already shares this hook. Existing activation-time resolution remains in place. A plain arbitrary native pushState after hydration still relies on Next's documented subscription; this is not a general external URL store.
 
@@ -21,3 +23,7 @@ Original QA105 query-only/history assertions remain unchanged. Required manifest
 No Brain Rot core, save schema, quest XP/streak, visual asset, account/auth, hosted environment/protection, production or native simulator change. Implementation needs independent review; design/runtime source tests do not self-authorize acceptance. Browser evidence is Linux Chromium on localhost, not iPhone Safari/VoiceOver or Founder playtest.
 
 Reference contracts: https://react.dev/reference/react/useSyncExternalStore (server snapshot during hydration, browser snapshot afterward); https://nextjs.org/docs/app/getting-started/linking-and-navigating (native History API integration). The installed Next app-router source registers its native History API wrappers in a passive effect, consistent with the missed-early-update hypothesis; controlled browser results establish the practical regression boundary.
+
+## Executed baseline and revision
+
+Test-only ac02045b0448e674abdff10f213452fb00fec1b9 / run42087309363 reproduced stale Character/Back hrefs in all8 delayed-script cases. Each held5 scripts; hrefs retained original mode after10s, page errors[] but Next dev stack-frame POST requests were blocked. Baseline fails on real query attributes, not only the request collector. The first browser-snapshot attempt used Next's query as getServerSnapshot; that is superseded because the client bootstrap query can differ from the HTML query. Final server snapshot is null in both environments. The cold test now accepts either a query-correct initial server anchor (baseline behavior) or an explicitly noninteractive pending label (final behavior); post-hydration href, navigation, errors and blocked-request assertions are unchanged. This does not remove or relax the original QA105 test.
