@@ -1,7 +1,7 @@
 name: Consolidated candidate evidence
 on:
   pull_request:
-    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105', 'qa/brain-rot-checkpoint-races-20261105', 'visual/crypt-combat-resources-20261105', 'integration/complete-browser-receipts-20261105', 'gameplay/brain-rot-writer-authority-20261105', 'qa/brain-rot-interleaved-writers-20261105', 'visual/crypt-deck-inspection-20261105', 'systems/town-preview-continuity-20261105', 'integration/parallel-build-evidence-20261105', 'gameplay/brain-rot-serialized-checkpoints-20261105', 'qa/brain-rot-queued-lifecycle-20261105', 'systems/town-live-mode-links-20261105', 'gameplay/brain-rot-dirty-exit-retry-20261105', 'qa/brain-rot-native-conflict-20261105', 'systems/town-history-readiness-20261105']
+    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105', 'qa/brain-rot-checkpoint-races-20261105', 'visual/crypt-combat-resources-20261105', 'integration/complete-browser-receipts-20261105', 'gameplay/brain-rot-writer-authority-20261105', 'qa/brain-rot-interleaved-writers-20261105', 'visual/crypt-deck-inspection-20261105', 'systems/town-preview-continuity-20261105', 'integration/parallel-build-evidence-20261105', 'gameplay/brain-rot-serialized-checkpoints-20261105', 'qa/brain-rot-queued-lifecycle-20261105', 'systems/town-live-mode-links-20261105', 'gameplay/brain-rot-dirty-exit-retry-20261105', 'qa/brain-rot-native-conflict-20261105', 'systems/town-history-readiness-20261105', 'visual/crypt-reward-presentation-20261105']
 permissions:
   contents: read
 jobs:
@@ -58,12 +58,12 @@ jobs:
           if (check !== 'source-build') {
             try { contracts = JSON.parse(readFileSync('browser-contract-evidence/' + check + '.json', 'utf8')).contracts; } catch {}
           }
-          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT, contracts }));
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT, result: process.env.CHECK_RESULT, contracts }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: receipt-source-build
+          name: receipt-source-build-attempt-${{ github.run_attempt }}
           path: ci-evidence/source-build.json
           if-no-files-found: error
 
@@ -93,12 +93,12 @@ jobs:
           import { execFileSync } from 'node:child_process';
           mkdirSync('ci-evidence', { recursive: true });
           const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-          writeFileSync('ci-evidence/unit-tests.json', JSON.stringify({ check: 'unit-tests', sha, result: process.env.CHECK_RESULT }));
+          writeFileSync('ci-evidence/unit-tests.json', JSON.stringify({ check: 'unit-tests', sha, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT, result: process.env.CHECK_RESULT }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: receipt-unit-tests
+          name: receipt-unit-tests-attempt-${{ github.run_attempt }}
           path: ci-evidence/unit-tests.json
           if-no-files-found: error
 
@@ -151,43 +151,43 @@ jobs:
           if (check !== 'source-build') {
             try { contracts = JSON.parse(readFileSync('browser-contract-evidence/' + check + '.json', 'utf8')).contracts; } catch {}
           }
-          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT, contracts }));
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT, result: process.env.CHECK_RESULT, contracts }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: receipt-browser-smoke
+          name: receipt-browser-smoke-attempt-${{ github.run_attempt }}
           path: ci-evidence/browser-smoke.json
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: consolidated-hub-renders
+          name: consolidated-hub-renders-attempt-${{ github.run_attempt }}
           path: artifacts/hub/
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: consolidated-town-renders
+          name: consolidated-town-renders-attempt-${{ github.run_attempt }}
           path: artifacts/town/
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: consolidated-crypt-renders
+          name: consolidated-crypt-renders-attempt-${{ github.run_attempt }}
           path: artifacts/crypt/
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: crypt-recap-renders
+          name: crypt-recap-renders-attempt-${{ github.run_attempt }}
           path: artifacts/crypt-recap/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: crypt-inspection-renders
+          name: crypt-inspection-renders-attempt-${{ github.run_attempt }}
           path: artifacts/crypt-inspection/
           if-no-files-found: warn
   boss-boundary:
@@ -239,12 +239,12 @@ jobs:
           if (check !== 'source-build') {
             try { contracts = JSON.parse(readFileSync('browser-contract-evidence/' + check + '.json', 'utf8')).contracts; } catch {}
           }
-          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT, contracts }));
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT, result: process.env.CHECK_RESULT, contracts }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: receipt-boss-boundary
+          name: receipt-boss-boundary-attempt-${{ github.run_attempt }}
           path: ci-evidence/boss-boundary.json
           if-no-files-found: error
 
@@ -263,11 +263,13 @@ jobs:
           node-version: '22'
       - uses: actions/download-artifact@v4
         with:
-          pattern: receipt-*
+          pattern: receipt-*-attempt-${{ github.run_attempt }}
           path: ci-evidence
           merge-multiple: true
       - name: Require complete successful evidence for this exact head
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_RUN_ID: ${{ github.run_id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.run_attempt }}
           RELEASE_JOB_RESULTS: ${{ toJSON(needs) }}
         run: node scripts/verify-release-receipts.mjs "$EXPECTED_SHA" ci-evidence
