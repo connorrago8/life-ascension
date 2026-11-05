@@ -1,3 +1,5 @@
+import './RunRecap.css';
+import { CryptGearGlyph } from './CryptGearGlyph';
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL } from '../../lib/crypt/delve/loot';
 import { lootRetainedLine, plural, type RunRecap as Recap, type SaveMode } from '../../lib/crypt/delve/recap';
 
@@ -44,11 +46,14 @@ export function RunRecapView({ recap, mode, confirmed, checkpoint, onContinue, e
       {won ? (
         reward ? (
           <div className={`recap-reward rarity-${reward.rarity}`} aria-label={`Boss reward: ${reward.name}`}>
+            <div className="recap-reward-art"><CryptGearGlyph slot={reward.slot} /></div>
+            <div className="recap-reward-copy">
             <p className="recap-reward-label">Boss reward</p>
             <p className="recap-reward-name">{reward.name}</p>
             <p className="delve-small">{RARITY_LABEL[reward.rarity]} · {bonusLabel(reward)}</p>
             {passiveLabel(reward) ? <p className="delve-small delve-passive">✦ {passiveLabel(reward)}</p> : null}
             <p className="delve-small recap-reward-status">{rewardStatus}</p>
+            </div>
           </div>
         ) : <p className="recap-reward recap-reward-none">The Warden left no gear this time.</p>
       ) : (

@@ -1,0 +1,25 @@
+/* Display-only end-of-run hierarchy; all facts and actions come from RunRecap. */
+.recap.recap { gap: 16px; min-width: 0; --recap-gold: #f2c46d; }
+.recap .recap-title { font-size: 1.75rem; line-height: 1.15; overflow-wrap: anywhere; text-wrap: balance; }
+.recap .recap-lede { line-height: 1.6; }
+.recap .recap-mode { padding: 12px; line-height: 1.5; }
+.recap .recap-reward { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px; border-radius: 8px; border-color: #a8864c; background: #20262c; box-shadow: inset 0 3px #493e29; }
+.recap .recap-reward-art { flex: 0 0 96px; width: 96px; height: 96px; background: #151a1e; outline: 1px solid #59614f; outline-offset: 3px; }
+.recap .recap-gear-glyph { display: block; width: 96px; height: 96px; image-rendering: pixelated; }
+.recap .recap-reward-copy { flex: 1 1 12rem; min-width: 0; }
+.recap .recap-reward-label { color: var(--recap-gold); font-size: .8rem; line-height: 1.5; }
+.recap .recap-reward-name { font-size: 1.4rem; line-height: 1.3; margin: 4px 0 8px !important; overflow-wrap: anywhere; }
+.recap .recap-reward-copy .delve-small { font-size: .9rem; line-height: 1.6; }
+.recap .recap-reward-status { margin-top: 12px !important; padding-top: 10px; border-top: 1px solid #45534c; }
+.recap .recap-summary { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: 8px; }
+.recap .recap-summary > div { padding: 12px; border-radius: 8px; }
+.recap .recap-summary > div:last-child { grid-column: 1 / -1; }
+.recap .recap-summary dt { font-size: .8rem; line-height: 1.5; }
+.recap .recap-summary dd { line-height: 1.5; }
+.recap .recap-gear-names { overflow-wrap: anywhere; line-height: 1.6; }
+.recap .recap-actions { gap: 12px; }
+.recap .recap-actions .btn { min-height: 48px; padding: 12px 16px; font-size: 1rem; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.recap .recap-actions .btn:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .recap .recap-title, .recap .recap-reward { animation: none; transition: none; }
+}
