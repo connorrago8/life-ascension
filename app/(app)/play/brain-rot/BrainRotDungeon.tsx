@@ -4,6 +4,7 @@ import {subscribeLocalRunCheckpoint} from '../../../../lib/localRunLifecycle';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {GAMES,newRun,readRun,currentGame,completeLevel,newBoss,advanceBoss,beginBossSegment,failBossSegment,tier,readActive,CHECKPOINT_KEY,resumeGameState,type Run,type GameId} from '../../../../lib/brainRot/core';
 import {createCheckpointWriter} from '../../../../lib/brainRot/checkpointWriter';
+import {createCheckpointSession} from '../../../../lib/brainRot/checkpointSession';
 import {handoffBossSegment} from '../../../../lib/brainRot/bossHandoff';
 import {createGame,step,keyboardInput,type State,type Input} from '../../../../lib/brainRot/games';
 const palette=['#f0c86b','#7ed6ba','#ba9cfa','#ff9580','#9ad1ff'];
@@ -23,9 +24,16 @@ function Surface({state}:{state:State}){
 export default function BrainRotDungeon(){
  const touchStart=useRef<{x:number;y:number}|null>(null);const [run,setRun]=useState<Run|null>(null);const [active,setActive]=useState<State|null>(null);const [playing,setPlaying]=useState(false);const [input,setInput]=useState<Input|null>(null);const [message,setMessage]=useState('');const [saveWarning,setSaveWarning]=useState('');const runRef=useRef<Run|null>(null);const activeRef=useRef<State|null>(null);const inputRef=useRef<Input|null>(null);const playingRef=useRef(false);
  const writerRef=useRef<ReturnType<typeof createCheckpointWriter>|null>(null);
- const recover=useCallback((notice='')=>{
+ const sessionRef=useRef<ReturnType<typeof createCheckpointSession>|null>(null);
+ const recover=useCallback((notice=''):void=>{
+  sessionRef.current?.invalidate();
   playingRef.current=false;setPlaying(false);inputRef.current=null;setInput(null);
   const writer=createCheckpointWriter();writerRef.current=writer;setSaveWarning('');
+  sessionRef.current=createCheckpointSession((r,active)=>writer.commitExclusive(r,active),status=>{
+   if(writerRef.current!==writer)return;
+   if(status==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return;}
+   setSaveWarning(status==='saving'?'Saving checkpoint…':status==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
+  });
   const saved=writer.checkpoint?.run??readRun();
   const r=saved??newRun(Date.now()>>>0);
   runRef.current=r;setRun(r);
@@ -35,18 +43,12 @@ export default function BrainRotDungeon(){
  },[]);
  useEffect(()=>{recover();},[recover]);
  const persist=useCallback((r:Run)=>{
-  const writer=writerRef.current;
-  if(!writer)return false;
-  // Simulation is synchronous. Storage waits must not drop frames or change
-  // boss timing; each queued operation clones this exact run/active pair.
-  runRef.current=r;setRun(r);setSaveWarning('Saving checkpoint…');
-  void writer.commitExclusive(r,activeRef.current?{level:r.level,state:activeRef.current}:null).then(result=>{
-   if(writerRef.current!==writer)return;
-   if(result==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return;}
-   setSaveWarning(result==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
-  });
+  const session=sessionRef.current;if(!session)return false;
+  // Simulation remains synchronous; the session owns immutable queued saves.
+  runRef.current=r;setRun(r);
+  void session.save(r,activeRef.current?{level:r.level,state:activeRef.current}:null);
   return true;
- },[recover]);
+ },[]);
  useEffect(()=>{const changed=(event:StorageEvent)=>{if((event.key===CHECKPOINT_KEY||event.key===null)&&writerRef.current?.isCurrent()===false)recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');};window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);},[recover]);
  const updateActive=useCallback((s:State|null)=>{activeRef.current=s;setActive(s);},[]);
  const start=useCallback(()=>{
@@ -64,13 +66,14 @@ export default function BrainRotDungeon(){
   const wasPlaying=playingRef.current;playingRef.current=false;setPlaying(false);
   const r=runRef.current,s=activeRef.current;
   if(wasPlaying&&r&&s&&!r.boss?.won)persist(r.boss?{...r,boss:{...r.boss,states:{...r.boss.states,[s.id]:s}}}:r);
+  else void sessionRef.current?.retry();
   inputRef.current=null;setInput(null);
  },[persist]);
  useEffect(()=>{
   const unsubscribe=subscribeLocalRunCheckpoint(document,window,pause);
   return()=>{
    // Flush route-exit state before invalidating the writer or playing flag.
-   unsubscribe();writerRef.current=null;playingRef.current=false;
+   unsubscribe();sessionRef.current?.invalidate();sessionRef.current=null;writerRef.current=null;playingRef.current=false;
   };
  },[pause]);
  useEffect(()=>{const timer=setInterval(()=>{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;if(r.boss?.won){playingRef.current=false;setPlaying(false);return;}const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
