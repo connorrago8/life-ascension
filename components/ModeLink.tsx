@@ -2,18 +2,31 @@
 
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense, type ComponentProps, type MouseEvent } from 'react';
+import { Suspense, useSyncExternalStore, type ComponentProps, type MouseEvent } from 'react';
 import { navigationModeHref } from '../lib/navigationMode';
 
 export function liveModeHref(href: string): string {
   return navigationModeHref(href, window.location.search, process.env.NODE_ENV === 'development');
 }
 
-/** Resolve in the same render as the current query, including query-only changes.
- * Callers provide a Suspense boundary for static production rendering. */
+const browserSearch = () => window.location.search;
+function subscribeBrowserSearch(changed: () => void) {
+  window.addEventListener('popstate', changed);
+  window.addEventListener('pageshow', changed);
+  return () => {
+    window.removeEventListener('popstate', changed);
+    window.removeEventListener('pageshow', changed);
+  };
+}
+
+/** Next supplies SSR/hydration state and normal query-navigation notifications.
+ * Recheck the native URL after hydration: a pre-hydration history change may
+ * precede Next's History API subscription. No history/router state is patched. */
 export function useModeHref(href: string): string {
   const search = useSearchParams();
-  return navigationModeHref(href, search?.toString() ?? '', process.env.NODE_ENV === 'development');
+  const serverSearch = search?.toString() ?? '';
+  const currentSearch = useSyncExternalStore(subscribeBrowserSearch, browserSearch, () => serverSearch);
+  return navigationModeHref(href, currentSearch, process.env.NODE_ENV === 'development');
 }
 
 type Props = Omit<ComponentProps<typeof Link>, 'href' | 'onClick'> & { href: string; onClick?: (event: MouseEvent<HTMLAnchorElement>) => void };
