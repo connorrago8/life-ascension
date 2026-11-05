@@ -55,7 +55,7 @@ export function AdventureHub() {
 
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
-    if (location.kind === 'preview') router.push(entryHref);
+    if (location.kind === 'preview') router.push(cryptEntryHref(window.location.search));
     if (location.kind === 'town') router.push('/play/emberhaven');
   }
 
@@ -70,7 +70,7 @@ export function AdventureHub() {
       <h1>{HUB.title}</h1>
       <p className="lede">{HUB.lede}</p>
 
-      <div className="adv-map">
+      <div className="adv-map" role="group" aria-label="Adventure destinations">
         <svg className="adv-web" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {HUB.links.map(([from, to]) => {
             const start = HUB.locations.find((location) => location.id === from);
@@ -87,11 +87,11 @@ export function AdventureHub() {
               type="button"
               className={locked ? 'adv-node is-locked' : 'adv-node is-preview'}
               style={{ left: `${location.x}%`, top: `${location.y}%` }}
-              aria-pressed={location.id === selected.id}
-              aria-label={locked ? `${location.name}, ${HUB.locked}` : location.kind === 'town' ? 'Town, open Emberhaven' : `${location.name}, ${HUB.preview}`}
+              aria-pressed={locked ? location.id === selected.id : undefined}
+              aria-label={locked ? `${location.name}, ${HUB.locked}` : location.kind === 'town' ? 'Town, open Emberhaven' : `Open ${location.name} preview`}
               onClick={() => choose(location)}
             >
-              <span className="adv-node-orb">
+              <span className="adv-node-orb" aria-hidden="true">
                 <PixelArt rows={SPRITES[location.icon]} />
               </span>
               <span className="adv-node-name">{location.name}</span>
@@ -101,7 +101,7 @@ export function AdventureHub() {
             </button>
           );
         })}
-        <div className="adv-hero">
+        <div className="adv-hero" aria-hidden="true">
           <AdventurerSprite label={PLAYER.name} overlays={STARTER_OVERLAYS} palette={HERO_PALETTE} />
         </div>
       </div>
