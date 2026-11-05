@@ -271,7 +271,7 @@ function Camp(props: {
       {enter}
 
       <section className="delve-panel" aria-labelledby="delve-attr-title">
-        <h2 id="delve-attr-title">Attributes <span className="delve-points">{left} of {total} points left</span></h2>
+        <h2 id="delve-attr-title">Attributes <span className="delve-points" aria-live="polite" aria-atomic="true">{left} of {total} points left</span></h2>
         <ul className="delve-attrs">
           {ATTRIBUTE_KEYS.map((key) => {
             const info = ATTRIBUTE_INFO[key];
@@ -308,7 +308,7 @@ function Camp(props: {
               if (!entry) return null;
               const worn = loadout[entry.slot] === id;
               return (
-                <li key={id} className={`delve-loot rarity-${entry.rarity}`}>
+                <li key={id} className={`delve-loot rarity-${entry.rarity}${worn ? ' camp-gear-worn' : ''}`}>
                   <div className="camp-gear-copy">
                     <strong>{entry.name}</strong>
                     <span className="delve-small">{entry.rarity} · {entry.slot}</span>
