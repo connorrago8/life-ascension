@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './CryptCombatResources.module.css';
+import { CryptInspectionDialog } from './CryptInspectionDialog';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
 import {
@@ -695,32 +696,16 @@ const PILE_NOTE: Record<PileKind, string> = {
   deck: 'Your whole deck for this run, sorted by cost.',
 };
 
-/** Bottom sheet listing one pile. Sits above the bottom nav and inside the safe area. */
+/** The same read-only modal supports combat piles, starter previews and reward decks. */
 function PileSheet({ kind, cards, onClose, title, note }: {
   kind: PileKind; cards: readonly ({ id: DeckCard } | DeckCard)[]; onClose: () => void; title?: string; note?: string;
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const closeLatest = useRef(onClose);
-  closeLatest.current = onClose;
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeLatest.current(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
   const entries = pileSummary(cards);
   return (
-    <>
-      <button type="button" className="delve-pile-backdrop" aria-label="Close" tabIndex={-1} onClick={onClose} />
-      <div className="delve-pile-sheet" role="dialog" aria-modal="true" aria-labelledby="delve-pile-title">
-        <div className="delve-pile-head">
-          <h3 id="delve-pile-title">{title ?? PILE_TITLE[kind]} · {cards.length} {cards.length === 1 ? 'card' : 'cards'}</h3>
-          <button ref={closeRef} type="button" className="btn ghost delve-pile-close" onClick={onClose}>Close</button>
-        </div>
-        <p className="delve-small muted delve-pile-note">{note ?? PILE_NOTE[kind]}</p>
-        {entries.length > 0 ? <PileList entries={entries} /> : <p className="delve-small muted">No cards here.</p>}
-      </div>
-    </>
+    <CryptInspectionDialog title={`${title ?? PILE_TITLE[kind]} · ${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
+      note={note ?? PILE_NOTE[kind]} onClose={onClose}>
+      {entries.length > 0 ? <PileList entries={entries} /> : <p className="delve-small muted">No cards here.</p>}
+    </CryptInspectionDialog>
   );
 }
 
@@ -734,7 +719,7 @@ function PileButtons({ battle, onOpen }: { battle: Battle; onOpen: (kind: PileKi
   return (
     <div className="delve-piles" role="group" aria-label="Card piles">
       {piles.map(([kind, label, count]) => (
-        <button key={kind} type="button" className={`delve-pile-btn pile-${kind}`} onClick={() => onOpen(kind)}
+        <button key={kind} type="button" className={`delve-pile-btn pile-${kind}`} onClick={event => { event.currentTarget.focus({ preventScroll: true }); onOpen(kind); }}
           aria-label={`${label} pile: ${count} ${count === 1 ? 'card' : 'cards'}. Show list.`}>
           <span className="delve-pile-btn-label" aria-hidden="true">{label}</span>
           <span className="delve-pile-btn-num" aria-hidden="true">{count}</span>
@@ -947,7 +932,7 @@ function DeckSelectView({ send }: { send: (command: DelveCommand) => void }) {
             <div className="delve-starter-actions">
               <button type="button" className="btn delve-starter-pick" onClick={() => send({ type: 'pick-deck', deckId: deck.id })}
                 aria-label={`Start with the ${deck.name} deck. ${deck.line}`}>Choose {deck.name}</button>
-              <button type="button" className="btn ghost delve-starter-view" onClick={() => setViewing(deck.id)}
+              <button type="button" className="btn ghost delve-starter-view" onClick={event => { event.currentTarget.focus({ preventScroll: true }); setViewing(deck.id); }}
                 aria-label={`View the ${deck.name} deck's cards`}>View cards</button>
             </div>
           </li>
@@ -991,7 +976,7 @@ function RewardView({ state, send }: { state: DelveState; send: (command: DelveC
       <LootDrop state={state} send={send} />
       <div className="delve-reward-deck">
         <p className="delve-small">Deck <strong>{state.deck.length}/{MAX_DECK_SIZE}</strong></p>
-        <button type="button" className="btn ghost delve-view-deck" onClick={() => setShowDeck(true)}>View deck</button>
+        <button type="button" className="btn ghost delve-view-deck" onClick={event => { event.currentTarget.focus({ preventScroll: true }); setShowDeck(true); }}>View deck</button>
       </div>
       {full ? (
         <p className="delve-deck-full" role="status">Your deck is full ({MAX_DECK_SIZE} cards). New cards can&apos;t be added — remove cards at a campfire.</p>
