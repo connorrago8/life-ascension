@@ -2,7 +2,8 @@
 import { InAppBackLink } from '../../../../components/InAppBackLink';
 import {subscribeLocalRunCheckpoint} from '../../../../lib/localRunLifecycle';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {GAMES,newRun,readRun,writeRun,currentGame,completeLevel,newBoss,advanceBoss,beginBossSegment,failBossSegment,tier,readActive,writeActive,readCheckpoint,saveCheckpoint,resumeGameState,type Run,type GameId} from '../../../../lib/brainRot/core';
+import {GAMES,newRun,readRun,currentGame,completeLevel,newBoss,advanceBoss,beginBossSegment,failBossSegment,tier,readActive,CHECKPOINT_KEY,resumeGameState,type Run,type GameId} from '../../../../lib/brainRot/core';
+import {createCheckpointWriter} from '../../../../lib/brainRot/checkpointWriter';
 import {handoffBossSegment} from '../../../../lib/brainRot/bossHandoff';
 import {createGame,step,keyboardInput,type State,type Input} from '../../../../lib/brainRot/games';
 const palette=['#f0c86b','#7ed6ba','#ba9cfa','#ff9580','#9ad1ff'];
@@ -20,34 +21,65 @@ function Surface({state}:{state:State}){
  </div>;
 }
 export default function BrainRotDungeon(){
- const touchStart=useRef<{x:number;y:number}|null>(null);const [run,setRun]=useState<Run|null>(null);const [active,setActive]=useState<State|null>(null);const [playing,setPlaying]=useState(false);const [input,setInput]=useState<Input|null>(null);const [message,setMessage]=useState('');const runRef=useRef<Run|null>(null);const activeRef=useRef<State|null>(null);const inputRef=useRef<Input|null>(null);const playingRef=useRef(false);
- useEffect(()=>{const checkpoint=readCheckpoint();const saved=checkpoint?.run??readRun();if(saved){setRun(saved);runRef.current=saved;const restored=resumeGameState(saved,checkpoint?checkpoint.active:readActive()) as State|null;if(restored){activeRef.current=restored;setActive(restored);}}else{const r=newRun(Date.now()>>>0);setRun(r);runRef.current=r;writeRun(r);}},[]);
- const persist=useCallback((r:Run)=>{runRef.current=r;setRun(r);writeRun(r);saveCheckpoint(r,activeRef.current?{level:r.level,state:activeRef.current}:null);},[]);
+ const touchStart=useRef<{x:number;y:number}|null>(null);const [run,setRun]=useState<Run|null>(null);const [active,setActive]=useState<State|null>(null);const [playing,setPlaying]=useState(false);const [input,setInput]=useState<Input|null>(null);const [message,setMessage]=useState('');const [saveWarning,setSaveWarning]=useState('');const runRef=useRef<Run|null>(null);const activeRef=useRef<State|null>(null);const inputRef=useRef<Input|null>(null);const playingRef=useRef(false);
+ const writerRef=useRef<ReturnType<typeof createCheckpointWriter>|null>(null);
+ const recover=useCallback((notice='')=>{
+  playingRef.current=false;setPlaying(false);inputRef.current=null;setInput(null);
+  const writer=createCheckpointWriter();writerRef.current=writer;setSaveWarning('');
+  const saved=writer.checkpoint?.run??readRun();
+  const r=saved??newRun(Date.now()>>>0);
+  runRef.current=r;setRun(r);
+  const restored=saved?resumeGameState(r,writer.checkpoint?writer.checkpoint.active:readActive()) as State|null:null;
+  activeRef.current=restored;setActive(restored);
+  setMessage(r.boss?.won?'👑 BRAIN ROT KING DEFEATED!':notice);
+ },[]);
+ useEffect(()=>{recover();},[recover]);
+ const persist=useCallback((r:Run)=>{
+  const result=writerRef.current?.commit(r,activeRef.current?{level:r.level,state:activeRef.current}:null)??'unavailable';
+  if(result==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return false;}
+  runRef.current=r;setRun(r);
+  setSaveWarning(result==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
+  return true;
+ },[recover]);
+ useEffect(()=>{const changed=(event:StorageEvent)=>{if((event.key===CHECKPOINT_KEY||event.key===null)&&writerRef.current?.isCurrent()===false)recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');};window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);},[recover]);
  const updateActive=useCallback((s:State|null)=>{activeRef.current=s;setActive(s);},[]);
- const start=useCallback(()=>{const r=runRef.current;if(!r)return;const id=r.level===31?(r.boss?.queue[r.boss.index]??GAMES[0].id):currentGame(r);const saved=resumeGameState(r,activeRef.current?{level:r.level,state:activeRef.current}:null) as State|null;const fresh=createGame(id,r.level===31?3:tier(r.level),r.seed+r.level*17);if(r.level===31)fresh.goal=Number.MAX_SAFE_INTEGER;const initial=saved?.id===id?saved:fresh;updateActive(initial);if(r.level===31&&r.boss){persist({...r,boss:beginBossSegment(r.boss,id,initial)});}setPlaying(true);playingRef.current=true;setMessage('');},[updateActive]);
- const pause=useCallback(()=>{playingRef.current=false;setPlaying(false);const r=runRef.current,s=activeRef.current;if(r&&s){writeActive({level:r.level,state:s});saveCheckpoint(r,{level:r.level,state:s});if(r.boss)persist({...r,boss:{...r.boss,states:{...r.boss.states,[s.id]:s}}});}inputRef.current=null;setInput(null);},[persist]);
+ const start=useCallback(()=>{
+  const r=runRef.current;if(!r||r.boss?.won)return;
+  if(!writerRef.current)return;
+  if(writerRef.current.isCurrent()===false){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return;}
+  const id=r.level===31?(r.boss?.queue[r.boss.index]??GAMES[0].id):currentGame(r);
+  const saved=resumeGameState(r,activeRef.current?{level:r.level,state:activeRef.current}:null) as State|null;
+  const fresh=createGame(id,r.level===31?3:tier(r.level),r.seed+r.level*17);if(r.level===31)fresh.goal=Number.MAX_SAFE_INTEGER;
+  const initial=saved?.id===id?saved:fresh;updateActive(initial);setMessage('');
+  if(!persist(r.level===31&&r.boss?{...r,boss:beginBossSegment(r.boss,id,initial)}:r))return;
+  setPlaying(true);playingRef.current=true;
+ },[updateActive,persist,recover]);
+ const pause=useCallback(()=>{
+  const wasPlaying=playingRef.current;playingRef.current=false;setPlaying(false);
+  const r=runRef.current,s=activeRef.current;
+  if(wasPlaying&&r&&s&&!r.boss?.won)persist(r.boss?{...r,boss:{...r.boss,states:{...r.boss.states,[s.id]:s}}}:r);
+  inputRef.current=null;setInput(null);
+ },[persist]);
  useEffect(()=>subscribeLocalRunCheckpoint(document,window,pause),[pause]);
- useEffect(()=>{const timer=setInterval(()=>{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
- if(next.lost){writeActive(null);updateActive(null);playingRef.current=false;setPlaying(false);const hearts=r.level===31?(r.boss?.hearts??3):r.hearts;const remaining=hearts-1;if(r.level===31&&r.boss){const result=failBossSegment(r.boss);persist({...r,boss:result.reset?newBoss(r.seed+31):result.boss});}else{persist({...r,hearts:remaining>0?remaining:3});}setMessage(remaining>0?'Challenge failed — retry!':'All hearts lost — attempt reset.');return;}
+ useEffect(()=>{const timer=setInterval(()=>{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;if(r.boss?.won){playingRef.current=false;setPlaying(false);return;}const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
+ if(next.lost){updateActive(null);playingRef.current=false;setPlaying(false);const hearts=r.level===31?(r.boss?.hearts??3):r.hearts;const remaining=hearts-1;if(r.level===31&&r.boss){const result=failBossSegment(r.boss);if(!persist({...r,boss:result.reset?newBoss(r.seed+31):result.boss}))return;}else{if(!persist({...r,hearts:remaining>0?remaining:3}))return;}setMessage(remaining>0?'Challenge failed — retry!':'All hearts lost — attempt reset.');return;}
  if(r.level===31&&r.boss){
   const meaningfulMove=next.id!=='rune-fusion'||(next.lastMeaningfulTick!==undefined&&next.tick-next.lastMeaningfulTick<60);
   const boss=advanceBoss(r.boss,meaningfulMove?1000/60:0,r.seed);
   runRef.current={...r,boss};
   // Resolve terminal and handoff states before the periodic checkpoint can write.
-  if(boss.won){writeActive(null);updateActive(null);persist({...r,boss});playingRef.current=false;setPlaying(false);setMessage('👑 BRAIN ROT KING DEFEATED!');return;}
+  if(boss.won){updateActive(null);if(!persist({...r,boss}))return;playingRef.current=false;setPlaying(false);setMessage('👑 BRAIN ROT KING DEFEATED!');return;}
   if(boss.index!==r.boss.index||boss.queue!==r.boss.queue){
    const handoff=handoffBossSegment(boss,next,r.seed);
    updateActive(handoff.active);
-   writeActive({level:r.level,state:handoff.active});
    persist({...r,boss:handoff.boss});
    inputRef.current=null;setInput(null);
   }else if(next.tick%60===0){
-   writeActive({level:r.level,state:next});
    persist({...r,boss:{...boss,states:{...boss.states,[next.id]:next}}});
   }
  }
- else if(next.won){writeActive(null);updateActive(null);const updated=completeLevel(r);if(updated.level===31)updated.boss=newBoss(r.seed+31);persist(updated);playingRef.current=false;setPlaying(false);setMessage(r.level===30?'LEVEL 31 UNLOCKED — THE BRAIN ROT KING AWAITS':'LEVEL COMPLETE — next challenge unlocked!');}
- else if(next.tick%60===0){writeActive({level:r.level,state:next});saveCheckpoint(r,{level:r.level,state:next});}
+ else if(next.won){updateActive(null);const updated=completeLevel(r);if(updated.level===31)updated.boss=newBoss(r.seed+31);if(!persist(updated))return;playingRef.current=false;setPlaying(false);setMessage(r.level===30?'LEVEL 31 UNLOCKED — THE BRAIN ROT KING AWAITS':'LEVEL COMPLETE — next challenge unlocked!');}
+ else if(next.tick%60===0){persist(r);}
  },1000/60);return()=>clearInterval(timer);},[persist,updateActive]);
  useEffect(()=>{inputRef.current=input;},[input]);
  useEffect(()=>{const down=(e:KeyboardEvent)=>{const id=activeRef.current?.id;if(!playingRef.current||!id)return;const value=keyboardInput(id,e.key);if(value){e.preventDefault();inputRef.current=value;setInput(value);}};const up=(e:KeyboardEvent)=>{const id=activeRef.current?.id;if(id&&keyboardInput(id,e.key)===inputRef.current){inputRef.current=null;setInput(null);}};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);};},[]);
@@ -64,7 +96,8 @@ export default function BrainRotDungeon(){
  <p>Objective: {run?.level===31?'Survive four 15-second visits':gameId==='goblin-jetpack'?(active?`Collect ${active.goal} sparks`:'Collect sparks along the flight path'):active?.goal??'Complete the challenge'}</p>
  {active?<div onPointerDown={touchDown} onPointerUp={touchUp} onPointerCancel={()=>{touchStart.current=null;release();}} style={{touchAction:'none'}}><Surface state={active}/></div>:<div style={{height:360,display:'grid',placeItems:'center',border:'1px solid #617366',borderRadius:18,background:'#182720'}}>Tap Start to enter {game.name}</div>}
  {active&&<p style={{textAlign:'center'}}>{gameId==='goblin-jetpack'?'Pickups':'Progress'}: {active.progress}/{active.goal} · Score: {active.score}</p>}
- <div style={{display:'flex',justifyContent:'center',gap:12,margin:'14px 0'}}>{playing?<button className="btn" onClick={pause}>Pause & Save</button>:<button className="btn" onClick={start}>{active?'Resume / Retry':'Start Challenge'}</button>}</div>
+ <div style={{display:'flex',justifyContent:'center',gap:12,margin:'14px 0'}}>{run?.boss?.won?<p role="status">Boss conquered · run complete</p>:playing?<button className="btn" onClick={pause}>Pause & Save</button>:<button className="btn" onClick={start}>{active?'Resume / Retry':'Start Challenge'}</button>}</div>
+ {saveWarning&&<p role="status">{saveWarning}</p>}
  {message&&<p role="status" style={{textAlign:'center',color:'#f0c86b',fontWeight:700}}>{message}</p>}
  <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginTop:18}}>
  {(['left','up','down','right'] as Input[]).map(i=><button key={i} className="btn ghost" style={{minHeight:56}} onClick={()=>press(i)} disabled={!playing}>{i==='left'?'←':i==='right'?'→':i==='up'?'↑':'↓'}</button>)}
