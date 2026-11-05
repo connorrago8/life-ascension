@@ -76,3 +76,9 @@ with no vault item selected. Camp now says “Run gear: None selected · base ou
 shown.” Explicit Wear lists only actual selected vault names; Take off returns to
 the empty summary. Preview art and every equipment handler remain unchanged.
 The browser contract verifies both summaries and adds one selected390px render.
+
+The starter-art regression previously checked literal Wearing copy instead of the
+sprite. It now asserts overlays={gearOverlays(loadout)} directly; Home Rusty piece,
+RUST_COLORS, combat and Hub overlay assertions remain. The browser contract owns
+new gear-summary behavior. Run42130030343 exposed that stale unit assertion
+(888pass/1fail); its result is superseded only after a complete new-head run.
