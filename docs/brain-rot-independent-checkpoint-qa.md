@@ -53,12 +53,24 @@ themselves. Neither fixture uses real accounts or claims XP/gear behavior.
 
 ## Severity and next verification
 
-- **Potential High:** a valid saved board being replaced on Resume would lose
-  run decisions. Requires the actual browser result above before confirmation.
-- **Medium:** malformed device state accepted by the loader can reach unsafe
-  render paths. Actual crash behavior requires the second browser result.
+- **High — browser reproduced:** atomic-only recovery displayed the saved Rune
+  board (eight legal engine moves, including a tile of 8) and replaced it with
+  two tiles of 2 immediately after Resume, with time frozen and no game input.
+  This is specifically checkpoint-only recovery, not proof all ordinary paired
+  legacy-key saves lose progress.
+- **Medium — browser reproduced:** malformed device state reached the renderer
+  and threw `Cannot read properties of undefined (reading 'map')`. The fixture
+  also caused a blocked POST to Next's local development stack-frame endpoint;
+  this is diagnostic traffic, not an account mutation. The crash assertion is
+  evaluated first to keep the actual defect as the primary failure signature.
 - **Medium:** source-confirmed validation inconsistency between atomic and
   legacy boss loaders. UI softlock and migration reachability remain untested.
+
+Initial reproduction: CI run `41961763889`, core job `127029522807` (one
+pass/three failures), browser job `127029523242` (two failures). Its PR checkout
+used synthetic merge `06fb4f2e51d9f8da366256e93ad5389a0f569e91`, containing this
+test-only addition over the unchanged PR73 source. The workflow now explicitly
+checks out the candidate head SHA; the final checkpoint records that rerun.
 
 Smallest gameplay-owner follow-up: establish one authority for loaded active
 state and validate active shape/game identity plus legacy boss shape before

@@ -82,8 +82,8 @@ test('malformed atomic active state falls back without crashing the game page', 
     // Allow hydration's error boundary to report; this does not advance gameplay.
     await new Promise(resolve => setTimeout(resolve, 400));
     console.log(JSON.stringify({case: 'malformed-checkpoint', errors: f.errors, forbidden: f.forbidden}));
-    assert.deepEqual(f.forbidden, []);
     assert.deepEqual(f.errors, [], 'malformed device state must not crash the renderer');
+    assert.deepEqual(f.forbidden, []);
     await f.page.getByRole('button', {name: 'Start Challenge', exact: true}).waitFor({timeout: 5000});
   } finally { await f.context.close(); }
 });
