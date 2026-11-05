@@ -48,8 +48,18 @@ test('jetpack collectible grants progress and score without causing damage',()=>
 test('jetpack does not grant progress from idle time',()=>{let s=games.createGame('goblin-jetpack',1,7);for(let i=0;i<120;i++){s=games.step(s,null);if(s.lost)break;}assert.equal(s.progress,0);});
 test('jetpack hazards still damage player',()=>{let s=games.createGame('goblin-jetpack',1,7);s.entities=[{x:s.player.x,y:s.player.y,vx:0,vy:0,type:0}];assert.equal(games.step(s,null).lost,true);});
 
-test('collision defeats simultaneous collectible goal completion',()=>{let s=games.createGame('goblin-jetpack',1,22);s.progress=s.goal-1;s.entities=[{x:.5,y:.5,vx:0,vy:0,type:1},{x:.5,y:.5,vx:0,vy:0,type:0}];const n=games.step(s,null);assert.equal(n.progress,s.goal);assert.equal(n.lost,true);assert.equal(n.won,false);});
-test('jetpack spawned pickups follow current altitude',()=>{let s=games.createGame('goblin-jetpack',1,22);s.player.y=.7;const interval=Math.max(35,90-Math.floor(s.goal/2));s.tick=interval*2-1;const n=games.step(s,null);const pickup=n.entities.find(e=>e.type===1);assert.ok(pickup);assert.equal(pickup.y,n.player.y);});
+test('collision prevents simultaneous collectible progress and score',()=>{let s=games.createGame('goblin-jetpack',1,22);s.progress=s.goal-1;s.entities=[{x:.5,y:.5,vx:0,vy:0,type:1},{x:.5,y:.5,vx:0,vy:0,type:0}];const n=games.step(s,null);assert.equal(n.progress,s.goal-1);assert.equal(n.score,0);assert.equal(n.lost,true);assert.equal(n.won,false);});
+test('jetpack pickup flight path is independent of player boundary parking',()=>{for(const y of [.06,.94]){const heights=[];for(let visit=1;visit<=4;visit++){let s=games.createGame('goblin-jetpack',1,22);s.player.y=y;const interval=Math.max(35,90-Math.floor(s.goal/2));s.tick=interval*2*visit-1;const n=games.step(s,null);const pickup=n.entities.find(e=>e.type===1);assert.ok(pickup);assert.ok(pickup.y>=.2&&pickup.y<=.8);assert.ok(Math.abs(pickup.y-y)>.09);heights.push(pickup.y);}assert.equal(new Set(heights).size,4);}});
+
+test('jetpack cannot win or earn pickups by idling across a full old winning run',()=>{for(const tier of [1,2,3])for(const seed of [1,7,22,91]){let s=games.createGame('goblin-jetpack',tier,seed);for(let i=0;i<12000&&!s.lost&&!s.won;i++)s=games.step(s,null);assert.equal(s.progress,0,`tier ${tier} seed ${seed}`);assert.equal(s.score,0);assert.equal(s.won,false);}});
+
+test('collected jetpack pickup scores once and is removed',()=>{let s=games.createGame('goblin-jetpack',1,7);s.entities=[{x:.5,y:.5,vx:0,vy:0,type:1}];s=games.step(s,null);const again=games.step(s,null);assert.equal(again.progress,1);assert.equal(again.score,10);assert.equal(again.entities.length,0);});
+
+test('jetpack hold and release give directional control toward the pickup path',()=>{let s=games.createGame('goblin-jetpack',1,7);s.player.y=.8;for(let i=0;i<35;i++)s=games.step(s,'hold');assert.ok(s.player.y<.6);const high=s.player.y;for(let i=0;i<55;i++)s=games.step(s,null);assert.ok(s.player.y>high);assert.equal(s.won,false);});
+
+test('flight Space is sustained hold while Flappy Space stays a tap',()=>{assert.equal(games.keyboardInput('goblin-jetpack',' '),'hold');assert.equal(games.keyboardInput('hill-glider',' '),'hold');assert.equal(games.keyboardInput('flappy-wyvern',' '),'tap');assert.equal(games.keyboardInput('rune-fusion','ArrowLeft'),'left');assert.equal(games.keyboardInput('goblin-jetpack','x'),null);});
+
+test('jetpack pickup collection remains deterministic after checkpoint restore',()=>{let a=games.createGame('goblin-jetpack',2,29);a.entities=[{x:.5,y:.5,vx:0,vy:0,type:1}];let b=games.restore(games.serialize(a));for(let i=0;i<100;i++){const input=i<25?'hold':null;a=games.step(a,input);b=games.step(b,input);assert.equal(games.serialize(a),games.serialize(b));}});
 
 test('Frog King scores only after reaching far bank and resets to starting bank',()=>{let s=games.createGame('frog-kings-crossing',1,3);s.player.y=.2;const before=games.step(s,'up');assert.equal(before.progress,0);const reached=games.step(before,'up');assert.equal(reached.progress,1);assert.equal(reached.score,10);assert.equal(reached.player.y,.92);});
 
