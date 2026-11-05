@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import { BROWSER_CONTRACTS, contractReceiptIssues } from './browser-contracts.mjs';
 
-export const REQUIRED_CHECKS = Object.freeze(['source-build', 'browser-smoke', 'boss-boundary']);
+export const REQUIRED_CHECKS = Object.freeze(['source-build', 'browser-smoke', 'boss-boundary', 'unit-tests']);
 
 /** Verify CI evidence only. Passing checks never authorize a merge or deployment. */
 export function verifyReleaseReceipts(expectedSha, receipts, jobResults) {
