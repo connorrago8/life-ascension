@@ -1,7 +1,7 @@
 name: Consolidated candidate evidence
 on:
   pull_request:
-    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105', 'qa/brain-rot-checkpoint-races-20261105', 'visual/crypt-combat-resources-20261105', 'integration/complete-browser-receipts-20261105', 'gameplay/brain-rot-writer-authority-20261105', 'qa/brain-rot-interleaved-writers-20261105', 'visual/crypt-deck-inspection-20261105', 'systems/town-preview-continuity-20261105', 'integration/parallel-build-evidence-20261105', 'gameplay/brain-rot-serialized-checkpoints-20261105']
+    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105', 'qa/brain-rot-checkpoint-races-20261105', 'visual/crypt-combat-resources-20261105', 'integration/complete-browser-receipts-20261105', 'gameplay/brain-rot-writer-authority-20261105', 'qa/brain-rot-interleaved-writers-20261105', 'visual/crypt-deck-inspection-20261105', 'systems/town-preview-continuity-20261105', 'integration/parallel-build-evidence-20261105', 'gameplay/brain-rot-serialized-checkpoints-20261105', 'qa/brain-rot-queued-lifecycle-20261105']
 permissions:
   contents: read
 jobs:
