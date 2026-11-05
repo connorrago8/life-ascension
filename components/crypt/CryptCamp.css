@@ -1,0 +1,27 @@
+/* Camp-only presentation. Allocation, Wear and Start handlers remain unchanged. */
+.crypt-camp { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+.crypt-camp .delve-top { flex-wrap: wrap; }
+.crypt-camp .delve-title { flex: 1 1 10rem; min-width: 0; line-height: 1.3; }
+.crypt-camp .delve-camp-hero { display: flex; flex-wrap: wrap; gap: 16px; }
+.crypt-camp .delve-hero-sprite { flex: 0 0 96px; }
+.crypt-camp .delve-camp-hero > div:last-child { flex: 1 1 12rem; min-width: 0; line-height: 1.5; }
+.crypt-camp .delve-small { line-height: 1.6; }
+.crypt-camp h2 { line-height: 1.4; overflow-wrap: anywhere; }
+.crypt-camp #delve-attr-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.crypt-camp .delve-points { float: none; font-size: .85rem; line-height: 1.5; }
+.crypt-camp .delve-attrs { gap: 0; }
+.crypt-camp .delve-attr { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.crypt-camp .delve-attr-text { flex: 1 1 10rem; gap: 4px; overflow-wrap: anywhere; }
+.crypt-camp .delve-attr-value { font-size: 1.1rem; font-weight: 700; }
+.crypt-camp .delve-stepper { gap: 12px; }
+.crypt-camp .delve-stepper .btn { min-width: 48px; min-height: 48px; font-size: 1.4rem; line-height: 1; }
+.crypt-camp .delve-vault { gap: 12px; }
+.crypt-camp .delve-vault .delve-loot { gap: 12px; align-items: flex-start; border-style: solid; border-width: 1px 1px 1px 3px; border-radius: 8px; padding: 12px; }
+.crypt-camp .camp-gear-copy { flex: 1 1 10rem; min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.crypt-camp .camp-gear-copy strong { line-height: 1.4; }
+.crypt-camp .delve-wear { min-height: 48px; min-width: 96px; margin-left: 0; font-size: 1rem; }
+.crypt-camp .btn { min-height: 48px; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; scroll-margin-block: 100px; }
+.crypt-camp .btn:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .crypt-camp .btn, .crypt-camp .pixel-sprite { animation: none; transition: none; }
+}
