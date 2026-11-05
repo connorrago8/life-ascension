@@ -19,9 +19,9 @@ type Visit = LanternProgress & {
 };
 const VisitContext = createContext<Visit | null>(null);
 const clues = {
-  hearth: { name: 'The Hearth', title: 'Warmth', text: 'Begin where the town gathers for warmth.' },
-  forge: { name: 'The Blacksmith', title: 'Craft', text: 'After warmth comes the work of careful hands.' },
-  market: { name: 'The Lantern Market', title: 'Light', text: 'When the work is done, carry a light toward the road.' },
+  hearth: { name: 'The Hearth', title: 'Warmth', href: '/play/emberhaven/hearth', text: 'Begin where the town gathers for warmth.' },
+  forge: { name: 'The Blacksmith', title: 'Craft', href: '/play/emberhaven/blacksmith', text: 'After warmth comes the work of careful hands.' },
+  market: { name: 'The Lantern Market', title: 'Light', href: '/play/emberhaven/market', text: 'When the work is done, carry a light toward the road.' },
 } as const;
 const order: LanternStop[] = ['hearth', 'forge', 'market'];
 
@@ -100,7 +100,7 @@ export function TownTrail() {
     {!visit.started ? <button type="button" className="btn" style={action} disabled={!visit.ready} onClick={visit.start}>Begin the Lantern Route</button> : <>
       <p role="status">{visit.solved ? 'Lantern Route complete.' : `${found} of 3 clues found.`}</p>
       <ul>{order.map(stop => <li key={stop}>{clues[stop].name}: {visit.clues.includes(stop) ? clues[stop].text : 'Talk to the neighbor here to find a clue.'}</li>)}</ul>
-      <Link className="btn" style={action} href={found === 3 ? '/play/emberhaven/waystone' : `/play/emberhaven/${nextStop || 'waystone'}`}>{visit.solved ? 'Visit the Waystone' : found === 3 ? 'Arrange the signs at the Waystone' : 'Seek the next clue'} →</Link>
+      <Link className="btn" style={action} href={found === 3 || !nextStop ? '/play/emberhaven/waystone' : clues[nextStop].href}>{visit.solved ? 'Visit the Waystone' : found === 3 ? 'Arrange the signs at the Waystone' : 'Seek the next clue'} →</Link>
       <button type="button" className="btn ghost" style={action} onClick={visit.reset}>Reset the Lantern Route</button>
     </>}
   </section>;

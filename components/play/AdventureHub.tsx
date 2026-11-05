@@ -11,7 +11,8 @@ import { SPRITES } from '../../lib/crypt/art';
 import { HUB, PLAYER } from '../../lib/crypt/content';
 import { InAppBackLink } from '../InAppBackLink';
 import { WayfarerMark } from './WayfarerMark';
-import { ACTIVE_RUN_KEY } from '../../lib/cryptActiveRun';
+import { ACTIVE_RUN_KEY, browserStorage } from '../../lib/cryptActiveRun';
+import { hubCryptContinuation } from '../../lib/cryptHubEntry';
 
 // Default Rusty Sword / Rusty Armor (0 stats) on the hero sprite.
 const STARTER_OVERLAYS = gearOverlays({});
@@ -41,16 +42,31 @@ export function AdventureHub() {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(HUB.locations[0].id);
   const selected = HUB.locations.find((location) => location.id === selectedId) ?? HUB.locations[0];
-  // Keep ?preview=1 on the way in, and say "Continue run" when an unfinished run is waiting.
+  // Promise continuation only when the same loader accepts this known owner/mode.
   const [entryHref, setEntryHref] = useState(CRYPT_ENTRY_HREF);
   const [hasRun, setHasRun] = useState(false);
   useEffect(() => {
-    setEntryHref(cryptEntryHref(window.location.search));
-    try {
-      setHasRun(!!window.localStorage.getItem(ACTIVE_RUN_KEY));
-    } catch {
-      setHasRun(false);
+    function refreshEntry() {
+      setEntryHref(cryptEntryHref(window.location.search));
+      setHasRun(hubCryptContinuation(
+        browserStorage(), window.location.search,
+        process.env.NODE_ENV === 'development',
+        !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+        Date.now(),
+      ));
     }
+    function storageChanged(event: StorageEvent) {
+      if (event.key === null || event.key === ACTIVE_RUN_KEY) refreshEntry();
+    }
+    refreshEntry();
+    window.addEventListener('focus', refreshEntry);
+    window.addEventListener('pageshow', refreshEntry);
+    window.addEventListener('storage', storageChanged);
+    return () => {
+      window.removeEventListener('focus', refreshEntry);
+      window.removeEventListener('pageshow', refreshEntry);
+      window.removeEventListener('storage', storageChanged);
+    };
   }, []);
 
   function choose(location: (typeof HUB.locations)[number]) {
