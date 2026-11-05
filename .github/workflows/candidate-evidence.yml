@@ -1,7 +1,7 @@
 name: Consolidated candidate evidence
 on:
   pull_request:
-    branches: ['gameplay/brain-rot-resume-authority-20261104']
+    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105']
 permissions:
   contents: read
 jobs:
@@ -162,6 +162,7 @@ jobs:
           done
           test "$ready" = true || { cat /tmp/release-browser.log; exit 1; }
           node --test tests/browser/brain-rot-boss-boundaries.qa.mjs
+          node --test tests/browser/brain-rot-boss-handoff.qa.mjs
       - name: Record actual checkout and outcome
         if: always()
         env:
