@@ -15,3 +15,7 @@ Mandatory manifest adds this suite; receipt coverage expands19→20. Existing su
 ## Evidence boundary
 
 Local syntax check and20 gate/runner tests pass. Browser and final-head CI results must be read from the PR run, not inferred from these checks. Same agent authored the parent implementation: no independent self-approval or release acceptance. Hosted Preview, Safari, VoiceOver and native iPhone remain unverified; native simulator is postponed. A failure should include case, width, repetition, durable checkpoint and visible main text, with errors/blocked requests, then fail the normal assertion.
+
+## First executed candidate
+
+Head42b4b10e6b4484f5519b29e2e02404719c84f4a4, run42084363884: all16 new cases passed, errors[]/forbidden[]; browser16/17 suites passed. Existing Town query-link test timed out at line22 after30s; exact query/observed href unknown. Overall browser and evidence gate failed; build,881units and3boss suites passed. Added catch/log/rethrow diagnostics to the same Town query assertion; no wait, assertion or application change. Both earlier native recovery timeout and intermittent Town failure remain unresolved. Later-head evidence must be read separately.

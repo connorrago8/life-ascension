@@ -19,7 +19,10 @@ try{
   for(const search of ['?preview=0','?preview=1&unrelated=do-not-forward','']){
    await page.evaluate(search=>history.pushState(null,'',location.pathname+search),search);
    const suffix=search.startsWith('?preview=1')?'?preview=1':'';
-   await page.waitForFunction(href=>[...document.querySelectorAll('a')].find(a=>a.textContent.trim()==='Open Character →')?.getAttribute('href')===href,'/character'+suffix);
+   try{await page.waitForFunction(href=>[...document.querySelectorAll('a')].find(a=>a.textContent.trim()==='Open Character →')?.getAttribute('href')===href,'/character'+suffix);}
+   catch(error){
+    console.log(JSON.stringify({case:'town-query-link-timeout',width,requestedSearch:search,expectedCharacter:'/character'+suffix,observed:await page.evaluate(()=>({url:location.href,historyKeys:Object.keys(history.state??{}),links:[...document.querySelectorAll('a')].map(a=>({text:a.textContent.trim(),href:a.getAttribute('href')}))})),errors,forbidden}));throw error;
+   }
    assert.equal(await character.getAttribute('href'),'/character'+suffix);
    assert.equal(await back.getAttribute('href'),'/play/emberhaven'+suffix);
   }
