@@ -35,7 +35,7 @@ test('launch errors, signals, timeouts and throwing executors remain failures wh
 });
 test('required manifest covers every current browser suite once and points to actual files', () => {
   const entries = Object.values(BROWSER_CONTRACTS).flat();
-  assert.equal(entries.length, 17);
+  assert.equal(entries.length, 18);
   assert.equal(new Set(entries.map(row => row.file)).size, entries.length);
   for (const row of entries) assert.ok(existsSync(row.file), row.file);
   assert.deepEqual(contractReceiptIssues('unknown', sha, []), ['Unknown browser group: unknown']);
