@@ -1,0 +1,208 @@
+name: Consolidated candidate evidence
+on:
+  pull_request:
+    branches: ['gameplay/brain-rot-resume-authority-20261104']
+permissions:
+  contents: read
+jobs:
+  source-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - name: Prepare synthetic QA build fixture (no hosted credentials)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const ref = 'njqwwimzrsunheehnnnt';
+          const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const key = [b64({ alg: 'HS256', typ: 'JWT' }),
+            b64({ iss: 'supabase', ref, role: 'anon' }),
+            'synthetic-invalid-signature'].join('.');
+          const pin = createHash('sha256').update(key).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, [
+            'VERCEL_ENV=preview',
+            // Synthetic CI-only protected-branch identity; never changes hosted routing.
+            'VERCEL_GIT_COMMIT_REF=audit/qa-isolation-and-reliability-20261027',
+            `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
+            `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
+            '',
+          ].join('\n'));
+          NODE
+      - name: Production build (isolated synthetic Preview configuration)
+        run: npm run build
+      - name: Record actual checkout and outcome
+        if: always()
+        env:
+          CHECK_NAME: source-build
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          mkdirSync('ci-evidence', { recursive: true });
+          const check = process.env.CHECK_NAME;
+          const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT }));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: receipt-source-build
+          path: ci-evidence/source-build.json
+          if-no-files-found: error
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund && npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - name: Run real localhost browser contracts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+          QA_BASE_URL: http://127.0.0.1:3148
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          export CHROMIUM_BIN="$(command -v google-chrome-stable || command -v google-chrome || true)"
+          test -n "$CHROMIUM_BIN"
+          npm run dev -- --hostname 127.0.0.1 --port 3148 > /tmp/release-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 "$QA_BASE_URL/play/brain-rot" >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true || { cat /tmp/release-browser.log; exit 1; }
+          node --test tests/browser/brain-rot-checkpoint.qa.mjs
+          node tests/browser/brain-rot-navigation.qa.mjs
+          node tests/browser/jetpack-controls.qa.mjs
+          node tests/browser/lantern-persistence.qa.mjs
+          node tests/browser/local-progress-integration.qa.mjs
+          node tests/browser/hub-destinations.qa.mjs
+      - name: Record actual checkout and outcome
+        if: always()
+        env:
+          CHECK_NAME: browser-smoke
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          mkdirSync('ci-evidence', { recursive: true });
+          const check = process.env.CHECK_NAME;
+          const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT }));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: receipt-browser-smoke
+          path: ci-evidence/browser-smoke.json
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consolidated-hub-renders
+          path: artifacts/hub/
+          if-no-files-found: warn
+  boss-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund && npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - name: Run real localhost browser contracts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+          QA_BASE_URL: http://127.0.0.1:3148
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          export CHROMIUM_BIN="$(command -v google-chrome-stable || command -v google-chrome || true)"
+          test -n "$CHROMIUM_BIN"
+          npm run dev -- --hostname 127.0.0.1 --port 3148 > /tmp/release-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 "$QA_BASE_URL/play/brain-rot" >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true || { cat /tmp/release-browser.log; exit 1; }
+          node --test tests/browser/brain-rot-boss-boundaries.qa.mjs
+      - name: Record actual checkout and outcome
+        if: always()
+        env:
+          CHECK_NAME: boss-boundary
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          mkdirSync('ci-evidence', { recursive: true });
+          const check = process.env.CHECK_NAME;
+          const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT }));
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: receipt-boss-boundary
+          path: ci-evidence/boss-boundary.json
+          if-no-files-found: error
+
+  candidate-evidence:
+    if: always()
+    needs: [source-build, browser-smoke, boss-boundary]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: receipt-*
+          path: ci-evidence
+          merge-multiple: true
+      - name: Require complete successful evidence for this exact head
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+          RELEASE_JOB_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/verify-release-receipts.mjs "$EXPECTED_SHA" ci-evidence
