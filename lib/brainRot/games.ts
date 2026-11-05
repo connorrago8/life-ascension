@@ -3,6 +3,12 @@ export type Input = 'left'|'right'|'up'|'down'|'tap'|'hold'|'release'|'slice';
 export type Entity = {x:number;y:number;vx:number;vy:number;type:number};
 export type State = {id:GameId;tick:number;seed:number;progress:number;goal:number;score:number;player:{x:number;y:number;vx:number;vy:number};entities:Entity[];grid:number[];lost:boolean;won:boolean;pressed:boolean;lastInput:Input|null;lastMeaningfulTick?:number};
 const game=(id:GameId)=>GAMES.find(g=>g.id===id)!;
+/** Discrete games tap Space; flight games sustain thrust/dive until keyup. */
+export function keyboardInput(id:GameId,key:string):Input|null{
+ const arrows:Record<string,Input>={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};
+ if(key===' ')return game(id).kind==='jetpack'||game(id).kind==='glide'?'hold':'tap';
+ return arrows[key]??null;
+}
 export function createGame(id:GameId,tier:number,seed:number):State{
  const kind=game(id).kind;const goals:Record<string,number[]>={runner:[35,55,75],climber:[25,45,65],flap:[10,20,30],jetpack:[35,55,75],crossing:[12,24,36],slice:[15,30,45],glide:[35,55,75],merge:[128,256,512]};
  const grid=Array(16).fill(0);if(kind==='merge'){const random=rng(seed);const first=Math.floor(random()*16);let second=Math.floor(random()*15);if(second>=first)second++;grid[first]=2;grid[second]=2;}
@@ -69,7 +75,11 @@ export function step(state:State,input:Input|null,dt=1/60):State{
   }else if(kind!=='flap'&&s.tick%Math.max(35,90-Math.floor(s.goal/2))===0){
    const y=kind==='runner'?.72:kind==='jetpack'?clamp(s.player.y+(random()-.5)*.24,.16,.84):.2+random()*.6;
    const collectible=kind==='jetpack'&&Math.floor(s.tick/Math.max(35,90-Math.floor(s.goal/2)))%2===0;
-   s.entities.push({x:1.08,y:collectible?s.player.y:y,vx:-speed,vy:0,type:collectible?1:0});
+   // Pickups follow an authored flight path, independent of player altitude.
+   // Boundary parking must never attract every collectible and clear a level.
+   const interval=Math.max(35,90-Math.floor(s.goal/2));
+   const pickupY=[.2,.4,.6,.8][(Math.floor(s.tick/(interval*2))-1)%4];
+   s.entities.push({x:1.08,y:collectible?pickupY:y,vx:-speed,vy:0,type:collectible?1:0});
   }
   for(const e of s.entities)e.x+=e.vx;
   s.entities=s.entities.filter(e=>e.x>-.1);
@@ -84,7 +94,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
   }else{
    if(s.entities.some(e=>(kind!=='jetpack'||e.type!==1)&&Math.abs(e.x-s.player.x)<.045&&Math.abs(e.y-s.player.y)<.09))s.lost=true;
    if(kind==='jetpack'){
-    for(const e of s.entities){if(e.type===1&&Math.abs(e.x-s.player.x)<.07&&Math.abs(e.y-s.player.y)<.09){s.progress++;s.score+=10;e.type=2;}}
+    if(!s.lost)for(const e of s.entities){if(e.type===1&&Math.abs(e.x-s.player.x)<.07&&Math.abs(e.y-s.player.y)<.09){s.progress++;s.score+=10;e.type=2;}}
     s.entities=s.entities.filter(e=>e.type!==2);
    }else if(s.tick%60===0)s.progress++;
   }
