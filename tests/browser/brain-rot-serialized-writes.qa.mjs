@@ -23,7 +23,8 @@ try{
   await holder.waitForFunction(()=>window.held===true);
   await player.getByRole('button',{name:'Start Challenge',exact:true}).click();
   await holder.waitForFunction(async lock=>(await navigator.locks.query()).pending.some(x=>x.name===lock),lock);
-  assert.equal(await player.getByRole('button',{name:'Pause & Save',exact:true}).count(),0,'waiting for save must not start the game');
+  await player.getByRole('button',{name:'Pause & Save',exact:true}).waitFor();
+  await player.getByText('Saving checkpoint…',{exact:true}).waitFor();
   const before=await holder.evaluate(key=>localStorage.getItem(key),core.CHECKPOINT_KEY);
   assert.equal(JSON.parse(before).revision,1,'queued save must not run outside the origin lock');
   // While this start waits, the lock holder accepts a valid newer completion.
@@ -43,7 +44,7 @@ try{
   await player.getByRole('button',{name:'Resume / Retry',exact:true}).waitFor();
   assert.equal(await player.getByRole('button',{name:'Pause & Save',exact:true}).count(),0);
   assert.deepEqual(errors,[]);assert.deepEqual(forbidden,[]);
-  console.log(`PASS ${width}px native Web Locks: queued Start waits, newer level retained, pause while queued prevents automatic play; errors[]/forbidden[]`);
+  console.log(`PASS ${width}px native Web Locks: queued save waits without blocking controls, newer level retained, pause while queued prevents automatic play; errors[]/forbidden[]`);
   await context.close();
  }
 }finally{await browser.close();}

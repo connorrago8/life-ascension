@@ -22,10 +22,8 @@ function Surface({state}:{state:State}){
 }
 export default function BrainRotDungeon(){
  const touchStart=useRef<{x:number;y:number}|null>(null);const [run,setRun]=useState<Run|null>(null);const [active,setActive]=useState<State|null>(null);const [playing,setPlaying]=useState(false);const [input,setInput]=useState<Input|null>(null);const [message,setMessage]=useState('');const [saveWarning,setSaveWarning]=useState('');const runRef=useRef<Run|null>(null);const activeRef=useRef<State|null>(null);const inputRef=useRef<Input|null>(null);const playingRef=useRef(false);
- const startingRef=useRef(false),tickingRef=useRef(false),playIntentRef=useRef(0);
  const writerRef=useRef<ReturnType<typeof createCheckpointWriter>|null>(null);
  const recover=useCallback((notice='')=>{
-  playIntentRef.current++;
   playingRef.current=false;setPlaying(false);inputRef.current=null;setInput(null);
   const writer=createCheckpointWriter();writerRef.current=writer;setSaveWarning('');
   const saved=writer.checkpoint?.run??readRun();
@@ -35,22 +33,23 @@ export default function BrainRotDungeon(){
   activeRef.current=restored;setActive(restored);
   setMessage(r.boss?.won?'👑 BRAIN ROT KING DEFEATED!':notice);
  },[]);
- useEffect(()=>{recover();return()=>{playIntentRef.current++;writerRef.current=null;playingRef.current=false;};},[recover]);
- const persist=useCallback(async(r:Run)=>{
-  const writer=writerRef.current;setSaveWarning('Saving checkpoint…');
-  runRef.current=r;setRun(r);
-  const result=await writer?.commitExclusive(r,activeRef.current?{level:r.level,state:activeRef.current}:null)??'unavailable';
-  // A recovery/unmount supersedes queued callbacks from the old writer.
-  if(writerRef.current!==writer)return false;
-  if(result==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return false;}
-  setSaveWarning(result==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
+ useEffect(()=>{recover();return()=>{writerRef.current=null;playingRef.current=false;};},[recover]);
+ const persist=useCallback((r:Run)=>{
+  const writer=writerRef.current;
+  if(!writer)return false;
+  // Simulation is synchronous. Storage waits must not drop frames or change
+  // boss timing; each queued operation clones this exact run/active pair.
+  runRef.current=r;setRun(r);setSaveWarning('Saving checkpoint…');
+  void writer.commitExclusive(r,activeRef.current?{level:r.level,state:activeRef.current}:null).then(result=>{
+   if(writerRef.current!==writer)return;
+   if(result==='conflict'){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return;}
+   setSaveWarning(result==='unavailable'?'Device save unavailable. Keep this tab open; your next save will retry.':'');
+  });
   return true;
  },[recover]);
  useEffect(()=>{const changed=(event:StorageEvent)=>{if((event.key===CHECKPOINT_KEY||event.key===null)&&writerRef.current?.isCurrent()===false)recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');};window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);},[recover]);
  const updateActive=useCallback((s:State|null)=>{activeRef.current=s;setActive(s);},[]);
- const start=useCallback(async()=>{
-  if(startingRef.current)return;startingRef.current=true;const intent=++playIntentRef.current;
-  try{
+ const start=useCallback(()=>{
   const r=runRef.current;if(!r||r.boss?.won)return;
   if(!writerRef.current)return;
   if(writerRef.current.isCurrent()===false){recover('Newer progress was saved in another tab. Latest checkpoint loaded; resume when ready.');return;}
@@ -58,39 +57,36 @@ export default function BrainRotDungeon(){
   const saved=resumeGameState(r,activeRef.current?{level:r.level,state:activeRef.current}:null) as State|null;
   const fresh=createGame(id,r.level===31?3:tier(r.level),r.seed+r.level*17);if(r.level===31)fresh.goal=Number.MAX_SAFE_INTEGER;
   const initial=saved?.id===id?saved:fresh;updateActive(initial);setMessage('');
-  if(!await persist(r.level===31&&r.boss?{...r,boss:beginBossSegment(r.boss,id,initial)}:r))return;
-  if(intent!==playIntentRef.current||document.visibilityState==='hidden')return;
+  if(!persist(r.level===31&&r.boss?{...r,boss:beginBossSegment(r.boss,id,initial)}:r))return;
   setPlaying(true);playingRef.current=true;
-  }finally{startingRef.current=false;}
  },[updateActive,persist,recover]);
  const pause=useCallback(()=>{
-  playIntentRef.current++;
   const wasPlaying=playingRef.current;playingRef.current=false;setPlaying(false);
   const r=runRef.current,s=activeRef.current;
   if(wasPlaying&&r&&s&&!r.boss?.won)persist(r.boss?{...r,boss:{...r.boss,states:{...r.boss.states,[s.id]:s}}}:r);
   inputRef.current=null;setInput(null);
  },[persist]);
  useEffect(()=>subscribeLocalRunCheckpoint(document,window,pause),[pause]);
- useEffect(()=>{const timer=setInterval(async()=>{if(tickingRef.current)return;tickingRef.current=true;try{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;if(r.boss?.won){playingRef.current=false;setPlaying(false);return;}const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
- if(next.lost){updateActive(null);playingRef.current=false;setPlaying(false);const hearts=r.level===31?(r.boss?.hearts??3):r.hearts;const remaining=hearts-1;if(r.level===31&&r.boss){const result=failBossSegment(r.boss);if(!await persist({...r,boss:result.reset?newBoss(r.seed+31):result.boss}))return;}else{if(!await persist({...r,hearts:remaining>0?remaining:3}))return;}setMessage(remaining>0?'Challenge failed — retry!':'All hearts lost — attempt reset.');return;}
+ useEffect(()=>{const timer=setInterval(()=>{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;if(r.boss?.won){playingRef.current=false;setPlaying(false);return;}const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
+ if(next.lost){updateActive(null);playingRef.current=false;setPlaying(false);const hearts=r.level===31?(r.boss?.hearts??3):r.hearts;const remaining=hearts-1;if(r.level===31&&r.boss){const result=failBossSegment(r.boss);if(!persist({...r,boss:result.reset?newBoss(r.seed+31):result.boss}))return;}else{if(!persist({...r,hearts:remaining>0?remaining:3}))return;}setMessage(remaining>0?'Challenge failed — retry!':'All hearts lost — attempt reset.');return;}
  if(r.level===31&&r.boss){
   const meaningfulMove=next.id!=='rune-fusion'||(next.lastMeaningfulTick!==undefined&&next.tick-next.lastMeaningfulTick<60);
   const boss=advanceBoss(r.boss,meaningfulMove?1000/60:0,r.seed);
   runRef.current={...r,boss};
   // Resolve terminal and handoff states before the periodic checkpoint can write.
-  if(boss.won){updateActive(null);if(!await persist({...r,boss}))return;playingRef.current=false;setPlaying(false);setMessage('👑 BRAIN ROT KING DEFEATED!');return;}
+  if(boss.won){updateActive(null);if(!persist({...r,boss}))return;playingRef.current=false;setPlaying(false);setMessage('👑 BRAIN ROT KING DEFEATED!');return;}
   if(boss.index!==r.boss.index||boss.queue!==r.boss.queue){
    const handoff=handoffBossSegment(boss,next,r.seed);
    updateActive(handoff.active);
-   await persist({...r,boss:handoff.boss});
+   persist({...r,boss:handoff.boss});
    inputRef.current=null;setInput(null);
   }else if(next.tick%60===0){
-   await persist({...r,boss:{...boss,states:{...boss.states,[next.id]:next}}});
+   persist({...r,boss:{...boss,states:{...boss.states,[next.id]:next}}});
   }
  }
- else if(next.won){updateActive(null);const updated=completeLevel(r);if(updated.level===31)updated.boss=newBoss(r.seed+31);if(!await persist(updated))return;playingRef.current=false;setPlaying(false);setMessage(r.level===30?'LEVEL 31 UNLOCKED — THE BRAIN ROT KING AWAITS':'LEVEL COMPLETE — next challenge unlocked!');}
- else if(next.tick%60===0){await persist(r);}
- }finally{tickingRef.current=false;}},1000/60);return()=>clearInterval(timer);},[persist,updateActive]);
+ else if(next.won){updateActive(null);const updated=completeLevel(r);if(updated.level===31)updated.boss=newBoss(r.seed+31);if(!persist(updated))return;playingRef.current=false;setPlaying(false);setMessage(r.level===30?'LEVEL 31 UNLOCKED — THE BRAIN ROT KING AWAITS':'LEVEL COMPLETE — next challenge unlocked!');}
+ else if(next.tick%60===0){persist(r);}
+ },1000/60);return()=>clearInterval(timer);},[persist,updateActive]);
  useEffect(()=>{inputRef.current=input;},[input]);
  useEffect(()=>{const down=(e:KeyboardEvent)=>{const id=activeRef.current?.id;if(!playingRef.current||!id)return;const value=keyboardInput(id,e.key);if(value){e.preventDefault();inputRef.current=value;setInput(value);}};const up=(e:KeyboardEvent)=>{const id=activeRef.current?.id;if(id&&keyboardInput(id,e.key)===inputRef.current){inputRef.current=null;setInput(null);}};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);};},[]);
  const press=(value:Input)=>{inputRef.current=value;setInput(value);};const release=()=>{inputRef.current=null;setInput(null);};
