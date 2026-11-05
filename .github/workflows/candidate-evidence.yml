@@ -1,7 +1,7 @@
 name: Consolidated candidate evidence
 on:
   pull_request:
-    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105']
+    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105']
 permissions:
   contents: read
 jobs:
@@ -105,6 +105,7 @@ jobs:
           node tests/browser/town-destinations.qa.mjs
           node tests/browser/crypt-continuation.qa.mjs
           node tests/browser/lantern-guided-route.qa.mjs
+          node --test tests/browser/brain-rot-checkpoint-races.qa.mjs
       - name: Record actual checkout and outcome
         if: always()
         env:
