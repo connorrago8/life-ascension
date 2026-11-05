@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ModeLink as Link } from '../ModeLink';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdventurerSprite } from '../AdventurerSprite';
@@ -12,6 +12,7 @@ import { HUB, PLAYER } from '../../lib/crypt/content';
 import { InAppBackLink } from '../InAppBackLink';
 import { WayfarerMark } from './WayfarerMark';
 import { ACTIVE_RUN_KEY, browserStorage } from '../../lib/cryptActiveRun';
+import { navigationModeHref } from '../../lib/navigationMode';
 import { hubCryptContinuation } from '../../lib/cryptHubEntry';
 
 // Default Rusty Sword / Rusty Armor (0 stats) on the hero sprite.
@@ -72,7 +73,7 @@ export function AdventureHub() {
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
     if (location.kind === 'preview') router.push(cryptEntryHref(window.location.search));
-    if (location.kind === 'town') router.push('/play/emberhaven');
+    if (location.kind === 'town') router.push(navigationModeHref('/play/emberhaven', window.location.search, process.env.NODE_ENV === 'development'));
   }
 
   return (

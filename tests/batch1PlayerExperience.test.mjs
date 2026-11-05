@@ -94,7 +94,7 @@ test('Home is the selected tab on Home, and Hub back does not skip from the Hear
   assert.match(hearth, /TownBackLink href="\/play\/emberhaven"/);
   assert.doesNotMatch(hearth, /Back to Hub/);
   assert.match(hub, /Locked\. Coming soon\./);
-  assert.match(hub, /router\.push\('\/play\/emberhaven'\)/);
+  assert.match(hub, /navigationModeHref\('\/play\/emberhaven',/);
   assert.match(hub, /href="\/play\/brain-rot"/);
   assert.doesNotMatch(read('app/(app)/play/emberhaven/page.tsx'), /WalkableTownMap/);
 });
