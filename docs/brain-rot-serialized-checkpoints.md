@@ -8,7 +8,7 @@ All application checkpoint commits use `commitExclusive` and the origin-scoped W
 
 The synchronous `commit` is retained for the existing isolated protocol tests; it is not a serializable API and is not used by the application. Web Locks serialize cooperating new-version tabs, not old versions or arbitrary scripts writing storage directly. Unsupported/denied/aborted locks fail closed with no optimistic write. The existing save warning reports unavailable device saving; gameplay can remain in memory. A lock wait is bounded to two seconds.
 
-Simulation and input remain synchronous while immutable saves queue separately. Storage latency never drops simulation ticks or changes boss timing. Saving has a visible pending state; completion clears it and failure shows the existing unavailable warning. Pause/background immediately stop gameplay, and completion of a queued save never starts gameplay again. Callbacks from recovered/unmounted writers do not reapply stale UI state. No game scores, RNG, hearts, quest XP, account/backend operations or reward rules change.
+Simulation and input remain synchronous while immutable saves queue separately. Storage latency never drops simulation ticks or changes boss timing. Saving has a visible pending state; completion clears it and failure shows the existing unavailable warning. Pause/background immediately stop gameplay, and completion of a queued save never starts gameplay again. Route-exit lifecycle cleanup queues its final snapshot before invalidating the writer; callbacks from recovered/unmounted writers do not reapply stale UI state. No game scores, RNG, hearts, quest XP, account/backend operations or reward rules change.
 
 ## Evidence and limitations
 

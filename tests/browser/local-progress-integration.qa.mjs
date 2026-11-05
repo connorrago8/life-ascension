@@ -1,3 +1,4 @@
+import {checkpointSaveBarrier} from './brain-rot-save-barrier.mjs';
 /** Combined Jetpack lifecycle and Lantern storage isolation; localhost only. */
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -46,7 +47,7 @@ try {
     await page.getByRole('link', {name: '← Back to Hub', exact: true}).click();
     await page.keyboard.up('Space');
     await page.getByRole('heading', {name: 'Hub', exact: true}).waitFor();
-    const checkpoint = () => page.evaluate(key => JSON.parse(localStorage.getItem(key)), core.CHECKPOINT_KEY);
+    const checkpoint = async () => {await checkpointSaveBarrier(page);return page.evaluate(key => JSON.parse(localStorage.getItem(key)), core.CHECKPOINT_KEY);};
     const saved = await checkpoint();
     assert.equal(saved.active.state.id, 'goblin-jetpack');
     assert.ok(saved.active.state.tick > 0 && saved.active.state.tick < 60);

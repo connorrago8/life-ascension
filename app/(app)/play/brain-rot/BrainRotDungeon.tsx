@@ -33,7 +33,7 @@ export default function BrainRotDungeon(){
   activeRef.current=restored;setActive(restored);
   setMessage(r.boss?.won?'👑 BRAIN ROT KING DEFEATED!':notice);
  },[]);
- useEffect(()=>{recover();return()=>{writerRef.current=null;playingRef.current=false;};},[recover]);
+ useEffect(()=>{recover();},[recover]);
  const persist=useCallback((r:Run)=>{
   const writer=writerRef.current;
   if(!writer)return false;
@@ -66,7 +66,13 @@ export default function BrainRotDungeon(){
   if(wasPlaying&&r&&s&&!r.boss?.won)persist(r.boss?{...r,boss:{...r.boss,states:{...r.boss.states,[s.id]:s}}}:r);
   inputRef.current=null;setInput(null);
  },[persist]);
- useEffect(()=>subscribeLocalRunCheckpoint(document,window,pause),[pause]);
+ useEffect(()=>{
+  const unsubscribe=subscribeLocalRunCheckpoint(document,window,pause);
+  return()=>{
+   // Flush route-exit state before invalidating the writer or playing flag.
+   unsubscribe();writerRef.current=null;playingRef.current=false;
+  };
+ },[pause]);
  useEffect(()=>{const timer=setInterval(()=>{if(!playingRef.current||!activeRef.current||!runRef.current)return;const r=runRef.current,s=activeRef.current;if(r.boss?.won){playingRef.current=false;setPlaying(false);return;}const next=step(s,inputRef.current);updateActive(next);if(inputRef.current==='tap'||inputRef.current==='slice'||inputRef.current==='up'||inputRef.current==='down'||inputRef.current==='left'||inputRef.current==='right'){inputRef.current=null;setInput(null);}
  if(next.lost){updateActive(null);playingRef.current=false;setPlaying(false);const hearts=r.level===31?(r.boss?.hearts??3):r.hearts;const remaining=hearts-1;if(r.level===31&&r.boss){const result=failBossSegment(r.boss);if(!persist({...r,boss:result.reset?newBoss(r.seed+31):result.boss}))return;}else{if(!persist({...r,hearts:remaining>0?remaining:3}))return;}setMessage(remaining>0?'Challenge failed — retry!':'All hearts lost — attempt reset.');return;}
  if(r.level===31&&r.boss){
