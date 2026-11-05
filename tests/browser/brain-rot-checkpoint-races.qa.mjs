@@ -29,6 +29,9 @@ function fixture(id) {
 }
 async function session(checkpoint) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  // Playwright clocks belong to the context and are shared by all its pages.
+  const time = new Date('2026-11-05T09:30:00Z');
+  await context.clock.install({ time }); await context.clock.pauseAt(time);
   const errors = [], forbidden = [];
   await context.route('**/*', route => {
     const r = route.request();
@@ -43,8 +46,6 @@ async function session(checkpoint) {
   }, { key: core.CHECKPOINT_KEY, checkpoint, origin: base.origin });
   async function page() {
     const p = await context.newPage(); p.on('pageerror', e => errors.push(e.message));
-    const time = new Date('2026-11-05T09:30:00Z');
-    await p.clock.install({ time }); await p.clock.pauseAt(time);
     await p.goto(new URL('/play/brain-rot', base).href);
     await p.getByRole('heading', { name: 'Brain Rot', exact: false }).waitFor();
     await p.getByText(/^❤️\s*[123]$/u).waitFor();
