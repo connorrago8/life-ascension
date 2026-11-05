@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, 'beta/quest-ui-clean-review', 'beta/crypt-intro-exit-accessibility-20261029']
   pull_request:
-    branches: [main, 'beta/quest-ui-clean-review', 'grok/release-candidate-1', 'grok/rc1-smoke-fixes']
+    branches: [main, 'beta/quest-ui-clean-review', 'grok/release-candidate-1', 'grok/rc1-smoke-fixes', 'grok/weekly-autopilot']
 permissions:
   contents: read
 jobs:
@@ -179,6 +179,45 @@ jobs:
       - name: Apply every migration and run the weekly autopilot smoke
         shell: bash
         run: bash tests/sql/run-weekly-autopilot.sh
+
+  integration-run-browser:
+    name: Brain Rot navigation browser QA (local, no backend)
+    if: github.event_name == 'pull_request' && github.base_ref == 'grok/weekly-autopilot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app and ephemeral browser driver
+        run: npm install --no-audit --no-fund && npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - name: Verify local run continuity in sandboxed Chromium
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ''
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+          QA_BASE_URL: http://127.0.0.1:3136
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$browser"
+          npm run dev -- --hostname 127.0.0.1 --port 3136 > /tmp/brain-rot-navigation.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 "$QA_BASE_URL/play/brain-rot" > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true || { cat /tmp/brain-rot-navigation.log; exit 1; }
+          CHROMIUM_BIN="$browser" node tests/browser/brain-rot-navigation.qa.mjs
 
   quest-browser-qa:
     name: Quest progress browser QA (unprivileged, no backend)
