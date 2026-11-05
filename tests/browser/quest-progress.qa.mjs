@@ -1,0 +1,175 @@
+/**
+ * REAL-COMPONENT browser QA against the development-only /qa/quest-progress fixture.
+ * Requires an unprivileged local runner, a running 'npm run dev' server and
+ * Playwright+Chromium installed separately. No credentials or backend requests.
+ *
+ * Run: node tests/browser/quest-progress.qa.mjs
+ * Output: artifacts/quest-progress/*.png (not automatically uploaded).
+ */
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+
+if (typeof process.getuid === 'function' && process.getuid() === 0) {
+  throw new Error('Refusing to run Chromium as root. Use an unprivileged sandboxed user.');
+}
+let chromium;
+try {
+  ({ chromium } = await import('playwright'));
+} catch {
+  throw new Error('Playwright is not installed. Install it and Chromium in an isolated QA runner; no browser tests ran.');
+}
+const baseURL = process.env.QA_BASE_URL || 'http://127.0.0.1:3000';
+const browser = await chromium.launch({
+  headless: true,
+  chromiumSandbox: true,
+  ...(process.env.CHROMIUM_BIN ? { executablePath: process.env.CHROMIUM_BIN } : {}),
+});
+const output = 'artifacts/quest-progress';
+await mkdir(output, { recursive: true });
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto(baseURL + '/qa/quest-progress');
+  assert.equal(await page.getByRole('heading', { name: /Quest progress interaction QA/ }).count(), 1,
+    'QA fixture must be running under Next development mode');
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
+  await page.getByRole('button', { name: /Clear QA journal/ }).click();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
+  // CEO P1: verify a real Tab sequence and visible keyboard focus at phone widths.
+  // This uses the actual component, not a static markup assertion.
+  const addButton = page.getByRole('button', { name: /^Add 2 repetitions/ });
+  const clearButton = page.getByRole('button', { name: /^Clear progress for/ });
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.getByLabel('Mock next response (no network)').focus();
+    for (const [target, label] of [[addButton, 'Add'], [page.getByRole('button', { name: /^Undo 2 repetitions/ }), 'Undo'], [clearButton, 'Clear']]) {
+      await page.keyboard.press('Tab');
+      const focus = await target.evaluate(element => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return {
+          active: document.activeElement === element,
+          focusVisible: element.matches(':focus-visible'),
+          outlineVisible: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
+          withinViewport: rect.left >= 0 && rect.right <= innerWidth + 1,
+        };
+      });
+      assert.equal(focus.active, true, `${label} must receive keyboard Tab focus at ${width}px`);
+      assert.equal(focus.focusVisible && focus.outlineVisible, true,
+        `${label} must show a visible keyboard focus outline at ${width}px`);
+      assert.equal(focus.withinViewport, true, `${label} focus must remain within ${width}px viewport`);
+      if (label === 'Add') {
+        await page.screenshot({ path: join(output, `quest-progress-keyboard-${width}.png`), fullPage: true });
+      }
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
+      `Keyboard focus must not cause horizontal overflow at ${width}px`);
+  }
+  // CDP page-scale emulation is measurable, but is not equivalent to browser UI zoom.
+  const cdp = await context.newCDPSession(page);
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 2 });
+    const metrics = await cdp.send('Page.getLayoutMetrics');
+    assert.ok(Math.abs(metrics.visualViewport.scale - 2) < 0.01,
+      `Expected measurable 2x page scale at ${width}px`);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
+      `Document overflow at 2x page scale and ${width}px`);
+    await addButton.focus();
+    assert.equal(await addButton.evaluate(el => document.activeElement === el), true);
+    await page.screenshot({ path: join(output, `quest-progress-scale2-${width}.png`), fullPage: true });
+    await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+  }
+  console.log('PASS: measured CDP 2x page scale, no document overflow, and focus at four widths.');
+  await page.setViewportSize({ width: 320, height: 844 });
+  console.log('PASS: real Tab focus, visible Add/Undo/Clear outlines and no overflow at 320/375/390/430px.');
+  const timedSaveRetryStart = performance.now();
+  await addButton.click();
+  await page.getByText('Save not confirmed. Retry the same operation before logging more.').waitFor();
+  const pending = await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only'));
+  assert.ok(pending, 'Pending journal must survive an unconfirmed mock response');
+  const original = JSON.parse(pending);
+  assert.equal(original.delta, 2);
+  await page.reload();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
+  await page.getByRole('button', { name: /Retry saving progress/ }).waitFor();
+  await page.getByLabel('Mock next response (no network)').selectOption('saved');
+  // Keyboard-only Retry must preserve the original operation ID and delta.
+  const retryButton = page.getByRole('button', { name: /Retry saving progress/ });
+  await page.getByLabel('Mock next response (no network)').focus();
+  await page.keyboard.press('Tab');
+  assert.equal(await retryButton.evaluate(element =>
+    document.activeElement === element && element.matches(':focus-visible')), true,
+    'Retry must be reachable with Tab and show keyboard focus');
+  await page.keyboard.press('Enter');
+  await page.getByText('Progress saved.').waitFor();
+  const retryLog = await page.locator('[data-testid="qa-operation-log"]').innerText();
+  assert.ok(retryLog.includes(`|${original.id}|2|saved`), 'Retry must reuse original operation ID and delta');
+  assert.equal(await page.evaluate(() => localStorage.getItem('life-progress-pending:qa-local-progress-only')), null);
+  const timedSaveRetryMs = Math.round(performance.now() - timedSaveRetryStart);
+  const timedMetrics = await page.evaluate(() => ({ cssWidth: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
+  await page.screenshot({ path: join(output, 'quest-progress-timed-save-retry-320.png'), fullPage: true });
+  console.log('QUEST_SAVE_RETRY_TIMING', JSON.stringify({ elapsedMs: timedSaveRetryMs, actions: 2, ...timedMetrics,
+    operationIdPreserved: retryLog.includes(`|${original.id}|2|saved`) }));
+  assert.ok(timedSaveRetryMs <= 30000, `Mock Save/Retry took ${timedSaveRetryMs}ms, exceeding 30-second budget`);
+  // A server-confirmed completion may arrive before the lost response is retried.
+  // The original pending operation must remain recoverable in the Completed view.
+  await page.getByRole('button', { name: /Clear QA journal/ }).click();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
+  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  await page.getByRole('button', { name: /Retry saving progress/ }).waitFor();
+  await page.getByRole('button', { name: /Mark QA instance completed/ }).click();
+  assert.equal(await page.getByRole('button', { name: /Retry saving progress/ }).count(), 1,
+    'A completed instance with an ambiguous operation must still offer Retry');
+  assert.equal(await page.getByRole('button', { name: /^Add 2 repetitions/ }).count(), 0,
+    'A completed instance must not offer new progress operations');
+  await page.getByLabel('Mock next response (no network)').selectOption('saved');
+  await page.getByRole('button', { name: /Retry saving progress/ }).click();
+  await page.waitForFunction(() => localStorage.getItem('life-progress-pending:qa-local-progress-only') === null);
+  assert.equal(await page.getByRole('button', { name: /Retry saving progress/ }).count(), 0);
+  // Reset fixture to test the separate one-step Clear behavior.
+  await page.getByRole('button', { name: /Clear QA journal/ }).click();
+  await page.locator('[data-qa-hydrated="true"]').waitFor();
+  await page.getByLabel('Mock next response (no network)').selectOption('saved');
+  await page.getByRole('button', { name: /^Clear progress for/ }).click();
+  // Preserve real-browser evidence even when Undo does not confirm; never claim a pass by timeout.
+  console.log('CLEAR QA STATE:', JSON.stringify({
+    selectedMock: await page.getByLabel('Mock next response (no network)').inputValue(),
+    operations: await page.locator('[data-testid="qa-operation-log"]').innerText(),
+    alerts: await page.getByRole('alert').allInnerTexts(),
+    statuses: await page.getByRole('status').allInnerTexts(),
+  }));
+  await page.screenshot({ path: join(output, 'quest-progress-undo-diagnostic.png'), fullPage: true });
+  await page.getByText('Progress saved.').waitFor();
+  assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\|-2\|saved/);
+  assert.equal(await page.locator('progress').evaluate(element => element.value), 0,
+    'One-step Clear must return the progress indicator to zero after confirmed save');
+  // Alpha PR21 atomic contract: 0 -> 2 -> 4 -> 7 -> 0 must send ONE -7 operation.
+  // This fixture verifies the actual React control and original-ID journal flow,
+  // not authenticated PostgreSQL execution (covered by isolated Alpha SQL).
+  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 2);
+  await page.getByRole('button', { name: /^Add 2 repetitions/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 4);
+  await page.getByRole('spinbutton', { name: /Custom progress amount for/ }).fill('3');
+  await page.getByRole('button', { name: /Log custom progress for/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 7);
+  await page.getByRole('button', { name: /^Clear progress for/ }).click();
+  await page.waitForFunction(() => document.querySelector('progress')?.value === 0);
+  assert.match(await page.locator('[data-testid="qa-operation-log"]').innerText(), /\|-7\|saved/,
+    'Atomic Clear from 7/10 must submit exactly -7');
+  await page.getByRole('button', { name: /Seed malformed journal/ }).click();
+  await page.getByRole('alert').filter({ hasText: /pending save record is unreadable/ }).waitFor();
+  assert.equal(await page.getByRole('button', { name: /^Add 2 repetitions/ }).isDisabled(), true);
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+    assert.equal(overflow, false, `Unexpected horizontal overflow at ${width}px`);
+    await page.screenshot({ path: join(output, `quest-progress-${width}.png`), fullPage: true });
+  }
+  console.log('PASS: real-component refresh, original-ID retry, one-step and 7-to-0 atomic Clear, corrupt journal, four viewport widths.');
+  console.log('Not covered: real backend idempotency, authenticated Preview, or genuine browser UI 200% zoom (CDP page scale is not equivalent).');
+} finally {
+  await browser.close();
+}
