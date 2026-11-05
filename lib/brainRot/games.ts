@@ -1,7 +1,7 @@
 import { GAMES, type GameId, rng, validGameState } from './core';
 export type Input = 'left'|'right'|'up'|'down'|'tap'|'hold'|'release'|'slice';
 export type Entity = {x:number;y:number;vx:number;vy:number;type:number};
-export type State = {id:GameId;tick:number;seed:number;progress:number;goal:number;score:number;player:{x:number;y:number;vx:number;vy:number};entities:Entity[];grid:number[];lost:boolean;won:boolean;pressed:boolean;lastInput:Input|null;lastMeaningfulTick?:number};
+export type State = {id:GameId;tick:number;seed:number;progress:number;goal:number;score:number;player:{x:number;y:number;vx:number;vy:number};entities:Entity[];grid:number[];lost:boolean;won:boolean;pressed:boolean;lastInput:Input|null;lastMeaningfulTick?:number;glide?:{distance:number;grounded:boolean;stall:number}};
 const game=(id:GameId)=>GAMES.find(g=>g.id===id)!;
 /** Discrete games tap Space; flight games sustain thrust/dive until keyup. */
 export function keyboardInput(id:GameId,key:string):Input|null{
@@ -12,9 +12,42 @@ export function keyboardInput(id:GameId,key:string):Input|null{
 export function createGame(id:GameId,tier:number,seed:number):State{
  const kind=game(id).kind;const goals:Record<string,number[]>={runner:[35,55,75],climber:[25,45,65],flap:[10,20,30],jetpack:[35,55,75],crossing:[12,24,36],slice:[15,30,45],glide:[35,55,75],merge:[128,256,512]};
  const grid=Array(16).fill(0);if(kind==='merge'){const random=rng(seed);const first=Math.floor(random()*16);let second=Math.floor(random()*15);if(second>=first)second++;grid[first]=2;grid[second]=2;}
- return {id,tick:0,seed,progress:0,goal:goals[kind][Math.min(2,tier-1)],score:0,player:{x:0.5,y:0.5,vx:0,vy:0},entities:[],grid,lost:false,won:false,pressed:false,lastInput:null};
+ const initial:State={id,tick:0,seed,progress:0,goal:goals[kind][Math.min(2,tier-1)],score:0,player:{x:0.5,y:0.5,vx:0,vy:0},entities:[],grid,lost:false,won:false,pressed:false,lastInput:null};
+ if(kind==='glide'){initial.goal=[6,9,12][Math.min(2,tier-1)];initial.player={x:.35,y:hillHeight(0)-.035,vx:.004,vy:0};initial.glide={distance:0,grounded:true,stall:0};}
+ return initial;
 }
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
+/** World-space hills; the same functions drive collision and visible terrain. */
+export function hillHeight(distance:number):number{return .66-.16*Math.cos(distance*Math.PI*2/1.4);}
+export function hillSlope(distance:number):number{return .16*Math.PI*2/1.4*Math.sin(distance*Math.PI*2/1.4);}
+function stepGlider(s:State,input:Input|null):State{
+ // Old timer-only saves restart this challenge, never the run or its hearts.
+ if(!s.glide){const fresh=createGame(s.id,s.goal<=35?1:s.goal<=55?2:3,s.seed);fresh.goal=s.goal===Number.MAX_SAFE_INTEGER?s.goal:fresh.goal;return fresh;}
+ const g={...s.glide};s.glide=g;
+ const dive=input==='hold',slope=hillSlope(g.distance);
+ if(g.grounded){
+  s.player.vx=clamp((s.player.vx+slope*(dive?.00028:.00006)-(dive?0:.000018))*.998,.0006,.012);
+  if(!dive&&slope<-.2&&s.player.vx>.0045){g.grounded=false;s.player.vy=slope*s.player.vx-.002;}
+ }
+ g.distance+=s.player.vx;
+ const ground=hillHeight(g.distance)-.035;
+ if(g.grounded){s.player.y=ground;s.player.vy=0;}
+ else{
+  s.player.vy+=dive?.00065:.00006;s.player.y+=s.player.vy;
+  if(s.player.y>=ground&&s.player.vy>0){
+   // A clean downhill landing requires a real launch and an active dive.
+   if(dive&&hillSlope(g.distance)>.04){s.progress++;s.score+=10;s.player.vx=clamp(s.player.vx+.0015,.0006,.012);s.lastMeaningfulTick=s.tick;}
+   else s.player.vx*=.55;
+   g.grounded=true;s.player.y=ground;s.player.vy=0;
+  }
+ }
+ s.player.y=Math.max(.06,s.player.y);
+ g.stall=s.player.vx<.0015?g.stall+1:0;
+ if(g.stall>=90)s.lost=true;
+ if(s.progress>=s.goal&&!s.lost)s.won=true;
+ return s;
+}
+
 function mergeLine(line:number[]):number[]{const compact=line.filter(Boolean),out:number[]=[];for(let i=0;i<compact.length;i++){if(compact[i]===compact[i+1]){out.push(compact[i]*2);i++;}else out.push(compact[i]);}return [...out,...Array(4-out.length).fill(0)];}
 export function moveTiles(grid:number[],dir:Input,seed:number):number[]{if(!['left','right','up','down'].includes(dir))return grid;const out=[...grid];for(let i=0;i<4;i++){const idx=Array.from({length:4},(_,j)=>dir==='left'||dir==='right'?i*4+j:j*4+i);if(dir==='right'||dir==='down')idx.reverse();const values=mergeLine(idx.map(k=>grid[k]));idx.forEach((k,j)=>{out[k]=values[j];});}
  if(out.every((v,i)=>v===grid[i]))return grid;
@@ -24,6 +57,7 @@ export function step(state:State,input:Input|null,dt=1/60):State{
  if(state.won||state.lost||dt<=0)return state;
  const s:State={...state,tick:state.tick+1,seed:(Math.imul(state.seed,1664525)+1013904223)>>>0,player:{...state.player},entities:state.entities.map(e=>({...e})),grid:[...state.grid],lastInput:input};
  const kind=game(s.id).kind,random=rng(s.seed),speed=dt*(0.16+Math.min(3,s.goal/35)*0.045);
+ if(kind==='glide')return stepGlider(s,input);
  if(kind==='merge'){
   if(input&&['left','right','up','down'].includes(input)){s.grid=moveTiles(s.grid,input,s.seed);if(s.grid.some((value,index)=>value!==state.grid[index]))s.lastMeaningfulTick=s.tick;s.score=s.grid.reduce((a,b)=>a+b,0);s.progress=Math.max(...s.grid);if(s.progress>=s.goal)s.won=true;else if(!s.grid.includes(0)&&!(['left','right','up','down'] as Input[]).some(d=>{const v=moveTiles(s.grid,d,s.seed);return v.some((n,i)=>n!==s.grid[i]);}))s.lost=true;}
   return s;
@@ -66,7 +100,6 @@ export function step(state:State,input:Input|null,dt=1/60):State{
   if(kind==='flap'){if(input==='tap')s.player.vy=-.012;s.player.vy+=.00065;s.player.y+=s.player.vy;if(s.player.y<=.06||s.player.y>=.94)s.lost=true;}
   else if(kind==='jetpack'){s.player.vy+=(input==='hold'?-.00075:.0006);s.player.vy=clamp(s.player.vy,-.012,.012);s.player.y+=s.player.vy;if(s.player.y<=.06||s.player.y>=.94)s.player.vy=0;}
   else if(kind==='climber'){s.player.vy+=.0005;if(input==='up')s.player.vy=-.016;s.player.y+=s.player.vy;if(s.player.y>.83){s.player.y=.83;s.player.vy=-.014;}}
-  else if(kind==='glide'){s.player.vy+=(input==='hold'?.0009:-.00025);s.player.vy=clamp(s.player.vy,-.012,.014);s.player.y+=s.player.vy;if(s.player.y>.83){s.player.y=.83;s.player.vy=-.009;}}
   else if(kind==='runner'){if(input==='up')s.player.y=.28;else s.player.y+=(0.72-s.player.y)*.06;}
   s.player.y=clamp(s.player.y,.06,.94);
   if(kind==='flap'&&s.tick%100===0){

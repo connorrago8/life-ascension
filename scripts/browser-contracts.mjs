@@ -15,6 +15,7 @@ export const BROWSER_CONTRACTS = Object.freeze({
     ['native-conflict', 'brain-rot-native-conflict', true],
     ['town-hydration-links', 'town-hydration-links', true],
     ['crypt-recap-presentation', 'crypt-recap-presentation'],
+    ['hill-glider', 'hill-glider'],
     ['checkpoint-races', 'brain-rot-checkpoint-races', true],
   ].map(([name, file, test]) => Object.freeze({ name, file: `tests/browser/${file}.qa.mjs`, test: !!test }))),
   'boss-boundary': Object.freeze([

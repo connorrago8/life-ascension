@@ -6,11 +6,13 @@ import {GAMES,newRun,readRun,currentGame,completeLevel,newBoss,advanceBoss,begin
 import {createCheckpointWriter} from '../../../../lib/brainRot/checkpointWriter';
 import {createCheckpointSession} from '../../../../lib/brainRot/checkpointSession';
 import {handoffBossSegment} from '../../../../lib/brainRot/bossHandoff';
-import {createGame,step,keyboardInput,type State,type Input} from '../../../../lib/brainRot/games';
+import {createGame,step,keyboardInput,hillHeight,hillSlope,type State,type Input} from '../../../../lib/brainRot/games';
 const palette=['#f0c86b','#7ed6ba','#ba9cfa','#ff9580','#9ad1ff'];
 function Surface({state}:{state:State}){
  const kind=GAMES.find(g=>g.id===state.id)?.kind;
+ const hill=state.glide?Array.from({length:81},(_,i)=>`${i*12.5},${(hillHeight(state.glide!.distance+(i/80-.35)*1.6)*360).toFixed(2)}`).join(' '):null;
  return <div style={{position:'relative',width:'100%',height:360,overflow:'hidden',borderRadius:18,background:'linear-gradient(160deg,#1d273a,#142923)',border:'2px solid #806b4a',touchAction:'none'}}>
+ {hill&&<svg aria-hidden="true" viewBox="0 0 1000 360" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%'}}><polygon points={`0,360 ${hill} 1000,360`} fill="#34493e" stroke="#b8c9a3" strokeWidth="3"/></svg>}
  {kind==='merge'?<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:7,padding:18,height:'100%'}}>{state.grid.map((n,i)=><div key={i} style={{display:'grid',placeItems:'center',borderRadius:9,background:n?'#866c45':'#334139',fontSize:25,fontWeight:800,color:'#fff'}}>{n||''}</div>)}</div>:<>
  {kind==='crossing'&&Array.from({length:8},(_,i)=><div key={i} style={{position:'absolute',top:i*45,height:2,width:'100%',background:'#5a6255'}}/>)}
  {state.id==='endless-crossing'&&Array.from({length:5},(_,i)=><div key={'track-'+i} aria-hidden="true" style={{position:'absolute',left:(8+i*21)+'%',top:0,bottom:0,width:1,background:'rgba(234,214,151,.20)',pointerEvents:'none'}}/>)}
@@ -58,7 +60,8 @@ export default function BrainRotDungeon(){
   const id=r.level===31?(r.boss?.queue[r.boss.index]??GAMES[0].id):currentGame(r);
   const saved=resumeGameState(r,activeRef.current?{level:r.level,state:activeRef.current}:null) as State|null;
   const fresh=createGame(id,r.level===31?3:tier(r.level),r.seed+r.level*17);if(r.level===31)fresh.goal=Number.MAX_SAFE_INTEGER;
-  const initial=saved?.id===id?saved:fresh;updateActive(initial);setMessage('');
+  const legacyGlider=saved?.id==='hill-glider'&&!saved.glide;
+  const initial=saved?.id===id&&!legacyGlider?saved:fresh;updateActive(initial);setMessage(legacyGlider?'Hill Glider now uses hill landings; this challenge restarts with your run and hearts kept.':'');
   if(!persist(r.level===31&&r.boss?{...r,boss:beginBossSegment(r.boss,id,initial)}:r))return;
   setPlaying(true);playingRef.current=true;
  },[updateActive,persist,recover]);
@@ -98,7 +101,7 @@ export default function BrainRotDungeon(){
  },1000/60);return()=>clearInterval(timer);},[persist,updateActive]);
  useEffect(()=>{inputRef.current=input;},[input]);
  useEffect(()=>{const down=(e:KeyboardEvent)=>{const id=activeRef.current?.id;if(!playingRef.current||!id)return;const value=keyboardInput(id,e.key);if(value){e.preventDefault();inputRef.current=value;setInput(value);}};const up=(e:KeyboardEvent)=>{const id=activeRef.current?.id;if(id&&keyboardInput(id,e.key)===inputRef.current){inputRef.current=null;setInput(null);}};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);};},[]);
- const press=(value:Input)=>{inputRef.current=value;setInput(value);};const release=()=>{inputRef.current=null;setInput(null);};
+ const press=(value:Input)=>{if(!playingRef.current)return;inputRef.current=value;setInput(value);};const release=()=>{inputRef.current=null;setInput(null);};
  const touchDown=(e:React.PointerEvent<HTMLDivElement>)=>{if(!playingRef.current)return;e.preventDefault();touchStart.current={x:e.clientX,y:e.clientY};const id=activeRef.current?.id;if(id==='flappy-wyvern'){press('tap');setTimeout(release,70);}else if(id==='goblin-jetpack'||id==='hill-glider')press('hold');};
  const touchUp=(e:React.PointerEvent<HTMLDivElement>)=>{if(!playingRef.current||!touchStart.current)return;e.preventDefault();const dx=e.clientX-touchStart.current.x,dy=e.clientY-touchStart.current.y;touchStart.current=null;const id=activeRef.current?.id;if(id==='goblin-jetpack'||id==='hill-glider'){release();return;}if(id==='blade-frenzy'){press('slice');setTimeout(release,70);return;}if(Math.abs(dx)+Math.abs(dy)>20){press(Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up');setTimeout(release,70);}else if(id==='flappy-wyvern'){release();}else if(id==='skybound-slime'){press('up');setTimeout(release,70);}};
  const gameId:GameId=run?.level===31?(run.boss?.queue[run.boss.index]??GAMES[0].id):run?currentGame(run):GAMES[0].id;
@@ -108,16 +111,17 @@ export default function BrainRotDungeon(){
  <h1 style={{fontSize:32,marginBottom:4}}>🧠 Brain Rot</h1><p style={{color:'#bac4bd'}}>30 arcade levels. Ten games. One impossible king.</p>
  <div style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap',margin:'14px 0',fontWeight:700}}><span>Level {run?.level??1}/31</span><span>❤️ {run?.level===31?run.boss?.hearts:run?.hearts}</span><span>{run?.level===31?'👑 Final Boss':'Cycle '+(run?tier(run.level):1)}</span></div>
  <h2>{game.name}</h2>{run?.level===31&&run.boss&&<p>King's rotation: {run.boss.seconds[gameId]}/60 seconds · {run.boss.queue.length} portals remaining · {Math.ceil((15000-run.boss.segmentMs)/1000)}s until switch</p>}
- <p>Objective: {run?.level===31?'Survive four 15-second visits':gameId==='goblin-jetpack'?(active?`Collect ${active.goal} sparks`:'Collect sparks along the flight path'):active?.goal??'Complete the challenge'}</p>
+ {gameId==='hill-glider'&&active?.glide&&<p role="status">{active.glide.stall>0?'Losing speed — dive downhill, release uphill.':active.glide.grounded?(hillSlope(active.glide.distance)>=0?'Downhill · hold to dive':'Uphill · release to launch'):'Airborne · dive onto the next downhill'} · {input==='hold'?'Diving':'Gliding'}</p>}
+ <p>Objective: {run?.level===31?'Survive four 15-second visits':gameId==='hill-glider'?`Land ${active?.goal??[6,9,12][tier(run?.level??1)-1]} clean downhill glides`:gameId==='goblin-jetpack'?(active?`Collect ${active.goal} sparks`:'Collect sparks along the flight path'):active?.goal??'Complete the challenge'}</p>
  {active?<div onPointerDown={touchDown} onPointerUp={touchUp} onPointerCancel={()=>{touchStart.current=null;release();}} style={{touchAction:'none'}}><Surface state={active}/></div>:<div style={{height:360,display:'grid',placeItems:'center',border:'1px solid #617366',borderRadius:18,background:'#182720'}}>Tap Start to enter {game.name}</div>}
  {active&&<p style={{textAlign:'center'}}>{gameId==='goblin-jetpack'?'Pickups':'Progress'}: {active.progress}/{active.goal} · Score: {active.score}</p>}
  <div style={{display:'flex',justifyContent:'center',gap:12,margin:'14px 0'}}>{run?.boss?.won?<p role="status">Boss conquered · run complete</p>:playing?<button className="btn" onClick={pause}>Pause & Save</button>:<button className="btn" onClick={start}>{active?'Resume / Retry':'Start Challenge'}</button>}</div>
  {saveWarning&&<p role="status">{saveWarning}</p>}
  {message&&<p role="status" style={{textAlign:'center',color:'#f0c86b',fontWeight:700}}>{message}</p>}
  <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginTop:18}}>
- {(['left','up','down','right'] as Input[]).map(i=><button key={i} className="btn ghost" style={{minHeight:56}} onClick={()=>press(i)} disabled={!playing}>{i==='left'?'←':i==='right'?'→':i==='up'?'↑':'↓'}</button>)}
- </div><div style={{display:'flex',gap:8,justifyContent:'center',marginTop:8}}>{(['tap','hold','slice'] as Input[]).map(i=><button key={i} className="btn ghost" onPointerDown={i==='hold'?()=>press(i):undefined} onPointerUp={i==='hold'?release:undefined} onPointerCancel={i==='hold'?release:undefined} onClick={i==='hold'?undefined:()=>press(i)} disabled={!playing}>{i==='tap'?'FLAP':i==='hold'?'HOLD / DIVE':'SLICE'}</button>)}</div>
- <p style={{fontSize:13,color:'#aab8ad',marginTop:14}}>{gameId==='goblin-jetpack'?'Collect gold sparks; avoid hazards. Hold the arena, HOLD button, or Space to rise; release to descend.':'Touch the arena to flap; hold for glider; swipe to move or slice. Keyboard and button controls are available for testing.'} Progress is stored on this device.</p>
+ {gameId!=='hill-glider'&&(['left','up','down','right'] as Input[]).map(i=><button key={i} className="btn ghost" style={{minHeight:56}} onClick={()=>press(i)} disabled={!playing}>{i==='left'?'←':i==='right'?'→':i==='up'?'↑':'↓'}</button>)}
+ </div><div style={{display:'flex',gap:8,justifyContent:'center',marginTop:8}}>{gameId==='hill-glider'?<><button className="btn" style={{minHeight:56}} disabled={!playing} onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);press('hold');}} onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}>Hold to dive</button><button className="btn ghost" style={{minHeight:56}} disabled={!playing} aria-pressed={input==='hold'} onClick={()=>press(inputRef.current==='hold'?'release':'hold')}>Toggle dive</button></>:(['tap','hold','slice'] as Input[]).map(i=><button key={i} className="btn ghost" onPointerDown={i==='hold'?()=>press(i):undefined} onPointerUp={i==='hold'?release:undefined} onPointerCancel={i==='hold'?release:undefined} onClick={i==='hold'?undefined:()=>press(i)} disabled={!playing}>{i==='tap'?'FLAP':i==='hold'?'HOLD / DIVE':'SLICE'}</button>)}</div>
+ <p style={{fontSize:13,color:'#aab8ad',marginTop:14}}>{gameId==='hill-glider'?'Dive down hills to build speed; release uphill to launch, then dive onto the next downhill to score. Hold the arena, Hold to dive, or Space; Toggle dive offers a tap alternative. Staying idle or diving uphill stalls the glider.':gameId==='goblin-jetpack'?'Collect gold sparks; avoid hazards. Hold the arena, HOLD button, or Space to rise; release to descend.':'Touch the arena to flap; hold for glider; swipe to move or slice. Keyboard and button controls are available for testing.'} Progress is stored on this device.</p>
  <h3>Dungeon Map</h3><div style={{display:'grid',gridTemplateColumns:'repeat(10,1fr)',gap:5}}>{Array.from({length:31},(_,i)=><div key={i} title={i===30?'Brain Rot King':GAMES.find(g=>g.id===run?.order[i])?.name} style={{textAlign:'center',padding:'8px 0',borderRadius:5,background:i+1<(run?.level??1)?'#406f51':i+1===(run?.level??1)?'#a17b35':'#303c38',fontSize:12}}>{i===30?'👑':i+1}</div>)}</div>
  </main>;
 }
