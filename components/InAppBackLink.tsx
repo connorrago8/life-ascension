@@ -29,5 +29,6 @@ function ResolvedBackLink({ href, className, style, children }: Props) {
     }
     performInAppBack(router, target);
   }
+  if (resolvedHref === null) return <span className={className} style={style} aria-disabled="true" aria-busy="true">{children}</span>;
   return <Link prefetch={false} href={resolvedHref} className={className} style={style} onClick={onClick}>{children}</Link>;
 }
