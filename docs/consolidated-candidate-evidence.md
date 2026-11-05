@@ -1,53 +1,62 @@
 # Consolidated candidate evidence — November 5, 2026
 
-This integration increment builds on Visual94 `9d10e8dadd5fedf7203554563c8add980f73db97`.
-It changes CI orchestration/evidence only, not application, gameplay, UI, storage,
-quest XP, credentials, hosted configuration or release permissions.
+Integration increment over Systems99 `63fe12e4321db7f967c122d03506acace3729c3f`.
+Only CI orchestration,receipt verification and regression tests change here.
+No gameplay/UI/world/XP/storage/authentication or hosting implementation changes.
 
-## Complete execution and complete rejection
+## Independent execution, all required
 
-`scripts/browser-contracts.mjs` is the explicit required coverage manifest:
-11 browser-smoke suites and three boss suites. The runner launches each in a
-separate Node process, preserving its existing test arguments and inherited
-blank-backend/localhost/sandbox settings. A failure, launch error, signal or
-180-second child timeout is recorded as failure, and the next suite is attempted.
-No failure becomes optional, skipped, TODO or continue-on-error. A parent job
-cancellation or job timeout still blocks the final gate.
+| Family | Evidence scope |
+|---|---|
+| source-build | TypeScript,guarded synthetic QA build and browser-bundle scan |
+| unit-tests | Full source/unit suite,including ordinary failing QA regressions |
+| browser-smoke | Thirteen sandboxed localhost browser suite receipts |
+| boss-boundary | Three sandboxed localhost boss suite receipts |
 
-The runner clears its report first and writes incremental per-suite receipts to
-`browser-contract-evidence/<group>.json`. It records actual full git checkout,
-name, file, result, exit code, signal, error and elapsed duration. It prints a
-`CONTRACT_RESULT` line and an Actions summary table. This allows a failed early
-suite to coexist with useful later render/test evidence. A partially written or
-missing report never qualifies as complete execution.
+The four jobs have no dependency on one another. A known unit regression must not
+prevent discovery of a separate build failure. Conversely,a successful build
+cannot stand in for unit success. No continue-on-error,skips,TODOs or optional
+assertions are introduced. Existing QA97 model failures remain unchanged.
 
-The existing always-run family receipt step embeds those suite results in its
-uploaded JSON. `verify-release-receipts.mjs` requires all three family receipts,
-actual GitHub job success, and every required suite exactly once at the expected
-full SHA and expected file with clean exit0/no signal/no launch error. Rejection
-aggregates all defects rather than stopping at whichever failed family was read
-first. Wrong-head, missing, duplicate, unknown, swapped-file and misleading
-success-text receipts are rejected. The verifier never authorizes release.
+Each family checks out the explicit full PR head and always attempts its receipt
+upload. Receipts use actual git HEAD and the job outcome. The final gate waits
+for all four,then requires both successful receipts and successful actual GitHub
+job results. Missing,wrong-head,duplicate,failed,skipped,cancelled or unknown
+families reject. Unit upload/job failure overrides an earlier success receipt.
+The verifier aggregates every rejection and always returns releaseAuthorized:false
+even in a fully green case. CI is not independent acceptance or Founder approval.
 
-## Current known candidate boundaries
+The build retains the existing guarded synthetic configuration:invalid-signature
+fixture key,TEST-shaped public identity,public-key fingerprint and QA bundle scan.
+It performs no hosted configuration changes or deployment. Unit/browser jobs have
+blank backend variables and no hosted credentials. Permissions remain contents:read
+and checkout credentials are not persisted.
 
-The inherited QA90 completed-boss Resume and QA93 stale-tab level rollback / heart
-restoration tests stay unchanged and blocking. Gameplay owns those repairs; no
-repair is claimed here. Visual94's four-width Crypt renders and World92's guided
-Lantern/continuation checks stay in the complete manifest. Source/build includes
-TypeScript, full unit suite and the guarded synthetic QA build/bundle scan.
+## Complete browser receipts
 
-Linux sandboxed localhost Chromium is not hosted Preview, iPhone Safari,
-VoiceOver, native simulator, Founder playtest, independent QA or a natural full
-run. Per-suite success says only that that process completed its assertions at
-this SHA. It does not change the meaning of fixture-based tests.
+The explicit browser manifest requires16suites(13smoke,3boss). Each runs in an
+isolated Node child. A failed/crashed/timed-out child remains failed while later
+suites are attempted. Incremental actual-SHA/name/file/exit/signal/error receipts
+are embedded in the family receipt. Missing,duplicate,unknown,wrong-file or
+nonclean outcomes reject. Parent cancellation/timeout still blocks the gate.
+Artifacts and Actions summary tables retain scoped results despite a red family.
 
-## Ownership and maintenance
+Current app coverage includes checkpoint validation/navigation,Jetpack,Lantern,
+cross-feature saves,Hub/Town four-width presentation,Crypt continuation/combat/
+inspection,Town development-mode continuity,sequential stale-tab control and
+boss boundary/handoff/recovery. Authored fixtures remain identified in their
+individual test docs. Browser process success is not full-run or device coverage.
 
-Integration owns the runner, coverage manifest, workflow, receipt verifier and
-regression tests. Add a new mandatory suite to the explicit manifest when adding
-its CI coverage; the gate then rejects an omitted execution. Preserve existing
-non-root browser checks, request isolation, fail-closed hosted branch guard and
-contents:read permissions. No merge, manual deployment, auth bypass or production
-operation is included. Exact head/run/job outcomes and deployment identity are
-posted in the single run checkpoint after execution, not assumed from this doc.
+## Current boundaries and ownership
+
+QA97's deterministic overlapping-writer model still fails two no-rollback
+contracts;native browser reachability is unproven. Gameplay owns any protocol
+repair. This integration change collects build evidence while retaining that
+rejection. No failing test implementation is edited.
+
+Integration owns the workflow,receipt gate and this documentation. World/UI/
+Gameplay/QA source ownership is unchanged. Native simulator remains postponed;
+no hosted/iPhoneSafari/VoiceOver/Founder/independent acceptance is implied.
+Current full SHA,exact run/jobs,outcomes and deployment identity belong in the
+GitHub checkpoint after execution. No merge,manual deployment,auth bypass,
+production data or protected-branch change is authorized here.

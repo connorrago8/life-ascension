@@ -70,3 +70,19 @@ test('success text cannot conceal failed exit, signal, launch error or missing o
     assert.throws(() => verifyReleaseReceipts(sha, r, jobs()), /Contract failed or incomplete/);
   }
 });
+
+
+test('a successful build and all browsers cannot replace missing unit-test evidence', () => {
+  const r = reports().filter(row => row.check !== 'unit-tests');
+  assert.throws(() => verifyReleaseReceipts(sha, r, jobs()), /Missing receipt: unit-tests/);
+});
+test('failed, skipped or cancelled unit tests block independently of successful build evidence', () => {
+  for (const result of ['failure', 'skipped', 'cancelled', undefined]) {
+    const r = reports(); r.find(row => row.check === 'unit-tests').result = result;
+    assert.throws(() => verifyReleaseReceipts(sha, r, jobs()), /unit-tests reported/);
+  }
+});
+test('unit-test upload/job failure overrides its earlier successful receipt', () => {
+  const actual = jobs(); actual['unit-tests'].result = 'failure';
+  assert.throws(() => verifyReleaseReceipts(sha, reports(), actual), /unit-tests job did not succeed/);
+});
