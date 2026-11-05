@@ -1,7 +1,7 @@
 name: Consolidated candidate evidence
 on:
   pull_request:
-    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105', 'qa/brain-rot-checkpoint-races-20261105']
+    branches: ['gameplay/brain-rot-resume-authority-20261104', 'integration/candidate-evidence-gates-20261105', 'gameplay/brain-rot-boss-handoff-20261105', 'qa/brain-rot-recovery-clock-20261105', 'visual/emberhaven-destination-cards-20261105', 'systems/crypt-continuation-20261105', 'qa/brain-rot-checkpoint-races-20261105', 'visual/crypt-combat-resources-20261105']
 permissions:
   contents: read
 jobs:
@@ -50,12 +50,16 @@ jobs:
           CHECK_RESULT: ${{ job.status }}
         run: |
           node --input-type=module <<'NODE'
-          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
           import { execFileSync } from 'node:child_process';
           mkdirSync('ci-evidence', { recursive: true });
           const check = process.env.CHECK_NAME;
           const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT }));
+          let contracts;
+          if (check !== 'source-build') {
+            try { contracts = JSON.parse(readFileSync('browser-contract-evidence/' + check + '.json', 'utf8')).contracts; } catch {}
+          }
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT, contracts }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
@@ -96,17 +100,7 @@ jobs:
             sleep 1
           done
           test "$ready" = true || { cat /tmp/release-browser.log; exit 1; }
-          node --test tests/browser/brain-rot-checkpoint.qa.mjs
-          node tests/browser/brain-rot-navigation.qa.mjs
-          node tests/browser/jetpack-controls.qa.mjs
-          node tests/browser/lantern-persistence.qa.mjs
-          node tests/browser/local-progress-integration.qa.mjs
-          node tests/browser/hub-destinations.qa.mjs
-          node tests/browser/town-destinations.qa.mjs
-          node tests/browser/crypt-continuation.qa.mjs
-          node tests/browser/lantern-guided-route.qa.mjs
-          node tests/browser/crypt-combat-resources.qa.mjs
-          node --test tests/browser/brain-rot-checkpoint-races.qa.mjs
+          node scripts/run-browser-contracts.mjs browser-smoke
       - name: Record actual checkout and outcome
         if: always()
         env:
@@ -114,12 +108,16 @@ jobs:
           CHECK_RESULT: ${{ job.status }}
         run: |
           node --input-type=module <<'NODE'
-          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
           import { execFileSync } from 'node:child_process';
           mkdirSync('ci-evidence', { recursive: true });
           const check = process.env.CHECK_NAME;
           const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT }));
+          let contracts;
+          if (check !== 'source-build') {
+            try { contracts = JSON.parse(readFileSync('browser-contract-evidence/' + check + '.json', 'utf8')).contracts; } catch {}
+          }
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT, contracts }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
@@ -178,9 +176,7 @@ jobs:
             sleep 1
           done
           test "$ready" = true || { cat /tmp/release-browser.log; exit 1; }
-          node --test tests/browser/brain-rot-boss-boundaries.qa.mjs
-          node --test tests/browser/brain-rot-boss-handoff.qa.mjs
-          node --test tests/browser/brain-rot-boss-recovery.qa.mjs
+          node scripts/run-browser-contracts.mjs boss-boundary
       - name: Record actual checkout and outcome
         if: always()
         env:
@@ -188,12 +184,16 @@ jobs:
           CHECK_RESULT: ${{ job.status }}
         run: |
           node --input-type=module <<'NODE'
-          import { mkdirSync, writeFileSync } from 'node:fs';
+          import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
           import { execFileSync } from 'node:child_process';
           mkdirSync('ci-evidence', { recursive: true });
           const check = process.env.CHECK_NAME;
           const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT }));
+          let contracts;
+          if (check !== 'source-build') {
+            try { contracts = JSON.parse(readFileSync('browser-contract-evidence/' + check + '.json', 'utf8')).contracts; } catch {}
+          }
+          writeFileSync('ci-evidence/' + check + '.json', JSON.stringify({ check, sha, result: process.env.CHECK_RESULT, contracts }));
           NODE
       - uses: actions/upload-artifact@v4
         if: always()

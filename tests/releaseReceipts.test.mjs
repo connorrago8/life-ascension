@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { REQUIRED_CHECKS, verifyReleaseReceipts } from '../scripts/verify-release-receipts.mjs';
+import { BROWSER_CONTRACTS } from '../scripts/browser-contracts.mjs';
 const sha = 'a'.repeat(40);
-const reports = () => REQUIRED_CHECKS.map(check => ({ check, sha, result: 'success' }));
+const reports = () => REQUIRED_CHECKS.map(check => ({ check, sha, result: 'success', ...(BROWSER_CONTRACTS[check] ? { contracts: BROWSER_CONTRACTS[check].map(spec => ({ name: spec.name, file: spec.file, sha, result: 'success', exitCode: 0, signal: null, error: null })) } : {}) }));
 const jobs = () => Object.fromEntries(REQUIRED_CHECKS.map(check => [check, { result: 'success' }]));
 
 test('all required exact-head successful evidence verifies without release authorization', () => {
@@ -38,4 +39,34 @@ test('unknown receipt families cannot expand the accepted gate silently', () => 
 test('missing actual job results and malformed report collections fail closed', () => {
   assert.throws(() => verifyReleaseReceipts(sha, reports(), {}), /job did not succeed/);
   assert.throws(() => verifyReleaseReceipts(sha, null, jobs()), /required/);
+});
+
+
+test('a green browser job without detailed execution receipts cannot certify suites', () => {
+  const r = reports(); delete r[1].contracts;
+  assert.throws(() => verifyReleaseReceipts(sha, r, jobs()), /Missing contract receipts/);
+});
+test('all failing groups and missing individual suites appear in one rejection', () => {
+  const r = reports(); r[1].result = 'failure'; r[2].result = 'failure';
+  r[1].contracts.pop(); r[2].contracts.pop();
+  assert.throws(() => verifyReleaseReceipts(sha, r, jobs()), error => {
+    for (const issue of ['browser-smoke reported failure', 'boss-boundary reported failure', 'Missing contract: browser-smoke/checkpoint-races', 'Missing contract: boss-boundary/boss-recovery']) assert.ok(error.message.includes(issue));
+    return true;
+  });
+});
+test('individual wrong-head, omitted, duplicate, unknown and swapped-file evidence fails closed', () => {
+  const mutations = [
+    rows => { rows[0].sha = 'b'.repeat(40); },
+    rows => { rows.pop(); },
+    rows => { rows[1] = { ...rows[0] }; },
+    rows => { rows.push({ ...rows[0], name: 'unapproved-suite' }); },
+    rows => { rows[0].file = rows[1].file; },
+  ];
+  for (const mutate of mutations) { const r = reports(); mutate(r[1].contracts); assert.throws(() => verifyReleaseReceipts(sha, r, jobs())); }
+});
+test('success text cannot conceal failed exit, signal, launch error or missing outcome', () => {
+  for (const patch of [{ exitCode: 1 }, { exitCode: null }, { signal: 'SIGKILL' }, { error: 'ETIMEDOUT' }, { result: 'skipped' }, { error: undefined }]) {
+    const r = reports(); Object.assign(r[1].contracts[0], patch);
+    assert.throws(() => verifyReleaseReceipts(sha, r, jobs()), /Contract failed or incomplete/);
+  }
 });
