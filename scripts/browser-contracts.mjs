@@ -11,6 +11,7 @@ export const BROWSER_CONTRACTS = Object.freeze({
     ['town-mode-continuity', 'town-mode-continuity'],
     ['serialized-writes', 'brain-rot-serialized-writes'],
     ['save-timeout', 'brain-rot-save-timeout', true],
+    ['town-query-links', 'town-query-links'],
     ['checkpoint-races', 'brain-rot-checkpoint-races', true],
   ].map(([name, file, test]) => Object.freeze({ name, file: `tests/browser/${file}.qa.mjs`, test: !!test }))),
   'boss-boundary': Object.freeze([
