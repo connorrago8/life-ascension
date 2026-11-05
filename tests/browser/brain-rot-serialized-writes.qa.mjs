@@ -30,7 +30,12 @@ try{
   // While this start waits, the lock holder accepts a valid newer completion.
   const completed={...checkpoint,revision:2,run:core.completeLevel(checkpoint.run)};
   await holder.evaluate(({key,saveKey,completed})=>{localStorage.setItem(key,JSON.stringify(completed));localStorage.setItem(saveKey,JSON.stringify(completed.run));window.releaseLock();},{key:core.CHECKPOINT_KEY,saveKey:core.SAVE_KEY,completed});
-  await player.getByText('Level 2/31',{exact:true}).waitFor();
+  try{await player.getByText('Level 2/31',{exact:true}).waitFor();}
+  catch(error){
+   const stored=await holder.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);
+   console.log(JSON.stringify({case:'native-conflict-recovery-diagnostic',width,storedLevel:stored?.run?.level,revision:stored?.revision,ui:await player.locator('main').innerText(),errors,forbidden}));
+   throw error;
+  }
   await holder.waitForFunction(async lock=>!(await navigator.locks.query()).held.some(x=>x.name===lock)&&!(await navigator.locks.query()).pending.some(x=>x.name===lock),lock);
   const after=await holder.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY);
   assert.equal(after.run.level,2);assert.equal(after.revision,2);assert.equal(await player.getByRole('button',{name:'Pause & Save',exact:true}).count(),0);
