@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './CryptCombatResources.module.css';
+import './CryptCamp.css';
 import { CryptInspectionDialog } from './CryptInspectionDialog';
 import { AdventurerSprite } from '../AdventurerSprite';
 import { PALETTE } from '../spriteArt';
@@ -248,7 +249,7 @@ function Camp(props: {
   };
 
   return (
-    <main className="wrap delve" aria-label="Forgotten Crypt camp">
+    <main className="wrap delve crypt-camp" aria-label="Forgotten Crypt camp">
       <div className="delve-top">
         <InAppBackLink className="btn ghost delve-leave" href={props.exitHref}>← Back</InAppBackLink>
         <h1 className="delve-title">Forgotten Crypt</h1>
@@ -261,8 +262,8 @@ function Camp(props: {
         <div className="delve-hero-sprite"><HeroSprite loadout={loadout} label="Your adventurer with Crypt gear" /></div>
         <div>
           <p className="delve-level">Level {props.level}</p>
-          <p className="muted delve-small">Only real quests level you up. Each level gives 3 more points.</p>
-          <p className="delve-small delve-worn">Wearing {wornGearLabels(loadout).join(' · ')}</p>
+          <p className="muted delve-small">Only real quests level you up. Each level gives {pointsForLevel(props.level + 1) - pointsForLevel(props.level)} more points.</p>
+          <p className="delve-small delve-worn" aria-live="polite" aria-atomic="true">Wearing {wornGearLabels(loadout).join(' · ')}</p>
           <p className="delve-small">Max HP {maxHpFor(preview, props.level)} · Crit {Math.round(critChance(preview) * 100)}% · Dodge {Math.round(dodgeChance(preview) * 100)}%</p>
         </div>
       </section>
@@ -308,10 +309,14 @@ function Camp(props: {
               const worn = loadout[entry.slot] === id;
               return (
                 <li key={id} className={`delve-loot rarity-${entry.rarity}`}>
-                  <strong>{entry.name}</strong> <span className="delve-small">{bonusLabel(entry)}</span>
-                  {passiveLabel(entry) ? <span className="delve-small delve-passive">✦ {passiveLabel(entry)}</span> : null}
-                  {entry.earnedOnly ? <span className="soon-pill">Quest-earned</span> : null}
-                  {worn ? <span className="soon-pill">Worn</span> : null}
+                  <div className="camp-gear-copy">
+                    <strong>{entry.name}</strong>
+                    <span className="delve-small">{entry.rarity} · {entry.slot}</span>
+                    <span className="delve-small">{bonusLabel(entry)}</span>
+                    {passiveLabel(entry) ? <span className="delve-small delve-passive">✦ {passiveLabel(entry)}</span> : null}
+                    {entry.earnedOnly ? <span className="soon-pill">Quest-earned</span> : null}
+                    {worn ? <span className="soon-pill">Worn</span> : null}
+                  </div>
                   <button type="button" className="btn ghost delve-wear" aria-pressed={worn}
                     aria-label={worn ? `Take off ${entry.name}` : `Wear ${entry.name} this run`}
                     onClick={() => toggleWear(id)}>{worn ? 'Take off' : 'Wear'}</button>
