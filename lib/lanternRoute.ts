@@ -15,7 +15,8 @@ export type LanternProgress = {
 export const EMPTY_LANTERN: LanternProgress = { started: false, clues: [], placed: [], solved: false, kept: false };
 
 export const LANTERN_PURPOSE = 'A short town story. Find 3 clues, then put them in order.';
-export const LANTERN_RESET_COPY = 'Progress is saved on this device and kept when you leave or reload. Reset starts the clues over. The lit lantern stays. XP, items, and streaks do not change.';
+export const LANTERN_RESET_COPY = 'Reset starts the clues over. The lit lantern stays. XP, items, and streaks do not change.';
+export const LANTERN_SAVED_COPY = 'Progress is saved on this device and kept when you leave or reload.';
 
 function stops(value: unknown): LanternStop[] {
   if (!Array.isArray(value)) return [];
@@ -49,15 +50,35 @@ export function readLanternProgress(store: Pick<Storage, 'getItem'> | null): Lan
   }
 }
 
-export function writeLanternProgress(store: Pick<Storage, 'setItem'> | null, progress: LanternProgress): void {
-  if (!store) return;
+export function writeLanternProgress(store: Pick<Storage, 'setItem'> | null, progress: LanternProgress): boolean {
+  if (!store) return false;
   try {
     store.setItem(LANTERN_STORAGE_KEY, JSON.stringify(progress));
+    return true;
   } catch {
-    /* The story still plays for this visit. */
+    return false;
   }
 }
 
 export function lanternClueCount(progress: LanternProgress): number {
   return progress.clues.length;
+}
+
+/** Acquire storage inside the guard: browsers can throw before getItem is called. */
+export function loadLanternVisit(getStore: () => Pick<Storage, 'getItem'> | null): { progress: LanternProgress; readable: boolean } {
+  try {
+    const store = getStore();
+    if (!store) return { progress: { ...EMPTY_LANTERN }, readable: false };
+    return { progress: parseLanternProgress(store.getItem(LANTERN_STORAGE_KEY)), readable: true };
+  } catch {
+    return { progress: { ...EMPTY_LANTERN }, readable: false };
+  }
+}
+
+export function saveLanternVisit(getStore: () => Pick<Storage, 'setItem'> | null, progress: LanternProgress): boolean {
+  try {
+    return writeLanternProgress(getStore(), progress);
+  } catch {
+    return false;
+  }
 }
