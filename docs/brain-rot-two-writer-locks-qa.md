@@ -61,3 +61,18 @@ Earlier gameplay/UI changes were authored in this same conversation. These new
 checks are additional evidence, not independent self-approval or release consent.
 Separate reviewer acceptance remains required. No native simulator, merge,
 deployment/protection change, production data or automation-setting change.
+
+## Native queue observation correction
+
+First-head run42132533483 passed15/16new cases.320px completion/simultaneous
+failed before releasing the lock: the first native query saw only one pending
+request, although both cross-document evaluate calls had returned. Both records
+remained initial revision1, with no storage events. No saved/conflict or rollback
+claim follows from that setup failure; the gate correctly stayed red.
+
+The test now observes native pending requests up to80times with10ms Node-clock
+yields before releasing the held lock. It still requires exactly two pending;
+extra writers fail immediately and a missing request fails after the bound.
+No write, result assertion, scenario or gameplay behavior is retried/softened.
+This synchronizes actual lock IPC visibility while the gameplay clock remains
+frozen. Complete new-head CI is required, not a retry of the old execution.

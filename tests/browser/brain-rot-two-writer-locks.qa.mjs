@@ -22,6 +22,19 @@ async function install(page){
   addEventListener('storage',e=>{if(e.key===key)window.qaStorageEvents.push({old:e.oldValue,next:e.newValue});});
  },{sources,key:core.CHECKPOINT_KEY});
 }
+/** Playwright evaluate returning does not guarantee cross-document lock IPC is visible.
+ * Observe the native queue before releasing it; never retry a write/result assertion. */
+async function pendingBarrier(page,count){
+ let observed=-1;
+ for(let poll=0;poll<80;poll++){
+  observed=await page.evaluate(async lock=>(await navigator.locks.query()).pending.filter(x=>x.name===lock).length,lock);
+  if(observed===count)return poll+1;
+  assert.ok(observed<count,'unexpected extra checkpoint writer in fixture');
+  // Node clock, not the frozen simulation clock; bounded setup synchronization only.
+  await new Promise(resolve=>setTimeout(resolve,10));
+ }
+ assert.equal(observed,count,'native queue setup did not reach required writer count');
+}
 for(const width of [320,375,390,430])for(const outcome of ['completion','heart-loss'])for(const arrival of ['ordered','simultaneous']){
  test(`${width}px ${outcome}: ${arrival} actual native-lock writers`,{timeout:45000},async()=>{
   const context=await browser.newContext({viewport:{width,height:844},hasTouch:true}),errors=[],forbidden=[];
@@ -43,10 +56,10 @@ for(const width of [320,375,390,430])for(const outcome of ['completion','heart-l
    const queue=(page,candidate)=>page.evaluate(candidate=>{window.qaPending=window.qaWriter.commitExclusive(candidate.run,candidate.active);return 'queued';},candidate);
    if(arrival==='ordered'){
     await queue(b,candidateB);
-    assert.equal(await holder.evaluate(async lock=>(await navigator.locks.query()).pending.filter(x=>x.name===lock).length,lock),1);
+    await pendingBarrier(holder,1);
     await queue(a,candidateA);
    }else await Promise.all([queue(a,candidateA),queue(b,candidateB)]);
-   assert.equal(await holder.evaluate(async lock=>(await navigator.locks.query()).pending.filter(x=>x.name===lock).length,lock),2,'both real writes wait behind native lock');
+   const queuePolls=await pendingBarrier(holder,2);
    await holder.evaluate(()=>window.qaRelease());
    const results=await Promise.all([a.evaluate(()=>window.qaPending),b.evaluate(()=>window.qaPending)]);
    assert.deepEqual([...results].sort(),['conflict','saved'],'exactly one same-generation writer may commit');
@@ -63,7 +76,7 @@ for(const width of [320,375,390,430])for(const outcome of ['completion','heart-l
    assert.deepEqual(await reader.evaluate(key=>JSON.parse(localStorage.getItem(key)),core.CHECKPOINT_KEY),JSON.parse(JSON.stringify({...expected,revision:3})));
    assert.deepEqual(await reader.evaluate(keys=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>!keys.includes(k))),[core.CHECKPOINT_KEY,core.SAVE_KEY,core.ACTIVE_KEY]),extraBefore,'no unrelated progression/storage changes');
    assert.deepEqual(errors,[]);assert.deepEqual(forbidden,[]);
-   console.log(JSON.stringify({case:'actual-two-writer-native-lock',width,outcome,arrival,results,winningLevel:winner.run.level,winningHearts:winner.run.hearts,freshWriterRevision:3,errors,forbidden}));
+   console.log(JSON.stringify({case:'actual-two-writer-native-lock',width,outcome,arrival,queuePolls,results,winningLevel:winner.run.level,winningHearts:winner.run.hearts,freshWriterRevision:3,errors,forbidden}));
   }catch(error){
    console.log(JSON.stringify({case:'actual-two-writer-failure',width,outcome,arrival,documents:await Promise.all([a,b].filter(Boolean).map(p=>p.evaluate(key=>({events:window.qaStorageEvents,checkpoint:localStorage.getItem(key)}),core.CHECKPOINT_KEY).catch(()=>null))),errors,forbidden}));throw error;
   }finally{await context.close();}
