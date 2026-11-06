@@ -81,11 +81,11 @@ function memoryDb(tables, calls) {
         tables.quest_progress.push({ id, user_id: userId, quest_id: quest.id, note: args.p_note });
         return { data: id, error: null };
       }
-      if (fn === 'set_quest_instance_status_as_user') {
+      if (fn === 'set_quest_instance_status_with_receipt_as_user') {
         const instance = tables.quest_instances.find((row) => row.id === args.p_instance_id && row.owner_id === userId);
         if (!instance) return { data: null, error: { message: 'Instance not found' } };
         const quest = tables.quests.find((row) => row.id === instance.quest_id && row.owner_id === userId);
-        if (instance.status === 'completed') return { data: 'completed', error: null };
+        if (instance.status === 'completed') return { data: receipt('already_awarded', 0), error: null };
         if (!quest?.active) return { data: null, error: { message: 'Active quest not found' } };
         if (quest.cadence === 'daily' && (instance.due_date > today || (quest.scheduled_for && instance.due_date < quest.scheduled_for))) {
           return { data: null, error: { message: 'Future daily quests cannot be completed' } };
@@ -94,8 +94,8 @@ function memoryDb(tables, calls) {
           return { data: null, error: { message: 'Daily quests can only be completed for today or the previous 2 days' } };
         }
         instance.status = 'completed';
-        tables.xp_ledger.push({ owner_id: userId, instance_id: instance.id, amount: 1 });
-        return { data: 'completed', error: null };
+        tables.xp_ledger.push({ owner_id: userId, instance_id: instance.id, amount: 10 });
+        return { data: receipt('awarded', 10), error: null };
       }
       if (fn === 'ensure_quest_instance_as_user') {
         const quest = tables.quests.find((row) => row.id === args.p_quest_id && row.owner_id === userId && row.active);
@@ -169,6 +169,24 @@ class Query {
     return { data: rows, error: null };
   }
 }
+
+function receipt(reward_status, xp_awarded, first_of_day = false) {
+  return { schema_version: 1, status: 'completed', quest_completion_confirmed: true,
+    reward_status, xp_awarded, base_xp: 10, streak_fire: 0, first_of_day };
+}
+
+test('API completion returns the server base-10 receipt without inferring XP in the client', async () => {
+  const { db } = seed();
+  const result = await asAlice(db, 'submit_completion', { quest_id: 'aq-active', confirmed_complete: true });
+  assert.equal(result.ok, true);
+  assert.equal(result.result.recorded, true);
+  assert.equal(result.result.server_result.xp_awarded, 10);
+  assert.equal(result.result.server_result.base_xp, 10);
+  const again = await asAlice(db, 'submit_completion', { quest_id: 'aq-active', confirmed_complete: true });
+  assert.equal(again.result.recorded, true);
+  assert.equal(again.result.server_result.reward_status, 'already_awarded');
+  assert.equal(again.result.server_result.xp_awarded, 0);
+});
 
 function asAlice(db, name, args) {
   return runMcpTool({ db, userId: alice, method: 'api_key', name, args, today });

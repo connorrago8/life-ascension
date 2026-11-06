@@ -19,19 +19,14 @@ const migration = read('supabase/migrations/202610310001_quest_streaks_weekly.sq
 const rollback = read('supabase/rollbacks/202610310001_quest_streaks_weekly_down.sql');
 const USER = '00000000-0000-0000-0000-00000000d001';
 
-test('streak XP: first of the day has no bonus; later ones floor(xp × (1 + 0.1F))', () => {
-  assert.equal(streakXp(1, 0, true), 1);
-  assert.equal(streakXp(10, 7, true), 10, 'first quest of the day: no bonus even at F=7');
-  assert.equal(streakXp(10, 1, false), 11, 'F=1 → ×1.1');
-  assert.equal(streakXp(10, 7, false), 17, 'F=7 → ×1.7');
-  assert.equal(streakXp(3, 5, false), 4, 'floor(4.5)');
-  assert.equal(streakXp(1, 7, false), 1, 'floor(1.7): a 1 XP quest shows no bonus until F=10');
-  assert.equal(streakXp(1, 9, false), 1);
-  assert.equal(streakXp(1, 10, false), 2);
-  assert.equal(streakXp(1, 20, false), 3);
-  assert.equal(streakXp(1, 400, false), 41, 'no cap');
-  for (let f = 0; f < 200; f++) assert.equal(streakXp(7, f, false), Math.floor((7 * (10 + f)) / 10), 'integer math');
-  assert.equal(streakBonusPercent(7), 70);
+test('base 10 XP uses nearest, half-up integer rounding for any positive base', () => {
+  for(const [fire, amount] of [[0,10],[1,11],[5,15],[7,17],[10,20]]) assert.equal(streakXp(10,fire,false),amount);
+  for(const fire of [0,7,14]) assert.equal(streakXp(10,fire,true),10);
+  assert.equal(streakXp(15,1,false),17,'15 × 1.1 = 16.5 rounds up');
+  assert.equal(streakXp(1,7,false),2,'1.7 rounds to 2');
+  assert.equal(streakXp(1,400,false),41,'no cap');
+  for(let f=0;f<200;f++) assert.equal(streakXp(7,f,false),Math.floor((7*(10+f)+5)/10));
+  assert.equal(streakBonusPercent(7),70);
 });
 
 test('fire counts consecutive days ending yesterday; today never counts; a miss resets', () => {
@@ -119,35 +114,23 @@ test('Home glance mirrors the board: off-board dailies are not "left" but count 
   assert.deepEqual(todayGlance(quests, instances, '2026-10-30'), { left: 7, done: 1 }, 'legacy callers unchanged');
 });
 
-test('parseStreak validates the RPC and the hint is honest about rounding', () => {
-  assert.deepEqual(parseStreak({ fire: 7, done_today: true, today: '2026-10-30', time_zone: 'America/Chicago' }),
-    { fire: 7, doneToday: true, today: '2026-10-30', timeZone: 'America/Chicago' });
-  for (const bad of [null, {}, { fire: -1, done_today: true, today: '2026-10-30' }, { fire: 1.5, done_today: true, today: '2026-10-30' },
-    { fire: 1, done_today: 'yes', today: '2026-10-30' }, { fire: 1, done_today: true, today: 'today' }]) assert.equal(parseStreak(bad), null);
-  assert.equal(streakHint({ fire: 7, doneToday: true, today: '', timeZone: '' }), 'next quests +70% · 1 XP each');
-  assert.equal(streakHint({ fire: 12, doneToday: true, today: '', timeZone: '' }), 'next quests +120% · 2 XP each');
-  assert.equal(streakHint({ fire: 7, doneToday: false, today: '', timeZone: '' }), 'First quest today keeps the streak');
-  assert.equal(streakHint({ fire: 0, doneToday: false, today: '', timeZone: '' }), 'Finish a quest today to light the fire');
+test('parseStreak validates the RPC and hint shows the current fire award', () => {
+  assert.equal(parseStreak({fire:7,done_today:true,today:'2026-10-30'}).fire,7);
+  for(const bad of [null,{}, {fire:-1,done_today:true,today:'2026-10-30'}, {fire:1,done_today:'yes',today:'2026-10-30'}]) assert.equal(parseStreak(bad),null);
+  assert.equal(streakHint({fire:7,doneToday:true,today:'',timeZone:''}),'🔥 7 · next quests 17 XP');
+  assert.equal(streakHint({fire:0,doneToday:false,today:'',timeZone:''}),'Finish a quest today to light the fire');
 });
 
-test('completion toast shows boosted XP only when the receipt proves the streak rule', () => {
-  const id = 'b1111111-1111-4111-8111-111111111111';
-  const base = { schema_version: 1, status: 'completed', quest_instance_id: id, quest_completion_confirmed: true,
-    reward_status: 'awarded', reward_confirmed: true, reward_awarded_at: '2026-10-30T15:00:00Z' };
-  assert.equal(completionFeedback({ ...base, xp_awarded: 2, base_xp: 1, streak_fire: 12, first_of_day: false }, id),
-    'Quest completed. +2 XP earned (🔥 12 streak bonus +120%).');
-  assert.equal(completionFeedback({ ...base, xp_awarded: 1, base_xp: 1, streak_fire: 7, first_of_day: true }, id),
-    'Quest completed. +1 XP earned. 🔥 7 streak kept.');
-  assert.match(completionFeedback({ ...base, xp_awarded: 1, base_xp: 1, streak_fire: 7, first_of_day: false }, id), /rounds to \+1 until 🔥 10/);
-  for (const forged of [
-    { ...base, xp_awarded: 2 },
-    { ...base, xp_awarded: 2, base_xp: 1, streak_fire: 12, first_of_day: true },
-    { ...base, xp_awarded: 3, base_xp: 1, streak_fire: 12, first_of_day: false },
-    { ...base, xp_awarded: 2, base_xp: 2, streak_fire: 12, first_of_day: false },
-    { ...base, xp_awarded: 2, base_xp: 1, streak_fire: 7, first_of_day: false },
-    { ...base, xp_awarded: 2, base_xp: 1, streak_fire: '12', first_of_day: false },
-    { ...base, xp_awarded: 2, base_xp: 1, streak_fire: 12, first_of_day: false, reward_confirmed: false },
-  ]) assert.doesNotMatch(completionFeedback(forged, id), /XP earned/);
+test('completion toast accepts only matching server base-10 receipts', () => {
+  const id='b1111111-1111-4111-8111-111111111111';
+  const base={schema_version:1,status:'completed',quest_instance_id:id,quest_completion_confirmed:true,
+    reward_status:'awarded',reward_confirmed:true,reward_awarded_at:'2026-10-30T15:00:00Z'};
+  assert.equal(completionFeedback({...base,xp_awarded:17,base_xp:10,streak_fire:7,first_of_day:false},id),
+    'Quest completed. +17 XP earned (🔥 7 streak bonus +70%).');
+  assert.equal(completionFeedback({...base,xp_awarded:10,base_xp:10,streak_fire:7,first_of_day:true},id),
+    'Quest completed. +10 XP earned. 🔥 7 streak kept.');
+  for(const forged of [{xp_awarded:16,base_xp:10,streak_fire:7,first_of_day:false},
+    {xp_awarded:17,base_xp:10,streak_fire:7,first_of_day:true}]) assert.doesNotMatch(completionFeedback({...base,...forged},id),/XP earned/);
 });
 
 test('migration guards: single locked mint, no client mint, Crypt cap and RLS untouched', () => {
@@ -161,7 +144,7 @@ test('migration guards: single locked mint, no client mint, Crypt cap and RLS un
   // Every completion path mints through _award_quest_xp; nothing else inserts into the ledger.
   assert.equal((migration.match(/insert into public\.xp_ledger/g) || []).length, 1);
   assert.equal((migration.match(/public\._award_quest_xp\(auth\.uid\(\), inst\.id\)/g) || []).length, 2);
-  assert.match(migration, /check \(base_amount is null or base_amount = 1\)/, 'base XP stays 1 per quest');
+  assert.match(read('supabase/migrations/202611060001_quest_base_xp10.sql'), /public.quest_streak_xp\(10, v_fire, v_first\)/, 'base XP is 10');
   // Rollback restores the old shape.
   assert.match(rollback, /check \(amount = 1\)/);
   assert.match(rollback, /check \(cadence in \('once','daily'\)\)/);
@@ -174,7 +157,7 @@ test('board UI: fire badge, 5-quest daily board with off-board list, weekly sect
   assert.match(board, /className=\{'streak-badge'/);
   assert.match(board, /dailyBoardIds\(user,today,/);
   assert.match(board, /More daily quests \(\{offBoardQuests\.length\}\)/);
-  assert.match(board, /still counts: \+1 XP and your streak/);
+  assert.match(board, /still counts: 10 base XP and your streak/);
   assert.match(board, /weeklyVisible\(user,q\.id,today/);
   assert.match(board, /Weekly · open until Sunday night/);
   assert.match(board, /streakFor&&streakFor\.owner===user/, 'never shows another account’s streak');

@@ -7,7 +7,7 @@ db="${DB:-life_ascension_auth_test}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 user_id="00000000-0000-0000-0000-00000000f001"
-# Ten days of history ending yesterday: F=10, so a non-first completion earns floor(1*2.0)=2.
+# Ten days of history ending yesterday: F=10, so a non-first completion earns round(10*2.0)=20.
 psql -v ON_ERROR_STOP=1 -q -d "$db" <<SQL
 INSERT INTO auth.users(id) VALUES ('$user_id');
 DO \$\$
@@ -63,5 +63,5 @@ wait "$pid_b" || { cat "$tmp/b.err"; exit 1; }
 grep -qx 'true:1' "$tmp/a.log" || { echo "A:"; cat "$tmp/a.log"; exit 1; }
 grep -qx 'false:2' "$tmp/b.log" || { echo "B:"; cat "$tmp/b.log"; exit 1; }
 firsts="$(psql -v ON_ERROR_STOP=1 -qAt -d "$db" -c "SELECT count(*) FILTER (WHERE first_of_day) || ':' || sum(amount) FROM public.xp_ledger WHERE instance_id IN ('$inst_a','$inst_b');")"
-test "$firsts" = "1:3" || { echo "Unexpected first-of-day count/sum: $firsts"; exit 1; }
+test "$firsts" = "1:30" || { echo "Unexpected first-of-day count/sum: $firsts"; exit 1; }
 echo "PASS concurrent first-of-day: one unboosted first, one boosted (+2 at F=10)"

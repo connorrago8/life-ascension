@@ -4,12 +4,13 @@
  * authority: it awards XP and enforces the weekly window; this module only lets
  * the board show the same numbers without a round trip.
  *
- * Founder rules (t672u):
+ * Founder rules (t672u; base XP revised in t673u):
  *  - Fire F = consecutive local days, ending yesterday, with at least one completion.
  *    Today never counts toward F, so F is fixed all day. A day with none resets it.
  *  - The first completion of a local day keeps the streak and gets no bonus.
- *    Every other completion that day earns floor(xp × (1 + 0.10 × F)), computed in
- *    integers as floor(xp × (10 + F) / 10). No cap.
+ *    Every other completion that day earns round(xp × (1 + 0.10 × F)), half up,
+ *    computed in integers as (xp × (10 + F) + 5) floor-divided by 10. No cap.
+ *    Normal quest, manual/off-board and weekly completions all use base 10 XP.
  *  - Daily board: up to DAILY_BOARD_SIZE daily quests a day, picked per user per
  *    local day (stable across reloads). Off-board completions still count.
  *  - Weekly quests appear at a seeded time between Monday 00:00 and Thursday 12:00
@@ -20,6 +21,7 @@
  */
 
 export const QUEST_TIME_ZONE = 'America/Chicago';
+export const QUEST_BASE_XP = 10;
 export const DAILY_BOARD_SIZE = 5;
 /** Monday 00:00 to Thursday 12:00 = 3.5 days. */
 export const WEEKLY_WINDOW_MINUTES = 84 * 60;
@@ -35,12 +37,12 @@ export function fnv1a32(text: string): number {
   return hash >>> 0;
 }
 
-/** XP for one completion. Integer math only: floor(base × (10 + F) / 10). */
+/** XP for any positive integer base. Integer math only; nearest integer, half up. */
 export function streakXp(base: number, fire: number, firstOfDay: boolean): number {
   const b = Math.max(0, Math.floor(base));
   const f = Math.max(0, Math.floor(fire));
   if (firstOfDay) return b;
-  return Math.floor((b * (10 + f)) / 10);
+  return Math.floor((b * (10 + f) + 5) / 10);
 }
 
 /** Bonus percent shown in the hint ("next quests +70%"). */
@@ -130,11 +132,11 @@ export function parseStreak(value: unknown): StreakState | null {
   return { fire, doneToday: r.done_today, today: r.today, timeZone: typeof r.time_zone === 'string' ? r.time_zone : QUEST_TIME_ZONE };
 }
 
-/** The badge's hint line. Honest about rounding: with 1 XP quests the bonus shows from 🔥10. */
-export function streakHint(state: StreakState, base: number = 1): string {
+/** The badge's hint line, using the server's base-B rule. */
+export function streakHint(state: StreakState, base: number = QUEST_BASE_XP): string {
   if (!state.doneToday) return state.fire > 0 ? 'First quest today keeps the streak' : 'Finish a quest today to light the fire';
   const pct = streakBonusPercent(state.fire);
   if (pct === 0) return 'Streak kept today';
   const next = streakXp(base, state.fire, false);
-  return `next quests +${pct}% · ${next} XP each`;
+  return `🔥 ${state.fire} · next quests ${next} XP`;
 }

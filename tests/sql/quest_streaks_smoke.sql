@@ -12,12 +12,12 @@ begin
   assert public.quest_streak_xp(1, 0, true) = 1;
   assert public.quest_streak_xp(1, 7, true) = 1;
   assert public.quest_streak_xp(10, 9, true) = 10;
-  -- later completions: floor(xp * (1 + 0.1F))
+  -- later completions: round(xp * (1 + 0.1F)), half up
   assert public.quest_streak_xp(10, 0, false) = 10;
   assert public.quest_streak_xp(10, 1, false) = 11, 'F=1 x1.1';
   assert public.quest_streak_xp(10, 7, false) = 17, 'F=7 x1.7';
-  assert public.quest_streak_xp(3, 5, false) = 4, 'floor(4.5)';
-  assert public.quest_streak_xp(1, 7, false) = 1, 'floor(1.7)';
+  assert public.quest_streak_xp(15, 1, false) = 17, '16.5 rounds up';
+  assert public.quest_streak_xp(1, 7, false) = 2, '1.7 rounds to 2';
   assert public.quest_streak_xp(1, 10, false) = 2;
   assert public.quest_streak_xp(1, 25, false) = 3, 'no cap';
   assert public.quest_streak_xp(1, 400, false) = 41, 'no cap';
@@ -107,7 +107,7 @@ begin
 end $$;
 
 -- Live awards through the real RPCs (relative to the real local today) ---------------------
--- e003: F=7 (only floor(1.7)=1 with 1 XP quests); e004: F=12 -> 2 XP; e005: missed yesterday -> F=0.
+-- e003: F=7 F7 -> 17 XP; e004: F12 -> 22 XP; e005: missed yesterday -> F=0.
 do $$
 declare today date := (now() at time zone 'America/Chicago')::date; d integer;
 begin
@@ -127,16 +127,16 @@ begin
   q1 := public.create_scheduled_quest('Board daily', 'home', 'daily', today, 'scheduled');
   q2 := public.create_scheduled_quest('Off-board daily', 'home', 'daily', today, 'scheduled');
   q3 := public.create_scheduled_quest('Off-board via API path', 'home', 'daily', today, 'scheduled');
-  -- first of the day: +1, no bonus, streak kept
+  -- first of the day: +10, no bonus, streak kept
   i := public.ensure_quest_instance(q1, today);
   r := public.set_quest_instance_status_v2(i, 'complete');
-  assert r->>'reward_status' = 'awarded' and (r->>'xp_awarded')::int = 1 and (r->>'first_of_day')::boolean and (r->>'streak_fire')::int = 12, r::text;
+  assert r->>'reward_status' = 'awarded' and (r->>'xp_awarded')::int = 10 and (r->>'first_of_day')::boolean and (r->>'streak_fire')::int = 12, r::text;
   s := public.get_quest_streak();
   assert (s->>'fire')::int = 12 and (s->>'done_today')::boolean, 'F fixed all day';
-  -- second (off the daily board): floor(1 * 2.2) = 2
+  -- second (off the daily board): round(10 * 2.2) = 22
   i := public.ensure_quest_instance(q2, today);
   r := public.set_quest_instance_status_v2(i, 'complete');
-  assert r->>'reward_status' = 'awarded' and (r->>'xp_awarded')::int = 2 and not (r->>'first_of_day')::boolean and (r->>'base_xp')::int = 1, r::text;
+  assert r->>'reward_status' = 'awarded' and (r->>'xp_awarded')::int = 22 and not (r->>'first_of_day')::boolean and (r->>'base_xp')::int = 10, r::text;
   -- double tap / retry: never a second award
   r := public.set_quest_instance_status_v2(i, 'complete');
   assert r->>'reward_status' = 'already_awarded' and (r->>'xp_awarded')::int = 0, r::text;
@@ -156,10 +156,10 @@ declare today date := (now() at time zone 'America/Chicago')::date; q uuid; i uu
 begin
   q := public.create_scheduled_quest('F7 a', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
-  assert (r->>'xp_awarded')::int = 1 and (r->>'first_of_day')::boolean, r::text;
+  assert (r->>'xp_awarded')::int = 10 and (r->>'first_of_day')::boolean, r::text;
   q := public.create_scheduled_quest('F7 b', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
-  assert (r->>'xp_awarded')::int = 1 and (r->>'streak_fire')::int = 7 and not (r->>'first_of_day')::boolean, 'floor(1.7) = 1: ' || r::text;
+  assert (r->>'xp_awarded')::int = 17 and (r->>'streak_fire')::int = 7 and not (r->>'first_of_day')::boolean, '17 XP: ' || r::text;
 end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000e005', false);
@@ -169,10 +169,10 @@ begin
   assert (public.get_quest_streak()->>'fire')::int = 0, 'a day with no completion resets';
   q := public.create_scheduled_quest('Reset a', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
-  assert (r->>'xp_awarded')::int = 1 and (r->>'first_of_day')::boolean;
+  assert (r->>'xp_awarded')::int = 10 and (r->>'first_of_day')::boolean;
   q := public.create_scheduled_quest('Reset b', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
-  assert (r->>'xp_awarded')::int = 1 and (r->>'streak_fire')::int = 0;
+  assert (r->>'xp_awarded')::int = 10 and (r->>'streak_fire')::int = 0;
 end $$;
 
 -- Weekly quests ----------------------------------------------------------------------------
@@ -197,7 +197,7 @@ begin
   set local role authenticated;
   if now() >= appears then
     r := public.set_quest_instance_status_v2(i, 'complete');
-    assert r->>'reward_status' = 'awarded' and (r->>'xp_awarded')::int = 1, r::text;
+    assert r->>'reward_status' = 'awarded' and (r->>'xp_awarded')::int = 10, r::text;
     r := public.set_quest_instance_status_v2(i, 'complete');
     assert r->>'reward_status' = 'already_awarded', 'weekly once per week';
   else
