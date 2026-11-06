@@ -1,0 +1,34 @@
+.root { font-size: 1rem; width: 100%; max-width: 760px; margin: 0 auto; padding: 20px 16px calc(120px + env(safe-area-inset-bottom)); color: #e4ece7; overflow-wrap: anywhere; }
+.root *, .root *::before, .root *::after { box-sizing: border-box; }
+.root h1 { font-size: 1.7rem; line-height: 1.25; margin: 12px 0; }
+.root h2 { font-size: 1.2rem; line-height: 1.4; }
+.root h3 { font-size: 1rem; line-height: 1.5; }
+.root h4 { margin: 0; }
+.root p { line-height: 1.6; }
+.eyebrow { font-size: .72rem; letter-spacing: .08em; color: #9ad4b5; }
+.back { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 0; color: #9ad4b5; }
+.panel { margin: 20px 0; padding: 16px; min-width: 0; background: #17201c; border: 2px solid #3e5549; border-radius: 6px; }
+.root fieldset { display: grid; gap: 12px; min-width: 0; margin: 16px 0; padding: 0; border: 0; }
+.root legend { font-weight: 700; margin-bottom: 12px; }
+.root label { display: block; min-width: 0; margin: 12px 0; line-height: 1.5; }
+.root input:not([type='radio']):not([type='checkbox']), .root textarea, .root select { display: block; min-width: 0; width: 100%; max-width: 100%; min-height: 48px; margin-top: 6px; padding: 10px; border: 1px solid #819a8c; border-radius: 4px; color: #e4ece7; background: #101713; font: inherit; }
+.root input[type='checkbox'], .root input[type='radio'] { width: 24px; height: 24px; margin: 8px 8px 8px 0; vertical-align: middle; accent-color: #93d3af; }
+.root label:has(input[type='checkbox']), .root label:has(input[type='radio']) { min-height: 48px; padding: 4px; border: 1px solid #526b5d; border-radius: 4px; }
+.root textarea { min-height: 96px; resize: vertical; }
+.root button { max-width: 100%; min-width: 44px; min-height: 48px; margin: 4px 0; padding: 10px 14px; font: inherit; white-space: normal; line-height: 1.5; overflow-wrap: anywhere; }
+.root :focus-visible { outline: 3px solid #e8c170; outline-offset: 3px; }
+.root button:disabled { opacity: .6; cursor: wait; }
+.root button, .root input, .root select, .root textarea { scroll-margin-block: 100px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions > * { flex: 1 1 150px; }
+.pair, .offer { border-top: 1px solid #526b5d; margin-top: 16px; padding-top: 12px; min-width: 0; }
+.reward, .review, .code { padding: 12px; border-left: 3px solid #93d3af; background: #101713; margin: 12px 0; }
+.reward p { white-space: pre-wrap; }
+.notice, .error { padding: 12px; border: 1px solid #93d3af; border-radius: 4px; background: #17201c; }
+.error { border-color: #e8b7a0; }
+.account, .muted { color: #b2c4b9; font-size: .85rem; }
+.account span, .id { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.root summary { min-height: 48px; padding: 8px 0; cursor: pointer; }
+.root summary h2 { display: inline; margin: 0; }

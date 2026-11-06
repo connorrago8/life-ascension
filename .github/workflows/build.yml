@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, feature/quest-companion-ledger-20261105]
 permissions:
   contents: read
 jobs:
@@ -12,6 +12,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record exact tested commit
+        run: git rev-parse HEAD
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -50,7 +55,12 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migrations 0001–0007 and run all five SQL smoke tests
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record exact tested commit
+        run: git rev-parse HEAD
+      - name: Apply migrations 0001–0007 and run all six SQL smoke tests
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +74,8 @@ jobs:
             supabase/migrations/202610230004_lifetime_xp.sql \
             supabase/migrations/202610240005_api_key_user_context.sql \
             supabase/migrations/202610240006_quest_edit_archive.sql \
-            supabase/migrations/202610240007_daily_late_window.sql; do
+            supabase/migrations/202610240007_daily_late_window.sql \
+            supabase/migrations/20261106041700_companion_consent_quests.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
@@ -72,7 +83,45 @@ jobs:
             tests/sql/scheduling_auth_smoke.sql \
             tests/sql/two_user_mcp_auth.sql \
             tests/sql/archive_compat_smoke.sql \
-            tests/sql/daily_late_window_smoke.sql; do
+            tests/sql/daily_late_window_smoke.sql \
+            tests/sql/companion_consent_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
-          echo "All five SQL smoke tests passed"
+          echo "All six SQL smoke tests passed"
+      - name: Concurrent companion completion (actual PostgreSQL locks)
+        run: bash tests/sql/run-companion-concurrency.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: npm install --no-audit --no-fund && npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - name: Companion UI against actual isolated PostgreSQL
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54329
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: fixture-not-a-real-key
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          export CHROMIUM_BIN="$(command -v google-chrome-stable || command -v google-chrome || true)"
+          test -n "$CHROMIUM_BIN"
+          psql -v ON_ERROR_STOP=1 -d life_ascension_auth_test -f tests/sql/companion_browser_fixture.sql
+          node tests/browser/companion-fixture-server.mjs >/tmp/companion-gateway.log 2>&1 &
+          fixture_pid=$!
+          npm run dev -- --hostname 127.0.0.1 --port 3148 >/tmp/companion-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$fixture_pid" "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 http://127.0.0.1:3148/companion >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true || { cat /tmp/companion-browser.log; exit 1; }
+          node tests/browser/companion-journey.qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: companion-renders-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
+          path: artifacts/companion/
+          if-no-files-found: error
