@@ -3,7 +3,7 @@
 import { pathToFileURL } from 'node:url';
 import { inspectQaBrowserBundle } from './verify-qa-browser-bundle.mjs';
 
-const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review']);
+const PROTECTED_QA_BRANCHES = new Set(['audit/qa-isolation-and-reliability-20261027', 'beta/quest-ui-clean-review', 'beta/crypt-intro-exit-accessibility-20261029']);
 
 export async function verifyQaBrowserBundleAfterBuild({
   env = process.env,

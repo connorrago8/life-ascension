@@ -44,6 +44,9 @@ export type HomeCharacterModel = {
   mainHand: string;
   mainHandAccent: string;
   mainHandAccentLight: string;
+  /** Default Rusty Armor / Rusty Sword shown while the slot is empty (lib/starterLook, 0 stats). */
+  starterArmor?: boolean;
+  starterWeapon?: boolean;
   motifs: readonly string[];
   itemNames: readonly string[];
   signature: string;
@@ -207,6 +210,10 @@ export function homeCharacterModel(appearance: Appearance): HomeCharacterModel {
   const motifs = equipment.map((item) => item.motif);
   const names = itemNames(appearance);
   const mainHand = main?.motif ?? 'none';
+  // Mirrors lib/starterLook starterSlots(): an empty Armor (chest) or Weapon (main-hand)
+  // slot wears its default Rusty item. Kept import-free for the isolated render tests.
+  const starterArmor = !visibleItem(appearance, 'chest');
+  const starterWeapon = !main;
   return {
     name: appearance.name,
     hair: appearance.hair.toUpperCase(),
@@ -226,6 +233,8 @@ export function homeCharacterModel(appearance: Appearance): HomeCharacterModel {
     mainHand,
     mainHandAccent: (main?.accent ?? appearance.belt).toUpperCase(),
     mainHandAccentLight: (main?.accentLight ?? appearance.belt).toUpperCase(),
+    starterArmor,
+    starterWeapon,
     motifs,
     itemNames: names,
     signature: [appearance.hair, appearance.skin, appearance.eye, appearance.tunic, mainHand, names.join('|')].join('~'),

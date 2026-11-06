@@ -46,7 +46,7 @@ test('custom amount cannot change while saving or retrying', () => {
 });
 
 test('quest card does not promise XP before authoritative reward confirmation', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(home, /· \+1 XP/);
 });
 
@@ -56,11 +56,23 @@ test('definitive progress failures are announced to assistive technology', () =>
 });
 
 test('mobile quest card prioritizes completion without removing secondary actions', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /quest-card-actions/);
   assert.match(home, /aria-label=\{\x60Actions for \$\{quest\.title\}\x60\}/);
   assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px;/);
   assert.match(css, /\.quest-card-actions \.btn:not\(\.ghost\) \{ order: -1;/);
+});
+
+// Ported from PR #41. Source-level regression only: real 200% browser UI zoom still requires
+// independent 320/375/390/430px screenshot and focus verification.
+test('quest actions stack at high browser zoom while preserving 48px targets', () => {
+  assert.match(css, /@media \(max-width: 280px\) \{\s*\.quest-card-actions, \.quest-progress-controls \.actions \{ flex-direction: column; align-items: stretch; \}\s*\.quest-card-actions \.btn, \.quest-progress-controls \.actions \.btn \{ width: 100%; flex: 0 0 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; \}\s*\.quest-progress-controls \.actions input\[type='number'\] \{ flex: 0 0 auto; width: 100%; max-width: none !important; \}\s*\}/);
+  assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px; flex: 1 1 0; \}/);
+  // The zoom rule must come after the 430px rules it overrides.
+  assert.ok(css.indexOf('@media (max-width: 280px)') > css.indexOf('.quest-card-actions .btn { min-height: 48px;'));
+  assert.ok(css.indexOf('@media (max-width: 280px)') > css.indexOf('.quest-progress-controls .actions input[type=\'number\'] { flex: 1 1 90px;'));
+  // Stacked order follows DOM order: Complete comes after Clear in the progress row.
+  assert.ok(controls.indexOf('>Clear</button>') < controls.indexOf('<ConfirmCompleteButton label="Complete"'));
 });
 
 test('authenticated character hides sample progression level', () => {
@@ -71,7 +83,7 @@ test('authenticated character hides sample progression level', () => {
 });
 
 test('quest metadata uses progressive disclosure', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /<QuestDetails quest=\{quest\} instance=\{instance!\}\/>/);
   const componentUrl = new URL('../components/QuestDetails.tsx', import.meta.url);
   const source = readFileSync(componentUrl, 'utf8');

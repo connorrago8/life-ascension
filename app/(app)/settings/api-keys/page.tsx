@@ -126,7 +126,7 @@ export default function ApiKeysPage() {
           <h1>API keys</h1>
           <p className="muted">Signed in as your private account.</p>
         </div>
-        <a className="btn ghost" href="/">Quest board</a>
+        <a className="btn ghost" href="/quests">Quest board</a>
       </header>
 
       <section className="panel">

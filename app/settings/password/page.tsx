@@ -134,7 +134,7 @@ export default function SetPassword() {
         <button className="btn" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>
         <p id="password-status" role="status" className={ok ? 'ok' : message ? 'warn' : 'message'}>{message}</p>
       </form>
-      <p className="foot"><a href="/">Quest board</a> · <a href="/quests">Quest notes</a> · <a href="/settings/api-keys">API keys</a></p>
+      <p className="foot"><a href="/quests">Quest board</a> · <a href="/quests/journal">Quest notes</a> · <a href="/settings/api-keys">API keys</a></p>
     </main>
   );
 }

@@ -11,7 +11,7 @@ test('focus refresh cannot start a stale equipment read while equip is pending',
 });
 
 test('mutation guard is acquired before equip RPC and released in finally', () => {
- const equipStart = source.indexOf('async function setArmorEquipped');
+ const equipStart = source.indexOf('async function setItemEquipped');
  const equipEnd = source.indexOf('  useEffect(() =>', equipStart);
  assert.ok(equipStart >= 0 && equipEnd > equipStart);
  const equip = source.slice(equipStart, equipEnd);

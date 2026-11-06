@@ -2,6 +2,12 @@
 
 import { useState } from 'react';
 import { AdventurerSprite } from '../AdventurerSprite';
+import { PALETTE } from '../spriteArt';
+import { GEAR_INKS, gearOverlays } from '../../lib/crypt/delve/gearArt';
+
+// Default Rusty Sword / Rusty Armor (0 stats) on the hero sprite.
+const STARTER_OVERLAYS = gearOverlays({});
+const HERO_PALETTE = { ...PALETTE, ...GEAR_INKS };
 import { SPRITES } from '../../lib/crypt/art';
 import { COMBAT, SENTINEL, charmNote, turnLabel } from '../../lib/crypt/content';
 import { availableActions, type ActionId, type BattleState } from '../../lib/crypt/engine';
@@ -86,7 +92,7 @@ export function CombatView({
 
       <section className="fighter" aria-label={battle.player.name}>
         <div className="crypt-stage crypt-stage-player">
-          <AdventurerSprite label={battle.player.name} />
+          <AdventurerSprite label={battle.player.name} overlays={STARTER_OVERLAYS} palette={HERO_PALETTE} />
           <PixelArt rows={SPRITES.platform} className="crypt-platform" />
         </div>
         <h2>{battle.player.name}</h2>

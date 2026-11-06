@@ -46,13 +46,16 @@ test('authenticated character route opts out of preview loadout even when previe
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   const screen = await readFile(new URL('../components/preview/CharacterScreen.tsx', import.meta.url), 'utf8');
   assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
-  assert.match(route, /Lifetime XP: \{state\.xp\}/, 'authenticated Character should show the verified lifetime XP value');
-  assert.match(route, /aria-label=\{`Lifetime XP: \$\{state\.xp\}`\}/, 'lifetime XP should have an accessible label');
+  // Compact header: five stats and a slim level bar from verified XP; no big Lifetime XP card.
+  assert.doesNotMatch(route, /Lifetime XP: \{state\.xp\}/);
+  assert.match(route, /const progress = levelFor\(state\.xp\)/);
+  assert.match(route, /role="progressbar"/);
+  assert.match(route, /Lv \{progress\.level\}/);
   assert.match(screen, /characterGearView\(equipmentMode, appearance, verifiedGear\)/);
   assert.match(screen, /visibleAppearance = displayName \? \{ \.\.\.gearView\.appearance, name: displayName \}/);
   assert.match(screen, /homeCharacterModel\(visibleAppearance\)/);
   assert.match(screen, /beltPreviewStage=\{gearView\.beltStage\}/);
-  assert.match(screen, /gearView\.canChange && selectedSlot/);
+  assert.match(screen, /if \(gearView\.canChange\) \{\s*return PREVIEW_CATALOG/);
   assert.match(screen, /gearView\.canChange && !hideSampleStats/);
 });
 
@@ -111,7 +114,7 @@ test('verified armor is server-only; authenticated route cannot fabricate the sn
   assert.match(route, /equipmentMode=\{state\.preview \? 'preview' : state\.gear \? 'verified' : 'unverified'\}/);
   assert.match(screen, /gearView\.source === 'verified'/);
   assert.match(screen, /verifiedGear\?: AuthenticatedGearSnapshot/);
-  assert.match(screen, /gearView\.canChange && selectedSlot/);
+  assert.match(screen, /if \(gearView\.canChange\) \{\s*return PREVIEW_CATALOG/);
   assert.doesNotMatch(route, /equipmentMode=\{'verified'\}/);
 });
 
@@ -135,8 +138,9 @@ test('authenticated armor controls call only owner-checked RPC and refresh after
   assert.match(route, /parseAuthenticatedGearSnapshot\(gearResult\.data\)/);
   assert.match(route, /rpc\('equip_earned_armor'/);
   assert.match(route, /await load\(\)/);
-  assert.match(screen, /ownedArmor && onEquipArmor/);
+  assert.match(screen, /serverEquip = gearView\.source === 'verified' && Boolean\(verifiedGear\) && Boolean\(onEquipItem\)/);
   assert.match(screen, /disabled=\{armorBusy\}/);
+  assert.match(route, /canRequestEquip\(verifiedLevel, state\.gear\.ownedItemIds, slot, itemId\)/);
   assert.doesNotMatch(route, /sessionStorage\\.setItem/);
 });
 
@@ -170,12 +174,14 @@ test('Ashen Hood milestone never promotes XP or unavailable gear into ownership'
     { status: 'owned', remainingXp: 0 });
 });
 
-test('authenticated Character offers truthful milestone guidance and Crypt entry', async () => {
+test('authenticated Character offers truthful one-line milestone guidance without the adventure card', async () => {
   const route = await readFile(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
   assert.match(route, /state\.preview \? null : earnedArmorMilestone\(state\.xp, state\.gear\)/);
   assert.match(route, /armorMilestone\.status === 'eligible-unconfirmed'/);
   assert.match(route, /armorMilestone\.status === 'unverified'/);
   assert.match(route, /armorMilestone\.status === 'owned'/);
   assert.match(route, /armorMilestone\.status === 'earning'/);
-  assert.match(route, /href="\/play\/crypt">Enter Forgotten Crypt<\/a>/);
+  assert.doesNotMatch(route, /Continue your adventure|Go to Quest Board|Enter Forgotten Crypt/);
+  assert.doesNotMatch(route, /Armor ownership and equipped state are read from your account|Ownership is granted by your account/);
+  assert.doesNotMatch(route, /<a className="btn" href="\/play\/crypt">/);
 });

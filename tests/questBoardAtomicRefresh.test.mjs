@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 function extractLoad() {
- const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
+ const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
  const marker='const load=useCallback(async(expectedProgressInstanceId?:string)=>{',start=home.indexOf(marker),end=home.indexOf('},[]);',start);
  assert.ok(start>=0&&end>start,'Home load callback boundaries changed');
  const code=('async(expectedProgressInstanceId)=>{'+home.slice(start+marker.length,end)+'}')
@@ -16,7 +16,7 @@ function extractLoad() {
  return new Function('supabase','setUser','setReady','setQuests','setRecoveryQuests',
   'setInstances','setXp','setMessage','setRecoveryIds','setLayoutPreview',
   'todayLocal','verifiedLifetimeXp','pendingProgressInstanceIds','localStorage','process',
-  'loadEpoch','accountRef','return ('+code+');');
+  'loadEpoch','accountRef','setStreak','weekStart','parseStreak','previewBoard','return ('+code+');');
 }
 
 function setup(failure) {
@@ -30,7 +30,7 @@ function setup(failure) {
  const load=extractLoad()(supabase,v=>{state.user=v},()=>{},v=>{state.quests=v},()=>{},
   v=>{state.instances=v},v=>{state.xp=v},v=>{state.message=v},()=>{},()=>{},
   ()=>'2026-10-29',v=>v,()=>[],{length:0,key:()=>null},{env:{NODE_ENV:'test'}},
-  {current:0},{current:'account-1'});
+  {current:0},{current:'account-1'},()=>{},d=>d,()=>null,()=>({}));
  return {load,state};
 }
 for(const failure of ['instances','xp'])test('failed '+failure+' read keeps prior consistent quest/progress/XP snapshot',async()=>{

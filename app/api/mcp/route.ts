@@ -47,7 +47,7 @@ const tools = [
   },
   {
     name: 'log_quest_progress',
-    description: 'Record a confirmed numeric increment for an opt-in tracked quest instance. Reuse the SAME request_id UUID when retrying an uncertain result. The target awards 1 XP once; partial updates award no XP. Never invent progress.',
+    description: 'Record a confirmed numeric increment for an opt-in tracked quest instance. Reuse the SAME request_id UUID when retrying an uncertain result. The target awards 10 base XP once, with any earned streak bonus; partial updates award no XP. Never invent progress.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -60,7 +60,7 @@ const tools = [
   },
   {
     name: 'submit_completion',
-    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once. A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
+    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards 10 base XP plus any streak bonus at most once. The first quest today earns 10 XP and keeps the streak; later quests earn round(10 × (1 + 0.10 × fire)). A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
     inputSchema: {
       type: 'object',
       properties: {
