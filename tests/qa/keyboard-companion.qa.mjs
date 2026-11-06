@@ -7,7 +7,7 @@ function session(name){const user={id:ids[name],aud:'authenticated',role:'authen
 if(process.getuid?.()===0)throw Error('Sandboxed non-root Chromium required');
 await mkdir('artifacts/companion',{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_BIN,chromiumSandbox:true});
-const errors=[],forbidden=[],payloads=[],results=[];
+const errors=[],forbidden=[],payloads=[],results=[],usabilityFailures=[];
 async function account(name){
  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'});
  await context.addCookies([{name:'sb-127-auth-token',value:'base64-'+Buffer.from(JSON.stringify(session(name))).toString('base64url'),domain:'127.0.0.1',path:'/',sameSite:'Lax',httpOnly:false,secure:false}]);
@@ -17,11 +17,14 @@ async function account(name){
  await page.goto(base+'/companion');await page.getByRole('heading',{name:'Connection & consent',exact:true}).waitFor();return{context,page};
 }
 async function tabTo(page,target){
+ await page.locator('main[aria-busy="false"]').waitFor();
  await target.waitFor({state:'visible'});
  for(let step=0;step<160;step++){
   if(await target.evaluate(el=>el===document.activeElement)){
-   const info=await target.evaluate(el=>{const e=el instanceof HTMLInputElement&&el.type==='checkbox'?el.closest('label'):el;const r=e.getBoundingClientRect(),f=el.getBoundingClientRect();const top=document.elementFromPoint(f.x+f.width/2,f.y+f.height/2);return{w:r.width,h:r.height,inView:f.x>=0&&f.right<=innerWidth+1,hit:top===e||e.contains(top)};});
-   assert.ok(info.w>=44&&info.h>=44&&info.inView&&info.hit,'focused target must be usable and unobscured');return;
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   const info=await target.evaluate(el=>{const e=el instanceof HTMLInputElement&&el.type==='checkbox'?el.closest('label'):el;const r=e.getBoundingClientRect(),f=el.getBoundingClientRect();const top=document.elementFromPoint(f.x+f.width/2,f.y+f.height/2);return{w:r.width,h:r.height,x:f.x,y:f.y,bottom:f.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight,inView:f.x>=0&&f.right<=innerWidth+1,hit:top===e||e.contains(top),hitTag:top?.tagName,hitText:top?.textContent?.slice(0,120),label:el.getAttribute('aria-label')||el.closest('label')?.textContent?.slice(0,120)||el.textContent?.slice(0,120)};});
+   if(!(info.w>=44&&info.h>=44&&info.inView&&info.hit)){usabilityFailures.push(info);await page.screenshot({path:`artifacts/companion/qa-obstruction-${usabilityFailures.length}.png`,fullPage:false});}
+   return;
   }
   await page.keyboard.press('Tab');
  }
@@ -45,6 +48,7 @@ try{
   assert.ok(payloads.every(p=>!p.includes(secret)),'pending mystery promise absent from all recipient payloads');
   await activate(connor.page,article.getByRole('button',{name:'Decline',exact:true}));
   await connor.page.getByText('Quest declined. No XP was changed.',{exact:true}).waitFor();
+  await connor.page.locator('main[aria-busy="false"]').waitFor();
   const after=await connor.page.evaluate(()=>({tag:document.activeElement.tagName,text:document.activeElement===document.body?'BODY':document.activeElement.textContent}));
   await connor.page.keyboard.press('Tab');
   const next=await connor.page.evaluate(()=>({tag:document.activeElement.tagName,text:document.activeElement.textContent,inSection:!!document.activeElement.closest('main section')}));
@@ -66,8 +70,9 @@ try{
  assert.ok(payloads.slice(since).every(p=>!p.includes('SECRET sunset picnic')&&!p.includes('QA-HIDDEN-PROMISE')),'revoked dashboard contains no shared reward');
  assert.ok((await connor.page.locator('main').innerText()).includes('Your lifetime XP: 4'));
  await connor.page.screenshot({path:'artifacts/companion/qa-keyboard-revoked.png',fullPage:true});
- await writeFile('artifacts/companion/qa-keyboard.json',JSON.stringify({evidence:'sandboxed Chromium + synthetic auth + actual PostgreSQL/RLS; not iPhone or live Auth',results,errors,forbidden},null,2));
+ await writeFile('artifacts/companion/qa-keyboard.json',JSON.stringify({evidence:'sandboxed Chromium + synthetic auth + actual PostgreSQL/RLS; not iPhone or live Auth',results,errors,forbidden,usabilityFailures},null,2));
  assert.deepEqual(errors,[]);assert.deepEqual(forbidden,[]);
+ assert.deepEqual(usabilityFailures,[],'keyboard targets must meet size and unobscured hit-test contracts');
  assert.ok(results.every(r=>r.focusContinues),'next Tab after decline must continue within page sections, not restart at global navigation');
  console.log('PASS keyboard Tab/typing/Space/Enter: mystery send→decline at four widths; consent revocation hides shared rewards and retains account XP. Synthetic authentication; not iPhone.');
-}finally{await writeFile('artifacts/companion/qa-keyboard.json',JSON.stringify({results,errors,forbidden},null,2));await browser.close();}
+}finally{await writeFile('artifacts/companion/qa-keyboard.json',JSON.stringify({results,errors,forbidden,usabilityFailures},null,2));await browser.close();}
