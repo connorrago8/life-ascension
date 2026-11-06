@@ -1,7 +1,7 @@
 name: Quest and companion boundary QA
 on:
   pull_request:
-    branches: [companion/manual-weekly-profile-20261105]
+    branches: [companion/manual-weekly-profile-20261105, qa/companion-credit-boundaries-20261106]
 permissions:
   contents: read
 jobs:

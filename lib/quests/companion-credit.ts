@@ -19,7 +19,7 @@ export function chicagoDate(instant: Date): string {
 }
 
 export function questDayKey(actor: QuestCredit["actor"], questKey: string, localDate: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate)) throw new Error("Invalid local date");
+  calendarDate(localDate);
   if (!questKey.trim()) throw new Error("Missing quest key");
   return [actor, localDate, questKey.trim().toLowerCase()].join(":");
 }
@@ -41,11 +41,17 @@ export function awardCredits(records: readonly QuestCredit[]): { total: Record<Q
   return { total, byQuestDay };
 }
 
-/** ISO Monday-start week for date-only values; independent of server timezone. */
-export function weekStart(localDate: string): string {
+/** Reject both malformed dates and JavaScript's automatic calendar rollover. */
+function calendarDate(localDate: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(localDate)) throw new Error("Invalid local date");
   const date = new Date(localDate + "T12:00:00Z");
   if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== localDate) throw new Error("Invalid local date");
+  return date;
+}
+
+/** ISO Monday-start week for date-only values; independent of server timezone. */
+export function weekStart(localDate: string): string {
+  const date = calendarDate(localDate);
   const offset = (date.getUTCDay() + 6) % 7;
   date.setUTCDate(date.getUTCDate() - offset);
   return date.toISOString().slice(0, 10);

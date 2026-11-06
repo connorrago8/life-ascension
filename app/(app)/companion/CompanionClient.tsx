@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { companionError, type CompanionDashboard } from '../../../lib/companion/types';
 import styles from './Companion.module.css';
 import ManualJournal from './ManualJournal';
+import { revealFocusedControl } from '../../../lib/ui/focus-visibility';
 
 export default function CompanionClient() {
   const client = useMemo(() => process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? supabase() : null, []);
@@ -84,7 +85,7 @@ export default function CompanionClient() {
   const senders = dashboard?.pairs.filter(p => p.status === 'active' && p.yourRole === 'sender') ?? [];
   const selectedPair = senders.some(p => p.id === pairId) ? pairId : senders[0]?.id ?? '';
   const disabled = busy || loading;
-  return <main className={styles.root} aria-busy={disabled}>
+  return <main className={styles.root} aria-busy={disabled} onFocusCapture={event => revealFocusedControl(event.target)}>
     <a className={styles.back} href="/">← Back to Home</a>
     <header><p className={styles.eyebrow}>LIFE ASCENSION · PRIVATE COMPANION</p><h1>Quests from someone you love</h1>
       <p>Two accounts, with consent. Your XP stays yours. Companion quests earn <strong>2 XP total</strong> when completed in real life.</p></header>
