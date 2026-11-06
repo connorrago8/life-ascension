@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, feature/quest-companion-ledger-20261105, companion/consent-quest-delivery-20261105]
+    branches: [main, feature/quest-companion-ledger-20261105, companion/consent-quest-delivery-20261105, integration/quest-companion-home-20261105]
 permissions:
   contents: read
 jobs:
@@ -60,7 +60,7 @@ jobs:
           persist-credentials: false
       - name: Record exact tested commit
         run: git rev-parse HEAD
-      - name: Apply migrations 0001–0007 and run all six SQL smoke tests
+      - name: Apply migrations 0001–0007 and run all seven SQL smoke tests
         shell: bash
         run: |
           set -euo pipefail
@@ -75,7 +75,8 @@ jobs:
             supabase/migrations/202610240005_api_key_user_context.sql \
             supabase/migrations/202610240006_quest_edit_archive.sql \
             supabase/migrations/202610240007_daily_late_window.sql \
-            supabase/migrations/20261106041700_companion_consent_quests.sql; do
+            supabase/migrations/20261106041700_companion_consent_quests.sql \
+            supabase/migrations/20261106052120_companion_manual_activity.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           for file in \
@@ -84,10 +85,11 @@ jobs:
             tests/sql/two_user_mcp_auth.sql \
             tests/sql/archive_compat_smoke.sql \
             tests/sql/daily_late_window_smoke.sql \
-            tests/sql/companion_consent_smoke.sql; do
+            tests/sql/companion_consent_smoke.sql \
+            tests/sql/companion_manual_smoke.sql; do
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
-          echo "All six SQL smoke tests passed"
+          echo "All seven SQL smoke tests passed"
       - name: Concurrent companion completion (actual PostgreSQL locks)
         run: bash tests/sql/run-companion-concurrency.sh
 

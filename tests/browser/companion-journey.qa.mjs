@@ -20,7 +20,7 @@ async function account(name) {
  await context.route('**/*',route=>{
   const r=route.request(),u=new URL(r.url());
   const allowedApp=u.origin===base && ['GET','HEAD'].includes(r.method());
-  const allowedDb=u.origin==='http://127.0.0.1:54329' && (r.method()==='OPTIONS' || (r.method()==='GET' && ['/auth/v1/user','/rest/v1/quests','/rest/v1/quest_instances'].includes(u.pathname)) || (r.method()==='POST' && /^\/rest\/v1\/rpc\/(companion_command|get_lifetime_xp|create_scheduled_quest|ensure_quest_instance|set_quest_instance_status)$/.test(u.pathname)));
+  const allowedDb=u.origin==='http://127.0.0.1:54329' && (r.method()==='OPTIONS' || (r.method()==='GET' && ['/auth/v1/user','/rest/v1/quests','/rest/v1/quest_instances'].includes(u.pathname)) || (r.method()==='POST' && /^\/rest\/v1\/rpc\/(companion_command|companion_activity|get_lifetime_xp|create_scheduled_quest|ensure_quest_instance|set_quest_instance_status)$/.test(u.pathname)));
   if(!allowedApp&&!allowedDb) {forbidden.push(r.method()+' '+u.origin+u.pathname);return route.abort();}return route.continue();
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
@@ -109,6 +109,39 @@ try {
  assert.ok((await connor.page.locator('main').innerText()).includes('Your lifetime XP: 4'));
  await izzy.page.getByRole('button',{name:'Refresh shared status',exact:true}).click();
  assert.ok((await izzy.page.locator('main').innerText()).includes('Your lifetime XP: 0'));
+ // Manual companion journal: real save with a deliberately lost response, then same-ID retry.
+ const journal=connor.page.getByRole('region',{name:'Private manual companion journal',exact:true});
+ await journal.getByText('0 manual companion XP this week',{exact:true}).waitFor();
+ assert.equal(await izzy.page.getByRole('region',{name:'Private manual companion journal',exact:true}).count(),0,'private journal not shown to sender');
+ const logIds=[];let loseFirst=true;
+ await connor.context.route('**/rest/v1/rpc/companion_activity',async route=>{
+  const payload=route.request().postDataJSON();
+  if(payload.p_action!=='log')return route.fallback();
+  logIds.push(payload.p_payload.requestId);
+  if(loseFirst){loseFirst=false;const saved=await route.fetch();assert.ok(saved.ok());return route.abort('failed');}
+  return route.fallback();
+ });
+ await journal.getByLabel('Completed activity',{exact:true}).fill('<b>Read a chapter</b>');
+ await journal.getByRole('button',{name:'Save manual activity',exact:true}).click();
+ await journal.getByText(/Could not confirm the journal request/).waitFor();
+ await journal.getByRole('button',{name:'Refresh manual journal',exact:true}).click();
+ await journal.getByText('1 manual companion XP this week',{exact:true}).waitFor();
+ await journal.getByRole('button',{name:'Save manual activity',exact:true}).click();
+ await journal.getByText('Manual activity saved. Account XP unchanged.',{exact:true}).waitFor();
+ assert.equal(logIds.length,2);assert.equal(logIds[0],logIds[1],'lost-response retry keeps original request ID');
+ assert.equal(await journal.locator('article').count(),1);assert.equal(await journal.locator('h4 b').count(),0);
+ await journal.getByLabel('Completed activity',{exact:true}).fill('Take a quiet walk');
+ await journal.getByRole('button',{name:'Save manual activity',exact:true}).click();
+ await journal.getByText('2 manual companion XP this week',{exact:true}).waitFor();
+ await journal.getByRole('button',{name:'Correct manual entry: <b>Read a chapter</b>',exact:true}).click();
+ await journal.getByLabel('Correction reason',{exact:true}).fill('Logged the wrong activity');
+ await journal.getByRole('button',{name:'Record correction',exact:true}).click();
+ await journal.getByText('1 manual companion XP this week',{exact:true}).waitFor();
+ await journal.getByText('Correction: Logged the wrong activity',{exact:true}).waitFor();
+ await connor.page.reload();
+ await journal.getByText('1 manual companion XP this week',{exact:true}).waitFor();
+ assert.equal(await journal.locator('article').count(),2,'original and correction history survives reload');
+ assert.ok((await connor.page.locator('main').innerText()).includes('Your lifetime XP: 4'),'manual journal never modifies account XP');
  for(const [name,account] of [['connor',connor],['izzy',izzy]]) {
   for(const width of [320,375,390,430]) {
    await account.page.setViewportSize({width,height:844});
@@ -130,7 +163,7 @@ try {
   }
  }
  assert.deepEqual(errors,[]);assert.deepEqual(forbidden,[]);
- console.log('PASS actual companion UI → synthetic test auth → actual PostgreSQL/RLS: invite/request/confirm, send, pre-accept payload secrecy, accept/reveal, double completion, Home personal completion + overlap upgrade, Home/More round-trip/reload, separate XP/shared status, HTML-as-text, four widths/200% root text. Not live Supabase Auth, hosted preview, native zoom or iPhone evidence.');
+ console.log('PASS actual companion UI → synthetic test auth → actual PostgreSQL/RLS: invite/request/confirm, send, pre-accept payload secrecy, accept/reveal, double completion, Home personal completion + overlap upgrade, Home/More round-trip/reload, manual journal lost-response retry/correction/reload, separate XP/shared status, HTML-as-text, four widths/200% root text. Not live Supabase Auth, hosted preview, native zoom or iPhone evidence.');
  await connor.context.close();await izzy.context.close();
 } catch(error) {
  for(const [index,context] of browser.contexts().entries()) {
