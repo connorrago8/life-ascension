@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useReducer, useRef, useState } from 'react';
 import styles from './CryptCombatResources.module.css';
 import './CryptCamp.css';
 import { CryptInspectionDialog } from './CryptInspectionDialog';
@@ -525,50 +525,61 @@ const STATUS_HELP = {
   worn: 'Steady pressure: from turn 2, if your cards deal less than this in a turn, the foe is worn down by the rest as its turn starts. (END)',
 } as const;
 
-function ChipRow({ chips, label, open, setOpen }: {
-  chips: Chip[]; label: string; open: string | null; setOpen: (key: string | null) => void;
+function ChipRow({ chips, label, open, setOpen, helpId }: {
+  chips: Chip[]; label: string; open: string | null; setOpen: (key: string | null) => void; helpId: string;
 }) {
-  if (chips.length === 0) return null;
+  const active = chips.find(chip => `${label}-${chip.key}` === open);
   return (
-    <div className="delve-chips" role="group" aria-label={label}>
-      <span className="delve-chips-label delve-small muted">{label}</span>
-      {chips.map((chip) => {
-        const key = `${label}-${chip.key}`;
-        return (
-          <button key={key} type="button" className={`delve-chip chip-${chip.key}`} aria-expanded={open === key}
-            aria-label={`${chip.label}. ${chip.explain}`} onClick={() => setOpen(open === key ? null : key)}>
-            <span aria-hidden="true">{chip.icon}</span> {chip.label}
-          </button>
-        );
-      })}
+    <div className={styles.statusGroup} role="group" aria-label={`${label} statuses`}>
+      <p className={styles.statusOwner}>{label} <span className={styles.ownerCount}>{chips.length}</span></p>
+      {chips.length ? <div className="delve-chips">
+        {chips.map((chip) => {
+          const key = `${label}-${chip.key}`;
+          return (
+            <button key={key} type="button" className={`delve-chip chip-${chip.key}`} aria-expanded={open === key}
+              aria-controls={open === key ? helpId : undefined}
+              aria-label={`${label}: ${chip.label}. ${chip.explain}`} onClick={() => setOpen(open === key ? null : key)}>
+              <span aria-hidden="true">{chip.icon}</span> {chip.label}
+            </button>
+          );
+        })}
+      </div> : <p className={styles.statusEmpty}>No active effects.</p>}
+      {active ? <p id={helpId} className={styles.statusHelp} role="status" aria-atomic="true">
+        <strong>{label}: {active.label}</strong><span>{active.explain}</span>
+      </p> : null}
     </div>
   );
 }
 
-/**
- * One tappable "Statuses" pill (collapsed by default) that expands into the enemy's and
- * your status chips. Each chip still taps to explain itself.
- */
+/** Read-only disclosure; Escape returns focus without spending a combat action. */
 function StatusPanel({ battle }: { battle: Battle }) {
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  const id = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
   const foe = foeChips(battle);
   const hero = heroChips(battle);
-  const all = [...foe.map((chip) => ({ ...chip, side: 'Enemy' })), ...hero.map((chip) => ({ ...chip, side: 'You' }))];
-  const active = all.find((chip) => `${chip.side}-${chip.key}` === open) ?? null;
-  const icons = all.map((chip) => chip.icon).filter((icon, i, list) => list.indexOf(icon) === i).slice(0, 6).join('');
+  function close() {
+    setExpanded(false);
+    setOpen(null);
+    trigger.current?.focus({ preventScroll: true });
+  }
   return (
-    <div className="delve-status">
-      <button type="button" className="delve-status-pill" aria-expanded={expanded} aria-controls="delve-status-list"
-        onClick={() => setExpanded(!expanded)}>
-        Statuses <span aria-hidden="true">{icons}</span> <span className="delve-status-count">{all.length}</span>
+    <div className={`delve-status ${styles.statusInspection}`} data-expanded={expanded}
+      onKeyDown={event => {
+        if (event.key === 'Escape' && expanded) { event.preventDefault(); event.stopPropagation(); close(); }
+      }}>
+      <button ref={trigger} type="button" className="delve-status-pill" aria-expanded={expanded} aria-controls={expanded ? id : undefined}
+        onClick={() => expanded ? close() : setExpanded(true)}>
+        Statuses <span className="delve-status-count">{foe.length + hero.length}</span>
         <span aria-hidden="true"> {expanded ? '▴' : '▾'}</span>
       </button>
       {expanded ? (
-        <div id="delve-status-list" className="delve-status-list">
-          <ChipRow chips={foe} label="Enemy" open={open} setOpen={setOpen} />
-          <ChipRow chips={hero} label="You" open={open} setOpen={setOpen} />
-          {active ? <p className="delve-small delve-explain" role="status">{active.explain}</p> : null}
+        <div id={id} className={`delve-status-list ${styles.statusList}`} role="region" aria-label="Combat statuses">
+          <p className={styles.statusHint}>Choose an effect to read what it does.</p>
+          <ChipRow chips={foe} label="Enemy" open={open} setOpen={setOpen} helpId={`${id}-enemy`} />
+          <ChipRow chips={hero} label="You" open={open} setOpen={setOpen} helpId={`${id}-you`} />
+          <button type="button" className={`btn ghost ${styles.hideStatuses}`} onClick={close}>Hide statuses</button>
         </div>
       ) : null}
     </div>
@@ -578,7 +589,7 @@ function StatusPanel({ battle }: { battle: Battle }) {
 function foeChips(battle: Battle): Chip[] {
   const foe = battle.foe;
   const chips: Chip[] = [];
-  if (foe.block > 0) chips.push({ key: 'block', icon: '🛡', label: `${foe.block}`, explain: STATUS_HELP.block });
+  if (foe.block > 0) chips.push({ key: 'block', icon: '🛡', label: `Block ${foe.block}`, explain: STATUS_HELP.block });
   if (foe.vulnerable > 0) chips.push({ key: 'exposed', icon: '🎯', label: `Exposed ${foe.vulnerable}`, explain: STATUS_HELP.exposed });
   if (foe.weak > 0) chips.push({ key: 'weak', icon: '↓', label: `Weak ${foe.weak}`, explain: STATUS_HELP.weak });
   if (foe.burn > 0) chips.push({ key: 'burn', icon: '🔥', label: `Burn ${foe.burn}`, explain: STATUS_HELP.burn });

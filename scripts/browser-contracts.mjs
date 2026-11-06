@@ -7,6 +7,7 @@ export const BROWSER_CONTRACTS = Object.freeze({
     ['hub-destinations', 'hub-destinations'], ['town-destinations', 'town-destinations'],
     ['crypt-continuation', 'crypt-continuation'], ['lantern-guided-route', 'lantern-guided-route'],
     ['crypt-combat-resources', 'crypt-combat-resources'],
+    ['crypt-status-inspection', 'crypt-status-inspection'],
     ['crypt-deck-inspection', 'crypt-deck-inspection'],
     ['town-mode-continuity', 'town-mode-continuity'],
     ['serialized-writes', 'brain-rot-serialized-writes'],
