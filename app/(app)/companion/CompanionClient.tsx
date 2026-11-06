@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { companionError, type CompanionDashboard } from '../../../lib/companion/types';
 import styles from './Companion.module.css';
+import ManualJournal from './ManualJournal';
 
 export default function CompanionClient() {
   const client = useMemo(() => process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? supabase() : null, []);
@@ -151,6 +152,7 @@ export default function CompanionClient() {
           {q.status === 'completed' && <p>Completed · 2 XP total for this task, retained across reloads.</p>}
         </article>)}
       </section>)}
+    {dashboard.pairs.filter(pair=>pair.yourRole==='recipient').map(pair=><ManualJournal key={dashboard.viewerId+pair.id} pairId={pair.id} viewerId={dashboard.viewerId} connectionActive={pair.status==='active'}/>)}
     </>}
   </main>;
 }

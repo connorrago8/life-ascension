@@ -1,0 +1,11 @@
+.root { font-size:1rem; background:#18221d; border:1px solid #3e5848; border-radius:10px; padding:16px; margin-top:20px; overflow-wrap:anywhere; }
+.root h3 { font-size:1.05rem; margin:20px 0 8px; }
+.root h4 { font-size:1rem; margin:0 0 8px; }
+.root p { margin:8px 0; }
+.root label { display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+.root input { width:100%; min-width:0; min-height:48px; padding:10px; color:#f4f6f8; background:#111714; border:1px solid #718879; border-radius:8px; }
+.root article { margin-top:16px; border-top:1px solid #718879; padding-top:16px; }
+.root button { white-space:normal; max-width:100%; min-height:44px; }
+.root :focus-visible { outline:3px solid #7ed9b8; outline-offset:3px; }
+.actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+@media(prefers-reduced-motion:reduce) { .root * { transition:none; animation:none; scroll-behavior:auto; } }

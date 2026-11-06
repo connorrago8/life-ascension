@@ -34,9 +34,10 @@ const server = http.createServer(async (request,response) => {
   let body=''; for await (const chunk of request) { body+=chunk; if(body.length>12000) throw Error('Request too large'); }
   const data=body ? JSON.parse(body) : {};
   let query;
-  if (request.method==='POST' && path==='/rest/v1/rpc/companion_command') {
+  if (request.method==='POST' && ['/rest/v1/rpc/companion_command','/rest/v1/rpc/companion_activity'].includes(path)) {
   if(typeof data.p_action!=='string' || !data.p_payload || typeof data.p_payload!=='object' || Array.isArray(data.p_payload)) throw Error('Invalid request');
-  query = `select public.companion_command(${literal(data.p_action)},${literal(JSON.stringify(data.p_payload))}::jsonb);`;
+  const rpc=path.endsWith('/companion_activity')?'companion_activity':'companion_command';
+  query = `select public.${rpc}(${literal(data.p_action)},${literal(JSON.stringify(data.p_payload))}::jsonb);`;
   } else query = homeFixtureSql(request.method, url, data);
   const sql = `begin; set local role authenticated; set local "request.jwt.claim.sub"=${literal(session.user.id)}; set local standard_conforming_strings=on; ${query} commit;`;
   const { stdout } = await exec('psql',['-qAt','-v','ON_ERROR_STOP=1','-d','life_ascension_auth_test','-c',sql],{ timeout:10000,maxBuffer:1024*1024 });

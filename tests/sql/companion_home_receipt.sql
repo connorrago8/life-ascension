@@ -7,4 +7,7 @@ begin
  then raise exception 'Home/companion overlap duplicated or lost persisted credit'; end if;
  if exists(select 1 from public.xp_ledger where owner_id in ('00000000-0000-0000-0000-00000000ce02','00000000-0000-0000-0000-00000000ce03'))
  then raise exception 'Home/companion journey credited the wrong actor'; end if;
+ if (select count(*) from companion_private.activity_entries where owner_id='00000000-0000-0000-0000-00000000ce01') <> 2
+    or (select count(*) from companion_private.activity_corrections where owner_id='00000000-0000-0000-0000-00000000ce01') <> 1
+ then raise exception 'Manual journal retry or correction lost its append-only history'; end if;
 end $$;
