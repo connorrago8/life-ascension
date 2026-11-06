@@ -6,7 +6,7 @@ const SAFE_MESSAGES = new Set([
   'Only the agreed sender can assign quests', 'A title and send identifier are required', 'Invalid category',
   'Text is too long', 'A mystery needs a reward promise', 'Due date must be within the next year',
   'This send attempt already exists; refresh before editing', 'Only pending quests can be declined',
-  'Overlap must be your active quest for today', 'This task already has companion credit',
+  'Overlap must be your eligible real-life task', 'This task already has companion credit',
   'Accept this quest first', 'This task is already completed', 'Choose a rain-check date within the next year',
   'Companion conflict; refresh before retrying', 'Invalid companion request', 'Sign-in required',
 ]);

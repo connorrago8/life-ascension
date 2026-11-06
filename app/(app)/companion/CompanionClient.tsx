@@ -62,7 +62,7 @@ export default function CompanionClient() {
   async function command(action: string, payload: Record<string, unknown>, success: string, onSuccess?: (result: Record<string, unknown>) => void): Promise<boolean> {
     if (!client || busyRef.current) return false;
     busyRef.current = true; setBusy(true); setError(false); setMessage('Saving…');
-    const mine = generation.current;
+    const mine = generation.current, actor = currentAccount.current;
     try {
       const result = await client.rpc('companion_command', { p_action: action, p_payload: payload });
       if (mine !== generation.current) return false;
@@ -72,6 +72,7 @@ export default function CompanionClient() {
         const refreshGeneration = generation.current + 1;
         if (!await load() || generation.current !== refreshGeneration) return false;
       }
+      if (currentAccount.current !== actor) return false;
       onSuccess?.(result.data as Record<string, unknown>);
       return true;
     } catch {
@@ -107,7 +108,7 @@ export default function CompanionClient() {
           <label>Have a companion’s code?<input autoComplete="off" value={code} maxLength={64} disabled={disabled} onChange={event => { setCode(event.target.value); setPreview(null); }} /></label>
           <button className="btn ghost" disabled={disabled || code.trim().length !== 64}>Review invitation</button>
         </form>
-        {preview && <div className={styles.review}><p><strong>{preview.name}</strong> invites you to {preview.yourRole === 'sender' ? 'send them' : 'receive their'} quests. Only shared quest status is visible; private records and XP remain separate.</p>
+        {preview && <div className={styles.review}><p><strong>{preview.name}</strong> invites you to {preview.yourRole === 'sender' ? 'send them' : 'receive their'} quests. Your display name and account ID are shared for confirmation. Only agreed quest status is shared afterward; private records and XP remain separate.</p>
           <button className="btn" disabled={disabled} onClick={async () => { await command('join', { code }, 'Connection requested. Ask your companion to confirm your account.', () => { setPreview(null); setCode(''); }); }}>I consent · request to join</button></div>}
         {dashboard.pairs.map(pair => <article className={styles.pair} key={pair.id}><h3>{pair.name} · {pair.status}</h3>
           <p>Your role: {pair.yourRole === 'sender' ? 'send quests' : 'receive quests'}</p>

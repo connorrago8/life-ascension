@@ -85,6 +85,19 @@ revoke all on function companion_private.credit_amount() from public,anon,authen
 create trigger companion_credit_amount before insert or update on public.xp_ledger
  for each row execute function companion_private.credit_amount();
 
+-- Use the existing completion contract: current quest-day daily instances, eligible
+-- unfinished one-time tasks/goals, or a legitimate completion made this quest day.
+create function companion_private.eligible_instance(p_instance uuid) returns boolean
+ language sql stable security invoker set search_path='' as $$
+ select exists(select 1 from public.quest_instances qi join public.quests qs on qs.id=qi.quest_id
+ where qi.id=p_instance and qi.owner_id=auth.uid() and qs.active and (
+  (qi.status='completed' and (qi.completed_at at time zone 'America/Chicago' - interval '5 hours')::date=(now() at time zone 'America/Chicago' - interval '5 hours')::date)
+  or (qi.status<>'completed' and (
+   (qs.cadence='daily' and qi.due_date=(now() at time zone 'America/Chicago' - interval '5 hours')::date)
+   or (qs.cadence='once' and (qs.quest_type='goal' or qi.due_date<=(now() at time zone 'America/Chicago' - interval '5 hours')::date))))));
+$$;
+revoke all on function companion_private.eligible_instance(uuid) from public,anon,authenticated;
+
 create function companion_private.command(p_action text,p_payload jsonb) returns jsonb
  language plpgsql security definer set search_path='' as $$
 declare
@@ -144,7 +157,7 @@ begin
      where cp.status='active' and u in(cq.sender_id,cq.recipient_id)),'[]'::jsonb),
    'overlaps',coalesce((select jsonb_agg(jsonb_build_object('id',sub.id,'title',sub.title,'completed',sub.status='completed')) from
     (select qi.id,qs.title,qi.status from public.quest_instances qi join public.quests qs on qs.id=qi.quest_id
-     where qi.owner_id=u and qs.active and qi.due_date=v_day
+     where qi.owner_id=u and companion_private.eligible_instance(qi.id)
      and not exists(select 1 from public.companion_quests cq where cq.instance_id=qi.id)
      order by qi.created_at desc limit 50) sub),'[]'::jsonb)) into v_response;
   return v_response;
@@ -198,7 +211,7 @@ begin
    if v_id is null then
     -- Exact-title overlap is automatic; differently-worded overlap is explicitly selected by the recipient.
     select qi.id into v_id from public.quest_instances qi join public.quests qs on qs.id=qi.quest_id
-     where qi.owner_id=u and qi.due_date=v_day and qs.active and lower(btrim(qs.title))=lower(btrim(q.title))
+     where qi.owner_id=u and companion_private.eligible_instance(qi.id) and lower(btrim(qs.title))=lower(btrim(q.title))
      order by qi.created_at limit 1;
    end if;
    if v_id is null then
@@ -208,8 +221,8 @@ begin
     if found then v_id:=public.ensure_quest_instance(v_personal_quest_id,v_day); end if;
    end if;
    if v_id is not null then
-    select * into i from public.quest_instances where id=v_id and owner_id=u and due_date=v_day for update;
-    if not found or not exists(select 1 from public.quests qs where qs.id=i.quest_id and qs.active) then raise exception 'Overlap must be your active quest for today'; end if;
+    select * into i from public.quest_instances where id=v_id and owner_id=u for update;
+    if not found or not companion_private.eligible_instance(i.id) then raise exception 'Overlap must be your eligible real-life task'; end if;
     if exists(select 1 from public.companion_quests cq where cq.instance_id=i.id) then raise exception 'This task already has companion credit'; end if;
    else
     insert into public.quests(owner_id,title,domain,cadence,scheduled_for,quest_type)

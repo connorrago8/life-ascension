@@ -49,13 +49,17 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca02',false);
 set role authenticated;
 insert into companion_fixture values('offerPayload',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair'),
+ 'recipientId','00000000-0000-0000-0000-00000000ca03','senderId','00000000-0000-0000-0000-00000000ca03','xp',999,
  'requestId','00000000-0000-0000-0000-00000000cb01','title','Brush teeth','category','hygiene','difficulty','Gentle','mystery',true,'reward','SECRET picnic promise'));
 insert into companion_fixture values('offer',public.companion_command('send',(select value from companion_fixture where label='offerPayload')));
 select public.test_companion_assert(public.companion_command('send',(select value from companion_fixture where label='offerPayload'))=(select value from companion_fixture where label='offer'),'retry sends same offer');
 select public.test_companion_assert((select count(*)=1 from public.companion_quests),'send retry creates no duplicate');
+select public.test_companion_assert((select recipient_id='00000000-0000-0000-0000-00000000ca01' and sender_id=auth.uid() from public.companion_quests),'client actor/recipient/XP overrides ignored');
 select public.test_companion_reject('send',(select value||'{"title":"Changed title"}'::jsonb from companion_fixture where label='offerPayload'),'This send attempt already exists; refresh before editing');
 select public.test_companion_assert(public.companion_command('dashboard')::text like '%SECRET picnic promise%','sender can review own promise');
 select public.test_companion_reject('accept',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='offer')),'Quest unavailable');
+select public.test_companion_reject('complete',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='offer')),'Quest unavailable');
+select public.test_companion_reject('rain-check',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='offer'),'until','2026-12-01'),'Quest unavailable');
 
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca03',false);
@@ -95,6 +99,7 @@ reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca02',false);
 set role authenticated;
 select public.test_companion_assert(public.get_lifetime_xp()=0,'Izzy did not inherit Connor XP');
+select public.test_companion_assert((select count(*)=0 from public.quest_instances),'shared status grants no access to recipient private instances');
 select public.test_companion_assert(public.companion_command('dashboard')->'quests'->0->>'status'='completed','sender can see agreed shared completion');
 insert into companion_fixture values('second',public.companion_command('send',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair'),
  'requestId','00000000-0000-0000-0000-00000000cb02','title','Take a walk','category','physical_health','reward','Visible tea promise')));
@@ -112,9 +117,34 @@ select public.companion_command('rain-check',jsonb_build_object('questId',(selec
 select public.test_companion_assert(public.get_lifetime_xp()=2,'rain check/decline has no penalty or bonus');
 select public.companion_command('complete',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='second')));
 select public.test_companion_assert(public.get_lifetime_xp()=4,'new completed quest earns2 exactly once');
+-- Future-deadline goals and uninstantiated/off-board habits reuse the original task.
+do $$ declare d date:=(now() at time zone 'America/Chicago' - interval '5 hours')::date; goal uuid; hidden uuid;
+begin
+ goal:=public.create_scheduled_quest('Plan a trip','personal_growth','once',d+7,'goal');
+ insert into companion_fixture values('futureGoal',jsonb_build_object('quest',goal));
+ insert into public.quests(owner_id,title,domain,cadence,scheduled_for) values(auth.uid(),'Off-board stretch','physical_health','daily',d) returning id into hidden;
+ insert into companion_fixture values('hiddenHabit',jsonb_build_object('quest',hidden));
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca02',false);
+set role authenticated;
+insert into companion_fixture values('futureOffer',public.companion_command('send',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair'),
+ 'requestId','00000000-0000-0000-0000-00000000cb04','title','Plan a trip')));
+insert into companion_fixture values('hiddenOffer',public.companion_command('send',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair'),
+ 'requestId','00000000-0000-0000-0000-00000000cb05','title','Off-board stretch')));
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca01',false);
+set role authenticated;
+select public.companion_command('accept',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='futureOffer')));
+select public.companion_command('accept',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='hiddenOffer')));
+select public.test_companion_assert((select count(*)=1 from public.quests where title='Plan a trip'),'no duplicate future goal');
+select public.test_companion_assert((select count(*)=1 from public.quests where title='Off-board stretch'),'no duplicate off-board habit');
+select public.companion_command('complete',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='futureOffer')));
+select public.companion_command('complete',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='hiddenOffer')));
+select public.test_companion_assert(public.get_lifetime_xp()=8,'both eligible overlaps receive2 once');
 select public.companion_command('revoke',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair')));
 select public.test_companion_assert((select count(*)=0 from public.companion_quests),'revocation removes shared RLS access');
-select public.test_companion_assert(public.get_lifetime_xp()=4,'revocation never deducts earned XP');
+select public.test_companion_assert(public.get_lifetime_xp()=8,'revocation never deducts earned XP');
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca02',false);
 set role authenticated;

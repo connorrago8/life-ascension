@@ -24,7 +24,8 @@ All promises are voluntary, not purchases or guaranteed fulfillment.
 
 Recipient: pending offers live in a private inbox, not automatically on the Board.
 Accept or decline. An accepted offer links to an explicitly selected eligible
-personal instance or an exact-title current-day overlap. Exact-title personal
+personal instance or an exact-title eligible overlap. Eligible unfinished one-time goals/chores and current-day daily instances can
+overlap; already-completed tasks must have been completed this quest day. Exact-title personal
 quests without an instance reuse ensure_quest_instance; differently-worded overlap
 requires the recipient to choose the matching task. No semantic AI match is claimed.
 New accepted offers create one normal, recipient-owned one-time goal instance.
