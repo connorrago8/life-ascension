@@ -25,7 +25,7 @@ async function account(name) {
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  if(name==='connor') page.on('response',async r=>{if(r.url().includes('/rpc/companion_command')) receiverPayloads.push(await r.text());});
- await page.goto(base+'/companion');await page.getByRole('heading',{name:'Connect privately',exact:true}).waitFor();
+ await page.goto(base+'/companion');await page.getByRole('heading',{name:'Connection & consent',exact:true}).waitFor();
  return {context,page};
 }
 try {
@@ -54,26 +54,32 @@ try {
  await connor.page.getByText('SECRET sunset picnic',{exact:true}).waitFor();
  await connor.page.getByRole('button',{name:'I completed this in real life · 2 XP total',exact:true}).dblclick();
  await connor.page.getByText('Completed · 2 XP total for this task, retained across reloads.',{exact:true}).waitFor();
- await connor.page.reload();await connor.page.getByRole('heading',{name:'Connect privately',exact:true}).waitFor();
+ await connor.page.reload();await connor.page.getByRole('heading',{name:'Connection & consent',exact:true}).waitFor();
  await connor.page.getByText('Completed · 2 XP total for this task, retained across reloads.',{exact:true}).waitFor();
  assert.ok((await connor.page.locator('main').innerText()).includes('Your lifetime XP: 2'));
  await izzy.page.getByRole('button',{name:'Refresh shared status',exact:true}).click();
  await izzy.page.getByText('Completed · 2 XP total for this task, retained across reloads.',{exact:true}).waitFor();
  assert.ok((await izzy.page.locator('main').innerText()).includes('Your lifetime XP: 0'),'separate actor totals');
- for(const width of [320,375,390,430]) {
-  await connor.page.setViewportSize({width,height:844});
-  for(const large of [false,true]) {
-   await connor.page.evaluate(large=>{document.documentElement.style.fontSize=large?'32px':'';},large);
-   const main=connor.page.getByRole('main');
-   assert.equal(await connor.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'no horizontal overflow');
-   for(const action of await main.locator('button,a,input:not([type=radio]):not([type=checkbox]),textarea,select').all()) {
-    await action.scrollIntoViewIfNeeded();const r=await action.boundingBox();assert.ok(r&&r.width>=44&&r.height>=44&&r.x>=0&&r.x+r.width<=width+1,'44px target fits');
-    assert.ok(await action.evaluate(el=>{const r=el.getBoundingClientRect();const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return top===el||el.contains(top);}), 'control not obscured');
+ for(const [name,account] of [['connor',connor],['izzy',izzy]]) {
+  for(const width of [320,375,390,430]) {
+   await account.page.setViewportSize({width,height:844});
+   for(const large of [false,true]) {
+    await account.page.evaluate(large=>{document.documentElement.style.fontSize=large?'32px':'';},large);
+    const main=account.page.getByRole('main');
+    assert.equal(await main.locator('header > p').last().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)),large?32:16,'body copy scales with root text, not just headings');
+    const connection=main.locator('details');
+    if((await connection.getAttribute('open'))===null) await connection.locator('summary').click();
+    assert.equal(await account.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'no horizontal overflow');
+    for(const action of await main.locator('button,a,summary,input:not([type=radio]):not([type=checkbox]),textarea,select').all()) {
+     await action.scrollIntoViewIfNeeded();const r=await action.boundingBox();assert.ok(r&&r.width>=44&&r.height>=44&&r.x>=0&&r.x+r.width<=width+1,'44px target fits');
+     assert.ok(await action.evaluate(el=>{const r=el.getBoundingClientRect();const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return top===el||el.contains(top);}), 'control not obscured');
+    }
+    await connection.locator('summary').click();
+    assert.equal(await connection.getAttribute('open'),null,'connected management can collapse to prioritize inbox');
+    await account.page.evaluate(()=>scrollTo(0,0));await account.page.screenshot({path:`artifacts/companion/${width}-${name}-${large?'text200':'normal'}.png`,fullPage:true});
    }
-   await connor.page.evaluate(()=>scrollTo(0,0));await connor.page.screenshot({path:`artifacts/companion/${width}-${large?'text200':'normal'}.png`,fullPage:true});
   }
  }
- await izzy.page.screenshot({path:'artifacts/companion/390-sender.png',fullPage:true});
  assert.deepEqual(errors,[]);assert.deepEqual(forbidden,[]);
  console.log('PASS actual companion UI → synthetic test auth → actual PostgreSQL/RLS: invite/request/confirm, send, pre-accept payload secrecy, accept/reveal, double completion, reload, separate XP/shared status, HTML-as-text, four widths/200% root text. Not live Supabase Auth, hosted preview, native zoom or iPhone evidence.');
  await connor.context.close();await izzy.context.close();

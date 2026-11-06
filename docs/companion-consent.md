@@ -80,8 +80,9 @@ A second SQL test observes a real lock wait between overlapping completion
 transactions and requires one ledger row,2 XP and one completion event. The
 browser journey creates a pair, sends HTML-like text and a hidden promise, checks
 ALL pre-accept response bodies for secrecy, accepts/reveals, attempts repeat
-completion, reloads and checks separate actor totals/shared status. Four widths
-and200% root text produce screenshots. These tests are pending until final-head CI.
+completion, reloads and checks separate actor totals/shared status. Both actor screens at four widths and200% root text produce16screenshots. Body
+copy scaling is explicitly measured. Connected management collapses so the inbox
+and sending form come first, while account verification stays available. These tests are pending until final-head CI.
 
 Hosted boundary: a restore-test project exists in account metadata, with no listed
 development branches. No schema/data or isolation was asserted from that name;

@@ -94,8 +94,9 @@ export default function CompanionClient() {
       <a className="btn" href="/login?next=%2Fcompanion">Sign in</a></section>}
     {signedIn && <button className="btn ghost" disabled={disabled} onClick={() => { setMessage(''); setError(false); void load(); }}>Refresh shared status</button>}
     {dashboard && <>
-      <p className={styles.account}>Your account: <span>{dashboard.viewerId}</span> · Your lifetime XP: <strong>{dashboard.personalXp}</strong></p>
-      <section className={styles.panel} aria-labelledby="companion-connect"><h2 id="companion-connect">Connect privately</h2>
+      <p className={styles.account}>Your lifetime XP: <strong>{dashboard.personalXp}</strong> · Kept separate from your companion.</p>
+      <section className={styles.panel} aria-labelledby="companion-connect"><details open={!dashboard.pairs.some(pair => pair.status === 'active')}><summary><h2 id="companion-connect">Connection &amp; consent</h2></summary>
+        <p className={styles.account}>Your account ID: <span>{dashboard.viewerId}</span></p>
         <p>Share a code privately. Joining requests a connection; the inviter must confirm the other account before any quests are shared.</p>
         <form onSubmit={async event => { event.preventDefault(); await command('invite', { role }, 'Invitation created. Share the code only with your intended companion.', result => setCreatedCode(String(result.inviteCode))); }}>
           <fieldset disabled={disabled}><legend>My role in this companionship</legend>
@@ -116,7 +117,7 @@ export default function CompanionClient() {
           {pair.status === 'requested' && (pair.canConfirm ? <><p>Verify this account ID with your companion privately before confirming.</p><button className="btn" disabled={disabled} onClick={() => { void command('confirm', { pairId: pair.id }, 'Private companionship confirmed.'); }}>Confirm this companion account</button></> : <p>Waiting for the inviter to confirm your account.</p>)}
           {pair.status !== 'revoked' && (confirmRevoke === pair.id ? <div className={styles.review}><p>End shared access? Earned XP and your own accepted tasks stay yours.</p><div className={styles.actions}><button className="btn ghost" disabled={disabled} onClick={async () => { await command('revoke', { pairId: pair.id }, 'Shared access revoked. Earned XP was retained.', () => setConfirmRevoke('')); }}>Confirm revocation</button><button className="btn ghost" disabled={disabled} onClick={() => setConfirmRevoke('')}>Keep connection</button></div></div> : <button className="btn ghost" disabled={disabled} onClick={() => setConfirmRevoke(pair.id)}>Revoke shared access</button>)}
         </article>)}
-      </section>
+      </details></section>
       {!!senders.length && <section className={styles.panel}><h2>Send a real-life quest</h2>
         <p>A voluntary invitation, not an obligation. Difficulty never changes the 2-XP total.</p>
         <form onSubmit={async event => { event.preventDefault(); sendRequest.current ||= crypto.randomUUID(); await command('send', { pairId: selectedPair, requestId: sendRequest.current, title, category, difficulty, dueDate, reward, mystery }, 'Quest delivered to the private inbox.', () => { sendRequest.current = ''; setTitle(''); setReward(''); setMystery(false); }); }}>
