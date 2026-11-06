@@ -1,5 +1,6 @@
 /** Test-only auth identities; every RPC executes the actual migration in isolated PostgreSQL. */
 import http from 'node:http';
+import { homeFixtureSql } from './home-fixture-sql.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 const exec = promisify(execFile);
@@ -25,14 +26,19 @@ const server = http.createServer(async (request,response) => {
  if (request.method==='OPTIONS') { finish(200,{}); return; }
  const session = sessions.find(s => request.headers.authorization === 'Bearer '+s.access_token);
  if (!session) { finish(401,{ message:'Unknown test identity' }); return; }
- const path = new URL(request.url,'http://127.0.0.1:54329').pathname;
+ const url = new URL(request.url,'http://127.0.0.1:54329');
+ const path = url.pathname;
  if (request.method==='GET' && path==='/auth/v1/user') { finish(200,session.user); return; }
- if (request.method!=='POST' || path!=='/rest/v1/rpc/companion_command') { finish(404,{ message:'No test route' }); return; }
+ if (!['GET','POST'].includes(request.method) || !path.startsWith('/rest/v1/')) { finish(404,{ message:'No test route' }); return; }
  try {
   let body=''; for await (const chunk of request) { body+=chunk; if(body.length>12000) throw Error('Request too large'); }
-  const data=JSON.parse(body);
+  const data=body ? JSON.parse(body) : {};
+  let query;
+  if (request.method==='POST' && path==='/rest/v1/rpc/companion_command') {
   if(typeof data.p_action!=='string' || !data.p_payload || typeof data.p_payload!=='object' || Array.isArray(data.p_payload)) throw Error('Invalid request');
-  const sql = `begin; set local role authenticated; set local "request.jwt.claim.sub"=${literal(session.user.id)}; set local standard_conforming_strings=on; select public.companion_command(${literal(data.p_action)},${literal(JSON.stringify(data.p_payload))}::jsonb); commit;`;
+  query = `select public.companion_command(${literal(data.p_action)},${literal(JSON.stringify(data.p_payload))}::jsonb);`;
+  } else query = homeFixtureSql(request.method, url, data);
+  const sql = `begin; set local role authenticated; set local "request.jwt.claim.sub"=${literal(session.user.id)}; set local standard_conforming_strings=on; ${query} commit;`;
   const { stdout } = await exec('psql',['-qAt','-v','ON_ERROR_STOP=1','-d','life_ascension_auth_test','-c',sql],{ timeout:10000,maxBuffer:1024*1024 });
   finish(200,JSON.parse(stdout.trim()));
  } catch(error) {

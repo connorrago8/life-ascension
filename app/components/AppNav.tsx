@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 const LINKS = NAV_ITEMS.filter((item): item is NavItem & { href: string } => item.href !== null);
 
 const SECONDARY = [
+  { href: '/companion', label: 'Companion inbox' },
   { href: '/quests/manage', label: 'Manage quests' },
   { href: '/settings/api-keys', label: 'API keys' },
 ] as const;
