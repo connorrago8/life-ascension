@@ -36,7 +36,7 @@ try {
  assert.equal(await connor.page.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
  await connor.page.getByRole('button',{name:'+ Create a quest',exact:true}).click();
  await connor.page.getByLabel('What real-world action will you take?').fill('Put away the laundry');
- await connor.page.getByLabel('Frequency',{exact:true}).selectOption('once');
+ await connor.page.getByLabel(/^Frequency/).selectOption('once');
  await connor.page.getByRole('button',{name:'Schedule quest',exact:true}).click();
  await connor.page.getByText('Put away the laundry',{exact:true}).waitFor();
  connor.page.once('dialog',dialog=>dialog.accept());
@@ -134,7 +134,8 @@ try {
  await connor.context.close();await izzy.context.close();
 } catch(error) {
  for(const [index,context] of browser.contexts().entries()) {
-  const page=context.pages().at(-1); if(page) await page.screenshot({path:`artifacts/companion/failure-${index}.png`,fullPage:true}).catch(()=>{});
+  const page=context.pages().at(-1); if(page) console.error('Fixture journey failure',page.url(),await page.locator('main').innerText().catch(()=>''));
+  if(page) await page.screenshot({path:`artifacts/companion/failure-${index}.png`,fullPage:true}).catch(()=>{});
  }
  throw error;
 } finally {await browser.close();}
