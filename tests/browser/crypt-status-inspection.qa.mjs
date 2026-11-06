@@ -74,10 +74,12 @@ try {
       await burn.focus(); await page.keyboard.press('Escape');
       assert.equal(await panel.count(), 0);
       assert.equal(await trigger.evaluate(el => document.activeElement === el), true, 'Escape returns focus');
+      assert.ok(await trigger.evaluate(el => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === el; }), 'returned keyboard focus is visible');
       await page.keyboard.press('Enter'); await panel.waitFor();
       assert.equal(await panel.getByRole('status').count(), 0, 'reopening clears old explanation');
       await panel.getByRole('button', { name: 'Hide statuses', exact: true }).click();
       assert.equal(await trigger.evaluate(el => document.activeElement === el), true, 'touch Hide returns focus');
+      assert.ok(await trigger.evaluate(el => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === el; }), 'returned touch focus is visible');
       assert.deepEqual(await snapshot(), before, 'inspection does not change HP, energy, deck, RNG, effects or run');
     }
     await fight.getByRole('button', { name: 'End turn', exact: true }).click();

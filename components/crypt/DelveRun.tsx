@@ -562,7 +562,7 @@ function StatusPanel({ battle }: { battle: Battle }) {
   function close() {
     setExpanded(false);
     setOpen(null);
-    trigger.current?.focus({ preventScroll: true });
+    trigger.current?.focus();
   }
   return (
     <div className={`delve-status ${styles.statusInspection}`} data-expanded={expanded}
