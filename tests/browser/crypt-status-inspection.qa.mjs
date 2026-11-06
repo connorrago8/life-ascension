@@ -96,11 +96,15 @@ try {
     const emptyEnemy = panel.getByRole('group', { name: 'Enemy statuses', exact: true });
     await emptyEnemy.getByText('No active effects.', { exact: true }).waitFor();
     assert.equal(await emptyEnemy.getByRole('button').count(), 0);
-    if (width === 390) {
-      await page.evaluate(() => { document.documentElement.style.fontSize = '32px'; });
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
-      await page.screenshot({ path: 'artifacts/crypt-status/390-empty-text200.png', fullPage: true });
-    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = '32px'; });
+    await page.screenshot({ path: `artifacts/crypt-status/${width}-empty-text200.png`, fullPage: true });
+    const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')].flatMap(el => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.left < -1 || r.right > innerWidth + 1)
+        ? [{ tag: el.tagName, class: el.className?.baseVal ?? el.className, left: r.left, right: r.right, text: el.textContent?.slice(0, 100) }] : [];
+    }));
+    console.log(JSON.stringify({ case: 'crypt-status-empty-overflow', width, documentWidth: await page.evaluate(() => document.documentElement.scrollWidth), overflow }));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'empty effects after a turn must reflow at200% text');
     assert.deepEqual(errors, []); assert.deepEqual(forbidden, []);
     console.log(`PASS Crypt statuses ${width}px: normal/200% root text, owner groups, single effect help, real Tab/Enter/Escape, 44px unobscured targets, reduced motion, empty display, read-only checkpoint and engine-equivalent next turn; errors[]/forbidden[]`);
     await context.close();
