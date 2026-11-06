@@ -136,8 +136,11 @@ jobs:
           done
           test "$ready" = true || { cat /tmp/companion-browser.log; exit 1; }
           node tests/browser/companion-journey.qa.mjs
-          node tests/qa/keyboard-companion.qa.mjs
+          keyboard_status=0
+          node tests/qa/keyboard-companion.qa.mjs || keyboard_status=$?
           psql -v ON_ERROR_STOP=1 -d life_ascension_auth_test -f tests/sql/companion_home_receipt.sql
+          echo "PASS persisted browser receipt: two ledger rows/4 Connor XP, two completion events, no Izzy/outsider account XP, append-only manual history"
+          exit "$keyboard_status"
       - name: Next-day credit waits until05:00 Chicago
         if: ${{ !cancelled() && steps.migrate.outcome == 'success' }}
         run: psql -v ON_ERROR_STOP=1 -d life_ascension_auth_test -f tests/qa/chicago-boundary.sql
