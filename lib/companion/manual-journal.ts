@@ -13,3 +13,9 @@ const messages=new Set(['Sign-in required','Journal unavailable','Invalid journa
 export function journalError(code?: string,message?: string): string {
  return code==='P0001' && message && messages.has(message) ? message : 'Could not confirm the journal request. Refresh before retrying. Neither account’s XP was changed.';
 }
+
+export function journalTimestamp(value: string): string {
+ const instant=new Date(value);
+ if (Number.isNaN(instant.getTime())) return 'Time unavailable';
+ return new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(instant);
+}
