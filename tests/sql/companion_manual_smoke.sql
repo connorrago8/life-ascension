@@ -23,6 +23,7 @@ select public.manual_assert(public.companion_activity('week','{"pairId":"0000000
 select public.manual_assert((public.companion_activity('week','{"pairId":"00000000-0000-0000-0000-00000000ba10","date":"2026-11-02"}')->>'weeklyXp')::integer=1);
 select public.manual_reject('log',jsonb_build_object('pairId','00000000-0000-0000-0000-00000000ba10','requestId','00000000-0000-0000-0000-00000000ba14','title','Future','date',((now() at time zone 'America/Chicago')::date+1)::text));
 select public.manual_reject('log','{"pairId":"00000000-0000-0000-0000-00000000ba10","requestId":"bad","title":"Invalid","date":"2026-02-30"}');
+select public.manual_reject('log',jsonb_build_object('pairId','00000000-0000-0000-0000-00000000ba10','requestId','00000000-0000-0000-0000-00000000ba18','title',E'\t\n','date','2026-11-02'));
 -- Sender and outsider cannot inspect or create the recipient's private journal.
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ba02',true);
 select public.manual_reject('week','{"pairId":"00000000-0000-0000-0000-00000000ba10"}');

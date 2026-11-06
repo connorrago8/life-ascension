@@ -58,7 +58,8 @@ begin
   request:=(p_payload->>'requestId')::uuid;
   title:=btrim(p_payload->>'title'); day:=(p_payload->>'date')::date;
   if request is null or title is null or length(title) not between 1 and 120 or day is null or day>today then raise exception 'Choose a completed activity and a past or current Chicago date'; end if;
-  key:=lower(regexp_replace(title,'\s+',' ','g'));
+  key:=btrim(lower(regexp_replace(title,'\s+',' ','g')));
+  if key='' then raise exception 'Choose a completed activity and a past or current Chicago date'; end if;
   -- Serialize owner requests, including retries across distinct companion profiles.
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(u::text||':manual-journal',0));
   select * into e from companion_private.activity_entries where owner_id=u and request_id=request;
