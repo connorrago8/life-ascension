@@ -148,10 +148,12 @@ select public.test_companion_assert(public.get_lifetime_xp()=8,'both eligible ov
 select public.companion_command('revoke',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair')));
 select public.test_companion_assert((select count(*)=0 from public.companion_quests),'revocation removes shared RLS access');
 select public.test_companion_assert(public.get_lifetime_xp()=8,'revocation never deducts earned XP');
+update public.profiles set display_name='PRIVATE post-revocation name' where id=auth.uid();
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca02',false);
 set role authenticated;
 select public.test_companion_assert(public.companion_command('dashboard')->'quests'='[]','sender loses shared access after revocation');
+select public.test_companion_assert(public.companion_command('dashboard')::text not like '%PRIVATE post-revocation name%','revocation hides subsequent private profile changes');
 select public.test_companion_reject('send',(select value from companion_fixture where label='offerPayload'),'Companionship unavailable');
 -- Anonymous and authenticated-without-user are distinct negative controls.
 reset role;

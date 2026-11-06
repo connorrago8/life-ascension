@@ -142,9 +142,9 @@ begin
  elsif p_action='dashboard' then
   select jsonb_build_object('viewerId',u,'personalXp',coalesce((select sum(amount) from public.xp_ledger where owner_id=u),0),
    'pairs',coalesce((select jsonb_agg(jsonb_build_object('id',cp.id,'status',cp.status,'canConfirm',cp.inviter_id=u,
-     'otherUserId',case when cp.inviter_id=u then cp.member_id else cp.inviter_id end,
+     'otherUserId',case when cp.status='revoked' then null when cp.inviter_id=u then cp.member_id else cp.inviter_id end,
      'yourRole',case when (cp.inviter_role='sender' and cp.inviter_id=u) or (cp.inviter_role='recipient' and cp.member_id=u) then 'sender' else 'recipient' end,
-     'name',coalesce((select display_name from public.profiles where id=case when cp.inviter_id=u then cp.member_id else cp.inviter_id end),'Your companion')) order by cp.created_at)
+     'name',case when cp.status='revoked' then 'Former companion' else coalesce((select display_name from public.profiles where id=case when cp.inviter_id=u then cp.member_id else cp.inviter_id end),'Your companion') end) order by cp.created_at)
      from public.companion_pairs cp where u in(cp.inviter_id,cp.member_id)),'[]'::jsonb),
    'quests',coalesce((select jsonb_agg(jsonb_build_object('id',cq.id,'pairId',cq.pair_id,'title',cq.title,'category',cq.category,
      'difficulty',cq.difficulty,'dueDate',cq.due_date,'rainCheckUntil',cq.rain_check_until,'instanceId',cq.instance_id,
