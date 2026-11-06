@@ -118,14 +118,17 @@ select public.test_companion_assert(public.get_lifetime_xp()=2,'rain check/decli
 select public.companion_command('complete',jsonb_build_object('questId',(select value->>'questId' from companion_fixture where label='second')));
 select public.test_companion_assert(public.get_lifetime_xp()=4,'new completed quest earns2 exactly once');
 -- Future-deadline goals and uninstantiated/off-board habits reuse the original task.
-do $$ declare d date:=(now() at time zone 'America/Chicago' - interval '5 hours')::date; goal uuid; hidden uuid;
+do $$ declare d date:=(now() at time zone 'America/Chicago' - interval '5 hours')::date; goal uuid;
 begin
  goal:=public.create_scheduled_quest('Plan a trip','personal_growth','once',d+7,'goal');
  insert into companion_fixture values('futureGoal',jsonb_build_object('quest',goal));
- insert into public.quests(owner_id,title,domain,cadence,scheduled_for) values(auth.uid(),'Off-board stretch','physical_health','daily',d) returning id into hidden;
- insert into companion_fixture values('hiddenHabit',jsonb_build_object('quest',hidden));
 end $$;
 reset role;
+-- Owner-only synthetic setup: an off-board definition without an instance. Client
+-- INSERT rights stay revoked; no application write policy is relaxed for this fixture.
+with q as (insert into public.quests(owner_id,title,domain,cadence,scheduled_for)
+ values('00000000-0000-0000-0000-00000000ca01','Off-board stretch','physical_health','daily',(now() at time zone 'America/Chicago' - interval '5 hours')::date) returning id)
+ insert into companion_fixture select 'hiddenHabit',jsonb_build_object('quest',id) from q;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-00000000ca02',false);
 set role authenticated;
 insert into companion_fixture values('futureOffer',public.companion_command('send',jsonb_build_object('pairId',(select value->>'id' from companion_fixture where label='pair'),
