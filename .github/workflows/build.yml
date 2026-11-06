@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, feature/quest-companion-ledger-20261105]
+    branches: [main, feature/quest-companion-ledger-20261105, companion/consent-quest-delivery-20261105]
 permissions:
   contents: read
 jobs:
@@ -119,6 +119,7 @@ jobs:
           done
           test "$ready" = true || { cat /tmp/companion-browser.log; exit 1; }
           node tests/browser/companion-journey.qa.mjs
+          psql -v ON_ERROR_STOP=1 -d life_ascension_auth_test -f tests/sql/companion_home_receipt.sql
       - uses: actions/upload-artifact@v4
         if: always()
         with:
