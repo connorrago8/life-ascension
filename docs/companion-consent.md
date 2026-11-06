@@ -57,3 +57,34 @@ manual logging/separate XP, optional consensual Secret Curses and explicit share
 membership. Full source documents were not reviewed. Current exclusive contract
 controls this slice. Manual companion activity history/weekly profile and opt-in
 Secret Curses remain follow-up work, not implied implementation.
+
+## Browser path and honest scope
+
+The new /companion page uses the real authenticated RPC (no application mock
+adapter). It includes onboarding/request/confirmation, creation, incoming/sent
+status, explicit accept/reveal, overlap selection, rain check, real-life completion,
+refresh and revocation. Private drafts and stale responses are cleared/discarded
+on account changes. No global Home/navigation ownership files are edited.
+
+CI's browser gateway exists ONLY under tests/browser. Its authentication identities
+are synthetic and unsigned; it is not Supabase Auth validation. Each browser RPC
+is passed to the actual migration running as the authenticated PostgreSQL role
+with that fixture's auth.uid(), never to a canned RPC response. Browser evidence
+therefore covers UI→actual PostgreSQL/RLS with fixture authentication, not live
+Supabase Auth/PostgREST, hosted two-account onboarding or iPhone acceptance.
+The gateway binds localhost, refuses nonlocal PGHOST, accepts only known fixture
+tokens, and is never imported by application code or deployed as an app route.
+
+A second SQL test observes a real lock wait between overlapping completion
+transactions and requires one ledger row,2 XP and one completion event. The
+browser journey creates a pair, sends HTML-like text and a hidden promise, checks
+ALL pre-accept response bodies for secrecy, accepts/reveals, attempts repeat
+completion, reloads and checks separate actor totals/shared status. Four widths
+and200% root text produce screenshots. These tests are pending until final-head CI.
+
+Hosted boundary: a restore-test project exists in account metadata, with no listed
+development branches. No schema/data or isolation was asserted from that name;
+no hosted SQL or auth account mutation was performed. An explicitly isolated,
+reviewed deployment migration and independent live-auth QA remain required.
+Home entry placement is an integration/UI-owner dependency; /companion includes
+an explicit Back to Home link and retains the existing app navigation shell.

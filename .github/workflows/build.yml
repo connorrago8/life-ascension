@@ -78,3 +78,40 @@ jobs:
             psql -v ON_ERROR_STOP=1 -d "$db" -f "$file"
           done
           echo "All six SQL smoke tests passed"
+      - name: Concurrent companion completion (actual PostgreSQL locks)
+        run: bash tests/sql/run-companion-concurrency.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: npm install --no-audit --no-fund && npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - name: Companion UI against actual isolated PostgreSQL
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54329
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: fixture-not-a-real-key
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          export CHROMIUM_BIN="$(command -v google-chrome-stable || command -v google-chrome || true)"
+          test -n "$CHROMIUM_BIN"
+          psql -v ON_ERROR_STOP=1 -d life_ascension_auth_test -f tests/sql/companion_browser_fixture.sql
+          node tests/browser/companion-fixture-server.mjs >/tmp/companion-gateway.log 2>&1 &
+          fixture_pid=$!
+          npm run dev -- --hostname 127.0.0.1 --port 3148 >/tmp/companion-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$fixture_pid" "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 http://127.0.0.1:3148/companion >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true || { cat /tmp/companion-browser.log; exit 1; }
+          node tests/browser/companion-journey.qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: companion-renders-${{ github.run_attempt }}
+          path: artifacts/companion/
+          if-no-files-found: error
