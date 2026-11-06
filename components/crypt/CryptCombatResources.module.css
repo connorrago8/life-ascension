@@ -16,3 +16,20 @@
 @media (prefers-reduced-motion: reduce) {
   .combat.combat *, .combat.combat *::before, .combat.combat *::after { animation: none !important; transition: none !important; }
 }
+
+/* An inspection surface, distinct from cards and their action highlights. */
+.statusInspection.statusInspection { min-width: 0; }
+.statusInspection[data-expanded='true'] { flex-basis: 100%; }
+.statusInspection :global(.delve-status-pill) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.statusList.statusList { min-width: 0; padding: 12px; gap: 12px; border: 2px solid #485b55; border-radius: 6px; background: #171f1d; }
+.statusHint, .statusEmpty { margin: 0; font-size: .8rem; line-height: 1.5; color: #b8cbc3; overflow-wrap: anywhere; }
+.statusGroup { min-width: 0; padding: 10px; border: 1px solid #485b55; border-radius: 4px; background: #101714; }
+.statusOwner { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: #e2eee8; font-size: .85rem; font-weight: 750; }
+.ownerCount { color: #b8cbc3; font-weight: 400; font-variant-numeric: tabular-nums; }
+.statusInspection :global(.delve-chips) { margin: 0; gap: 8px; }
+.statusInspection :global(.delve-chip) { min-width: 44px; max-width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid #70877d; background: #202c26; color: #e2eee8; text-align: left; line-height: 1.5; overflow-wrap: anywhere; }
+.statusInspection :global(.delve-chip[aria-expanded='true']) { border-color: #9fe3bd; box-shadow: inset 3px 0 #9fe3bd; }
+.statusHelp { display: grid; gap: 6px; margin: 12px 0 0; padding: 10px; border-left: 3px solid #9fe3bd; background: #202c26; color: #e2eee8; font-size: .85rem; line-height: 1.5; overflow-wrap: anywhere; }
+.hideStatuses.hideStatuses { justify-self: start; min-width: 44px; min-height: 44px; max-width: 100%; white-space: normal; }
+.statusInspection button { scroll-margin-block: 100px; }
+.statusInspection button:focus-visible { outline: 3px solid #f2c46d; outline-offset: 3px; }
