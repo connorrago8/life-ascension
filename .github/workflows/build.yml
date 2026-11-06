@@ -92,6 +92,8 @@ jobs:
           echo "All seven SQL smoke tests passed"
       - name: Concurrent companion completion (actual PostgreSQL locks)
         run: bash tests/sql/run-companion-concurrency.sh
+      - name: Concurrent manual task deduplication (actual PostgreSQL locks)
+        run: bash tests/sql/run-manual-concurrency.sh
 
       - uses: actions/setup-node@v4
         with:

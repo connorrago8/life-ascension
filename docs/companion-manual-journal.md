@@ -23,6 +23,7 @@ Weeks use activity_date, not creation time. Monday grouping is computed on the s
 ## Verification plan
 
 - SQL: recipient ownership, sender/outsider/anonymous denial; no direct table grants; server-fixed1/manual provenance; retry/different-ID duplicate guard; changed payload rejection; Sunday/Monday around Nov1 DST; future/invalid date rejection; append-only idempotent corrections; revocation; no account ledger writes.
+- Concurrency: observe an actual lock wait between two distinct requests for the same normalized task/day; require one saved manual row, a duplicate rejection and zero account credit.
 - Browser: preserve full consent/mystery/2-XP and Home overlap journey; save a manual activity with a deliberately lost response, refresh and retry the same request ID; log a second activity, correct the first, reload and retain original history + one manual tally. Connor remains4 account XP, sender0. Literal HTML stays text.
 - Existing four-width/normal/enlarged-text control checks include the journal. Results are pending until exact-head CI; source and unit success are not browser evidence.
 
