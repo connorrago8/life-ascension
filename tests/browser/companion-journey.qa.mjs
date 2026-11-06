@@ -31,7 +31,7 @@ async function account(name) {
 try {
  const connor=await account('connor'),izzy=await account('izzy');
  // Real Home APIs, not canned data: create/complete personal task before companion assignment.
- await connor.page.getByRole('link',{name:'Back to Home',exact:true}).click();
+ await connor.page.getByRole('link',{name:'← Back to Home',exact:true}).click();
  await connor.page.getByRole('heading',{name:'Today’s Quests',exact:true}).waitFor();
  assert.equal(await connor.page.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
  await connor.page.getByRole('button',{name:'+ Create a quest',exact:true}).click();
@@ -42,7 +42,8 @@ try {
  connor.page.once('dialog',dialog=>dialog.accept());
  await connor.page.getByRole('button',{name:'Complete',exact:true}).click();
  await connor.page.locator('.xp').filter({hasText:'1 lifetime XP'}).waitFor();
- await connor.page.getByRole('link',{name:'Open companion inbox',exact:true}).click();
+ await connor.page.getByRole('link',{name:'Open companion inbox',exact:true}).focus();
+ await connor.page.keyboard.press('Enter');
  await connor.page.getByRole('heading',{name:'Connection & consent',exact:true}).waitFor();
  await connor.page.getByRole('button',{name:'Create private invitation',exact:true}).click();
  const field=connor.page.getByLabel('Invitation code · expires in 7 days');await field.waitFor();const code=await field.inputValue();assert.equal(code.length,64);
@@ -83,7 +84,7 @@ try {
  await connor.page.getByRole('button',{name:'Accept quest',exact:true}).click();
  await connor.page.getByText('Completed · 2 XP total for this task, retained across reloads.',{exact:true}).nth(1).waitFor();
  assert.ok((await connor.page.locator('main').innerText()).includes('Your lifetime XP: 4'));
- await connor.page.getByRole('link',{name:'Back to Home',exact:true}).click();
+ await connor.page.getByRole('link',{name:'← Back to Home',exact:true}).click();
  await connor.page.locator('.xp').filter({hasText:'4 lifetime XP'}).waitFor();
  await connor.page.reload();
  await connor.page.locator('.xp').filter({hasText:'4 lifetime XP'}).waitFor();
@@ -93,6 +94,8 @@ try {
   await connor.page.evaluate(()=>{document.documentElement.style.fontSize='32px';});
   const entry=connor.page.getByRole('link',{name:'Open companion inbox',exact:true});
   await entry.scrollIntoViewIfNeeded();const box=await entry.boundingBox();
+  assert.equal(await entry.evaluate(el=>parseFloat(getComputedStyle(el).fontSize)),32,'Home companion body/action text actually scales');
+  assert.ok(await entry.evaluate(el=>{const r=el.getBoundingClientRect();const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return top===el||el.contains(top);}), 'Home companion entry not obscured');
   assert.ok(box&&box.width>=44&&box.height>=44&&box.x>=0&&box.x+box.width<=width+1);
   assert.equal(await connor.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
   await connor.page.screenshot({path:`artifacts/companion/${width}-home-text200.png`,fullPage:true});
