@@ -12,6 +12,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record exact tested commit
+        run: git rev-parse HEAD
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -50,6 +55,11 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record exact tested commit
+        run: git rev-parse HEAD
       - name: Apply migrations 0001–0007 and run all six SQL smoke tests
         shell: bash
         run: |
@@ -112,6 +122,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: companion-renders-${{ github.run_attempt }}
+          name: companion-renders-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
           path: artifacts/companion/
           if-no-files-found: error
