@@ -96,6 +96,12 @@ code { font-family: ui-monospace, monospace; }
 :focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
 .auth-form .btn { display: flex; width: 100%; }
 .auth-form .btn + .btn, .auth-form .foot { margin-top: 12px; }
+.auth-form .otp { font-size: 1.35rem; letter-spacing: 0.28em; text-align: center; }
+@media (max-width: 390px) {
+  .auth-page { padding-left: 16px; padding-right: 16px; }
+  .auth-page h1 { font-size: 1.7rem; overflow-wrap: anywhere; }
+  .auth-form .field, .auth-form .btn { width: 100%; max-width: 100%; box-sizing: border-box; }
+}
 .ok { color: var(--mint); font-weight: 650; }
 .sr-only {
   position: absolute;

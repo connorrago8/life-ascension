@@ -15,6 +15,11 @@ test('OTP verify flow is a six-digit email code and does not enumerate accounts'
   assert.match(login, /shouldCreateUser: false/);
   assert.match(login, /If an account exists for this email, a 6-digit code was sent\./);
   assert.match(login, /Create your account/);
+  assert.match(login, /Send my code/);
+  assert.match(login, /Use a link instead/);
+  assert.match(login, />Resend</);
+  assert.match(login, /shouldCreateUser: true/);
+  assert.match(login, /signUp\(\{/);
   assert.match(login, /type: 'email'/);
   assert.equal(safeNext('/companion?invite=abc123def456', 'https://preview.example'), '/companion?invite=abc123def456');
   assert.match(login, /That code is invalid or expired\. Request a new code and try again\./);
