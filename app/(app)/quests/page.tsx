@@ -10,6 +10,7 @@ import {verifiedLifetimeXp} from '../../../lib/characterXpProof';
 import {QuestProgressControls} from '../../../components/QuestProgressControls';
 import {QuestDetails} from '../../../components/QuestDetails';
 import {ConfirmCompleteButton} from '../../../components/ConfirmCompleteButton';
+import {IzzyProof} from '../../../components/IzzyProof';
 import {completionFeedback} from '../../../lib/preview/questReceipt.mjs';
 import {confirmedProgressResult} from '../../../lib/preview/progressDelta.mjs';
 import {hasPendingCompletedRecovery,pendingProgressInstanceIds,recoverableCompletedEntries} from '../../../lib/preview/pendingProgress';
@@ -25,7 +26,7 @@ export default function QuestBoard(){
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  // The streak is tagged with its account so a sign-out or account switch can never show another account's fire.
  const [streakFor,setStreak]=useState<{owner:string;state:StreakState}|null>(null);const [showOffBoard,setShowOffBoard]=useState(false);
- const [fromIzzy,setFromIzzy]=useState<Set<string>>(new Set());
+ const [fromIzzy,setFromIzzy]=useState<Set<string>>(new Set());const [izzyColor,setIzzyColor]=useState('amber');const [nudged,setNudged]=useState<Set<string>>(new Set());
  const router=useRouter();const questFormRef=useRef<HTMLFormElement>(null);const openQuestFormOnRender=useRef(false);
  const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
  const questCreateInFlight=useRef(false);
@@ -37,9 +38,23 @@ export default function QuestBoard(){
  useEffect(()=>{
   if(!user||user==='preview'){setFromIzzy(new Set());return;}
   let cancel=false;
-  void supabase().from('companion_quests').select('quest_id').eq('to_user',user).in('status',['accepted','completed']).then(({data,error})=>{
+  void supabase().from('companion_quests').select('id, quest_id').eq('to_user',user).in('status',['accepted','completed']).then(({data,error})=>{
    if(cancel||error||!Array.isArray(data))return;
-   setFromIzzy(new Set(data.map((row:{quest_id?:string|null})=>row.quest_id).filter((id):id is string=>!!id)));
+   const rows=data as {id?:string|null;quest_id?:string|null}[];
+   setFromIzzy(new Set(rows.map(row=>row.quest_id).filter((id):id is string=>!!id)));
+   void supabase().from('companion_nudges').select('quest_id').eq('game_day',todayLocal()).then(({data:nudgeRows})=>{
+    if(cancel||!Array.isArray(nudgeRows))return;
+    const nudgedIds=new Set((nudgeRows as {quest_id?:string}[]).map(row=>row.quest_id));
+    setNudged(new Set(rows.filter(row=>row.quest_id&&row.id&&nudgedIds.has(row.id)).map(row=>row.quest_id as string)));
+   });
+   void supabase().from('companion_bonds').select('companion_id').eq('inviter_id',user).eq('status','active').maybeSingle().then(({data:bond})=>{
+    const companionId=(bond as {companion_id?:string}|null)?.companion_id;
+    if(!companionId)return;
+    void supabase().from('companion_identities').select('quest_color').eq('user_id',companionId).maybeSingle().then(({data:ident})=>{
+     const next=(ident as {quest_color?:string}|null)?.quest_color;
+     if(next)setIzzyColor(next);
+    });
+   });
   });
   return()=>{cancel=true;};
  },[user,instances]);
@@ -240,7 +255,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  const canComplete=(quest:Quest,instance:Instance)=>instance.status==='available'&&(quest.cadence==='weekly'?instance.due_date===thisWeek:quest.cadence==='daily'?instance.due_date<=today:quest.quest_type==='goal'||instance.due_date<=today);
  const openCard=(e:React.MouseEvent<HTMLElement>,quest:Quest)=>{const selection=typeof window!=='undefined'?String(window.getSelection?.()??''):'';if(shouldOpenQuestCard(e.target as Element,selection))router.push(questDetailHref(quest.id))};
  const cardTitle=(quest:Quest)=><div className="quest-title"><Link className="quest-title-link" href={questDetailHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div>;
- const questCard=({quest,instance}:{quest:Quest;instance?:Instance})=><div className="quest quest-tappable" key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}<div className="muted">{fromIzzy.has(quest.id)?'From Izzy · ':''}{quest.cadence==='weekly'?'Weekly · open until Monday 5:00 AM':<>{quest.quest_type==='goal'?'Deadline':'Due'} {instance?.due_date}{instance&&instance.due_date<today&&instance.status!=='completed'?' · Overdue':''}{quest.cadence==='daily'?' · Daily':''}</>}</div><QuestDetails quest={quest} instance={instance!}/></div>{instance?.status==='available'&&quest.target_amount!=null&&canComplete(quest,instance)&&<QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/> }<div className="actions quest-card-actions" aria-label={`Actions for ${quest.title}`}>{instance?.status==='completed'?<span className="tag">✓ Done</span>:instance?.status==='deferred'?<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'resume')}>Resume</button>:instance&&canComplete(quest,instance)?<><button className="btn ghost" disabled={busy} onClick={()=>act(instance!.id,'defer')}>Defer</button>{(quest.target_amount==null||instance.current_amount>=quest.target_amount)&&<ConfirmCompleteButton label="Complete" questTitle={quest.title} disabled={busy} onConfirm={()=>act(instance!.id,'complete')}/>}</>:<span className="muted">Opens {instance?.due_date}</span>}</div></div>;
+ const questCard=({quest,instance}:{quest:Quest;instance?:Instance})=><div className={"quest quest-tappable"+(fromIzzy.has(quest.id)?` from-izzy from-izzy-${izzyColor}`:'')} key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}<div className="muted">{fromIzzy.has(quest.id)?'From Izzy · ':''}{nudged.has(quest.id)?<span className="tag">Nudge</span>:null}{quest.cadence==='weekly'?'Weekly · open until Monday 5:00 AM':<>{quest.quest_type==='goal'?'Deadline':'Due'} {instance?.due_date}{instance&&instance.due_date<today&&instance.status!=='completed'?' · Overdue':''}{quest.cadence==='daily'?' · Daily':''}</>}</div><QuestDetails quest={quest} instance={instance!}/></div>{instance?.status==='available'&&quest.target_amount!=null&&canComplete(quest,instance)&&<QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/> }<div className="actions quest-card-actions" aria-label={`Actions for ${quest.title}`}>{instance?.status==='completed'?<>{fromIzzy.has(quest.id)&&<span className="muted">Optional photo</span>}{fromIzzy.has(quest.id)&&<IzzyProof instanceId={instance.id} disabled={busy}/>}<span className="tag">✓ Done</span></>:instance?.status==='deferred'?<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'resume')}>Resume</button>:instance&&canComplete(quest,instance)?<><button className="btn ghost" disabled={busy} onClick={()=>act(instance!.id,'defer')}>Defer</button>{(quest.target_amount==null||instance.current_amount>=quest.target_amount)&&<ConfirmCompleteButton label="Complete" questTitle={quest.title} disabled={busy} onConfirm={()=>act(instance!.id,'complete')}/>}</>:<span className="muted">Opens {instance?.due_date}</span>}</div></div>;
  const notStartedCard=(q:Quest)=><div className="quest quest-tappable" key={q.id} onClick={e=>openCard(e,q)}><div className="quest-main">{cardTitle(q)}<div className="muted">{q.cadence==='daily'?'Daily · starts':q.quest_type==='goal'?'Deadline':'Scheduled'} · {q.scheduled_for}</div></div></div>;
  return <main className="wrap quest-board-page">{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}<header className="top board-header"><div><div className="eyebrow">LIFE ASCENSION</div><h1>{mode==='daily'?'Today’s Quests':'The Adventurer’s Path'}</h1><p className="muted">{new Date(dateString()+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p>{streak&&<p className={'streak-badge'+(streak.fire>0?' lit':'')} role="status" aria-label={`Streak ${streak.fire} days. ${streakHint(streak)}`}><span className="streak-fire" aria-hidden="true">🔥 {streak.fire}</span><span className="streak-hint">{streakHint(streak)}</span></p>}</div><button className="btn ghost" onClick={logout}>Sign out</button></header>
  <nav className="tabs board-mode-tabs" aria-label="View mode"><button className={'btn '+(mode==='daily'?'':'ghost')} onClick={()=>setMode('daily')}>Daily Mode</button><button className={'btn '+(mode==='adventure'?'':'ghost')} onClick={()=>setMode('adventure')}>Adventure Mode</button></nav>

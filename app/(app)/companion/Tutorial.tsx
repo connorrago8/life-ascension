@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 export type TutorialCard = { title: string; body: string };
 
@@ -9,11 +9,13 @@ export function Tutorial({
   onClose,
   onFinish,
   finishLabel,
+  lastCard,
 }: {
   cards: readonly TutorialCard[];
   onClose: () => void;
   onFinish: () => void;
   finishLabel: string;
+  lastCard?: ReactNode;
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -36,15 +38,17 @@ export function Tutorial({
       >
         <p className="eyebrow">How it works · {index + 1} of {cards.length}</p>
         <h2 id={titleId}>{card.title}</h2>
-        <p>{card.body}</p>
+        {last && lastCard ? lastCard : <p>{card.body}</p>}
         <div className="companion-actions">
           <button className="btn ghost" type="button" onClick={onClose}>Skip</button>
           {index > 0 && (
             <button className="btn ghost" type="button" onClick={() => setIndex((value) => value - 1)}>Back</button>
           )}
-          <button className="btn" type="button" onClick={() => (last ? onFinish() : setIndex((value) => value + 1))}>
-            {last ? finishLabel : 'Next'}
-          </button>
+          {!(last && lastCard) && (
+            <button className="btn" type="button" onClick={() => (last ? onFinish() : setIndex((value) => value + 1))}>
+              {last ? finishLabel : 'Next'}
+            </button>
+          )}
         </div>
       </div>
     </div>

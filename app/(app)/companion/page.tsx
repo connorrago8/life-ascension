@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { COMPANION_TITLES } from '../../../lib/companion';
+import { COMPANION_COLORS, COMPANION_TITLES } from '../../../lib/companion';
+import { CompanionHome, type CompanionView } from './CompanionHome';
 import { COMPANION_INVITE_STORAGE_KEY, companionInvitePath, readInviteCode } from '../../../lib/companionInvite';
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../lib/companionQuestDraft';
 import { gameDayParts } from '../../../lib/questStreak';
@@ -40,9 +41,15 @@ type ActivityRow = {
 type Board = {
   userId: string;
   bond: Bond | null;
-  identity: { displayName: string; title: string } | null;
+  identity: { displayName: string; title: string; questColor?: string; avatarPath?: string | null } | null;
   quests: QuestRow[];
   activities: ActivityRow[];
+  notices?: CompanionView['notices'];
+  rewards?: CompanionView['rewards'];
+  repeats?: CompanionView['repeats'];
+  recap?: CompanionView['recap'];
+  milestones?: CompanionView['milestones'];
+  tipsSeen?: string[];
 };
 
 export default function CompanionPage() {
@@ -55,6 +62,7 @@ export default function CompanionPage() {
   const [freshCode, setFreshCode] = useState('');
   const [name, setName] = useState('');
   const [title, setTitle] = useState<string>(COMPANION_TITLES[0]);
+  const [color, setColor] = useState<string>(COMPANION_COLORS[0]);
   const [questTitle, setQuestTitle] = useState('');
   const [questCadence, setQuestCadence] = useState<QuestCadence>('daily');
   const [cadenceTouched, setCadenceTouched] = useState(false);
@@ -89,6 +97,7 @@ export default function CompanionPage() {
     if (next.identity) {
       setName(next.identity.displayName);
       setTitle(next.identity.title);
+      if (next.identity.questColor) setColor(next.identity.questColor);
     }
   }, []);
 
@@ -148,6 +157,10 @@ export default function CompanionPage() {
 
   function fail(error: { message: string } | null) {
     if (error) throw new Error(error.message);
+  }
+
+  function tipSeen(key: string) {
+    return (board?.tipsSeen ?? []).includes(key);
   }
 
   return (
@@ -230,7 +243,7 @@ export default function CompanionPage() {
             <form onSubmit={(event) => {
               event.preventDefault();
               void run(async () => {
-                const { error } = await supabase().rpc('companion_set_identity', { p_name: name, p_title: title });
+                const { error } = await supabase().rpc('companion_set_identity', { p_name: name, p_title: title, p_color: color });
                 fail(error);
                 setMessage('Identity saved.');
               });
@@ -240,6 +253,10 @@ export default function CompanionPage() {
               <label htmlFor="companion-title">Title</label>
               <select id="companion-title" className="field" value={title} onChange={(event) => setTitle(event.target.value)}>
                 {COMPANION_TITLES.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <label htmlFor="companion-color">Quest color</label>
+              <select id="companion-color" className="field" value={color} onChange={(event) => setColor(event.target.value)}>
+                {COMPANION_COLORS.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
               <button className="btn" type="submit" disabled={busy}>Save identity</button>
             </form>
@@ -316,6 +333,14 @@ export default function CompanionPage() {
               <button className="btn" type="submit" disabled={busy || !questTitle.trim()}>Send quest</button>
             </form>
             )}
+          {tipSeen('izzy-send') ? null : (
+            <p className="companion-tip">Send puts it on his board right away. Daily is a same-day chore. Weekly is a bigger job for this week.
+              <button className="btn ghost" type="button" onClick={() => void run(async () => {
+                const { error } = await supabase().rpc('companion_dismiss_tip', { p_key: 'izzy-send' });
+                fail(error);
+              })}>Got it</button>
+            </p>
+          )}
             {drafts.length > 0 && (
               <form className="companion-draft" onSubmit={(event) => {
                 event.preventDefault();
@@ -423,6 +448,9 @@ export default function CompanionPage() {
         </section>
       )}
       {board?.bond?.status === 'active' && (
+        <CompanionHome board={board} busy={busy} reload={load} />
+      )}
+      {board?.bond?.status === 'active' && (
         <button className="btn ghost" type="button" onClick={() => board.bond?.role === 'companion' ? setShowTutorial(true) : setShowConnorTip(true)}>How it works</button>
       )}
       {message && <p className="message" role="status">{message}</p>}
@@ -432,15 +460,44 @@ export default function CompanionPage() {
             { title: 'Welcome', body: "You're Connor's companion in LIFE ASCENSION. His real-life quests power his hero." },
             { title: 'Send a quest', body: 'Type a task, add a note, and pick a day, like his off day. It lands straight on his board.' },
             { title: 'Watch progress', body: "You'll see it marked done when he finishes it, and he earns XP." },
-            { title: 'Ready', body: 'Send the first one whenever you are ready. You can replay this from How it works.' },
+            { title: 'Your first quest', body: 'Send a real one now. It lands on his board.' },
           ]}
           finishLabel="Send your first quest"
+          lastCard={(
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              void run(async () => {
+                const saved = await supabase().rpc('companion_set_identity', { p_name: name, p_title: title, p_color: color });
+                fail(saved.error);
+                const { error } = await supabase().rpc('companion_send_quest', {
+                  p_title: questTitle,
+                  p_description: '',
+                  p_due: questDue || null,
+                  p_reward: '',
+                  p_cadence: questCadence,
+                });
+                fail(error);
+                setQuestTitle('');
+                rememberTutorial('izzy');
+              });
+            }}>
+              <label htmlFor="tutorial-name">Your name</label>
+              <input id="tutorial-name" className="field" maxLength={40} value={name} onChange={(event) => setName(event.target.value)} required />
+              <label htmlFor="tutorial-title">Title</label>
+              <select id="tutorial-title" className="field" value={title} onChange={(event) => setTitle(event.target.value)}>
+                {COMPANION_TITLES.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <label htmlFor="tutorial-color">Quest color</label>
+              <select id="tutorial-color" className="field" value={color} onChange={(event) => setColor(event.target.value)}>
+                {COMPANION_COLORS.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <label htmlFor="tutorial-quest">First quest</label>
+              <input id="tutorial-quest" className="field" maxLength={120} value={questTitle} onChange={(event) => setQuestTitle(event.target.value)} required />
+              <button className="btn" type="submit" disabled={busy || !questTitle.trim() || !name.trim()}>Send your first quest</button>
+            </form>
+          )}
           onClose={() => rememberTutorial('izzy')}
-          onFinish={() => {
-            rememberTutorial('izzy');
-            document.getElementById('send-quest')?.scrollIntoView({ block: 'start' });
-            document.getElementById('quest-title')?.focus();
-          }}
+          onFinish={() => rememberTutorial('izzy')}
         />
       )}
       {showConnorTip && (

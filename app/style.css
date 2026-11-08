@@ -1306,6 +1306,19 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .companion-quest h3, .companion-activity h3 { margin: 0 0 4px; font-size: 1rem; overflow-wrap: anywhere; }
 .companion-code { font-family: ui-monospace, monospace; font-size: 1.15rem; letter-spacing: 0.04em; overflow-wrap: anywhere; }
 .companion-chip { min-height: 44px; border-radius: 999px; }
+.companion-greeting { display: flex; gap: 12px; align-items: center; }
+.companion-portrait { width: 72px; height: 72px; min-width: 72px; border-radius: 50%; border: 1px dashed var(--border); background: transparent; }
+.companion-tip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.from-izzy-amber { box-shadow: inset 4px 0 0 #c4841d; }
+.from-izzy-rose { box-shadow: inset 4px 0 0 #b85c6a; }
+.from-izzy-sage { box-shadow: inset 4px 0 0 #5d7a55; }
+.from-izzy-sky { box-shadow: inset 4px 0 0 #3d6f8f; }
+.from-izzy-violet { box-shadow: inset 4px 0 0 #6d5a8c; }
+.izzy-swatch-amber { background: #c4841d; }
+.izzy-swatch-rose { background: #b85c6a; }
+.izzy-swatch-sage { background: #5d7a55; }
+.izzy-swatch-sky { background: #3d6f8f; }
+.izzy-swatch-violet { background: #6d5a8c; }
 .companion-tutorial { position: fixed; inset: 0; z-index: 40; display: grid; place-items: end center; background: rgba(8, 10, 12, 0.55); padding: 16px; }
 .companion-tutorial-card { width: min(100%, 420px); background: var(--bg, #171a1e); color: inherit; border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 72px; }
 .companion-draft { border-top: 1px solid var(--border); padding-top: 12px; }
