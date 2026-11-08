@@ -1295,3 +1295,18 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .quest-board-page #offboard-quests-list > p.muted { padding: 8px 4px 0; font-size: 0.85rem; }
 .hub-today .hub-streak { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hub-today .hub-streak.lit { color: #ffb070; }
+.companion-page { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.companion-page h1 { overflow-wrap: anywhere; }
+.companion-back { align-self: flex-start; min-height: 44px; }
+.companion-card { min-width: 0; }
+.companion-card h2 { overflow-wrap: anywhere; }
+.companion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.companion-actions .btn { min-height: 44px; }
+.companion-quest, .companion-activity { border-top: 1px solid var(--border); padding: 12px 0; min-width: 0; }
+.companion-quest h3, .companion-activity h3 { margin: 0 0 4px; font-size: 1rem; overflow-wrap: anywhere; }
+.companion-code { font-family: ui-monospace, monospace; font-size: 1.15rem; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+@media (max-width: 390px) {
+  .companion-page .field, .companion-page .btn { max-width: 100%; }
+  .companion-actions { flex-direction: column; }
+  .companion-actions .btn { width: 100%; }
+}

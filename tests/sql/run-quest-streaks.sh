@@ -29,9 +29,15 @@ psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_streaks_smoke.sql"
 echo "PASS quest_streaks_smoke.sql"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_game_day_smoke.sql" | grep -q 'quest game day smoke passed'
 echo "PASS quest_game_day_smoke.sql"
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/companion_b1_smoke.sql" | grep -q 'companion batch 1 smoke passed'
+echo "PASS companion_b1_smoke.sql"
+DB="$db" bash "$root/tests/sql/companion_concurrency.sh"
 DB="$db" bash "$root/tests/sql/quest_streaks_concurrency.sh"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_xp10_smoke.sql" | grep -q 'quest xp10 smoke passed'
 echo "PASS quest_xp10_smoke.sql"
+# Drop companion functions before the game-day rollback removes quest_game_day.
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080002_companion_bond_down.sql" >/dev/null
+echo "PASS companion rollback"
 # Game-day rollback restores midnight windows, reapply is idempotent, then the older
 # streak rollback still applies. 202611060001 is not re-applied: its guard is not
 # idempotent on this chain once _award_quest_xp has been replaced or dropped.
