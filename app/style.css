@@ -1314,6 +1314,11 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .companion-chip { min-height: 44px; border-radius: 999px; }
 .companion-greeting { display: flex; gap: 12px; align-items: center; }
 .companion-portrait { width: 72px; height: 72px; min-width: 72px; border-radius: 50%; border: 1px dashed var(--border); background: transparent; }
+.pixel-avatar { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 50%; object-fit: cover; display: block; background: #1b1e22; }
+.companion-card > picture { margin-bottom: 8px; }
+.avatar-pair { display: flex; gap: 12px; justify-content: center; margin: 8px 0 12px; }
+.avatar-chip { display: inline-flex; vertical-align: middle; margin-right: 6px; }
+.avatar-chip .pixel-avatar { width: 28px; height: 28px; }
 .companion-tip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .from-izzy-amber { box-shadow: inset 4px 0 0 #c4841d; }
 .from-izzy-rose { box-shadow: inset 4px 0 0 #b85c6a; }

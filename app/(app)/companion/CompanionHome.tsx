@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PixelAvatar } from '../../../components/PixelAvatar';
 import { collapseCompanionQuests, companionStatusLabel } from '../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence } from '../../../lib/companionQuestDraft';
 import { gameDayParts, weekStart } from '../../../lib/questStreak';
@@ -97,7 +98,7 @@ export function CompanionHome({
     <>
       {izzy && board.identity && (
         <section className="panel companion-card companion-greeting">
-          <div className={`companion-portrait izzy-swatch-${board.identity.questColor ?? 'amber'}`} role="img" aria-label="Portrait slot" />
+          <PixelAvatar who="connor" size={72} alt="Connor's hero, a pixel knight in silver armor" />
           <p>Connor&apos;s hero greets you, {board.identity.displayName}, {board.identity.title}.</p>
         </section>
       )}
@@ -132,6 +133,7 @@ export function CompanionHome({
         {(board.notices ?? []).length === 0 && <p className="muted">Nothing new.</p>}
         {(board.notices ?? []).map((item) => (
           <div className="companion-quest" key={item.id}>
+            {item.kind === 'completed' && <PixelAvatar who="izzy" size={40} alt="Izzy, smiling in her tiara" />}
             <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `${item.title ?? 'A quest'} is done`}</p>
             {izzy && item.kind === 'completed' && item.questId && (
               <button className="btn" type="button" disabled={busy} onClick={() => void call(async () => {
@@ -149,9 +151,12 @@ export function CompanionHome({
         )}
       </section>
       {board.recap?.visible && (
-        <section className="panel companion-card" aria-label="Sunday recap">
-          <h2>This week</h2>
-          <p>{board.recap.done ?? 0} of her quests done. Streak {board.recap.streak ?? 0}. {board.recap.xp ?? 0} XP from those quests.</p>
+        <section className="panel companion-card companion-greeting" aria-label="Sunday recap">
+          <PixelAvatar who="izzy" size={72} alt="Izzy, your companion" />
+          <div>
+            <h2>This week</h2>
+            <p>{board.recap.done ?? 0} of her quests done. Streak {board.recap.streak ?? 0}. {board.recap.xp ?? 0} XP from those quests.</p>
+          </div>
         </section>
       )}
       <section className="panel companion-card" aria-label="Milestones">

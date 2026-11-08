@@ -8,6 +8,7 @@ import { COMPANION_INVITE_STORAGE_KEY, companionInvitePath, readInviteCode } fro
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../lib/companionQuestDraft';
 import { gameDayParts, weekStart } from '../../../lib/questStreak';
 import { supabase } from '../../../lib/supabase';
+import { PixelAvatar } from '../../../components/PixelAvatar';
 import { Tutorial } from './Tutorial';
 
 type Bond = {
@@ -242,6 +243,7 @@ export default function CompanionPage() {
         <>
           <section className="panel companion-card">
             <h2>Your identity</h2>
+            <PixelAvatar who="izzy" size={72} alt="Izzy, a pixel princess with a silver tiara" />
             <form onSubmit={(event) => {
               event.preventDefault();
               void run(async () => {
@@ -466,7 +468,12 @@ export default function CompanionPage() {
       {showTutorial && (
         <Tutorial
           cards={[
-            { title: 'Welcome', body: "You're Connor's companion in LIFE ASCENSION. His real-life quests power his hero." },
+            { title: 'Welcome', body: "You're Connor's companion in LIFE ASCENSION. His hero greets you. Your real-life quests power him.", art: (
+              <div className="avatar-pair">
+                <PixelAvatar who="izzy" size={72} alt="Izzy, a pixel princess with a silver tiara" />
+                <PixelAvatar who="connor" size={72} alt="Connor's hero, a pixel knight in silver armor" />
+              </div>
+            ) },
             { title: 'Send a quest', body: 'Type a task, add a note, and pick a day, like his off day. It lands straight on his board.' },
             { title: 'Watch progress', body: "You'll see it marked done when he finishes it, and he earns XP." },
             { title: 'Your first quest', body: 'Send a real one now. It lands on his board.' },
