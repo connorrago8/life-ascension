@@ -7,6 +7,8 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 db="${DB:-life_ascension_streak_test}"
 psql -v ON_ERROR_STOP=1 -q -c "DROP DATABASE IF EXISTS ${db};" -c "CREATE DATABASE ${db};"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/prelude.sql" >/dev/null
+# Hosted Supabase keeps pgcrypto in schema extensions. Mirror that before the migrations.
+psql -v ON_ERROR_STOP=1 -q -d "$db" -c "create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions;" >/dev/null
 for file in "$root"/supabase/migrations/*.sql; do
   base=$(basename "$file")
   if [[ "$base" == "202611060001_quest_base_xp10.sql" ]]; then
@@ -35,7 +37,9 @@ DB="$db" bash "$root/tests/sql/companion_concurrency.sh"
 DB="$db" bash "$root/tests/sql/quest_streaks_concurrency.sh"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_xp10_smoke.sql" | grep -q 'quest xp10 smoke passed'
 echo "PASS quest_xp10_smoke.sql"
-# Drop companion functions before the game-day rollback removes quest_game_day.
+# Drop the auto-assign helpers before the game-day rollback removes quest_game_day.
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080004_companion_auto_assign_down.sql" >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080003_companion_pgcrypto_digest_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080002_companion_bond_down.sql" >/dev/null
 echo "PASS companion rollback"
 # Game-day rollback restores midnight windows, reapply is idempotent, then the older

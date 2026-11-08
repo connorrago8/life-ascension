@@ -16,6 +16,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [mode, setMode] = useState<'password' | 'link' | 'code'>('password');
+  const [createAccount, setCreateAccount] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -32,6 +33,13 @@ export default function Login() {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mode') === 'signup') {
+      setCreateAccount(true);
+      setMode('link');
+    }
+  }, []);
 
   async function signInWithPassword(event: React.FormEvent) {
     event.preventDefault();
@@ -58,18 +66,18 @@ export default function Login() {
     if (busy) return;
     setBusy(true);
     setMessage('');
-    const { error } = await supabase().auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: emailAuthRedirect(window.location.origin, returnPath()),
-      },
-    });
+    const redirect = emailAuthRedirect(window.location.origin, returnPath());
+    const options = createAccount
+      ? { shouldCreateUser: true, emailRedirectTo: redirect }
+      : { shouldCreateUser: false, emailRedirectTo: redirect };
+    const { error } = await supabase().auth.signInWithOtp({ email: email.trim(), options });
     if (error && (error.status === 429 || /rate limit|too many requests/i.test(error.message))) {
       setMessage('Too many requests, wait a minute.');
     } else {
       setMode('code');
-      setMessage('If an account exists for this email, a 6-digit code was sent.');
+      setMessage(createAccount
+        ? 'Check your email for a 6-digit code. Enter it on this page.'
+        : 'If an account exists for this email, a 6-digit code was sent.');
     }
     setBusy(false);
   }
@@ -118,14 +126,15 @@ export default function Login() {
             onChange={(event) => setPassword(event.target.value)}
           />
           <button className="btn" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setMode('link'); setMessage(''); }}>Email me a link instead</button>
+          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setCreateAccount(false); setMode('link'); setMessage(''); }}>Email me a link instead</button>
+          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setCreateAccount(true); setMode('link'); setMessage(''); }}>Create an account</button>
           <p className="foot"><a href="/login/forgot">Forgot password?</a></p>
           <p id="login-status" role="status">{message}</p>
         </form>
       )}
       {mode === 'link' && (
         <form className="panel auth-form" method="post" action="/login" onSubmit={requestCode}>
-          <p className="muted">We will email a sign-in link for this site. You can open the link or enter the 6-digit code.</p>
+          <p className="muted">{createAccount ? 'Create an account with a 6-digit code. Enter the code on this page.' : 'We will email a sign-in link for this site. You can open the link or enter the 6-digit code.'}</p>
           <label htmlFor="email">Email</label>
           <input
             id="email"

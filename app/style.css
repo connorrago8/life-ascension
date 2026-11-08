@@ -1305,8 +1305,15 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .companion-quest, .companion-activity { border-top: 1px solid var(--border); padding: 12px 0; min-width: 0; }
 .companion-quest h3, .companion-activity h3 { margin: 0 0 4px; font-size: 1rem; overflow-wrap: anywhere; }
 .companion-code { font-family: ui-monospace, monospace; font-size: 1.15rem; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.companion-chip { min-height: 44px; border-radius: 999px; }
+.companion-tutorial { position: fixed; inset: 0; z-index: 40; display: grid; place-items: end center; background: rgba(8, 10, 12, 0.55); padding: 16px; }
+.companion-tutorial-card { width: min(100%, 420px); background: var(--bg, #171a1e); color: inherit; border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 72px; }
+.companion-draft { border-top: 1px solid var(--border); padding-top: 12px; }
 @media (max-width: 390px) {
   .companion-page .field, .companion-page .btn { max-width: 100%; }
   .companion-actions { flex-direction: column; }
-  .companion-actions .btn { width: 100%; }
+  .companion-actions .btn, .companion-chip { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .companion-tutorial, .companion-tutorial-card { scroll-behavior: auto; transition: none; }
 }

@@ -267,6 +267,8 @@ test('runtime server/Edge accepts both approved QA Preview branches and denies u
   assert.equal((await runtimePublicConfig(qa))?.url, qa.NEXT_PUBLIC_SUPABASE_URL);
   assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' }))?.url,
     qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'beta/crypt-intro-exit-accessibility-20261029' }))?.url,
+    qa.NEXT_PUBLIC_SUPABASE_URL);
   for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {
     assert.equal(await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: ref }), null);

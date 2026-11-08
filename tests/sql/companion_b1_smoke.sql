@@ -17,6 +17,8 @@ do $$ begin
   );
   assert position('v_amount := 2' in pg_catalog.pg_get_functiondef('public._award_quest_xp(uuid,uuid)'::regprocedure)) = 0;
   assert position('_award_personal_quest_xp' in pg_catalog.pg_get_functiondef('public._award_quest_xp(uuid,uuid)'::regprocedure)) > 0;
+  assert position('extensions.digest' in pg_catalog.pg_get_functiondef('public.companion_invite()'::regprocedure)) > 0;
+  assert position('public.digest' in pg_catalog.pg_get_functiondef('public.companion_invite()'::regprocedure)) = 0;
   assert not has_table_privilege('authenticated', 'public.companion_bonds', 'INSERT');
   assert not has_table_privilege('authenticated', 'public.xp_ledger', 'INSERT');
   assert not has_table_privilege('anon', 'public.companion_quests', 'SELECT');
@@ -114,8 +116,9 @@ begin
     assert sqlerrm = 'Invalid title';
   end;
   q := public.companion_send_quest('The Evening Reset', 'Tidy for fifteen minutes', null, 'Choose our movie');
-  assert q->>'status' = 'sent';
-  assert (select instance_id from public.companion_quests where id = (q->>'questId')::uuid) is null, 'send created an awardable instance';
+  assert q->>'status' = 'accepted', q::text;
+  assert q->>'cadence' = 'daily';
+  assert (select instance_id from public.companion_quests where id = (q->>'questId')::uuid) is not null, 'send did not place the quest';
   delete from b1_quest;
   insert into b1_quest values ((q->>'questId')::uuid);
 end $$;
@@ -165,7 +168,29 @@ begin
   assert n = 1, 'overlap minted a second row';
 end $$;
 
--- Izzy sees the completion. A declined quest awards nothing.
+-- Izzy sees the completion. Respond is a no-op and still awards nothing.
+-- A weekly quest is one instance for the week that contains the chosen day.
+do $$
+declare sent jsonb; before integer; n integer; qid uuid;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000c101', true);
+  select count(*) into before from public.xp_ledger where owner_id = auth.uid();
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000c102', true);
+  sent := public.companion_send_quest('Get rid of the cardboard boxes', 'cardboard boxes', null, null, 'weekly');
+  assert sent->>'status' = 'accepted' and sent->>'cadence' = 'weekly', sent::text;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000c101', true);
+  qid := (select quest_id from public.companion_quests where id = (sent->>'questId')::uuid);
+  assert (select cadence from public.quests where id = qid) = 'weekly', 'weekly cadence';
+  assert (select companion_one_shot from public.quests where id = qid), 'one-shot flag';
+  assert (select due_date from public.quest_instances where id = (sent->>'instanceId')::uuid)
+    = (sent->>'dueOn')::date - (pg_catalog.date_part('isodow', (sent->>'dueOn')::date)::integer - 1), 'week of the chosen day';
+  assert (select count(*) from public.xp_ledger where owner_id = auth.uid()) = before, 'weekly send awarded XP';
+  perform public.ensure_quest_instance(qid, public.quest_today());
+  select count(*) into n from public.quest_instances where quest_id = qid;
+  assert n = 1, 'one-shot weekly minted another week';
+end $$;
+
+-- Izzy sees the completion. A no-op decline awards nothing.
 do $$
 declare state jsonb; sent jsonb; before integer;
 begin
@@ -184,6 +209,7 @@ begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000c101', true);
   select count(*) into before from public.xp_ledger where owner_id = auth.uid();
   perform public.companion_respond_quest((sent->>'questId')::uuid, false);
+  assert (select status from public.companion_quests where id = (sent->>'questId')::uuid) = 'accepted', 'decline is no longer a step';
   assert (select count(*) from public.xp_ledger where owner_id = auth.uid()) = before;
 end $$;
 
