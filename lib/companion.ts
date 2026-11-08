@@ -7,6 +7,10 @@ export const COMPANION_TITLES = [
   'Dawn Herald',
 ] as const;
 
+export const COMPANION_COLORS = ['amber', 'rose', 'sage', 'sky', 'violet'] as const;
+
+export type CompanionColor = (typeof COMPANION_COLORS)[number];
+
 export type CompanionTitle = (typeof COMPANION_TITLES)[number];
 
 export function isCompanionTitle(value: string): value is CompanionTitle {
