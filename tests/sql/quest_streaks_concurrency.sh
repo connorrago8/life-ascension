@@ -8,10 +8,11 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 user_id="00000000-0000-0000-0000-00000000f001"
 # Ten days of history ending yesterday: F=10, so a non-first completion earns round(10*2.0)=20.
+today=$(psql -v ON_ERROR_STOP=1 -qAt -d "$db" -c "SELECT public.quest_game_day(pg_catalog.now(), 'America/Chicago')")
 psql -v ON_ERROR_STOP=1 -q -d "$db" <<SQL
 INSERT INTO auth.users(id) VALUES ('$user_id');
 DO \$\$
-DECLARE d integer; q uuid; i uuid; day date := (now() AT TIME ZONE 'America/Chicago')::date;
+DECLARE d integer; q uuid; i uuid; day date := '$today';
 BEGIN
   FOR d IN 1 .. 10 LOOP
     q := gen_random_uuid(); i := gen_random_uuid();
@@ -28,7 +29,7 @@ make_instance() {
   psql -v ON_ERROR_STOP=1 -qAt -d "$db" <<SQL | grep -E '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$' | tail -1
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','$user_id',false);
-SELECT public.ensure_quest_instance(public.create_scheduled_quest('$1','home','daily',(now() AT TIME ZONE 'America/Chicago')::date,'scheduled'));
+SELECT public.ensure_quest_instance(public.create_scheduled_quest('$1','home','daily','$today','scheduled'), '$today');
 SQL
 }
 inst_a="$(make_instance 'Race A')"
@@ -60,8 +61,8 @@ SQL
 pid_b=$!
 wait "$pid_a" || { cat "$tmp/a.err"; exit 1; }
 wait "$pid_b" || { cat "$tmp/b.err"; exit 1; }
-grep -qx 'true:1' "$tmp/a.log" || { echo "A:"; cat "$tmp/a.log"; exit 1; }
-grep -qx 'false:2' "$tmp/b.log" || { echo "B:"; cat "$tmp/b.log"; exit 1; }
+grep -qx 'true:10' "$tmp/a.log" || { echo "A:"; cat "$tmp/a.log"; cat "$tmp/a.err"; exit 1; }
+grep -qx 'false:20' "$tmp/b.log" || { echo "B:"; cat "$tmp/b.log"; cat "$tmp/b.err"; exit 1; }
 firsts="$(psql -v ON_ERROR_STOP=1 -qAt -d "$db" -c "SELECT count(*) FILTER (WHERE first_of_day) || ':' || sum(amount) FROM public.xp_ledger WHERE instance_id IN ('$inst_a','$inst_b');")"
 test "$firsts" = "1:30" || { echo "Unexpected first-of-day count/sum: $firsts"; exit 1; }
-echo "PASS concurrent first-of-day: one unboosted first, one boosted (+2 at F=10)"
+echo "PASS concurrent first-of-day: one unboosted first (10 XP), one boosted (20 XP at F=10)"

@@ -2,16 +2,17 @@
  * Read-only "Today" glance for the Home screen. Counts what is left and done
  * today without creating instances (the Quests board owns ensure/complete).
  */
-import { dailyBoardIds, weekStart, weeklyVisible } from './questStreak.ts';
+import { dailyBoardIds, gameDayParts, weekStart, weeklyVisible } from './questStreak.ts';
 
 export type GlanceQuest = { id: string; cadence: string | null; quest_type: string | null; scheduled_for: string | null };
 export type GlanceInstance = { quest_id: string; due_date: string; status: string };
 export type TodayGlance = { left: number; done: number };
-/** When given, the glance mirrors the Quest board: today's daily board (up to 5) and visible weekly quests. */
+/** When given, the glance mirrors the Quest board. `minutesOfDay` is minutes since 05:00 on the game day. */
 export type GlanceBoard = { userId: string; minutesOfDay: number };
 
+/** America/Chicago game day. The day starts at 05:00, so 01:00 still belongs to yesterday. */
 export function chicagoToday(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  return gameDayParts(now).date;
 }
 
 export function todayGlance(quests: readonly GlanceQuest[], instances: readonly GlanceInstance[], today: string, board?: GlanceBoard): TodayGlance {

@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  DAILY_BOARD_SIZE, WEEKLY_WINDOW_MINUTES, dailyBoardIds, fireFromDays, fnv1a32, localParts,
+  DAILY_BOARD_SIZE, GAME_DAY_START_MINUTES, WEEKLY_WINDOW_MINUTES, dailyBoardIds, fireFromDays, fnv1a32, gameDayParts, localParts,
   minutesIntoWeek, parseStreak, streakBonusPercent, streakHint, streakXp, weekStart,
   weeklyAppearLabel, weeklyAppearOffset, weeklyVisible,
 } from '../lib/questStreak.ts';
@@ -24,6 +24,7 @@ test('base 10 XP uses nearest, half-up integer rounding for any positive base', 
   for(const fire of [0,7,14]) assert.equal(streakXp(10,fire,true),10);
   assert.equal(streakXp(15,1,false),17,'15 × 1.1 = 16.5 rounds up');
   assert.equal(streakXp(1,7,false),2,'1.7 rounds to 2');
+  assert.equal(streakXp(1,25,false),4,'3.5 rounds half up, no cap');
   assert.equal(streakXp(1,400,false),41,'no cap');
   for(let f=0;f<200;f++) assert.equal(streakXp(7,f,false),Math.floor((7*(10+f)+5)/10));
   assert.equal(streakBonusPercent(7),70);
@@ -62,29 +63,32 @@ test('fnv1a32 matches the SQL quest_fnv1a values asserted in quest_streaks_smoke
   assert.equal(fnv1a32(`${USER}:00000000-0000-0000-0000-00000000d0a1:2026-10-26`), 475018547);
   assert.equal(migration.includes("quest_weekly_appears_at(p_owner uuid, p_quest uuid, p_week date, p_tz text)"), true);
   assert.match(migration, /% 5040/);
-  assert.equal(WEEKLY_WINDOW_MINUTES, 5040);
+  assert.equal(GAME_DAY_START_MINUTES, 300);
+  assert.equal(WEEKLY_WINDOW_MINUTES, 79 * 60);
 });
 
-test('weekly window: appears Mon 00:00–Thu 12:00, stays through Sunday, resets next week', () => {
+test('weekly window: appears Mon 05:00–Thu 12:00, stays through Monday 04:59, resets at Monday 05:00', () => {
   assert.equal(weekStart('2026-10-26'), '2026-10-26');
   assert.equal(weekStart('2026-10-29'), '2026-10-26');
   assert.equal(weekStart('2026-11-01'), '2026-10-26', 'Sunday belongs to the week');
   assert.equal(weekStart('2026-11-02'), '2026-11-02');
   const quest = '00000000-0000-0000-0000-00000000d0a1';
   const offset = weeklyAppearOffset(USER, quest, '2026-10-26');
-  assert.equal(offset, 3587);
-  assert.equal(weeklyAppearLabel(offset), 'Wed 11:47 AM');
-  assert.equal(weeklyVisible(USER, quest, '2026-10-28', 11 * 60 + 46), false, 'hidden one minute before');
-  assert.equal(weeklyVisible(USER, quest, '2026-10-28', 11 * 60 + 47), true);
-  assert.equal(weeklyVisible(USER, quest, '2026-11-01', 23 * 60 + 59), true, 'still there Sunday 23:59');
+  assert.equal(offset, 4187);
+  assert.equal(weeklyAppearLabel(offset), 'Thu 2:47 AM');
+  // 1307 minutes after Wednesday 05:00 is Thursday 02:47. One minute earlier stays hidden.
+  assert.equal(weeklyVisible(USER, quest, '2026-10-28', 1306), false, 'hidden one minute before');
+  assert.equal(weeklyVisible(USER, quest, '2026-10-28', 1307), true);
+  assert.equal(weeklyVisible(USER, quest, '2026-11-01', 18 * 60 + 59), true, 'still there Sunday 23:59');
+  assert.equal(gameDayParts(new Date('2026-11-02T10:59:00Z')).date, '2026-11-01', 'Monday 04:59 is still Sunday');
   assert.equal(weeklyVisible(USER, quest, '2026-11-02', 0), weeklyAppearOffset(USER, quest, '2026-11-02') === 0, 'new week: new seed');
-  assert.equal(minutesIntoWeek('2026-10-29', 12 * 60), 3.5 * 1440);
-  // Every seed lands in [Mon 00:00, Thu 12:00), and seeds differ per quest and week.
+  assert.equal(minutesIntoWeek('2026-10-29', 7 * 60), 3 * 1440 + 7 * 60, 'Thursday noon');
+  // Every seed lands in [Mon 05:00, Thu 12:00), and seeds differ per quest and week.
   const offsets = new Set();
   for (let i = 0; i < 2000; i++) {
     const o = weeklyAppearOffset(USER, `quest-${i}`, '2026-10-26');
-    assert.ok(o >= 0 && o < 3.5 * 1440);
-    assert.equal(weeklyVisible(USER, `quest-${i}`, '2026-10-29', 12 * 60), true, 'all visible by Thursday noon');
+    assert.ok(o >= 0 && o < WEEKLY_WINDOW_MINUTES);
+    assert.equal(weeklyVisible(USER, `quest-${i}`, '2026-10-29', 7 * 60), true, 'all visible by Thursday noon');
     offsets.add(o);
   }
   assert.ok(offsets.size > 1000, 'appearance times are spread out');
@@ -159,7 +163,8 @@ test('board UI: fire badge, 5-quest daily board with off-board list, weekly sect
   assert.match(board, /More daily quests \(\{offBoardQuests\.length\}\)/);
   assert.match(board, /still counts: 10 base XP and your streak/);
   assert.match(board, /weeklyVisible\(user,q\.id,today/);
-  assert.match(board, /Weekly · open until Sunday night/);
+  assert.match(board, /Weekly · open until Monday 5:00 AM/);
+  assert.match(board, /gameDayParts\(new Date\(\)\)/);
   assert.match(board, /streakFor&&streakFor\.owner===user/, 'never shows another account’s streak');
   assert.match(css, /\.streak-badge \{[^}]*min-height: 44px/);
   assert.match(css, /\.offboard-toggle \{[^}]*min-height: 44px/);

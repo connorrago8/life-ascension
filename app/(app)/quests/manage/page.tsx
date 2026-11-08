@@ -1,10 +1,11 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
+import {gameDayParts} from '../../../../lib/questStreak';
 import {supabase} from '../../../../lib/supabase';
 
 type Quest={id:string;title:string;domain:string;cadence:string;scheduled_for:string|null;active:boolean};
-function chicagoToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+function chicagoToday(){return gameDayParts(new Date()).date}
 export default function ManageQuests(){
  const [quests,setQuests]=useState<Quest[]>([]);
  const [loading,setLoading]=useState(true);

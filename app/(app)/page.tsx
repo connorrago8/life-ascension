@@ -15,7 +15,7 @@ import { verifiedLifetimeXp } from '../../lib/characterXpProof';
 import { GEAR_SLOTS, SERVER_EQUIPPABLE_ITEMS } from '../../lib/gearSlots';
 import { chicagoToday, todayGlance, todayGlanceLabel, type GlanceInstance, type GlanceQuest, type TodayGlance } from '../../lib/homeToday';
 import { supabase } from '../../lib/supabase';
-import { localParts, parseStreak, type StreakState } from '../../lib/questStreak';
+import { gameDayParts, parseStreak, type StreakState } from '../../lib/questStreak';
 import { starterSlots } from '../../lib/starterLook';
 import { ReturnBanner } from '../../components/home/ReturnBanner';
 
@@ -60,7 +60,8 @@ export default function Home() {
       const { data: authData, error: authError } = await client.auth.getUser();
       const user = authError ? null : authData.user;
       if (!user) { commit({ status: 'signed-out' }); return; }
-      const today = chicagoToday();
+      const nowGame = gameDayParts(new Date());
+      const today = nowGame.date;
       const [xpResult, profileResult, gearResult, statsResult, questsResult, instancesResult, streakResult] = await Promise.all([
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
@@ -79,7 +80,7 @@ export default function Home() {
       const profile = profileResult.error ? null : (profileResult.data as Record<string, unknown> | null);
       const glance = questsResult.error || instancesResult.error
         ? null
-        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: localParts(new Date()).minutes });
+        : todayGlance((questsResult.data ?? []) as GlanceQuest[], (instancesResult.data ?? []) as GlanceInstance[], today, { userId: user.id, minutesOfDay: nowGame.minutes });
       commit({
         status: 'ready',
         name: adventurerName(user.email, profile?.display_name),

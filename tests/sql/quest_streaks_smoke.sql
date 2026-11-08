@@ -19,27 +19,27 @@ begin
   assert public.quest_streak_xp(15, 1, false) = 17, '16.5 rounds up';
   assert public.quest_streak_xp(1, 7, false) = 2, '1.7 rounds to 2';
   assert public.quest_streak_xp(1, 10, false) = 2;
-  assert public.quest_streak_xp(1, 25, false) = 3, 'no cap';
+  assert public.quest_streak_xp(1, 25, false) = 4, '3.5 rounds half up, no cap';
   assert public.quest_streak_xp(1, 400, false) = 41, 'no cap';
   -- weeks start Monday; Sunday still belongs to the week
   assert public.quest_week_start('2026-10-26') = '2026-10-26';
   assert public.quest_week_start('2026-10-29') = '2026-10-26';
   assert public.quest_week_start('2026-11-01') = '2026-10-26', 'Sunday';
   assert public.quest_week_start('2026-11-02') = '2026-11-02', 'new week';
-  -- weekly appearance: Wed 11:47 CDT for the TS parity seed
+  -- weekly appearance: Thu 02:47 CDT for the TS parity seed (Monday 05:00 + 4187 minutes)
   assert public.quest_weekly_appears_at('00000000-0000-0000-0000-00000000d001', '00000000-0000-0000-0000-00000000d0a1', '2026-10-26', 'America/Chicago')
-       = '2026-10-28 16:47:00+00'::timestamptz, 'appears_at TS parity';
+       = '2026-10-29 07:47:00+00'::timestamptz, 'appears_at TS parity';
   assert public.quest_timezone('00000000-0000-0000-0000-00000000dfff') = 'America/Chicago', 'tz fallback';
 end $$;
 
--- Every appearance lands in Mon 00:00 .. Thu 12:00 local, including the DST-change week.
+-- Every appearance lands in Mon 05:00 .. Thu 12:00 local, including the DST-change week.
 do $$
 declare w date; t timestamptz; i integer;
 begin
   foreach w in array array['2026-10-26'::date, '2026-11-02', '2027-03-08', '2027-03-15'] loop
     for i in 1 .. 300 loop
       t := public.quest_weekly_appears_at(gen_random_uuid(), gen_random_uuid(), w, 'America/Chicago');
-      assert t >= (w::timestamp at time zone 'America/Chicago'), 'not before Monday 00:00';
+      assert t >= ((w::timestamp + interval '5 hours') at time zone 'America/Chicago'), 'not before Monday 05:00';
       assert t < ((w::timestamp + interval '3 days 12 hours') at time zone 'America/Chicago'), 'before Thursday noon';
     end loop;
   end loop;
@@ -109,7 +109,7 @@ end $$;
 -- Live awards through the real RPCs (relative to the real local today) ---------------------
 -- e003: F=7 F7 -> 17 XP; e004: F12 -> 22 XP; e005: missed yesterday -> F=0.
 do $$
-declare today date := (now() at time zone 'America/Chicago')::date; d integer;
+declare today date := public.quest_game_day(pg_catalog.now(), 'America/Chicago'); d integer;
 begin
   for d in 1 .. 7 loop perform pg_temp.seed_day('00000000-0000-0000-0000-00000000e003', today - d); end loop;
   for d in 1 .. 12 loop perform pg_temp.seed_day('00000000-0000-0000-0000-00000000e004', today - d); end loop;
@@ -120,7 +120,7 @@ set role authenticated;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000e004', false);
 do $$
-declare today date := (now() at time zone 'America/Chicago')::date; q1 uuid; q2 uuid; q3 uuid; i uuid; r jsonb; s jsonb; t text;
+declare today date := (public.get_quest_streak()->>'today')::date; q1 uuid; q2 uuid; q3 uuid; i uuid; r jsonb; s jsonb; t text;
 begin
   s := public.get_quest_streak();
   assert (s->>'fire')::int = 12 and (s->>'done_today')::boolean = false and s->>'time_zone' = 'America/Chicago', s::text;
@@ -152,7 +152,7 @@ end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000e003', false);
 do $$
-declare today date := (now() at time zone 'America/Chicago')::date; q uuid; i uuid; r jsonb;
+declare today date := (public.get_quest_streak()->>'today')::date; q uuid; i uuid; r jsonb;
 begin
   q := public.create_scheduled_quest('F7 a', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
@@ -164,7 +164,7 @@ end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000e005', false);
 do $$
-declare today date := (now() at time zone 'America/Chicago')::date; q uuid; r jsonb;
+declare today date := (public.get_quest_streak()->>'today')::date; q uuid; r jsonb;
 begin
   assert (public.get_quest_streak()->>'fire')::int = 0, 'a day with no completion resets';
   q := public.create_scheduled_quest('Reset a', 'home', 'daily', today, 'scheduled');
@@ -180,9 +180,9 @@ reset role;
 do $$
 declare
   u uuid := '00000000-0000-0000-0000-00000000e006';
-  today date := (now() at time zone 'America/Chicago')::date;
-  wk date := public.quest_week_start((now() at time zone 'America/Chicago')::date);
-  nextwk date := public.quest_week_start((now() at time zone 'America/Chicago')::date + 1);
+  today date := public.quest_game_day(pg_catalog.now(), 'America/Chicago');
+  wk date := public.quest_week_start(public.quest_game_day(pg_catalog.now(), 'America/Chicago'));
+  nextwk date := public.quest_week_start(public.quest_game_day(pg_catalog.now(), 'America/Chicago') + 1);
   q uuid; i uuid; i2 uuid; r jsonb; ok boolean; appears timestamptz;
 begin
   perform set_config('request.jwt.claim.sub', u::text, true);
@@ -222,7 +222,7 @@ do $$
 declare
   u uuid := '00000000-0000-0000-0000-00000000e006';
   q uuid; i uuid := gen_random_uuid(); ok boolean := false;
-  lastwk date := public.quest_week_start((now() at time zone 'America/Chicago')::date) - 7;
+  lastwk date := public.quest_week_start(public.quest_game_day(pg_catalog.now(), 'America/Chicago')) - 7;
 begin
   select id into q from public.quests where owner_id = u and cadence = 'weekly' limit 1;
   insert into public.quest_instances(id, owner_id, quest_id, due_date) values (i, u, q, lastwk);

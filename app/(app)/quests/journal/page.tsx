@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { weekStart } from '../../../../lib/questStreak';
+import { gameDayParts, weekStart } from '../../../../lib/questStreak';
 import { CollapsibleSection } from '../../../../components/CollapsibleSection';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -24,7 +24,7 @@ const DOMAINS: Record<string, string> = {
 };
 
 function todayLocal() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return gameDayParts(new Date()).date;
 }
 
 export default function QuestNotesIndex() {

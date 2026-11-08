@@ -8,6 +8,7 @@ import {
 } from '../../../lib/apiKeyAuth';
 import { readBearerToken } from '../../../lib/apiKey';
 import { mcpDomains, runMcpTool } from '../../../lib/mcpTools';
+import { gameDayParts } from '../../../lib/questStreak';
 import { createServiceRoleClient } from '../../../lib/supabaseAdmin';
 import { readServerSupabaseConfig } from '../../../lib/supabaseRuntimeConfig';
 
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 const tools = [
   {
     name: 'create_quest',
-    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for today and the previous 2 Chicago days. If its start is older than that, the first instance opens on today minus 2 days.',
+    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for the current game day and the previous 2 game days (America/Chicago, day starts at 5:00 AM). If its start is older than that, the first instance opens on today minus 2 days.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -157,5 +158,5 @@ async function openActor(auth: AuthSuccess, token: string): Promise<{ db: Supaba
 }
 
 function chicagoToday() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return gameDayParts(new Date()).date;
 }

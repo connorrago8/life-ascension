@@ -4,27 +4,32 @@
  * authority: it awards XP and enforces the weekly window; this module only lets
  * the board show the same numbers without a round trip.
  *
- * Founder rules (t672u; base XP revised in t673u):
- *  - Fire F = consecutive local days, ending yesterday, with at least one completion.
- *    Today never counts toward F, so F is fixed all day. A day with none resets it.
- *  - The first completion of a local day keeps the streak and gets no bonus.
+ * Founder rules (t672u; base XP revised in t673u; game day starts at 05:00):
+ *  - A game day starts at 05:00 local time. A completion at 01:00 counts for the
+ *    previous game day. Fire F = consecutive game days, ending yesterday, with at
+ *    least one completion. Today never counts toward F, so F is fixed all game day.
+ *    A game day with none resets it.
+ *  - The first completion of a game day keeps the streak and gets no bonus.
  *    Every other completion that day earns round(xp × (1 + 0.10 × F)), half up,
  *    computed in integers as (xp × (10 + F) + 5) floor-divided by 10. No cap.
  *    Normal quest, manual/off-board and weekly completions all use base 10 XP.
- *  - Daily board: up to DAILY_BOARD_SIZE daily quests a day, picked per user per
- *    local day (stable across reloads). Off-board completions still count.
- *  - Weekly quests appear at a seeded time between Monday 00:00 and Thursday 12:00
- *    local time and stay until done or the week ends (Sunday 23:59).
- *  - Local day: the profile's time zone when one is stored; today there is no such
- *    column, so every account uses America/Chicago, the same day boundary as every
- *    existing completion window.
+ *  - Daily board: up to DAILY_BOARD_SIZE daily quests a game day, picked per user
+ *    per game day (stable across reloads). Off-board completions still count.
+ *  - The week runs Monday 05:00 to the next Monday 05:00. Weekly quests appear at
+ *    a seeded time between Monday 05:00 and Thursday 12:00 local and stay until
+ *    done or the next Monday 05:00.
+ *  - Local time: the profile's time zone when one is stored; today there is no such
+ *    column, so every account uses America/Chicago. The server enforces the same
+ *    05:00 boundary (public.quest_game_day).
  */
 
 export const QUEST_TIME_ZONE = 'America/Chicago';
 export const QUEST_BASE_XP = 10;
 export const DAILY_BOARD_SIZE = 5;
-/** Monday 00:00 to Thursday 12:00 = 3.5 days. */
-export const WEEKLY_WINDOW_MINUTES = 84 * 60;
+/** Game day starts at 05:00 local, not midnight. */
+export const GAME_DAY_START_MINUTES = 5 * 60;
+/** Monday 05:00 to Thursday 12:00 = 79 hours. Thursday noon stays the latest appear time. */
+export const WEEKLY_WINDOW_MINUTES = 79 * 60;
 
 /** 32-bit FNV-1a over UTF-8 bytes. Same as public.quest_fnv1a in SQL. */
 export function fnv1a32(text: string): number {
@@ -64,7 +69,7 @@ export function fireFromDays(daysWithCompletion: Iterable<string>, today: string
   return fire;
 }
 
-/** Local calendar date (YYYY-MM-DD) and minutes since local midnight for an instant. */
+/** Local calendar date (YYYY-MM-DD) and minutes since local midnight. Not the game day. */
 export function localParts(instant: Date, timeZone: string = QUEST_TIME_ZONE): { date: string; minutes: number; isoDow: number } {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
@@ -76,6 +81,22 @@ export function localParts(instant: Date, timeZone: string = QUEST_TIME_ZONE): {
   return { date, minutes, isoDow };
 }
 
+/**
+ * Game day for an instant. `date` is the game-day calendar date (05:00–next 05:00).
+ * `minutes` is minutes since 05:00 local, so Monday 05:00 is minute 0 of that week.
+ */
+export function gameDayParts(instant: Date, timeZone: string = QUEST_TIME_ZONE): { date: string; minutes: number; isoDow: number } {
+  const local = localParts(instant, timeZone);
+  if (local.minutes >= GAME_DAY_START_MINUTES) {
+    return { date: local.date, minutes: local.minutes - GAME_DAY_START_MINUTES, isoDow: local.isoDow };
+  }
+  return {
+    date: addDays(local.date, -1),
+    minutes: local.minutes + (24 * 60 - GAME_DAY_START_MINUTES),
+    isoDow: local.isoDow === 1 ? 7 : local.isoDow - 1,
+  };
+}
+
 /** Monday of the week containing `date` (ISO weeks, Monday first). */
 export function weekStart(date: string): string {
   const d = new Date(`${date}T12:00:00Z`);
@@ -83,27 +104,28 @@ export function weekStart(date: string): string {
   return addDays(date, 1 - isoDow);
 }
 
-/** Minutes after Monday 00:00 local when a weekly quest appears. Same as SQL. */
+/** Minutes after Monday 05:00 local when a weekly quest appears. Same as SQL. */
 export function weeklyAppearOffset(userId: string, questId: string, week: string): number {
   return fnv1a32(`${userId}:${questId}:${week}`) % WEEKLY_WINDOW_MINUTES;
 }
 
-/** Local wall-clock minutes since Monday 00:00 of `date`'s week. */
+/** Minutes since Monday 05:00 of `date`'s week. `minutesOfDay` is minutes since 05:00 on that game day. */
 export function minutesIntoWeek(date: string, minutesOfDay: number): number {
   const days = Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse(`${weekStart(date)}T12:00:00Z`)) / 86_400_000);
   return days * 1440 + minutesOfDay;
 }
 
-/** Whether a weekly quest is on this week's board at local `date` + `minutesOfDay`. */
+/** Whether a weekly quest is on this week's board. `date` is the game day and `minutesOfDay` is minutes since 05:00. */
 export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number): boolean {
   const week = weekStart(date);
   return minutesIntoWeek(date, minutesOfDay) >= weeklyAppearOffset(userId, questId, week);
 }
 
-/** "Thu 9:41 AM" style label for when a weekly quest appears. */
+/** "Thu 9:41 AM" style label for when a weekly quest appears. Offset is minutes after Monday 05:00. */
 export function weeklyAppearLabel(offset: number): string {
-  const day = ['Mon', 'Tue', 'Wed', 'Thu'][Math.floor(offset / 1440)] ?? 'Thu';
-  const minutes = offset % 1440;
+  const fromMidnight = offset + GAME_DAY_START_MINUTES;
+  const day = ['Mon', 'Tue', 'Wed', 'Thu'][Math.floor(fromMidnight / 1440)] ?? 'Thu';
+  const minutes = fromMidnight % 1440;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${day} ${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
