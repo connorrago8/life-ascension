@@ -87,7 +87,11 @@ export default function Login() {
     if (busy || !/^\d{6}$/.test(code)) return;
     setBusy(true);
     setMessage('');
-    const { error } = await supabase().auth.verifyOtp({ email: email.trim(), token: code, type: 'email' });
+    let { error } = await supabase().auth.verifyOtp({ email: email.trim(), token: code, type: 'email' });
+    if (error && createAccount) {
+      const signup = await supabase().auth.verifyOtp({ email: email.trim(), token: code, type: 'signup' });
+      error = signup.error;
+    }
     if (error) setMessage('That code is invalid or expired. Request a new code and try again.');
     else router.replace(returnPath());
     setBusy(false);
@@ -96,7 +100,7 @@ export default function Login() {
   return (
     <main className="wrap">
       <div className="eyebrow">LIFE ASCENSION</div>
-      <h1>Sign in to your adventure</h1>
+      <h1>{createAccount ? 'Create your account' : 'Sign in to your adventure'}</h1>
       {mode === 'password' && (
         <form className="panel auth-form" method="post" action="/login" onSubmit={signInWithPassword}>
           <label htmlFor="email">Email</label>
@@ -134,7 +138,7 @@ export default function Login() {
       )}
       {mode === 'link' && (
         <form className="panel auth-form" method="post" action="/login" onSubmit={requestCode}>
-          <p className="muted">{createAccount ? 'Create an account with a 6-digit code. Enter the code on this page.' : 'We will email a sign-in link for this site. You can open the link or enter the 6-digit code.'}</p>
+          <p className="muted">{createAccount ? 'Create your account with a 6-digit code, and enter it on this page. The email link also comes back here.' : 'We will email a sign-in link for this site. You can open the link or enter the 6-digit code.'}</p>
           <label htmlFor="email">Email</label>
           <input
             id="email"
@@ -150,7 +154,7 @@ export default function Login() {
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
           />
-          <button className="btn" type="submit" disabled={busy}>{busy ? 'Sending…' : 'Email me a link instead'}</button>
+          <button className="btn" type="submit" disabled={busy}>{busy ? 'Sending…' : createAccount ? 'Create your account' : 'Email me a link instead'}</button>
           <button className="btn ghost" type="button" disabled={busy} onClick={() => { setMode('password'); setMessage(''); }}>Use password instead</button>
           <p id="login-status" role="status">{message}</p>
         </form>

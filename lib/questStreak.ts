@@ -115,8 +115,9 @@ export function minutesIntoWeek(date: string, minutesOfDay: number): number {
   return days * 1440 + minutesOfDay;
 }
 
-/** Whether a weekly quest is on this week's board. `date` is the game day and `minutesOfDay` is minutes since 05:00. */
-export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number): boolean {
+/** Whether a weekly quest is on this week's board. `date` is the game day and `minutesOfDay` is minutes since 05:00. Companion one-shots skip the seeded reveal and are open for the whole week. */
+export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number, immediate = false): boolean {
+  if (immediate) return true;
   const week = weekStart(date);
   return minutesIntoWeek(date, minutesOfDay) >= weeklyAppearOffset(userId, questId, week);
 }

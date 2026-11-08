@@ -16,7 +16,7 @@ import {confirmedProgressResult} from '../../../lib/preview/progressDelta.mjs';
 import {hasPendingCompletedRecovery,pendingProgressInstanceIds,recoverableCompletedEntries} from '../../../lib/preview/pendingProgress';
 import {dailyBoardIds,gameDayParts,parseStreak,streakHint,weekStart,weeklyAppearOffset,weeklyVisible,type StreakState} from '../../../lib/questStreak';
 import {previewBoard} from '../../../lib/questBoardPreview';
-type Quest={id:string;title:string;domain:string;cadence:'once'|'daily'|'weekly';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null};
+type Quest={id:string;title:string;domain:string;cadence:'once'|'daily'|'weekly';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null;companion_one_shot?:boolean|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
 const DOMAINS=[['hygiene','Hygiene & appearance'],['home','Home & environment'],['mental_health','Mental health & recovery'],['personal_growth','Growth & hobbies'],['finance','Financial health'],['career','Career & productivity'],['relationships','Relationships'],['physical_health','Physical health']];
 function todayLocal(){return gameDayParts(new Date()).date}
@@ -66,7 +66,7 @@ export default function QuestBoard(){
  // Recover only journal-backed older completed instances owned by this signed-in user.
  // Never query arbitrary history or trust a browser key without server owner filtering.
  let pendingIds:string[]=[];try{pendingIds=pendingProgressInstanceIds(localStorage)}catch{/* Storage getter denied; never query broad history. */}
- const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('active',true).order('created_at',{ascending:true});if(epoch!==loadEpoch.current)return false;if(qe){setMessage(qe.message);return false}const all=q||[];const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));if(epoch!==loadEpoch.current)return false;const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return false}const today=todayLocal();
+ const {data:q,error:qe}=await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment,companion_one_shot').eq('active',true).order('created_at',{ascending:true});if(epoch!==loadEpoch.current)return false;if(qe){setMessage(qe.message);return false}const all=q||[];const ensured=await Promise.all(all.filter(quest=>quest.quest_type!=='goal'&&(!quest.scheduled_for||quest.scheduled_for<=todayLocal())).map(quest=>s.rpc('ensure_quest_instance',{p_quest_id:quest.id,p_date:todayLocal()})));if(epoch!==loadEpoch.current)return false;const instanceError=ensured.find(r=>r.error)?.error;if(instanceError){setMessage(instanceError.message);return false}const today=todayLocal();
 const goalIds=all.filter(q=>q.quest_type==='goal').map(q=>q.id);
 const onceIds=all.filter(q=>q.quest_type==='scheduled'&&q.cadence==='once').map(q=>q.id);
 // Weekly quests: one instance per local week, keyed by its Monday (see lib/questStreak.ts).
@@ -87,7 +87,7 @@ if(te||ge||oe||le||re||we){setMessage(te?.message||ge?.message||oe?.message||le?
 // Fetch metadata only for server-confirmed, owner-scoped recovered instances.
 const missingRecoveryQuestIds=[...new Set((recoveries||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
 const {data:missingRecoveryQuests,error:missingRecoveryError}=missingRecoveryQuestIds.length
- ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
+ ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment,companion_one_shot').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
  :{data:[] as Quest[],error:null};
 if(epoch!==loadEpoch.current)return false;
 if(missingRecoveryError){setMessage(missingRecoveryError.message);return false}
@@ -233,7 +233,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  const streak=streakFor&&streakFor.owner===user?streakFor.state:null;
  const today=todayLocal();const nowGame=gameDayParts(new Date());const thisWeek=weekStart(today);
  // Weekly quests stay hidden until their seeded appearance time (server enforces the same window).
- const weeklyOpen=(q:Quest)=>q.cadence!=='weekly'||weeklyVisible(user,q.id,today,nowGame.minutes);
+ const weeklyOpen=(q:Quest)=>q.cadence!=='weekly'||weeklyVisible(user,q.id,today,nowGame.minutes,q.companion_one_shot===true);
  const visible=quests.map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):q.cadence==='weekly'?instances.find(i=>i.quest_id===q.id&&i.due_date===thisWeek):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&weeklyOpen(x.quest)&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.quest.cadence==='weekly'||x.instance!.status!=='completed'||x.instance!.due_date===today));
  const weeklyHidden=quests.filter(q=>q.cadence==='weekly'&&instances.some(i=>i.quest_id===q.id&&i.due_date===thisWeek)&&!weeklyOpen(q)).length;
  // Daily board: up to 5 daily quests a day, seeded per user and local day; the rest stay one tap away and still count.

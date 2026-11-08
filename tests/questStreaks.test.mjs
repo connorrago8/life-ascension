@@ -78,6 +78,7 @@ test('weekly window: appears Mon 05:00–Thu 12:00, stays through Monday 04:59, 
   assert.equal(weeklyAppearLabel(offset), 'Thu 2:47 AM');
   // 1307 minutes after Wednesday 05:00 is Thursday 02:47. One minute earlier stays hidden.
   assert.equal(weeklyVisible(USER, quest, '2026-10-28', 1306), false, 'hidden one minute before');
+  assert.equal(weeklyVisible(USER, quest, '2026-10-28', 0, true), true, 'companion one-shot is open all week');
   assert.equal(weeklyVisible(USER, quest, '2026-10-28', 1307), true);
   assert.equal(weeklyVisible(USER, quest, '2026-11-01', 18 * 60 + 59), true, 'still there Sunday 23:59');
   assert.equal(gameDayParts(new Date('2026-11-02T10:59:00Z')).date, '2026-11-01', 'Monday 04:59 is still Sunday');

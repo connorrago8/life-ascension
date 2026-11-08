@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getVercelOidcToken } from '@vercel/oidc';
 import { generateText, Output } from 'ai';
 import { z } from 'zod';
 import { fallbackQuestDrafts, sanitizeQuestDrafts } from '../../../../lib/companionQuestDraft';
@@ -66,7 +67,14 @@ export async function POST(request: NextRequest) {
 
 async function draftWithGateway(text: string): Promise<{ items: ReturnType<typeof fallbackQuestDrafts>; source: 'model' | 'fallback' }> {
   const fallback = fallbackQuestDrafts(text);
-  if (!process.env.VERCEL_OIDC_TOKEN && !process.env.AI_GATEWAY_API_KEY) return { items: fallback, source: 'fallback' };
+  if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
+    try {
+      const token = await getVercelOidcToken();
+      if (!token) return { items: fallback, source: 'fallback' };
+    } catch {
+      return { items: fallback, source: 'fallback' };
+    }
+  }
   try {
     const { output } = await generateText({
       model: process.env.AI_GATEWAY_MODEL || 'openai/gpt-5.4-mini',

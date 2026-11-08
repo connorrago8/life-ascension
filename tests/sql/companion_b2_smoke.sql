@@ -117,5 +117,27 @@ begin
   assert (select count(*) from public.xp_ledger where instance_id = inst) = 1, 'photo awarded XP';
 end $$;
 
+-- A companion weekly quest can be finished before the seeded reveal.
+do $$
+declare sent jsonb; err text;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000c302', true);
+  sent := public.companion_send_quest('Deep clean the kitchen', null, null, null, 'weekly');
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000c301', true);
+  assert (select companion_one_shot from public.quests where id = (
+    select quest_id from public.companion_quests where id = (sent->>'questId')::uuid
+  )), 'weekly companion quest is one-shot';
+  begin
+    perform public.companion_complete_quest((sent->>'questId')::uuid);
+  exception when raise_exception then
+    err := sqlerrm;
+  end;
+  assert err is distinct from 'This weekly quest is not on your board yet', coalesce(err, 'completed');
+end $$;
+
 reset role;
+do $$
+begin
+  assert position('companion_one_shot' in pg_catalog.pg_get_functiondef('public._check_weekly_window(uuid,uuid,date)'::regprocedure)) > 0;
+end $$;
 select 'companion batch 2 smoke passed' as result;

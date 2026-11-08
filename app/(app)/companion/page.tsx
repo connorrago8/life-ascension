@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { COMPANION_COLORS, COMPANION_TITLES } from '../../../lib/companion';
+import { collapseCompanionQuests, companionStatusLabel, COMPANION_COLORS, COMPANION_TITLES } from '../../../lib/companion';
 import { CompanionHome, type CompanionView } from './CompanionHome';
 import { COMPANION_INVITE_STORAGE_KEY, companionInvitePath, readInviteCode } from '../../../lib/companionInvite';
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../lib/companionQuestDraft';
-import { gameDayParts } from '../../../lib/questStreak';
+import { gameDayParts, weekStart } from '../../../lib/questStreak';
 import { supabase } from '../../../lib/supabase';
 import { Tutorial } from './Tutorial';
 
@@ -26,6 +26,8 @@ type QuestRow = {
   dueOn: string | null;
   rewardText: string | null;
   status: 'sent' | 'accepted' | 'declined' | 'completed';
+  cadence?: string | null;
+  instanceId?: string | null;
   fromUser: string;
   toUser: string;
 };
@@ -411,12 +413,15 @@ export default function CompanionPage() {
       {board && board.quests.length > 0 && (
         <section className="panel companion-card" aria-label="Companion quests">
           <h2>Quests</h2>
-          {board.quests.map((quest) => (
+          {(board.bond?.role === 'companion' ? collapseCompanionQuests(board.quests) : board.quests).map((quest) => {
+            const today = gameDayParts(new Date()).date;
+            const future = !!quest.dueOn && (quest.cadence === 'weekly' ? weekStart(quest.dueOn) > weekStart(today) : quest.dueOn > today);
+            return (
             <article className="companion-quest" key={quest.id}>
               <h3>{quest.title}</h3>
               {quest.description && <p>{quest.description}</p>}
-              <p className="muted">{quest.status}{quest.dueOn ? ` · due ${quest.dueOn}` : ''}{quest.rewardText ? ` · reward: ${quest.rewardText}` : ''}</p>
-              {board.bond?.role === 'inviter' && quest.status === 'accepted' && (
+              <p className="muted">{board.bond?.role === 'companion' ? companionStatusLabel(quest.status) : quest.status}{quest.dueOn ? ` · due ${quest.dueOn}` : ''}{quest.rewardText ? ` · reward: ${quest.rewardText}` : ''}</p>
+              {board.bond?.role === 'inviter' && quest.status === 'accepted' && !future && (
                 <button className="btn" type="button" disabled={busy} onClick={() => void run(async () => {
                   const { data, error } = await supabase().rpc('companion_complete_quest', { p_quest: quest.id });
                   fail(error);
@@ -424,8 +429,12 @@ export default function CompanionPage() {
                   setMessage(xp > 0 ? `Completed. +${xp} XP.` : 'Completed. No extra XP.');
                 })}>Complete</button>
               )}
+              {board.bond?.role === 'inviter' && quest.status === 'accepted' && future && (
+                <p className="muted">Opens {quest.dueOn}</p>
+              )}
             </article>
-          ))}
+            );
+          })}
         </section>
       )}
       {board && board.activities.length > 0 && (

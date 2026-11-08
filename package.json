@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/oidc": "^4.0.7",
     "ai": "^7.0.165",
     "next": "^15.3.0",
     "react": "^19.0.0",

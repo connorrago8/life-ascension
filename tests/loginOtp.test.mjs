@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { safeNext } from '../lib/safeNext.ts';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
@@ -13,6 +14,9 @@ test('OTP verify flow is a six-digit email code and does not enumerate accounts'
   assert.match(login, /verifyOtp\(\{ email: email\.trim\(\), token: code, type: 'email' \}\)/);
   assert.match(login, /shouldCreateUser: false/);
   assert.match(login, /If an account exists for this email, a 6-digit code was sent\./);
+  assert.match(login, /Create your account/);
+  assert.match(login, /type: 'email'/);
+  assert.equal(safeNext('/companion?invite=abc123def456', 'https://preview.example'), '/companion?invite=abc123def456');
   assert.match(login, /That code is invalid or expired\. Request a new code and try again\./);
   assert.match(login, /Too many requests, wait a minute\./);
   assert.match(login, /\/rate limit\|too many requests\/i\.test\(error\.message\)/);

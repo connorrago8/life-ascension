@@ -4,7 +4,7 @@
  */
 import { dailyBoardIds, gameDayParts, weekStart, weeklyVisible } from './questStreak.ts';
 
-export type GlanceQuest = { id: string; cadence: string | null; quest_type: string | null; scheduled_for: string | null };
+export type GlanceQuest = { id: string; cadence: string | null; quest_type: string | null; scheduled_for: string | null; companion_one_shot?: boolean | null };
 export type GlanceInstance = { quest_id: string; due_date: string; status: string };
 export type TodayGlance = { left: number; done: number };
 /** When given, the glance mirrors the Quest board. `minutesOfDay` is minutes since 05:00 on the game day. */
@@ -33,7 +33,7 @@ export function todayGlance(quests: readonly GlanceQuest[], instances: readonly 
     }
     if (quest.cadence === 'weekly' && board) {
       const week = mine.find((instance) => instance.due_date === weekStart(today));
-      if (week?.status === 'available' && weeklyVisible(board.userId, quest.id, today, board.minutesOfDay)) left += 1;
+      if (week?.status === 'available' && weeklyVisible(board.userId, quest.id, today, board.minutesOfDay, quest.companion_one_shot === true)) left += 1;
       continue;
     }
     for (const instance of mine) {

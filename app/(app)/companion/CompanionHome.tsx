@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { collapseCompanionQuests, companionStatusLabel } from '../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence } from '../../../lib/companionQuestDraft';
 import { gameDayParts, weekStart } from '../../../lib/questStreak';
 import { supabase } from '../../../lib/supabase';
@@ -11,6 +12,7 @@ type Quest = {
   dueOn: string | null;
   status: string;
   cadence?: string | null;
+  instanceId?: string | null;
   fromUser: string;
   nudgedToday?: boolean;
 };
@@ -53,7 +55,7 @@ export function CompanionHome({
   const today = gameDayParts(new Date()).date;
   const start = weekStart(today);
   const end = addDays(start, 7);
-  const mine = board.quests.filter((quest) => quest.fromUser === board.userId && quest.status !== 'declined');
+  const mine = collapseCompanionQuests(board.quests.filter((quest) => quest.fromUser === board.userId && quest.status !== 'declined'));
   const inWeek = (quest: Quest) => !!quest.dueOn && quest.dueOn >= start && quest.dueOn < end;
   const groups = [
     ['Today, still open', mine.filter((quest) => quest.dueOn === today && quest.status !== 'completed')],
@@ -110,7 +112,7 @@ export function CompanionHome({
               {rows.map((quest) => (
                 <div className="companion-quest" key={quest.id}>
                   <p>{quest.title}</p>
-                  <p className="muted">{quest.cadence === 'weekly' ? 'Weekly' : 'Daily'} · {quest.dueOn}</p>
+                  <p className="muted">{companionStatusLabel(quest.status)} · {quest.cadence === 'weekly' ? 'Weekly' : 'Daily'} · {quest.dueOn}</p>
                   {quest.status !== 'completed' && (
                     <button className="btn ghost" type="button" disabled={busy || quest.nudgedToday} onClick={() => void call(async () => {
                       const { error } = await supabase().rpc('companion_nudge', { p_quest: quest.id });
