@@ -28,6 +28,7 @@ export type CompanionView = {
   bond: { role: 'inviter' | 'companion'; partnerName?: string | null; partnerTitle?: string | null } | null;
   identity: { displayName: string; title: string; questColor?: string; avatarPath?: string | null } | null;
   quests: Quest[];
+  activities?: { id: string; title: string; voided?: boolean }[];
   notices?: Notice[];
   rewards?: Reward[];
   repeats?: Repeat[];

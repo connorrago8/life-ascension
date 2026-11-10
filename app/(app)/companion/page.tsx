@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { draftSourceLabel } from '../../../lib/companionAccess';
 import { collapseCompanionQuests, companionStatusLabel, COMPANION_COLORS, COMPANION_TITLES } from '../../../lib/companion';
 import { CompanionHome, type CompanionView } from './CompanionHome';
 import { COMPANION_INVITE_STORAGE_KEY, companionInvitePath, readInviteCode } from '../../../lib/companionInvite';
@@ -77,6 +78,7 @@ export default function CompanionPage() {
   const [justType, setJustType] = useState(false);
   const [brainDump, setBrainDump] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
+  const [draftSource, setDraftSource] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showConnorTip, setShowConnorTip] = useState(false);
 
@@ -275,6 +277,7 @@ export default function CompanionPage() {
                 event.preventDefault();
                 void run(async () => {
                   let next = fallbackQuestDrafts(brainDump);
+                  let source = 'fallback';
                   try {
                     const response = await fetch('/api/companion/draft', {
                       method: 'POST',
@@ -282,17 +285,20 @@ export default function CompanionPage() {
                       body: JSON.stringify({ text: brainDump }),
                     });
                     if (response.ok) {
-                      const payload = await response.json() as { items?: QuestDraft[] };
+                      const payload = await response.json() as { items?: QuestDraft[]; source?: string };
                       if (Array.isArray(payload.items) && payload.items.length > 0) next = payload.items;
+                      if (payload.source === 'model' || payload.source === 'fallback') source = payload.source;
                     }
                   } catch { /* The local splitter already filled next. */ }
                   setDrafts(next);
+                  setDraftSource(source);
                   setMessage(next.length ? 'Check the list, then send.' : 'No quests found in that note.');
                 });
               }}>
                 <label htmlFor="brain-dump">Type everything on your mind</label>
                 <textarea id="brain-dump" className="field" maxLength={1000} value={brainDump} onChange={(event) => setBrainDump(event.target.value)} />
                 <button className="btn" type="submit" disabled={busy || brainDump.trim().length < 1}>Turn into quests</button>
+                {draftSourceLabel(draftSource) && <p className="companion-draft-source" role="status">{draftSourceLabel(draftSource)}</p>}
               </form>
             ) : (
             <form onSubmit={(event) => {
