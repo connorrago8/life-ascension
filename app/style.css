@@ -1304,6 +1304,15 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .companion-page { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .companion-page h1 { overflow-wrap: anywhere; }
 .companion-back { align-self: flex-start; min-height: 44px; }
+.role-loading { margin: 24px; }
+.companion-mode-home { display: grid; gap: 14px; }
+.companion-mode-home h1 { margin: 0; font-size: 1.6rem; }
+.companion-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.companion-metric { margin: 0; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: grid; gap: 4px; }
+.companion-metric strong { font-size: 1.6rem; }
+.companion-metric span { color: var(--muted); }
+.companion-create { width: 100%; min-height: 48px; }
+.companion-draft-source { font-weight: 650; }
 .companion-card { min-width: 0; }
 .companion-card h2 { overflow-wrap: anywhere; }
 .companion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
