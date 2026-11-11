@@ -1,0 +1,69 @@
+/* Dark visual system for the main adventurer (Connor). Matches companion palette. */
+.screen,
+.wrap,
+.quest-board,
+.character-screen {
+  --neon: #ff2bd6;
+  --cyan: #00f0ff;
+  --gold: #c9a227;
+  --glass: rgba(16, 18, 24, 0.92);
+  --border: #2c313a;
+  background: #0c0e12;
+  color: #e8eaed;
+}
+
+.quest,
+.panel,
+.companion-card,
+.character-summary,
+.wellness,
+.equip-slot {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.xp-track,
+.progress,
+.character-xp-track {
+  background: #14171c;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.xp-fill,
+.progress span {
+  background: linear-gradient(90deg, var(--cyan), var(--neon));
+  box-shadow: 0 0 6px var(--cyan);
+}
+
+.btn {
+  background: var(--neon);
+  color: #0c0e12;
+  font-weight: 650;
+  border-radius: 12px;
+}
+.btn.ghost {
+  background: transparent;
+  color: #e8eaed;
+  border: 1px solid #3c4450;
+}
+
+.eyebrow,
+.page-brand,
+.character-level {
+  color: var(--gold);
+  letter-spacing: 0.12em;
+}
+
+.quest-title {
+  color: #e8eaed;
+}
+.muted {
+  color: #9aa3ae;
+}
+
+.equip-slot.is-owned {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.3);
+}

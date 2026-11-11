@@ -1,0 +1,128 @@
+/* Dark BG3 × cyberpunk companion visual system. */
+.companion-page {
+  --neon: #ff2bd6;
+  --cyan: #00f0ff;
+  --gold: #c9a227;
+  --glass: rgba(16, 18, 24, 0.92);
+  --border: #2c313a;
+  background: #0c0e12;
+  color: #e8eaed;
+}
+
+.companion-page .cq-hero-card,
+.companion-page .companion-card,
+.companion-page .cq-card,
+.companion-page .cq-pass {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(8px);
+}
+
+.companion-page .cq-heartbar {
+  height: 10px;
+  background: #14171c;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 0 4px rgba(0,0,0,0.6);
+}
+.companion-page .cq-heartbar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--neon));
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.companion-page .cq-score-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #12151a;
+  font-size: 0.85rem;
+}
+
+.companion-page .btn {
+  background: var(--neon);
+  color: #0c0e12;
+  font-weight: 650;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 43, 214, 0.35);
+}
+.companion-page .btn.ghost {
+  background: transparent;
+  color: #e8eaed;
+  border: 1px solid #3c4450;
+  box-shadow: none;
+}
+
+.companion-page .cq-kicker,
+.companion-page .cq-section {
+  color: var(--gold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.companion-page .companion-fanfare {
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: rgba(0, 240, 255, 0.06);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+}
+
+.companion-page .cq-track {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.companion-page .cq-tier {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #12151a;
+}
+.companion-page .cq-tier.is-owned {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.3);
+}
+.companion-page .cq-tier-level {
+  color: var(--gold);
+  font-weight: 650;
+  text-align: center;
+}
+.companion-page .cq-lock {
+  color: #555;
+  font-size: 0.8rem;
+}
+
+.companion-page .cq-pill {
+  background: #1a1d22;
+  color: var(--cyan);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+.companion-page .cq-pill.is-done {
+  background: var(--neon);
+  color: #0c0e12;
+}
+
+.companion-page .companion-hero {
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}

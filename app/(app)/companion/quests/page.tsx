@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { QuestBoard } from '../../../../components/companion/QuestBoard';
 import { draftSourceLabel } from '../../../../lib/companionAccess';
-import { companionStatusLabel } from '../../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../../lib/companionQuestDraft';
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
@@ -67,21 +67,33 @@ export default function CompanionQuestsPage() {
     }
   }
 
+  async function nudge(id: string) {
+    setBusy(true);
+    const { error } = await supabase().rpc('companion_nudge', { p_quest: id });
+    setBusy(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setMessage('');
+    await reload();
+  }
+
   if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
   const label = draftSourceLabel(source);
   return (
     <main className="wrap companion-page" id="send-quest">
       <h1>Quests</h1>
-      <form onSubmit={(event) => void organize(event)}>
+      <form className="cq-notebook" onSubmit={(event) => void organize(event)}>
         <label htmlFor="brain-dump">Just type</label>
-        <textarea id="brain-dump" className="field" maxLength={1000} value={text} onChange={(event) => setText(event.target.value)} />
-        <button className="btn" type="submit" disabled={busy || text.trim().length < 1}>Turn into quests</button>
+        <textarea id="brain-dump" className="field" maxLength={1000} placeholder="Example: yoga tonight, dishes after dinner, and a weekly cardboard run" value={text} onChange={(event) => setText(event.target.value)} />
+        <button className="btn cq-spark" type="submit" disabled={busy || text.trim().length < 1}>✦ Turn into quests</button>
       </form>
       {label && <p className="companion-draft-source" role="status">{label}</p>}
       {drafts.length > 0 && (
-        <form onSubmit={(event) => void send(event)}>
+        <form className="companion-card" onSubmit={(event) => void send(event)}>
           {drafts.map((draft, index) => (
-            <div className="companion-quest" key={`${draft.title}-${index}`}>
+            <div className="cq-card is-open" key={`${draft.title}-${index}`}>
               <input className="field" maxLength={120} aria-label="Quest" value={draft.title} onChange={(event) => setDrafts((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, title: event.target.value } : row))} />
               <button className="btn companion-chip" type="button" onClick={() => setDrafts((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, cadence: (row.cadence === 'daily' ? 'weekly' : 'daily') as QuestCadence } : row))}>
                 {draft.cadence === 'weekly' ? 'Weekly' : 'Daily'}
@@ -91,18 +103,8 @@ export default function CompanionQuestsPage() {
           <button className="btn" type="submit" disabled={busy}>Send</button>
         </form>
       )}
-      <p><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
-      <h2>Yours</h2>
-      {mine.length === 0 && <p className="muted">No quests yet.</p>}
-      {mine.slice(0, 6).map((quest) => (
-        <p key={quest.id}>{quest.title} · {companionStatusLabel(quest.status)}
-          {quest.status !== 'completed' && (
-            <button className="btn ghost" type="button" disabled={busy || quest.nudgedToday} onClick={() => void supabase().rpc('companion_nudge', { p_quest: quest.id }).then(() => reload())}>
-              {quest.nudgedToday ? 'Nudged today' : 'Nudge'}
-            </button>
-          )}
-        </p>
-      ))}
+      <p className="cq-planner"><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
+      <QuestBoard quests={mine} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} />
       {message && <p className="message" role="status">{message}</p>}
     </main>
   );

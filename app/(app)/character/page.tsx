@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
+import { AdventurerCosmeticTrack } from '../../../components/AdventurerCosmeticTrack';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { parseCryptProfile } from '../../../lib/cryptVault';
@@ -31,8 +32,6 @@ export default function CharacterPage() {
   const equipmentMutationInFlight = useRef(false);
 
   const load = useCallback(async () => {
-    // Focus/visibility refreshes and post-equip reads may overlap. Only the
-    // latest request may commit a verified XP/equipment snapshot or error.
     const isCurrent = loadGate.current.begin();
     const commit = (next: LoadState) => { if (isCurrent()) setState(next); };
     const preview = process.env.NODE_ENV === 'development'
@@ -54,9 +53,7 @@ export default function CharacterPage() {
         client.rpc('get_lifetime_xp'),
         client.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
-        // Read-only: your STR/AGI/INT/END/LCK allocation (set in the Crypt camp, capped by level server-side).
         client.rpc('get_crypt_profile'),
-        // Read-only: your latest Apple Health Shortcut reading (RLS: your own rows only).
         client.from('wellness_readings').select(WELLNESS_READING_COLUMNS).order('reading_date', { ascending: false }).limit(1),
       ]);
       if (xpResult.error) {
@@ -80,15 +77,12 @@ export default function CharacterPage() {
         gear: gearResult.error ? null : parseAuthenticatedGearSnapshot(gearResult.data),
       });
     } catch {
-      // A transient network failure is not evidence that the user signed out.
       commit({ status: 'error', message: 'Could not load your character. Your quests and equipment are unchanged.' });
     }
   }, []);
 
   async function setItemEquipped(slot: GearSlotKey, itemId: string, equip: boolean) {
     if (state.status !== 'ready' || state.preview || !state.gear || equipmentBusy || equipmentMutationInFlight.current) return;
-    // Client pre-check only (owned + fits slot + level unlocked). The server RPC
-    // independently enforces ownership and the level gate; it never grants items.
     const verifiedLevel = levelForVerifiedXp(state.xp);
     if (equip && !canRequestEquip(verifiedLevel, state.gear.ownedItemIds, slot, itemId)) {
       setEquipmentError(isSlotUnlocked(verifiedLevel, slot) ? 'That item is not available for this slot.' : `${slotLockText(slot)}.`);
@@ -96,7 +90,6 @@ export default function CharacterPage() {
     }
     if (!equip && SERVER_EQUIPPABLE_ITEMS[itemId] !== slot) return;
     equipmentMutationInFlight.current = true;
-    // An older focus refresh must not repaint stale gear during an equip RPC.
     loadGate.current.invalidate();
     setEquipmentBusy(true);
     setEquipmentError('');
@@ -110,9 +103,6 @@ export default function CharacterPage() {
           : 'Could not update your equipment. Your equipment is unchanged.');
         return;
       }
-      // Only the authoritative server read can change the visible equipment.
-      // If that read fails, do not leave the previous gear snapshot looking
-      // like a confirmed successful equip operation.
       setState({ status: 'loading' });
       await load();
     } catch {
@@ -125,7 +115,6 @@ export default function CharacterPage() {
 
   useEffect(() => {
     void load();
-    // Refresh verified XP and equipment when returning from Quest Board or another tab.
     const refreshOnFocus = () => { if (document.visibilityState === 'visible' && !equipmentMutationInFlight.current) void load(); };
     document.addEventListener('visibilitychange', refreshOnFocus);
     window.addEventListener('focus', refreshOnFocus);
@@ -160,7 +149,6 @@ export default function CharacterPage() {
 
   const progress = levelFor(state.xp);
   const fraction = levelProgress(state.xp);
-  // Allocated stats when the account has them; otherwise the placeholder dash.
   const attributes = attributeEntries(state.stats);
   const wellness = state.wellness;
   const armorMilestone = state.preview ? null : earnedArmorMilestone(state.xp, state.gear);
@@ -196,6 +184,8 @@ export default function CharacterPage() {
           {armorMilestone.status === 'unverified' && 'Ashen Hood status unavailable. Refresh to retry.'}
         </p>
       )}
+
+      <AdventurerCosmeticTrack level={progress.level} />
 
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
         <h2 id="wellness-heading">Wellness</h2>
