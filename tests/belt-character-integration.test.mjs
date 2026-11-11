@@ -145,3 +145,61 @@ test('unverified account full-character render has starter tie, no earned belt, 
   assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
   assert.doesNotMatch(html, /data-prop="(?:staff|lantern)"/);
 });
+
+
+test('first sword draws a single held weapon without staff or lantern', async () => {
+  const HomeCharacter = await loadCharacter();
+  const html = renderToStaticMarkup(React.createElement(HomeCharacter, {
+    model: { ...model, mainHand: 'sword', mainHandAccent: '#697D8A', mainHandAccentLight: '#E3EDF0' },
+    beltPreviewStage: 'starter',
+  }));
+  assert.match(html, /data-main-hand="sword"/);
+  assert.match(html, /data-prop="sword"/);
+  assert.match(html, /aria-label="Initiate Sword"/);
+  assert.equal((html.match(/data-prop="/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-prop="(?:staff|lantern)"/);
+  assert.match(html, /data-waist-part="starter-tie"/);
+  assert.doesNotMatch(html, /data-waist-part="earned-buckle"/);
+});
+
+test('first sword is selectable preview gear and appears in the adventure sprite', async () => {
+  const appearance = execute(compile(await readFile(new URL('../lib/preview/appearance.ts', import.meta.url), 'utf8')), require);
+  const catalog = execute(compile(await readFile(new URL('../lib/preview/catalog.ts', import.meta.url), 'utf8')),
+    (name) => name.includes('appearance') ? appearance : require(name));
+  const characterRender = execute(compile(await readFile(new URL('../lib/preview/characterRender.ts', import.meta.url), 'utf8')),
+    (name) => name.includes('appearance') ? appearance : require(name));
+  const sword = appearance.gearById('initiate-sword');
+  assert.equal(sword?.motif, 'sword');
+  assert.equal(catalog.catalogItem('initiate-sword')?.slot, 'main-hand');
+  const next = appearance.withEquippedItem(appearance.SAMPLE_APPEARANCE, sword);
+  assert.equal(next.equipment.filter((item) => item.slot === 'main-hand').length, 1);
+  const adventure = characterRender.adventureCharacterModel(next);
+  assert.equal(adventure.mainHand, 'sword');
+  const swordPixels = adventure.overlays['main-hand']?.join('') ?? '';
+  assert.match(swordPixels, /I/);
+  assert.match(swordPixels, /G/);
+  assert.match(swordPixels, /g/);
+  assert.equal(characterRender.pixelPalette(next).G, '#C6A66D');
+});
+
+test('restored preview equipment catalog identifies invalid IDs and conflicting slots', async () => {
+  const appearance = execute(compile(await readFile(new URL('../lib/preview/appearance.ts', import.meta.url), 'utf8')), require);
+  const catalog = execute(compile(await readFile(new URL('../lib/preview/catalog.ts', import.meta.url), 'utf8')),
+    (name) => name.includes('appearance') ? appearance : require(name));
+  assert.equal(catalog.catalogItem('not-a-real-item'), null);
+  assert.equal(catalog.catalogItem('wine-cloak-dye')?.category, 'cosmetic');
+  assert.equal(catalog.catalogItem('initiate-sword')?.category, 'equipment');
+  const equipped = catalog.equipCatalogId(['walking-staff', 'travelers-hood'], [], 'initiate-sword');
+  assert.deepEqual(equipped.equipmentIds, ['travelers-hood', 'initiate-sword']);
+  assert.equal(equipped.equipmentIds.filter((id) => catalog.catalogItem(id)?.slot === 'main-hand').length, 1);
+  assert.deepEqual(catalog.equipCatalogId(equipped.equipmentIds, [], 'not-a-real-item').equipmentIds, equipped.equipmentIds);
+});
+
+test('preview restore removes malformed JSON and falls back to default equipment', async () => {
+  const source = await readFile(new URL('../components/preview/usePreviewAppearance.ts', import.meta.url), 'utf8');
+  // Regression guard for the recovery path: invalid JSON must not remain
+  // in sessionStorage and poison every subsequent character preview.
+  assert.match(source, /parsed = JSON\\.parse\\(raw)/);
+  assert.match(source, /catch \\{[\\s\\S]*?sessionStorage\\.removeItem\\(LOADOUT_KEY\\)/);
+  assert.match(source, /return base;/);
+});

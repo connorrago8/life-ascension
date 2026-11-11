@@ -104,6 +104,17 @@ export function HomeCharacter({ model, idPrefix = 'home', beltPreviewStage }: { 
             <path d="M53 40 L56 352" stroke={model.mainHandAccentLight} strokeWidth="2" />
             <path d="M48 43 L55 29 62 43Z" fill={model.mainHandAccentLight} />
           </g>
+        ) : model.mainHand === 'sword' ? (
+          <g data-prop="sword" aria-label="Initiate Sword">
+            <path d="M56 244 L54 99 59 79 64 99 62 244Z"
+              fill={model.mainHandAccentLight} stroke={model.mainHandAccent} strokeWidth="2" />
+            <path d="M59 93 L59 238" stroke="#FFFFFF" strokeWidth="2" opacity=".75" />
+            <path d="M42 243 Q59 238 76 243 L76 250 Q59 247 42 250Z"
+              fill="#C6A66D" stroke="#4A3826" strokeWidth="2" />
+            <path d="M56 250 L62 250 64 282 54 282Z"
+              fill="#51392C" stroke="#A87A50" strokeWidth="2" />
+            <circle cx="59" cy="286" r="6" fill="#C6A66D" stroke="#4A3826" strokeWidth="2" />
+          </g>
         ) : null}
       </g>
     </svg>
