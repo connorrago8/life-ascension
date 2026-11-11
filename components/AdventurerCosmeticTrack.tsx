@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ADVENTURER_COSMETICS, type AdventurerCosmetic } from '../lib/adventurerCosmetics';
+import { supabase } from '../lib/supabase';
 
 type Props = {
   level: number;
@@ -11,14 +12,19 @@ type Props = {
 
 export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) {
   const [localWorn, setLocalWorn] = useState<Set<string>>(new Set(wornIds));
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setLocalWorn(new Set(wornIds));
   }, [wornIds]);
 
-  function toggle(item: AdventurerCosmetic) {
-    if (item.unlockLevel > level) return;
+  async function toggle(item: AdventurerCosmetic) {
+    if (item.unlockLevel > level || busy) return;
     const next = !localWorn.has(item.id);
+    setBusy(true);
+    const { error } = await supabase().rpc('adventurer_set_worn', { p_id: item.id, p_wear: next });
+    setBusy(false);
+    if (error) return;
     setLocalWorn((prev) => {
       const copy = new Set(prev);
       if (next) copy.add(item.id);
@@ -31,7 +37,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) 
   return (
     <section className="adventurer-track" aria-label="Adventurer cosmetics">
       <h2 className="cq-section">Cosmetics</h2>
-      <p className="muted">Unlocks every 2 levels. Tap Wear to equip. (Local only until server persistence is added.)</p>
+      <p className="muted">Unlocks every 2 levels. Wear persists after refresh.</p>
       <ul className="cq-track">
         {ADVENTURER_COSMETICS.map((item) => {
           const owned = item.unlockLevel <= level;
@@ -47,7 +53,8 @@ export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) 
                 <button
                   type="button"
                   className="btn ghost"
-                  onClick={() => toggle(item)}
+                  disabled={busy}
+                  onClick={() => void toggle(item)}
                 >
                   {worn ? 'Take off' : 'Wear'}
                 </button>
