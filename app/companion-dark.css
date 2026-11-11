@@ -1,0 +1,62 @@
+/* Dark BG3 × cyberpunk companion overrides. */
+.companion-page {
+  --neon: #ff2bd6;
+  --cyan: #00f0ff;
+  --gold: #c9a227;
+  --glass: rgba(28, 31, 36, 0.85);
+  background: #0e1014;
+}
+
+.companion-page .cq-hero-card,
+.companion-page .companion-card,
+.companion-page .cq-card {
+  background: var(--glass);
+  border: 1px solid #2a2f38;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.companion-page .cq-heartbar {
+  height: 8px;
+  background: #1a1d22;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.companion-page .cq-heartbar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--neon));
+}
+
+.companion-page .cq-score-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #2a2f38;
+  border-radius: 8px;
+  background: #15181c;
+  font-size: 0.85rem;
+}
+
+.companion-page .btn {
+  background: var(--neon);
+  color: #0e1014;
+}
+.companion-page .btn.ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid #3c4450;
+}
+
+.companion-page .cq-kicker {
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.companion-page .companion-fanfare {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
