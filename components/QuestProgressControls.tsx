@@ -46,7 +46,7 @@ export function QuestProgressControls({ quest, instance, disabled, onLog }: Prop
   };
   return <div className="quest-progress-controls">
     <label className="muted" htmlFor={`progress-${instance.id}`}>{amount} / {target} {quest.progress_unit}</label>
-    <progress id={`progress-${instance.id}`} value={amount} max={target} style={{width:'100%'}} />
+    <div className="quest-progress-track" role="progressbar" aria-label={`${quest.progress_unit} progress`} aria-valuemin={0} aria-valuemax={target} aria-valuenow={amount}><span className="quest-progress-fill" style={{width:`${Math.max(0,Math.min(100,amount/target*100))}%`}} /></div>
     {storageError && <p role="alert">Browser storage is unavailable. Progress logging is paused to prevent duplicate saves. Enable site storage and reload.</p>}
     {retrying && <p role="alert">Save not confirmed. Retry the same operation before logging more.</p>}
     <div className="actions">{retrying && <button type="button" className="btn" disabled={disabled || saving || storageError} onClick={retryPending}>Retry save</button>}
