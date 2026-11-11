@@ -1,6 +1,7 @@
--- More cosmetic tiers for Izzy's battle pass, plus two activity rewards.
+-- Companion cosmetics for Izzy's battle pass (approved Style Track).
 -- Additive. Reverse with supabase/rollbacks/202611110002_companion_pass_down.sql.
 -- No combat stats. Crypt XP is not touched.
+-- Level 1 default is not catalogued (plain tank / baggy pants / scuffed boots).
 
 alter table public.companion_cosmetic_catalog
   add column if not exists grant_kind text not null default 'level'
@@ -8,20 +9,36 @@ alter table public.companion_cosmetic_catalog
 
 alter table public.companion_cosmetic_catalog drop constraint if exists companion_cosmetic_catalog_slot_check;
 alter table public.companion_cosmetic_catalog add constraint companion_cosmetic_catalog_slot_check
-  check (slot in ('accent', 'shirt', 'pin', 'head', 'gown', 'boots', 'wand', 'pet', 'aura', 'wings', 'frame', 'accessory'));
+  check (slot in ('top', 'bottom', 'boots', 'gloves', 'jacket', 'head', 'face', 'hair', 'tattoo', 'hip', 'aura', 'companion', 'back', 'accessory'));
 
 insert into public.companion_cosmetic_catalog(id, label, slot, unlock_level, sort_order, grant_kind) values
-  ('bow', 'Hair bow', 'accessory', 3, 6, 'level'),
-  ('sparkle-boots', 'Sparkly boots', 'boots', 7, 7, 'level'),
-  ('flower-crown', 'Flower crown', 'head', 12, 8, 'level'),
-  ('heart-wand', 'Heart wand', 'wand', 15, 9, 'level'),
-  ('bunny', 'Bunny', 'pet', 20, 10, 'level'),
-  ('star-aura', 'Star aura', 'aura', 30, 11, 'level'),
-  ('tiara', 'Tiara', 'head', 35, 12, 'level'),
-  ('fairy-wings', 'Fairy wings', 'wings', 40, 13, 'level'),
-  ('pastel-frame', 'Pastel frame', 'frame', 45, 14, 'level'),
-  ('yoga-mat', 'Yoga mat', 'accessory', 1, 15, 'activity'),
-  ('bubble-aura', 'Bubble aura', 'aura', 1, 16, 'activity')
+  ('fingerless-gloves', 'Black fingerless gloves', 'gloves', 2, 1, 'level'),
+  ('nose-ring', 'Silver nose ring', 'face', 4, 2, 'level'),
+  ('cargo-pants', 'Black cargo pants', 'bottom', 6, 3, 'level'),
+  ('crop-top', 'Black crop top', 'top', 8, 4, 'level'),
+  ('leather-jacket', 'Cropped leather jacket', 'jacket', 10, 5, 'level'),
+  ('wrist-tattoo', 'Small wrist tattoo', 'tattoo', 12, 6, 'level'),
+  ('combat-boots', 'Buckled combat boots', 'boots', 14, 7, 'level'),
+  ('silver-circlet', 'Silver circlet', 'head', 16, 8, 'level'),
+  ('neon-hair-streak', 'Neon hair streak', 'hair', 18, 9, 'level'),
+  ('arm-sleeve-tattoo', 'Glowing cyan arm-sleeve tattoo', 'tattoo', 20, 10, 'level'),
+  ('utility-belt', 'Utility belt', 'hip', 22, 11, 'level'),
+  ('cyber-visor', 'Cyber eye visor', 'face', 24, 12, 'level'),
+  ('trench-coat', 'Long dark trench coat', 'jacket', 26, 13, 'level'),
+  ('neck-tattoo', 'Glowing magenta neck tattoo', 'tattoo', 28, 14, 'level'),
+  ('cat-ear-headset', 'Cat-ear headset', 'head', 30, 15, 'level'),
+  ('rune-lantern', 'Rune lantern', 'back', 32, 16, 'level'),
+  ('armored-corset', 'Armored leather corset', 'top', 34, 17, 'level'),
+  ('hand-tattoos', 'Glowing hand tattoos', 'tattoo', 36, 18, 'level'),
+  ('hooded-cloak', 'Hooded cloak with neon trim', 'jacket', 38, 19, 'level'),
+  ('rune-drone', 'Floating rune drone', 'companion', 40, 20, 'level'),
+  ('shoulder-pauldron', 'Obsidian shoulder pauldron', 'back', 42, 21, 'level'),
+  ('back-tattoo', 'Full back tattoo', 'tattoo', 44, 22, 'level'),
+  ('silver-neon-hair', 'Silver hair with neon tips', 'hair', 46, 23, 'level'),
+  ('neon-aura', 'Soft neon aura', 'aura', 48, 24, 'level'),
+  ('obsidian-gown', 'Obsidian techwear gown with gold filigree', 'top', 50, 25, 'level'),
+  ('neon-yoga-wrap', 'Neon yoga wrap', 'accessory', 1, 26, 'activity'),
+  ('rune-cleaning-drone', 'Rune cleaning drone', 'companion', 1, 27, 'activity')
 on conflict (id) do nothing;
 
 create table if not exists public.companion_activity_rewards (
@@ -30,9 +47,9 @@ create table if not exists public.companion_activity_rewards (
   cosmetic_id text not null references public.companion_cosmetic_catalog(id)
 );
 insert into public.companion_activity_rewards(title_key, need_count, cosmetic_id) values
-  ('yoga', 5, 'yoga-mat'),
-  ('dishes', 10, 'bubble-aura')
-on conflict (title_key) do nothing;
+  ('yoga', 5, 'neon-yoga-wrap'),
+  ('dishes', 10, 'rune-cleaning-drone')
+on conflict (title_key) do update set need_count = excluded.need_count, cosmetic_id = excluded.cosmetic_id;
 alter table public.companion_activity_rewards enable row level security;
 revoke all on public.companion_activity_rewards from public, anon, authenticated;
 
