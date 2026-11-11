@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ADVENTURER_COSMETICS, type AdventurerCosmetic } from '../lib/adventurerCosmetics';
 
 type Props = {
@@ -11,6 +11,10 @@ type Props = {
 
 export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) {
   const [localWorn, setLocalWorn] = useState<Set<string>>(new Set(wornIds));
+
+  useEffect(() => {
+    setLocalWorn(new Set(wornIds));
+  }, [wornIds]);
 
   function toggle(item: AdventurerCosmetic) {
     if (item.unlockLevel > level) return;
@@ -27,7 +31,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) 
   return (
     <section className="adventurer-track" aria-label="Adventurer cosmetics">
       <h2 className="cq-section">Cosmetics</h2>
-      <p className="muted">Unlocks every 2 levels. Tap Wear to equip.</p>
+      <p className="muted">Unlocks every 2 levels. Tap Wear to equip. (Local only until server persistence is added.)</p>
       <ul className="cq-track">
         {ADVENTURER_COSMETICS.map((item) => {
           const owned = item.unlockLevel <= level;
