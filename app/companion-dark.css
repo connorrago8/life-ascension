@@ -3,17 +3,19 @@
   --neon: #ff2bd6;
   --cyan: #00f0ff;
   --gold: #c9a227;
-  --glass: rgba(28, 31, 36, 0.85);
+  --glass: rgba(20, 22, 28, 0.9);
   background: #0e1014;
+  color: #e8eaed;
 }
 
 .companion-page .cq-hero-card,
 .companion-page .companion-card,
-.companion-page .cq-card {
+.companion-page .cq-card,
+.companion-page .cq-pass {
   background: var(--glass);
   border: 1px solid #2a2f38;
   border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .companion-page .cq-heartbar {
@@ -42,14 +44,16 @@
 .companion-page .btn {
   background: var(--neon);
   color: #0e1014;
+  font-weight: 650;
 }
 .companion-page .btn.ghost {
   background: transparent;
-  color: var(--text);
+  color: #e8eaed;
   border: 1px solid #3c4450;
 }
 
-.companion-page .cq-kicker {
+.companion-page .cq-kicker,
+.companion-page .cq-section {
   color: var(--gold);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -58,5 +62,26 @@
 
 .companion-page .companion-fanfare {
   color: var(--cyan);
-  border-color: var(--cyan);
+  border: 1px solid var(--cyan);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.companion-page .cq-tier.is-owned {
+  border-color: var(--gold);
+}
+.companion-page .cq-lock {
+  color: #666;
+}
+
+.companion-page .cq-pill {
+  background: #222;
+  color: var(--cyan);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+}
+.companion-page .cq-pill.is-done {
+  background: var(--neon);
+  color: #0e1014;
 }
