@@ -109,8 +109,22 @@ function QuestCard({
 }) {
   const done = quest.status === 'completed';
   const long = quest.title.length > 42;
+  if (done) {
+    return (
+      <li className="cq-card is-done is-compact">
+        <span className="cq-glyph" aria-hidden="true">{questGlyph(quest.title)}</span>
+        <p className={expanded ? 'cq-title' : 'cq-title is-one'}>{quest.title}</p>
+        {long && (
+          <button className="cq-more" type="button" aria-expanded={expanded} onClick={onToggle}>
+            {expanded ? 'Less' : 'More'}
+          </button>
+        )}
+        {action}
+      </li>
+    );
+  }
   return (
-    <li className={done ? 'cq-card is-done' : 'cq-card is-open'}>
+    <li className="cq-card is-open">
       <span className="cq-glyph" aria-hidden="true">{questGlyph(quest.title)}</span>
       <div className="cq-card-main">
         <p className={expanded || !long ? 'cq-title' : 'cq-title is-clamped'}>{quest.title}</p>
@@ -120,7 +134,7 @@ function QuestCard({
           </button>
         )}
         <div className="cq-actions">
-          <span className={done ? 'cq-pill is-done' : 'cq-pill'}>{companionStatusLabel(quest.status)}</span>
+          <span className="cq-pill">{companionStatusLabel(quest.status)}</span>
           {action}
         </div>
       </div>

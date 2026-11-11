@@ -42,6 +42,9 @@ test('open quests stay above a collapsed completed section', () => {
   assert.match(read('app/style.css'), /grid-template-rows: 0fr/);
   assert.match(read('app/style.css'), /cubic-bezier\(0\.34, 1\.4, 0\.64, 1\)/);
   assert.match(read('app/style.css'), /cq-sparkles/);
+  assert.match(read('app/style.css'), /\.companion-shell \.btn\.ghost \{\s*color: #2a1a22/);
+  assert.match(read('components/companion/QuestBoard.tsx'), /is-compact/);
+  assert.doesNotMatch(read('components/companion/QuestBoard.tsx'), /cq-pill is-done/);
   assert.match(read('app/style.css'), /prefers-reduced-motion: reduce/);
   const gallery = read('app/companion-gallery/[screen]/page.tsx');
   assert.match(gallery, /COMPANION_GALLERY/);
