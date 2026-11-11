@@ -1,22 +1,21 @@
-# Minimal Adventurer Cosmetic Track (Connor)
+# Adventurer Cosmetic Track (Connor)
 
-Lightweight counterpart to Izzy's Style Track. Purely cosmetic, level-gated, manual equip only. Does not touch Crypt XP or Ashen Hood logic.
+Implemented on branch. Distinct from Izzy's Style Track. Every 2 levels through Level 50. Purely cosmetic. Additive and reversible.
 
-## Proposed unlocks (every 5 levels, 6 pieces total)
+## Registry
+`lib/adventurerCosmetics.ts`
 
-| Level | Piece              | Slot      | Notes                          |
-|-------|--------------------|-----------|--------------------------------|
-| 5     | Dark hood          | head      | Complements Ashen Hood         |
-| 10    | Leather vest       | chest     | Basic torso                    |
-| 15    | Utility bracers    | main-hand | Or off-hand variant            |
-| 20    | Reinforced boots   | feet      |                                |
-| 25    | Cloak of the path  | back      | New slot or overlay            |
-| 30    | Neon edge dagger   | main-hand | Cosmetic only                  |
+## Migration
+`supabase/migrations/202611110003_adventurer_cosmetics.sql`
+Rollback: `supabase/rollbacks/202611110003_adventurer_cosmetics_down.sql`
 
-## Implementation notes
-- Reuse existing equipment tables where possible.
-- Additive TEST migration only.
-- Wear/Take Off via existing equip RPCs or a thin companion-style wrapper.
-- Visuals can start as layered SVG on the current CharacterScreen.
+## Sample pieces (full list in code)
+- L2 Shadow hood
+- L4 Worn leather bracers
+- L6 Dark traveler tunic
+- L8 Road-worn boots
+- L10 Pathfinder cloak
+- ...
+- L50 Legendary wayfarer coat
 
-This is a sketch only. Not implemented yet.
+Does not replace or alter Ashen Hood. TEST-only.
