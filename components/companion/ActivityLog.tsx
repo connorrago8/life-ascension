@@ -23,11 +23,10 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     if (!title.trim()) return;
     setBusy(true);
     setMessage('');
+    // Only pass fields known to be safe. XP and recorded_on are preview-only until the RPC is confirmed.
     const { error } = await supabase().rpc('companion_log_activity', {
       p_title: title.trim(),
-      p_note: null,
-      p_xp: xp,
-      p_recorded_on: date || null,
+      p_note: date ? `Backdated: ${date}` : null,
     });
     setBusy(false);
     if (error) {
@@ -37,8 +36,12 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     setTitle('');
     setDate('');
     setOverride(null);
-    setMessage(`Logged. +${xp} XP`);
+    setMessage(`Logged. Suggested +${xp} XP`);
     onLogged?.();
+  }
+
+  function cycle() {
+    setOverride(tier === 'small' ? 'medium' : tier === 'medium' ? 'big' : 'small');
   }
 
   return (
@@ -57,7 +60,7 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
       {title.trim() && (
         <p className="cq-score-chip" role="status">
           Suggested: {scored.category} · {scored.tier} ({scored.xp} XP)
-          <button type="button" className="btn ghost" onClick={() => setOverride(tier === 'small' ? 'medium' : tier === 'medium' ? 'big' : 'small')}>
+          <button type="button" className="btn ghost" onClick={cycle}>
             Use {tier === 'small' ? 'medium' : tier === 'medium' ? 'big' : 'small'} instead
           </button>
         </p>
@@ -73,7 +76,7 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
         onChange={(e) => setDate(e.target.value)}
       />
       <button className="btn" type="submit" disabled={busy || !title.trim()}>
-        Award {xp} XP
+        Log activity
       </button>
       {message && <p className="message" role="status">{message}</p>}
     </form>
