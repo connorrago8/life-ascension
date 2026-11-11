@@ -1,6 +1,7 @@
 import type { Viewport } from 'next';
 import './style.css';
 import './companion-dark.css';
+import './adventurer-dark.css';
 
 export const metadata = {
   title: 'LIFE ASCENSION',
