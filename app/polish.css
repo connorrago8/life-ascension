@@ -1,0 +1,63 @@
+/* Polish layer: reduced motion, empty states, domain chips, unlock banner. */
+
+@media (prefers-reduced-motion: reduce) {
+  .companion-page *,
+  .screen *,
+  .quest-board * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .companion-page .cq-heartbar span,
+  .xp-fill {
+    box-shadow: none;
+  }
+}
+
+.empty-state {
+  background: rgba(16, 18, 24, 0.92);
+  border: 1px solid #2c313a;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  color: #9aa3ae;
+}
+
+.unlock-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0c0e12;
+  color: #00f0ff;
+  border: 1px solid #00f0ff;
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+  z-index: 50;
+  font-weight: 650;
+}
+
+.domain-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  border: 1px solid #2c313a;
+}
+.domain-chip.hygiene { border-color: #00f0ff; color: #00f0ff; }
+.domain-chip.home { border-color: #c9a227; color: #c9a227; }
+.domain-chip.physical_health { border-color: #ff2bd6; color: #ff2bd6; }
+.domain-chip.mental_health { border-color: #a78bfa; color: #a78bfa; }
+
+.bond-milestones {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.next-piece {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
