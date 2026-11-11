@@ -1051,6 +1051,21 @@ code { font-family: ui-monospace, monospace; }
 .hub-gear-chip { border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 0.85rem; }
 .hub-gear-chip small { color: var(--muted); }
 .hub-today { display: flex; align-items: center; gap: 10px; min-height: 52px; color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.home-estate { margin: 8px 0 12px; }
+.home-estate-art { width: min(100%, 320px); height: auto; image-rendering: pixelated; image-rendering: crispEdges; }
+.home-fire { animation: home-flicker 1.1s steps(2, end) infinite; }
+.hub-idle .pixel-sprite, .hub-idle svg { animation: home-idle 2.4s ease-in-out infinite; }
+.hub-fanfare { margin: 8px 0; font-weight: 700; }
+.hub-trophies { margin: 8px 0 12px; }
+.hub-trophy-row { display: flex; gap: 8px; list-style: none; padding: 0; margin: 8px 0 0; }
+.hub-trophy { min-height: 44px; min-width: 72px; display: grid; place-items: center; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); font-size: 0.75rem; }
+@keyframes home-flicker { 50% { opacity: 0.45; } }
+@keyframes home-idle { 50% { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) {
+  .home-fire, .hub-idle .pixel-sprite, .hub-idle svg, .hub-fanfare { animation: none; }
+}
+.hub-facilities { display: grid; gap: 8px; margin-top: 12px; }
+.hub-facilities .btn { min-height: 44px; width: 100%; }
 .hub-today:active { background: #262b32; }
 .hub-today:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
 .hub-today-label { font-size: 0.7rem; letter-spacing: 0.12em; color: var(--mint); font-weight: 700; text-transform: uppercase; }

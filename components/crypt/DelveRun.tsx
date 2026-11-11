@@ -22,6 +22,8 @@ import { copiesInDeck, deckIsFull, pileSummary, type PileEntry } from '../../lib
 import { runRecap, type RunRecap, type SaveMode } from '../../lib/crypt/delve/recap';
 import { STARTER_DECKS, starterSummary, type StarterId } from '../../lib/crypt/delve/starters';
 import { RunRecapView } from './RunRecap';
+import { Armory } from '../facilities/Armory';
+import { TrainingRoom } from '../facilities/TrainingRoom';
 import {
   canRemoveCard, canUpgradeCard, canWearDrop, createDelve, currentRoomChoices, effectiveAttributes, MIN_DECK_SIZE, reduceDelve, removalPreview, runLoadout,
   wearPreview,
@@ -29,7 +31,7 @@ import {
   type DelveState,
 } from '../../lib/crypt/delve/run';
 import {
-  adjustAttribute, ATTRIBUTE_INFO, ATTRIBUTE_KEYS, clampAllocation, critChance, dodgeChance, maxHpFor, pointsForLevel, spentPoints,
+  ATTRIBUTE_INFO, clampAllocation, critChance, dodgeChance, maxHpFor,
   ZERO_ATTRIBUTES, type Attributes,
 } from '../../lib/crypt/delve/stats';
 
@@ -214,8 +216,6 @@ function Camp(props: {
   const [saving, setSaving] = useState(false);
   useEffect(() => setDraft(clampAllocation(props.savedAttributes, props.level)), [props.savedAttributes, props.level]);
 
-  const total = pointsForLevel(props.level);
-  const left = total - spentPoints(draft);
   // Crypt-run gear only (not /character account equipment). Camp mounts fresh after
   // every run end, defeat or leave, so this always starts empty: nothing is worn
   // until the player taps Wear again. It is never stored locally or on the server.
@@ -269,59 +269,22 @@ function Camp(props: {
 
       {enter}
 
-      <section className="delve-panel" aria-labelledby="delve-attr-title">
-        <h2 id="delve-attr-title">Attributes <span className="delve-points">{left} of {total} points left</span></h2>
-        <ul className="delve-attrs">
-          {ATTRIBUTE_KEYS.map((key) => {
-            const info = ATTRIBUTE_INFO[key];
-            const gear = preview[key] - draft[key];
-            return (
-              <li key={key} className="delve-attr">
-                <div className="delve-attr-text">
-                  <strong>{info.label}</strong> <span className="delve-attr-value">{draft[key]}{gear > 0 ? <span className="delve-gear-bonus"> +{gear}</span> : null}</span>
-                  <span className="muted delve-small">{info.effect}</span>
-                </div>
-                <div className="delve-stepper">
-                  <button type="button" className="btn ghost" aria-label={`Lower ${info.label}`} disabled={draft[key] <= 0}
-                    onClick={() => setDraft(adjustAttribute(draft, key, -1, props.level))}>−</button>
-                  <button type="button" className="btn ghost" aria-label={`Raise ${info.label}`} disabled={left <= 0}
-                    onClick={() => setDraft(adjustAttribute(draft, key, 1, props.level))}>+</button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <button type="button" className="btn ghost" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save build'}</button>
-        {saveNote ? <p className="delve-small" role="status">{saveNote}</p> : null}
-      </section>
-
-      <section className="delve-panel" aria-labelledby="delve-vault-title">
-        <h2 id="delve-vault-title">Gear vault</h2>
-        <p className="muted delve-small">Tap Wear to bring gear on this run. Worn gear resets after every run.</p>
-        {props.vault.length === 0 ? (
-          <p className="muted delve-small">No gear yet. Monsters, chests and the boss drop it.</p>
-        ) : (
-          <ul className="delve-vault">
-            {props.vault.map((id) => {
-              const entry = lootById(id);
-              if (!entry) return null;
-              const worn = loadout[entry.slot] === id;
-              return (
-                <li key={id} className={`delve-loot rarity-${entry.rarity}`}>
-                  <strong>{entry.name}</strong> <span className="delve-small">{bonusLabel(entry)}</span>
-                  {passiveLabel(entry) ? <span className="delve-small delve-passive">✦ {passiveLabel(entry)}</span> : null}
-                  {entry.earnedOnly ? <span className="soon-pill">Quest-earned</span> : null}
-                  {worn ? <span className="soon-pill">Worn</span> : null}
-                  <button type="button" className="btn ghost delve-wear" aria-pressed={worn}
-                    aria-label={worn ? `Take off ${entry.name}` : `Wear ${entry.name} this run`}
-                    onClick={() => toggleWear(id)}>{worn ? 'Take off' : 'Wear'}</button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <p className="muted delve-small">{props.keepNote}</p>
-      </section>
+      <TrainingRoom
+        level={props.level}
+        draft={draft}
+        gearBonus={{
+          strength: preview.strength - draft.strength,
+          agility: preview.agility - draft.agility,
+          intelligence: preview.intelligence - draft.intelligence,
+          endurance: preview.endurance - draft.endurance,
+          luck: preview.luck - draft.luck,
+        }}
+        onChange={setDraft}
+        onSave={() => { void save(); }}
+        saving={saving}
+        saveNote={saveNote}
+      />
+      <Armory vault={props.vault} loadout={loadout} onToggle={toggleWear} keepNote={props.keepNote} />
 
     </main>
   );
