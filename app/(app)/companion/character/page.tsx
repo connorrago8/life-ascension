@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PixelAvatar } from '../../../../components/PixelAvatar';
+import { CompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
 import { clearCompanionRoleCache } from '../../../../lib/companionAccess';
 import { COMPANION_COLORS, COMPANION_TITLES } from '../../../../lib/companion';
 import { supabase } from '../../../../lib/supabase';
@@ -47,7 +47,7 @@ export default function CompanionCharacterPage() {
   return (
     <main className="wrap companion-page">
       <h1>Character</h1>
-      <PixelAvatar who="izzy" size={96} alt="Izzy, a pixel princess with a silver tiara" />
+      <CompanionWardrobe />
       <form onSubmit={(event) => void save(event)}>
         <label htmlFor="companion-name">Display name</label>
         <input id="companion-name" className="field" maxLength={40} value={name} onChange={(event) => setName(event.target.value)} required />

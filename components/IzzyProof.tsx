@@ -25,7 +25,7 @@ export function IzzyProof({ instanceId, disabled }: { instanceId: string; disabl
           });
         }}
       />
-      {note ? <span className="sr-only">{note}</span> : null}
+      {note ? <span className="muted" role="status">{note}</span> : null}
     </label>
   );
 }
