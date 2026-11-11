@@ -1,39 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
 import { clearCompanionRoleCache } from '../../../../lib/companionAccess';
-import { COMPANION_COLORS, COMPANION_TITLES } from '../../../../lib/companion';
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
 export default function CompanionCharacterPage() {
-  const { board, ready, message, setMessage, reload } = useCompanionBoard();
-  const [name, setName] = useState('');
-  const [title, setTitle] = useState<string>(COMPANION_TITLES[0]);
-  const [color, setColor] = useState<string>(COMPANION_COLORS[0]);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!board?.identity) return;
-    setName(board.identity.displayName);
-    setTitle(board.identity.title);
-    if (board.identity.questColor) setColor(board.identity.questColor);
-  }, [board]);
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setMessage('');
-    const { error } = await supabase().rpc('companion_set_identity', { p_name: name, p_title: title, p_color: color });
-    setBusy(false);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-    setMessage('Saved.');
-    await reload();
-  }
+  const { ready, message } = useCompanionBoard();
+  const [menu, setMenu] = useState(false);
 
   async function signOut() {
     clearCompanionRoleCache();
@@ -46,22 +21,18 @@ export default function CompanionCharacterPage() {
   if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
   return (
     <main className="wrap companion-page">
-      <h1>Character</h1>
+      <header className="cq-char-head">
+        <h1>Character</h1>
+        <button className="btn ghost" type="button" aria-expanded={menu} onClick={() => setMenu((value) => !value)}>Menu</button>
+      </header>
+      {menu && (
+        <div className="companion-card cq-menu" role="dialog" aria-label="Settings">
+          <p className="muted">Name, title, and color stay as they are.</p>
+          <button className="btn ghost" type="button" onClick={() => void signOut()}>Sign out</button>
+        </div>
+      )}
       <CompanionWardrobe />
-      <form onSubmit={(event) => void save(event)}>
-        <label htmlFor="companion-name">Display name</label>
-        <input id="companion-name" className="field" maxLength={40} value={name} onChange={(event) => setName(event.target.value)} required />
-        <label htmlFor="companion-title">Title</label>
-        <select id="companion-title" className="field" value={title} onChange={(event) => setTitle(event.target.value)}>
-          {COMPANION_TITLES.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
-        <label htmlFor="companion-color">Quest color</label>
-        <select id="companion-color" className="field" value={color} onChange={(event) => setColor(event.target.value)}>
-          {COMPANION_COLORS.map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
-        <button className="btn" type="submit" disabled={busy}>Save</button>
-      </form>
-      <button className="btn ghost" type="button" onClick={() => void signOut()}>Sign out</button>
+      <p className="muted">Gear is cosmetic. Logged activities raise the level. Nothing here is for combat.</p>
       {message && <p className="message" role="status">{message}</p>}
     </main>
   );
