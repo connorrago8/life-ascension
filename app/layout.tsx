@@ -1,5 +1,6 @@
 import type { Viewport } from 'next';
 import './style.css';
+import './companion-dark.css';
 
 export const metadata = {
   title: 'LIFE ASCENSION',
@@ -16,7 +17,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#1c1f24',
+  themeColor: '#0e1014',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
