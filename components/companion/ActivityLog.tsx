@@ -24,11 +24,12 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     setBusy(true);
     setMessage('');
     const requestId = crypto.randomUUID();
-    const note = date ? `Backdated: ${date}` : null;
-    const { error } = await supabase().rpc('companion_log_activity', {
+    const { error } = await supabase().rpc('companion_log_activity_v2', {
       p_request: requestId,
       p_title: title.trim(),
-      p_note: note,
+      p_note: null,
+      p_tier: tier,
+      p_recorded_on: date || null,
     });
     setBusy(false);
     if (error) {
@@ -38,7 +39,7 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     setTitle('');
     setDate('');
     setOverride(null);
-    setMessage(`Logged. Suggested +${xp} XP (server awards base contract)`);
+    setMessage(`Logged. +${xp} XP`);
     onLogged?.();
   }
 
@@ -78,7 +79,7 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
         onChange={(e) => setDate(e.target.value)}
       />
       <button className="btn" type="submit" disabled={busy || !title.trim()}>
-        Log activity
+        Award {xp} XP
       </button>
       {message && <p className="message" role="status">{message}</p>}
     </form>
