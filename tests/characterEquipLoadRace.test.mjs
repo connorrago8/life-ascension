@@ -6,7 +6,7 @@ import { createLatestCharacterLoadGate } from '../lib/preview/latestCharacterLoa
 const page = readFileSync(new URL('../app/(app)/character/page.tsx', import.meta.url), 'utf8');
 
 test('equipping invalidates pre-mutation focus loads before the server RPC', () => {
-  const start = page.indexOf('async function setArmorEquipped(');
+  const start = page.indexOf('async function setItemEquipped(');
   const end = page.indexOf('\n  useEffect(', start);
   assert.ok(start >= 0 && end > start, 'Character equip handler must exist');
   const handler = page.slice(start, end);

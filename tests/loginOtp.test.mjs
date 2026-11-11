@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import { safeNext } from '../lib/safeNext.ts';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const login = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const callback = readFileSync(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8');
-const board = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+const board = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
 const whoami = readFileSync(new URL('../app/api/whoami/route.ts', import.meta.url), 'utf8');
 const mcp = readFileSync(new URL('../app/api/mcp/route.ts', import.meta.url), 'utf8');
 const auth = readFileSync(new URL('../lib/apiKeyAuth.ts', import.meta.url), 'utf8');
@@ -13,6 +14,14 @@ test('OTP verify flow is a six-digit email code and does not enumerate accounts'
   assert.match(login, /verifyOtp\(\{ email: email\.trim\(\), token: code, type: 'email' \}\)/);
   assert.match(login, /shouldCreateUser: false/);
   assert.match(login, /If an account exists for this email, a 6-digit code was sent\./);
+  assert.match(login, /Create your account/);
+  assert.match(login, /Send my code/);
+  assert.match(login, /Use a link instead/);
+  assert.match(login, />Resend</);
+  assert.match(login, /shouldCreateUser: true/);
+  assert.match(login, /signUp\(\{/);
+  assert.match(login, /type: 'email'/);
+  assert.equal(safeNext('/companion?invite=abc123def456', 'https://preview.example'), '/companion?invite=abc123def456');
   assert.match(login, /That code is invalid or expired\. Request a new code and try again\./);
   assert.match(login, /Too many requests, wait a minute\./);
   assert.match(login, /\/rate limit\|too many requests\/i\.test\(error\.message\)/);
@@ -33,7 +42,7 @@ test('callback and auth-gated links use safeNext or a fixed same-origin next', (
   assert.match(callback, /safeNext\(next, origin\)/);
   assert.match(callback, /\/login\?next=\$\{encodeURIComponent\(destination\)\}/);
   assert.match(board, /href=\{loginHref\}/);
-  assert.match(board, /setLoginHref\('\/login\?next='\+encodeURIComponent\(next\|\|'\/'\)\)/);
+  assert.match(board, /setLoginHref\('\/login\?next='\+encodeURIComponent\(next\|\|'\/quests'\)\)/);
   assert.match(board, /Quest notes/);
   assert.match(board, /API keys/);
   assert.match(board, /Upcoming/);

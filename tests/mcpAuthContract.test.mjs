@@ -22,7 +22,7 @@ test('mcp tools use the scheduling and progress RPCs', () => {
   assert.match(route, /if \(!outcome\.ok\) return fail\(id, outcome\.rpcCode, outcome\.message\)/);
   assert.match(tools, /create_scheduled_quest_as_user/);
   assert.match(tools, /add_quest_progress_as_user/);
-  assert.match(tools, /set_quest_instance_status_as_user/);
+  assert.match(tools, /set_quest_instance_status_with_receipt_as_user/);
   assert.match(tools, /confirmed_complete !== true/);
   assert.match(tools, /\.eq\('owner_id', userId\)\.eq\('active', true\)/);
   assert.match(tools, /\.eq\('owner_id', userId\)\.in\('quest_id', activeIds\)/);

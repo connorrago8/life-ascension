@@ -43,41 +43,67 @@ try {
   const avatar = page.locator('svg[data-character-style="home"]');
   await avatar.waitFor();
   const imageLabel = () => avatar.getAttribute('aria-label');
+  const headwearSlot = () => page.getByRole('button', { name: /^Headwear: .*Choose equipment$/ });
+  const sheet = () => page.getByRole('dialog', { name: /^Choose headwear$/ });
+  async function chooseInSheet(name) {
+    await headwearSlot().click();
+    await sheet().waitFor();
+    await page.getByRole('button', { name, exact: true }).click();
+    await sheet().waitFor({ state: 'detached' });
+  }
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i);
-  assert.equal(await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).count(), 0,
-    'Unverified character must not offer equipment writes');
+  assert.equal(await headwearSlot().count(), 0, 'Unverified character must not offer equipment writes');
 
   await page.getByRole('button', { name: 'Mock server: invalid unowned equip' }).click();
-  assert.equal(await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).count(), 0,
-    'Equipped-but-unowned mock must fail closed');
+  assert.equal(await headwearSlot().count(), 0, 'Equipped-but-unowned mock must fail closed');
   assert.doesNotMatch(await imageLabel(), /Ashen Hood/i);
 
   await page.getByRole('button', { name: 'Mock server: grant Ashen Hood' }).click();
-  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).waitFor();
-  assert.doesNotMatch(await imageLabel(), /Ashen Hood/i,
-    'Ownership alone must not draw armor before equip');
+  await headwearSlot().waitFor();
+  assert.doesNotMatch(await imageLabel(), /Ashen Hood/i, 'Ownership alone must not draw armor before equip');
 
+  // Locked slots show the unlock level and are not tappable at Lv 3.
+  for (const [label, level] of [['Shield', 5], ['Cloak', 10], ['Companion', 15]]) {
+    await page.getByRole('group', { name: `${label}: locked. Unlocks at Lv ${level}` }).waitFor();
+    assert.equal(await page.getByRole('button', { name: new RegExp(`^${label}: `) }).count(), 0, `${label} locked`);
+  }
+  // Unlocked Weapon slot with nothing owned wears the default Rusty Sword (no stats); Escape returns focus.
+  const weaponSlot = page.getByRole('button', { name: /^Weapon: Rusty Sword\. Choose equipment$/ });
+  await weaponSlot.click();
+  await page.getByRole('dialog', { name: 'Choose weapon' }).getByText('Rusty Sword equipped by default · No stat boosts').waitFor();
+  await page.getByRole('dialog', { name: 'Choose weapon' }).getByText('No other items for this slot yet').waitFor();
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog').waitFor({ state: 'detached' });
+  assert.equal(await weaponSlot.evaluate((node) => node === document.activeElement), true, 'focus returns to slot');
+
+  await headwearSlot().click();
+  await sheet().getByText('Ashen Hood').waitFor();
+  await page.screenshot({ path: join(output, 'headwear-sheet-390.png'), fullPage: true });
   await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).click();
-  await page.getByRole('button', { name: 'Unequip Ashen Hood', exact: true }).waitFor();
-  assert.match(await imageLabel(), /Ashen Hood/i,
-    'Confirmed equip must change the actual character SVG');
+  await sheet().waitFor({ state: 'detached' });
+  await page.getByRole('button', { name: 'Headwear: Ashen Hood. Choose equipment' }).waitFor();
+  assert.match(await imageLabel(), /Ashen Hood/i, 'Confirmed equip must change the actual character SVG');
   await page.screenshot({ path: join(output, 'earned-hood-equipped-390.png'), fullPage: true });
 
   await page.reload();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
-  await page.getByRole('button', { name: 'Unequip Ashen Hood', exact: true }).waitFor();
-  assert.match(await imageLabel(), /Ashen Hood/i,
-    'Reload must rehydrate the synthetic confirmed equipment snapshot');
+  await page.getByRole('button', { name: 'Headwear: Ashen Hood. Choose equipment' }).waitFor();
+  assert.match(await imageLabel(), /Ashen Hood/i, 'Reload must rehydrate the synthetic confirmed equipment snapshot');
 
-  await page.getByRole('button', { name: 'Unequip Ashen Hood', exact: true }).click();
-  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).waitFor();
-  assert.doesNotMatch(await imageLabel(), /Ashen Hood/i,
-    'Unequip must remove the visible hood');
+  await chooseInSheet('Unequip Ashen Hood');
+  await page.getByRole('button', { name: 'Headwear: Empty. Choose equipment' }).waitFor();
+  assert.doesNotMatch(await imageLabel(), /Ashen Hood/i, 'Unequip must remove the visible hood');
   await page.reload();
   await page.locator('[data-qa-hydrated="true"]').waitFor();
-  await page.getByRole('button', { name: 'Equip Ashen Hood', exact: true }).waitFor();
-  assert.doesNotMatch(await imageLabel(), /Ashen Hood/i,
-    'Reload must preserve synthetic unequipped state');
+  await page.getByRole('button', { name: 'Headwear: Empty. Choose equipment' }).waitFor();
+  assert.doesNotMatch(await imageLabel(), /Ashen Hood/i, 'Reload must preserve synthetic unequipped state');
+
+  // Below Lv 3 headwear is locked even though the hood is owned.
+  await page.getByRole('button', { name: 'Mock server: level 2' }).click();
+  await page.getByRole('group', { name: 'Headwear: locked. Unlocks at Lv 3' }).waitFor();
+  assert.equal(await headwearSlot().count(), 0, 'locked headwear is not tappable');
+  await page.getByRole('button', { name: 'Mock server: level 3' }).click();
+  await headwearSlot().waitFor();
 
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
@@ -86,8 +112,8 @@ try {
     await page.screenshot({ path: join(output, `owned-unequipped-${width}.png`), fullPage: true });
   }
   assert.deepEqual(accountWrites, [], 'Local Character fixture must never write account data');
-  console.log('PASS: real Chromium CharacterScreen unowned denial → earned → equip/visible hood →');
-  console.log('mock refresh persistence → unequip/refresh, 320/390px, zero account writes.');
+  console.log('PASS: real Chromium CharacterScreen unowned denial → earned → slot sheet equip/visible hood →');
+  console.log('locked slots + empty slot sheet → refresh persistence → sheet unequip → Lv2 headwear lock, 320/390px, zero account writes.');
   console.log('NOT covered: real auth, server RPCs, hosted QA, physical iPhone or database persistence.');
 } finally {
   await browser.close();

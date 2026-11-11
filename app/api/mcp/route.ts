@@ -8,6 +8,7 @@ import {
 } from '../../../lib/apiKeyAuth';
 import { readBearerToken } from '../../../lib/apiKey';
 import { mcpDomains, runMcpTool } from '../../../lib/mcpTools';
+import { gameDayParts } from '../../../lib/questStreak';
 import { createServiceRoleClient } from '../../../lib/supabaseAdmin';
 import { readServerSupabaseConfig } from '../../../lib/supabaseRuntimeConfig';
 
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 const tools = [
   {
     name: 'create_quest',
-    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for today and the previous 2 Chicago days. If its start is older than that, the first instance opens on today minus 2 days.',
+    description: 'Schedule a quest for a planned action. Does not mark it completed and does not award XP. quest_type "goal" is a one-time deadline that can be completed early. A one-time chore cannot be completed before its due date. A daily habit earns XP only for the current game day and the previous 2 game days (America/Chicago, day starts at 5:00 AM). If its start is older than that, the first instance opens on today minus 2 days.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -47,7 +48,7 @@ const tools = [
   },
   {
     name: 'log_quest_progress',
-    description: 'Record a confirmed numeric increment for an opt-in tracked quest instance. Reuse the SAME request_id UUID when retrying an uncertain result. The target awards 1 XP once; partial updates award no XP. Never invent progress.',
+    description: 'Record a confirmed numeric increment for an opt-in tracked quest instance. Reuse the SAME request_id UUID when retrying an uncertain result. The target awards 10 base XP once, with any earned streak bonus; partial updates award no XP. Never invent progress.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -60,7 +61,7 @@ const tools = [
   },
   {
     name: 'submit_completion',
-    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards XP at most once. A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
+    description: 'Record completion only when confirmed_complete is explicitly true. The server calls set_quest_instance_status, which awards 10 base XP plus any streak bonus at most once. The first quest today earns 10 XP and keeps the streak; later quests earn round(10 × (1 + 0.10 × fire)). A daily habit earns XP only when its Chicago date is today or one of the previous 2 days. Older days and future days are rejected. Overdue one-time chores can still be completed. Deadline goals can be completed early.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -157,5 +158,5 @@ async function openActor(auth: AuthSuccess, token: string): Promise<{ db: Supaba
 }
 
 function chicagoToday() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return gameDayParts(new Date()).date;
 }

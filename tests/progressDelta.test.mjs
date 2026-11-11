@@ -49,7 +49,7 @@ test('progress RPC success requires exactly one valid result row', () => {
 });
 
 test('Home retains original progress request on unverified RPC response', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home, /const confirmation=confirmedProgressResult\(data\)/);
   assert.match(home, /if\(!confirmation\)\{[^}]*return 'retry';\s*\}/);
   assert.match(home, /confirmation\.status === 'completed'/);
@@ -58,7 +58,7 @@ test('Home retains original progress request on unverified RPC response', () => 
 });
 
 test('authenticated reload restores persisted progress from owner-scoped quest rows', () => {
-  const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
   assert.match(home,
     /s\.from\('quest_instances'\)\.select\('id,quest_id,due_date,status,current_amount'\)\.eq\('owner_id',user\.id\)/,
     'Reload must fetch current_amount from the signed-in user\'s persisted quest instances');

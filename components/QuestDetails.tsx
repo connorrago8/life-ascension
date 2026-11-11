@@ -4,7 +4,7 @@ import { questDetailFacts } from '../lib/preview/questDetailFacts.mjs';
 type Quest = {
   title: string;
   domain: string;
-  cadence: 'once' | 'daily';
+  cadence: 'once' | 'daily' | 'weekly';
   quest_type: 'scheduled' | 'goal';
   target_amount: number | null;
   progress_increment: number | null;

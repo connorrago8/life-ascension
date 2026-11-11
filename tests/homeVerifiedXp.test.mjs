@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { verifiedLifetimeXp } from '../lib/characterXpProof.ts';
 
-const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
 
 test('Home validates the ledger response and hides level until verified', () => {
   assert.match(home, /const verifiedXp = verifiedLifetimeXp\(ledger\)/);

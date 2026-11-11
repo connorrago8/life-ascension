@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 const LINKS = NAV_ITEMS.filter((item): item is NavItem & { href: string } => item.href !== null);
 
 const SECONDARY = [
+  { href: '/companion', label: 'Companion' },
   { href: '/quests/manage', label: 'Manage quests' },
   { href: '/settings/api-keys', label: 'API keys' },
 ] as const;
@@ -101,6 +102,11 @@ export function AppNav() {
   }
 
   const moreCurrent = SECONDARY.some((item) => isCurrent(pathname, item.href));
+  // Keep guest/dev preview mode when tapping Play (a run in progress resumes there).
+  const [previewQuery, setPreviewQuery] = useState('');
+  useEffect(() => {
+    setPreviewQuery(new URLSearchParams(window.location.search).get('preview') === '1' ? '?preview=1' : '');
+  }, [pathname]);
 
   return (
     <>
@@ -113,7 +119,7 @@ export function AppNav() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={play ? `${item.href}${previewQuery}` : item.href}
                 className={play ? 'nav-link nav-play' : 'nav-link'}
                 aria-current={current ? 'page' : undefined}
               >

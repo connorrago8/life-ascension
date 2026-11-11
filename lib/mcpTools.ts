@@ -116,14 +116,14 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
       if (ensured.error || typeof ensured.data !== 'string') return crashed(ensured.error?.message || 'Instance was not created');
       instanceId = ensured.data;
     }
-    const completed = await userRpc(input, 'set_quest_instance_status', 'set_quest_instance_status_as_user', {
+    const completed = await userRpc(input, 'set_quest_instance_status_with_receipt', 'set_quest_instance_status_with_receipt_as_user', {
       p_instance_id: instanceId,
       p_action: 'complete',
     });
     if (completed.error) return crashed(completed.error.message);
     return {
       ok: true,
-      result: { quest_id: questRow.id, instance_id: instanceId, recorded: completed.data === 'completed', server_result: completed.data },
+      result: { quest_id: questRow.id, instance_id: instanceId, recorded: receiptRecorded(completed.data), server_result: completed.data },
     };
   }
 
@@ -156,6 +156,12 @@ export async function runMcpTool(input: ToolInput): Promise<ToolOutcome> {
   }
 
   return bad('Unknown tool');
+}
+
+function receiptRecorded(value: unknown): boolean {
+  if (value === 'completed') return true;
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+    && (value as Record<string, unknown>).quest_completion_confirmed === true;
 }
 
 async function userRpc(input: ToolInput, name: string, asUserName: string, args: Record<string, unknown>): Promise<RpcResult> {

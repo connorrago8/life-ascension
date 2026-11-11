@@ -6,6 +6,7 @@ import {
   parseAuthenticatedGearSnapshot,
   type AuthenticatedGearSnapshot,
 } from '../../../lib/preview/characterGearView';
+import { canRequestEquip, type GearSlotKey } from '../../../lib/gearSlots';
 
 const STORAGE_KEY = 'life-ascension.qa-character-gear-mock';
 
@@ -18,6 +19,8 @@ export function CharacterGearQAHarness() {
   const [gear, setGear] = useState<AuthenticatedGearSnapshot | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Synthetic verified level; headwear unlocks at Lv 3.
+  const [level, setLevel] = useState(3);
 
   useEffect(() => {
     try {
@@ -34,8 +37,10 @@ export function CharacterGearQAHarness() {
     setGear(parseAuthenticatedGearSnapshot(value));
   }
 
-  async function mockEquip(equip: boolean) {
-    if (!gear?.ownedItemIds.includes('ashen-hood') || busy) return;
+  async function mockEquip(slot: GearSlotKey, itemId: string, equip: boolean) {
+    // Mirrors the server: owned item, matching slot, and level gate on equip.
+    if (busy || !gear) return;
+    if (equip && !canRequestEquip(level, gear.ownedItemIds, slot, itemId)) return;
     setBusy(true);
     try {
       // The fixture models a confirmed read after a mock write. No real RPC.
@@ -52,6 +57,7 @@ export function CharacterGearQAHarness() {
   function reset() {
     localStorage.removeItem(STORAGE_KEY);
     setGear(null);
+    setLevel(3);
   }
 
   return <section aria-label="Local character gear QA" data-qa-hydrated={hydrated ? 'true' : 'false'}>
@@ -63,6 +69,8 @@ export function CharacterGearQAHarness() {
       <button type="button" className="btn ghost" onClick={() => confirmMockSnapshot({
         ownedItemIds: [], equippedItemIds: ['ashen-hood'],
       })}>Mock server: invalid unowned equip</button>
+      <button type="button" className="btn ghost" onClick={() => setLevel(2)}>Mock server: level 2</button>
+      <button type="button" className="btn ghost" onClick={() => setLevel(3)}>Mock server: level 3</button>
       <button type="button" className="btn ghost" onClick={reset}>Reset mock ownership</button>
     </div>
     {hydrated && <CharacterScreen
@@ -70,7 +78,8 @@ export function CharacterGearQAHarness() {
       hideSampleStats
       equipmentMode={gear ? 'verified' : 'unverified'}
       verifiedGear={gear}
-      onEquipArmor={(equip) => { void mockEquip(equip); }}
+      playerLevel={level}
+      onEquipItem={(slot, itemId, equip) => { void mockEquip(slot, itemId, equip); }}
       armorBusy={busy}
     />}
   </section>;

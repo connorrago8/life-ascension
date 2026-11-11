@@ -15,7 +15,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
-  const [mode, setMode] = useState<'password' | 'link' | 'code'>('password');
+  const [mode, setMode] = useState<'password' | 'link' | 'code' | 'register'>('password');
+  const [createAccount, setCreateAccount] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -32,6 +33,13 @@ export default function Login() {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mode') === 'signup') {
+      setCreateAccount(true);
+      setMode('link');
+    }
+  }, []);
 
   async function signInWithPassword(event: React.FormEvent) {
     event.preventDefault();
@@ -53,23 +61,47 @@ export default function Login() {
     setBusy(false);
   }
 
-  async function requestCode(event: React.FormEvent) {
-    event.preventDefault();
-    if (busy) return;
+  async function requestCode(event: React.FormEvent | null, via: 'code' | 'link' = 'code') {
+    event?.preventDefault();
+    if (busy || !email.trim()) return;
     setBusy(true);
     setMessage('');
-    const { error } = await supabase().auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: emailAuthRedirect(window.location.origin, returnPath()),
-      },
-    });
+    const redirect = emailAuthRedirect(window.location.origin, returnPath());
+    const options = createAccount
+      ? { shouldCreateUser: true, emailRedirectTo: redirect }
+      : { shouldCreateUser: false, emailRedirectTo: redirect };
+    const { error } = await supabase().auth.signInWithOtp({ email: email.trim(), options });
     if (error && (error.status === 429 || /rate limit|too many requests/i.test(error.message))) {
       setMessage('Too many requests, wait a minute.');
     } else {
       setMode('code');
-      setMessage('If an account exists for this email, a 6-digit code was sent.');
+      setMessage(via === 'link'
+        ? 'Open the link in your email. It brings you back to this page. You can also enter the 6-digit code.'
+        : createAccount
+          ? 'Check your email for a 6-digit code. Enter it on this page.'
+          : 'If an account exists for this email, a 6-digit code was sent.');
+    }
+    setBusy(false);
+  }
+
+  async function createWithPassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    if (password.length < 8) {
+      setMessage('Use at least 8 characters.');
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    const { error } = await supabase().auth.signUp({
+      email: email.trim(),
+      password,
+      options: { emailRedirectTo: emailAuthRedirect(window.location.origin, returnPath()) },
+    });
+    if (error && (error.status === 429 || /rate limit|too many requests/i.test(error.message))) {
+      setMessage('Too many requests, wait a minute.');
+    } else {
+      setMessage('Check your email to confirm your account. The link brings you back to this page.');
     }
     setBusy(false);
   }
@@ -79,16 +111,20 @@ export default function Login() {
     if (busy || !/^\d{6}$/.test(code)) return;
     setBusy(true);
     setMessage('');
-    const { error } = await supabase().auth.verifyOtp({ email: email.trim(), token: code, type: 'email' });
+    let { error } = await supabase().auth.verifyOtp({ email: email.trim(), token: code, type: 'email' });
+    if (error && createAccount) {
+      const signup = await supabase().auth.verifyOtp({ email: email.trim(), token: code, type: 'signup' });
+      error = signup.error;
+    }
     if (error) setMessage('That code is invalid or expired. Request a new code and try again.');
     else router.replace(returnPath());
     setBusy(false);
   }
 
   return (
-    <main className="wrap">
+    <main className="wrap auth-page">
       <div className="eyebrow">LIFE ASCENSION</div>
-      <h1>Sign in to your adventure</h1>
+      <h1>{createAccount ? 'Create your account' : 'Sign in to your adventure'}</h1>
       {mode === 'password' && (
         <form className="panel auth-form" method="post" action="/login" onSubmit={signInWithPassword}>
           <label htmlFor="email">Email</label>
@@ -118,13 +154,14 @@ export default function Login() {
             onChange={(event) => setPassword(event.target.value)}
           />
           <button className="btn" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setMode('link'); setMessage(''); }}>Email me a link instead</button>
+          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setCreateAccount(false); setMode('link'); setMessage(''); }}>Email me a link instead</button>
+          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setCreateAccount(true); setMode('link'); setMessage(''); }}>Create an account</button>
           <p className="foot"><a href="/login/forgot">Forgot password?</a></p>
           <p id="login-status" role="status">{message}</p>
         </form>
       )}
-      {mode === 'link' && (
-        <form className="panel auth-form" method="post" action="/login" onSubmit={requestCode}>
+      {mode === 'link' && !createAccount && (
+        <form className="panel auth-form" method="post" action="/login" onSubmit={(event) => void requestCode(event, 'link')}>
           <p className="muted">We will email a sign-in link for this site. You can open the link or enter the 6-digit code.</p>
           <label htmlFor="email">Email</label>
           <input
@@ -146,14 +183,93 @@ export default function Login() {
           <p id="login-status" role="status">{message}</p>
         </form>
       )}
-      {mode === 'code' && (
+      {createAccount && mode !== 'password' && mode !== 'register' && (
+        <form className="panel auth-form" method="post" action="/login" onSubmit={(event) => void (mode === 'code' ? verify(event) : requestCode(event, 'code'))}>
+          <p className="muted">Create your account with a 6-digit code. Enter it on this page. An email link also brings you back here.</p>
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            className="field"
+            type="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+          />
+          {mode !== 'code' && <button className="btn" type="submit" disabled={busy || !email.trim()}>{busy ? 'Sending…' : 'Send my code'}</button>}
+          {mode === 'code' && (
+            <>
+              <label htmlFor="otp">6-digit code</label>
+              <input
+                id="otp"
+                name="one-time-code"
+                className="field otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                required
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              />
+              <button className="btn" type="submit" disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Verify'}</button>
+              <button className="btn ghost" type="button" disabled={busy} onClick={() => void requestCode(null, 'code')}>Resend</button>
+            </>
+          )}
+          <button className="btn ghost" type="button" disabled={busy || !email.trim()} onClick={() => void requestCode(null, 'link')}>Use a link instead</button>
+          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setMode('register'); setMessage(''); }}>Create with password</button>
+          <p id="login-status" role="status">{message}</p>
+        </form>
+      )}
+      {mode === 'register' && (
+        <form className="panel auth-form" method="post" action="/login" onSubmit={createWithPassword}>
+          <p className="muted">Create your account with a password. You still confirm it from the email link, which brings you back here.</p>
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            className="field"
+            type="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+          />
+          <label htmlFor="new-password">Password</label>
+          <input
+            id="new-password"
+            name="password"
+            className="field"
+            type="password"
+            autoComplete="off"
+            minLength={8}
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button className="btn" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create with password'}</button>
+          <button className="btn ghost" type="button" disabled={busy} onClick={() => { setMode('link'); setMessage(''); }}>Use a code instead</button>
+          <p id="login-status" role="status">{message}</p>
+        </form>
+      )}
+      {mode === 'code' && !createAccount && (
         <form className="panel auth-form" method="post" action="/login" onSubmit={verify}>
           <p className="muted">Code sent to {email}. Enter the 6-digit code, or open the link in that email on this device.</p>
           <label htmlFor="otp">6-digit sign-in code</label>
           <input
             id="otp"
             name="one-time-code"
-            className="field"
+            className="field otp"
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"

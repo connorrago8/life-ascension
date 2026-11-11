@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const home = readFileSync(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8');
+const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
 const signature = "async function logProgress(id:string,requestId:string,delta:number):Promise<'saved'|'retry'|'rejected'>{";
 const start = home.indexOf(signature);
 const end = home.indexOf(' // A confirmed retry', start);

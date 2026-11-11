@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const home=readFileSync(new URL('../app/(app)/page.tsx',import.meta.url),'utf8');
+const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
 const start=home.indexOf("async function act(id:string,action:'complete'|'defer'|'resume'){");
 const end=home.indexOf('async function logProgress(',start);
 assert.ok(start>=0&&end>start,'Quest action callback boundaries changed');
@@ -29,7 +29,8 @@ test('rapid complete taps send only one RPC and release the lock',async()=>{
  const first=x.action('instance-1','complete');
  const second=x.action('instance-1','complete');
  assert.equal(x.state.calls,1);
- assert.equal(x.state.confirms,1);
+ // The native window.confirm sheet was replaced by the in-app two-tap ConfirmCompleteButton.
+ assert.equal(x.state.confirms,0);
  x.pending.resolve({data:{},error:null});
  await Promise.all([first,second]);
  assert.equal(x.state.loads,1);
