@@ -23,10 +23,12 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     if (!title.trim()) return;
     setBusy(true);
     setMessage('');
-    // Only pass fields known to be safe. XP and recorded_on are preview-only until the RPC is confirmed.
+    const requestId = crypto.randomUUID();
+    const note = date ? `Backdated: ${date}` : null;
     const { error } = await supabase().rpc('companion_log_activity', {
+      p_request: requestId,
       p_title: title.trim(),
-      p_note: date ? `Backdated: ${date}` : null,
+      p_note: note,
     });
     setBusy(false);
     if (error) {
@@ -36,7 +38,7 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     setTitle('');
     setDate('');
     setOverride(null);
-    setMessage(`Logged. Suggested +${xp} XP`);
+    setMessage(`Logged. Suggested +${xp} XP (server awards base contract)`);
     onLogged?.();
   }
 
@@ -51,7 +53,7 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
       <input
         id="activity-title"
         className="field"
-        maxLength={200}
+        maxLength={120}
         placeholder="e.g. deep cleaned the bathroom, yoga 1hr"
         value={title}
         onChange={(e) => { setTitle(e.target.value); setOverride(null); }}
