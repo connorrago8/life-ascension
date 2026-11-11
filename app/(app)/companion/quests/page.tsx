@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { draftSourceLabel } from '../../../../lib/companionAccess';
 import { companionStatusLabel } from '../../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../../lib/companionQuestDraft';
@@ -90,6 +91,7 @@ export default function CompanionQuestsPage() {
           <button className="btn" type="submit" disabled={busy}>Send</button>
         </form>
       )}
+      <p><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
       <h2>Yours</h2>
       {mine.length === 0 && <p className="muted">No quests yet.</p>}
       {mine.slice(0, 6).map((quest) => (

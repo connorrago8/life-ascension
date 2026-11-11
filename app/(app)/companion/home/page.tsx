@@ -1,27 +1,28 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { PixelAvatar } from '../../../../components/PixelAvatar';
-import { gameDayParts, weekStart } from '../../../../lib/questStreak';
+import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
-function addDays(date: string, days: number) {
-  const value = new Date(`${date}T12:00:00Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
+type HomeMetrics = { openQuests: number; doneThisWeek: number };
 
 export default function CompanionModeHome() {
   const { board, ready, message } = useCompanionBoard();
+  const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
+  useEffect(() => {
+    if (!ready || !board) return;
+    let cancel = false;
+    void supabase().rpc('companion_home_metrics').then(({ data, error }) => {
+      if (cancel || error || !data) return;
+      setMetrics(data as HomeMetrics);
+    });
+    return () => { cancel = true; };
+  }, [ready, board]);
   if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
   const name = board?.identity?.displayName || 'Izzy';
   const title = board?.identity?.title;
-  const mine = (board?.quests ?? []).filter((quest) => quest.fromUser === board?.userId && quest.status !== 'declined');
-  const today = gameDayParts(new Date()).date;
-  const start = weekStart(today);
-  const end = addDays(start, 7);
-  const open = mine.filter((quest) => quest.status !== 'completed').length;
-  const doneThisWeek = mine.filter((quest) => quest.status === 'completed' && quest.dueOn && quest.dueOn >= start && quest.dueOn < end).length;
   const recent = [...(board?.activities ?? [])].slice(0, 2);
   return (
     <main className="wrap companion-page companion-mode-home">
@@ -33,10 +34,32 @@ export default function CompanionModeHome() {
           {title && <p className="muted">{title}</p>}
         </div>
       </section>
+      {board?.bond?.role === 'companion' && board.identity && (
+        <section className="companion-greeting" aria-label="Hero greeting">
+          <PixelAvatar who="connor" size={72} alt="Connor's hero, a pixel knight in silver armor" />
+          <p>Connor&apos;s hero greets you, {board.identity.displayName}, {board.identity.title}.</p>
+        </section>
+      )}
       <div className="companion-metrics" aria-label="Quest metrics">
-        <p className="companion-metric"><strong>{open}</strong><span>Open quests</span></p>
-        <p className="companion-metric"><strong>{doneThisWeek}</strong><span>Done this week</span></p>
+        <p className="companion-metric"><strong>{metrics ? metrics.openQuests : '…'}</strong><span>Open quests</span></p>
+        <p className="companion-metric"><strong>{metrics ? metrics.doneThisWeek : '…'}</strong><span>Done this week</span></p>
       </div>
+      {board?.recap?.visible && (
+        <section aria-label="Sunday recap">
+          <h2>This week</h2>
+          <p>{board.recap.done ?? 0} quests done. Streak {board.recap.streak ?? 0}. {board.recap.xp ?? 0} XP from those quests.</p>
+        </section>
+      )}
+      {(board?.milestones ?? []).length > 0 && (
+        <section aria-label="Milestones">
+          <h2>Milestones</h2>
+          <ul>
+            {board?.milestones?.map((item) => (
+              <li key={item.key}>{item.earned ? item.label : `${item.label} — not yet`}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section aria-label="Recent activity">
         <h2>Recent</h2>
         {recent.length === 0 && <p className="muted">Nothing new yet.</p>}

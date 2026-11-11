@@ -135,7 +135,7 @@ export function CompanionHome({
         {(board.notices ?? []).map((item) => (
           <div className="companion-quest" key={item.id}>
             {item.kind === 'completed' && <PixelAvatar who="izzy" size={40} alt="Izzy, smiling in her tiara" />}
-            <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `${item.title ?? 'A quest'} is done`}</p>
+            <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `♥ ${item.title ?? 'A quest'} is done`}</p>
             {izzy && item.kind === 'completed' && item.questId && (
               <button className="btn" type="button" disabled={busy} onClick={() => void call(async () => {
                 const { error } = await supabase().rpc('companion_thank', { p_quest: item.questId });
@@ -190,7 +190,7 @@ export function CompanionHome({
               <p key={item.id}>{item.unlocked ? `Unlocked: ${item.text}` : `${item.progress} of ${item.goal}. ${item.text}`}</p>
             ))}
           </section>
-          <section className="panel companion-card">
+          <section className="panel companion-card" id="off-day">
             <h2>Plan an off day</h2>
             {tip('izzy-planner', 'Pick a future day. The quest waits on his board until that game day.')}
             <form onSubmit={(event) => {
