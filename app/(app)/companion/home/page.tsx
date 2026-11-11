@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PixelAvatar } from '../../../../components/PixelAvatar';
+import { ActivityLog } from '../../../../components/companion/ActivityLog';
 import { CompanionHero } from '../../../../components/companion/CompanionHero';
 import { nextTierLabel, useCompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
 import { questGlyph } from '../../../../lib/companionPass';
@@ -13,7 +14,7 @@ import { useCompanionBoard } from '../useCompanionBoard';
 type HomeMetrics = { openQuests: number; doneThisWeek: number };
 
 export default function CompanionModeHome() {
-  const { board, ready, message } = useCompanionBoard();
+  const { board, ready, message, reload } = useCompanionBoard();
   const { wardrobe, banner } = useCompanionWardrobe();
   const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
   useEffect(() => {
@@ -53,20 +54,20 @@ export default function CompanionModeHome() {
       </section>
       {banner.length > 0 && (
         <p className="companion-fanfare cq-sparkles" role="status">
-          <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
-          Unlocked: {banner.join(', ')} ♥
+          Unlocked: {banner.join(', ')}
         </p>
       )}
       {board?.bond?.role === 'companion' && board.identity && (
         <section className="cq-bubble" aria-label="Hero greeting">
           <PixelAvatar who="connor" size={48} alt="Connor's hero, a pixel knight in silver armor" />
-          <p>Connor&apos;s hero says hi, {board.identity.displayName}. ♥</p>
+          <p>Connor's hero says hi, {board.identity.displayName}.</p>
         </section>
       )}
       <div className="companion-metrics" aria-label="Quest metrics">
         <p className="companion-metric"><strong>{metrics ? metrics.openQuests : '…'}</strong><span>Open quests</span></p>
         <p className="companion-metric"><strong>{metrics ? metrics.doneThisWeek : '…'}</strong><span>Done this week</span></p>
       </div>
+      <ActivityLog onLogged={() => void reload()} />
       {board?.recap?.visible && (
         <section className="companion-card" aria-label="Sunday recap">
           <h2>This week</h2>
