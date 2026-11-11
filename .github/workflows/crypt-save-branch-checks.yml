@@ -1,0 +1,27 @@
+name: Crypt save branch verification
+on:
+  push:
+    branches:
+      - chatgpt/crypt-save-contract-20261031
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  crypt-save-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+        id: tests
+        continue-on-error: true
+      - run: npm run lint
+      - name: Fail if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
