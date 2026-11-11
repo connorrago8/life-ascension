@@ -13,6 +13,7 @@ import {
 } from '../../lib/crypt/delve/cards';
 import { cardFrameClass, cardIcon, GROUP_LABEL, ICONS, INTENT_TYPE, INTENT_TYPE_ICON, intentBadge, playedCard, type IconKey } from '../../lib/crypt/delve/cardArt';
 import { checkChance, eventById, FLOOR_NAME, FLOOR_ROWS, roomHint, roomTitle, ROOM_LABEL, type Room } from '../../lib/crypt/delve/floor';
+import { floorCheckpointKey } from '../../lib/crypt/delve/journey';
 import { GEAR_INKS, gearOverlays, wornGearLabels } from '../../lib/crypt/delve/gearArt';
 import { bonusLabel, lootById, passiveLabel, RARITY_LABEL, type Loadout } from '../../lib/crypt/delve/loot';
 import { MONSTER_PALETTE, MONSTER_SPRITES } from '../../lib/crypt/delve/monsterArt';
@@ -93,7 +94,7 @@ export function DelveRun(props: DelveRunProps) {
   const [{ state }, dispatch] = useReducer(holderReducer, props.resume ?? null, (resume): Holder => ({ state: resume }));
   const [vault, setVault] = useState<string[]>(() => props.vaultItemIds.slice());
   const reported = useRef<{ runId: string; count: number }>({ runId: '', count: 0 });
-  const clearedRuns = useRef<Set<string>>(new Set());
+  const reportedFloors = useRef<Set<string>>(new Set());
   const [checkpoint, setCheckpoint] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<{ runId: string; drops: number[] }>({ runId: '', drops: [] });
   const saveMode: SaveMode = props.saveMode ?? 'visit';
@@ -142,9 +143,11 @@ export function DelveRun(props: DelveRunProps) {
   const currentRun = useRef<string | null>(null);
   currentRun.current = state?.runId ?? null;
   useEffect(() => {
-    if (!state || state.phase !== 'floor-clear' || clearedRuns.current.has(state.runId)) return;
+    if (!state || state.phase !== 'floor-clear') return;
+    const key = floorCheckpointKey(state.runId, state.floor);
+    if (reportedFloors.current.has(key)) return;
     const runId = state.runId;
-    clearedRuns.current.add(runId);
+    reportedFloors.current.add(key);
     setCheckpoint('Saving checkpoint…');
     props.onFloorCleared(runId, state.floor).then((message) => {
       if (currentRun.current === runId) setCheckpoint(message);

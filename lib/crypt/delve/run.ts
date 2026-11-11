@@ -1,6 +1,7 @@
 import { endTurn, playCard, startBattle, type Battle } from './battle.ts';
 import { CARDS, MAX_DECK_SIZE, REWARD_POOL, cardDef, isUpgraded, upgradedKey, type CardId, type DeckCard } from './cards.ts';
-import { BOSS, FLOOR_ROWS, REST_HEAL, checkChance, eventById, generateFloor, spawnFoe, type Room } from './floor.ts';
+import { REST_HEAL, checkChance, eventById, spawnFoe, type Room } from './floor.ts';
+import { floorByNumber, journeyAfterClear, layoutForFloor, FLOOR_DEFINITIONS } from './journey.ts';
 import { gearAttributes, isUpgrade, loadoutCards, loadoutPassives, lootById, rollLoot, type Loadout, type LootSource } from './loot.ts';
 import { nextIndex, nextRoll, seedRng, type Rng } from './rng.ts';
 import { starterById, starterCards, type StarterId } from './starters.ts';
@@ -9,11 +10,14 @@ import {
 } from './stats.ts';
 
 /**
- * One Crypt delve, held only in this tab. Run progress is NOT saved mid-floor:
- * leaving the page or signing out ends the run. Gear you found is reported to the
- * caller as it drops (so it can be kept), and the floor checkpoint is reported only
- * when a floor is cleared. This reducer never grants XP itself.
+ * One Crypt delve, held only in this tab. The journey (lib/crypt/delve/journey.ts)
+ * decides whether clearing a floor continues or ends the run. Deck, HP, upgrades
+ * and boons last only for this run. Permanent level, attributes and the vault
+ * are inputs, never written here. This reducer never grants XP itself.
  */
+
+/** A temporary boon for this run. Empty until a later release offers any. */
+export type RunBoon = { id: string };
 export type DelvePhase = 'deck-select' | 'start-pick' | 'map' | 'combat' | 'reward' | 'event' | 'treasure' | 'rest' | 'floor-clear' | 'defeat';
 
 /**
@@ -39,6 +43,8 @@ export type DelveState = {
   starter?: StarterId | null;
   /** Card upgrades you may pick right now (treasure chests and some mystery rooms). */
   upgrades: number;
+  /** Temporary boons for this run only. Release 1 keeps the slot empty. */
+  boons: RunBoon[];
   hp: number;
   maxHp: number;
   rows: Room[][];
@@ -126,16 +132,21 @@ export function createDelve(input: {
   const level = Math.max(1, Math.floor(input.level) || 1);
   const allocated = clampAllocation(input.allocated, level);
   const loadout = runLoadout(input.vaultItemIds ?? [], input.wear ?? []);
-  const floor = generateFloor(seedRng(input.seed));
+  const opening = layoutForFloor(FLOOR_DEFINITIONS[0], seedRng(input.seed));
+  if (!opening) throw new Error('Floor 1 is not defined');
   const base = { allocated, runBonus: { ...ZERO_ATTRIBUTES }, loadout };
   const maxHp = maxHpFor(effectiveAttributes(base), level);
   // Own stream so the opening offer never shifts the floor layout or the fights.
   const startPick = rewardCards(seedRng((input.seed ^ 0x5eed) >>> 0), 2)[0];
   return {
-    runId: input.runId, seed: input.seed, rng: floor.rng, floor: 1, level, ...base,
-    found: [], deck: starterCards(null), starter: null, upgrades: 0, hp: maxHp, maxHp,
-    rows: floor.rows, row: 0, path: [], phase: input.deckSelect ? 'deck-select' : 'start-pick', startPick, room: null, battle: null, reward: null, event: null, note: null,
+    runId: input.runId, seed: input.seed, rng: opening.rng, floor: FLOOR_DEFINITIONS[0].number, level, ...base,
+    found: [], deck: starterCards(null), starter: null, upgrades: 0, boons: [], hp: maxHp, maxHp,
+    rows: opening.rows, row: 0, path: [], phase: input.deckSelect ? 'deck-select' : 'start-pick', startPick, room: null, battle: null, reward: null, event: null, note: null,
   };
+}
+
+function activeFloor(state: Pick<DelveState, 'floor'>) {
+  return floorByNumber(state.floor) ?? FLOOR_DEFINITIONS[0];
 }
 
 function refreshMaxHp(state: DelveState): DelveState {
@@ -184,7 +195,8 @@ function rewardCards(rng: Rng, count = 3): [CardId[], Rng] {
 }
 
 export function currentRoomChoices(state: DelveState): readonly Room[] {
-  if (state.row >= FLOOR_ROWS) return [{ kind: 'fight', foeId: BOSS.id }];
+  const floor = activeFloor(state);
+  if (state.row >= floor.rows) return [{ kind: 'fight', foeId: floor.bossId }];
   return state.rows[state.row] ?? [];
 }
 
@@ -209,6 +221,22 @@ function advance(state: DelveState): DelveState {
   return { ...state, phase: 'map', row: state.row + 1, room: null, battle: null, reward: null, event: null, upgrades: 0 };
 }
 
+/** Clearing a floor asks the journey whether the run continues. Only Floor 1 exists, so it ends the run. */
+function finishFloor(state: DelveState, loot: string | null): DelveState {
+  const reward = { cards: [] as CardId[], picked: true, loot, worn: false };
+  const step = journeyAfterClear(state.floor);
+  if (step.kind === 'next-floor') {
+    const layout = layoutForFloor(step.floor, state.rng);
+    if (layout) {
+      return {
+        ...state, floor: step.floor.number, rows: layout.rows, rng: layout.rng, row: 0, path: [],
+        phase: 'map', room: null, battle: null, reward: null, event: null, note: null, upgrades: 0,
+      };
+    }
+  }
+  return { ...state, phase: 'floor-clear', reward };
+}
+
 export function reduceDelve(state: DelveState, command: DelveCommand): DelveState {
   if (state.phase === 'defeat' || state.phase === 'floor-clear') return state;
 
@@ -226,12 +254,11 @@ export function reduceDelve(state: DelveState, command: DelveCommand): DelveStat
     let next: DelveState = { ...state, battle, hp: battle.hp };
     if (battle.status === 'lost') return { ...next, phase: 'defeat', hp: 0 };
     if (battle.status === 'won') {
-      const boss = state.row >= FLOOR_ROWS;
+      const floor = activeFloor(state);
+      const boss = state.row >= floor.rows;
       const drop = dropLoot(next, boss ? 'boss' : state.room?.kind === 'elite' ? 'elite' : 'fight');
       next = drop.state;
-      if (boss) {
-        return { ...next, phase: 'floor-clear', reward: { cards: [], picked: true, loot: drop.itemId, worn: false } };
-      }
+      if (boss) return finishFloor(next, drop.itemId);
       const [cards, rng] = rewardCards(next.rng);
       return { ...next, rng, phase: 'reward', reward: { cards, picked: false, loot: drop.itemId, worn: false } };
     }

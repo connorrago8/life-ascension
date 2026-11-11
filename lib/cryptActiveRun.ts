@@ -10,14 +10,16 @@
  * another's run. Nothing here grants XP, gear or vault items: loot claims stay
  * server-checked and idempotent per run and drop index.
  */
-import type { DelvePhase, DelveState } from './crypt/delve/run';
+import type { DelvePhase, DelveState, RunBoon } from './crypt/delve/run';
 
 export const ACTIVE_RUN_KEY = 'la.crypt.activeRun.v1';
 /** Old runs are dropped after a day so a forgotten run never surprises anyone. */
 export const ACTIVE_RUN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/** Current browser-save shape. Version 1 is the original owner-scoped save; it still loads. */
+export const ACTIVE_RUN_VERSION = 2;
 
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem' | 'removeItem'>;
-type Saved = { v: 1; owner: string; savedAt: number; state: DelveState };
+type Saved = { v: number; owner: string; savedAt: number; state: DelveState };
 
 const LIVE_PHASES: readonly DelvePhase[] = ['deck-select', 'start-pick', 'map', 'combat', 'reward', 'event', 'treasure', 'rest'];
 const RUN_ID = /^[0-9a-f-]{8,64}$/i;
@@ -44,14 +46,29 @@ function looksLikeRun(value: unknown): value is DelveState {
     && (s.phase !== 'combat' || (!!s.battle && typeof s.battle === 'object'));
 }
 
+/** A live run stays saved. Defeat, a finished journey, and End run (null) remove it. */
+export function runShouldStaySaved(state: DelveState | null): boolean {
+  return isLiveRun(state);
+}
+
+function boonsOf(value: unknown): RunBoon[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is RunBoon => !!entry && typeof entry === 'object' && typeof (entry as RunBoon).id === 'string');
+}
+
+/** Version 1 saves have no boons slot. Newer saves keep only well-formed boons. */
+export function migrateRunState(state: DelveState): DelveState {
+  return { ...state, boons: boonsOf((state as { boons?: unknown }).boons) };
+}
+
 /** Save the latest state of a live run; an over (or empty) run clears the slot. */
 export function saveActiveRun(storage: Storage, owner: string, state: DelveState | null, now: number): void {
   try {
-    if (!isLiveRun(state)) {
+    if (!runShouldStaySaved(state)) {
       storage.removeItem(ACTIVE_RUN_KEY);
       return;
     }
-    const saved: Saved = { v: 1, owner, savedAt: now, state: state as DelveState };
+    const saved: Saved = { v: ACTIVE_RUN_VERSION, owner, savedAt: now, state: migrateRunState(state as DelveState) };
     storage.setItem(ACTIVE_RUN_KEY, JSON.stringify(saved));
   } catch {
     /* Private mode or full storage: the run still plays, it just can't resume. */
@@ -64,9 +81,11 @@ export function loadActiveRun(storage: Storage, owner: string, now: number): Del
     const raw = storage.getItem(ACTIVE_RUN_KEY);
     if (!raw) return null;
     const saved = JSON.parse(raw) as Partial<Saved>;
-    if (!saved || saved.v !== 1 || saved.owner !== owner) return null;
+    if (!saved || (saved.v !== 1 && saved.v !== ACTIVE_RUN_VERSION) || saved.owner !== owner) return null;
     if (!Number.isFinite(saved.savedAt) || now - (saved.savedAt as number) > ACTIVE_RUN_MAX_AGE_MS || (saved.savedAt as number) > now + 60_000) return null;
-    return looksLikeRun(saved.state) ? saved.state : null;
+    if (!saved.state) return null;
+    const migrated = migrateRunState(saved.state);
+    return looksLikeRun(migrated) ? migrated : null;
   } catch {
     return null;
   }

@@ -1,4 +1,5 @@
-import { ENCOUNTERS_PER_RUN, FLOOR_ROWS } from './floor.ts';
+import { FLOOR_ROWS } from './floor.ts';
+import { floorByNumber } from './journey.ts';
 import type { DelveState } from './run.ts';
 
 /**
@@ -33,13 +34,14 @@ export function runRecap(state: RecapInput): RunRecap | null {
   if (state.phase !== 'floor-clear' && state.phase !== 'defeat') return null;
   const won = state.phase === 'floor-clear';
   const visited = state.path.length;
+  const rooms = (floorByNumber(state.floor)?.rows ?? FLOOR_ROWS) + 1;
   return {
     runId: state.runId,
     result: won ? 'conquered' : 'fallen',
     floor: state.floor,
-    roomsCleared: won ? FLOOR_ROWS + 1 : Math.max(0, visited - 1),
-    roomsVisited: won ? FLOOR_ROWS + 1 : visited,
-    roomsTotal: ENCOUNTERS_PER_RUN,
+    roomsCleared: won ? rooms : Math.max(0, visited - 1),
+    roomsVisited: won ? rooms : visited,
+    roomsTotal: rooms,
     fellTo: won ? null : state.battle?.foe.name ?? null,
     bossReward: won ? state.reward?.loot ?? null : null,
     found: state.found.slice(),
