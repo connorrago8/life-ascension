@@ -1,30 +1,9 @@
 'use client';
-
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { NAV_ITEMS, type NavItem } from '../../lib/nav';
-import { supabase } from '../../lib/supabase';
-
-const LINKS = NAV_ITEMS.filter((item): item is NavItem & { href: string } => item.href !== null);
-
-const SECONDARY = [
-  { href: '/together', label: 'Together' },
-  { href: '/companion', label: 'Companion' },
-  { href: '/quests/manage', label: 'Manage quests' },
-  { href: '/settings/api-keys', label: 'API keys' },
-] as const;
-
-type IconName = 'home' | 'quests' | 'play' | 'character' | 'more';
-
-function isCurrent(pathname: string, href: string) {
-  if (href === '/') return pathname === '/';
-  if (href === '/quests') {
-    return pathname === '/quests' || (pathname.startsWith('/quests/') && !pathname.startsWith('/quests/manage'));
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
+import {useEffect,useState} from 'react';
+import {usePathname} from 'next/navigation';
+import {NAV_ITEMS} from '../../lib/nav';
+type IconName='home'|'quests'|'play'|'character'|'more';
 function Icon({ name }: { name: IconName }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -63,127 +42,13 @@ function Icon({ name }: { name: IconName }) {
   );
 }
 
-export function AppNav() {
-  const pathname = usePathname() || '/';
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
-
-  useEffect(() => {
-    setMoreOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    let active = true;
-    let unsubscribe = () => {};
-    try {
-      const client = supabase();
-      void client.auth.getUser().then(({ data, error }) => {
-        if (active) setSignedIn(!error && !!data.user);
-      });
-      const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-        if (active) setSignedIn(!!session?.user);
-      });
-      unsubscribe = () => subscription.unsubscribe();
-    } catch {
-      if (active) setSignedIn(false);
-    }
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
-
-  async function logout() {
-    try {
-      await supabase().auth.signOut();
-    } catch {
-      /* Supabase is not configured in this browser. */
-    }
-    window.location.assign('/');
-  }
-
-  const moreCurrent = SECONDARY.some((item) => isCurrent(pathname, item.href));
-  // Keep guest/dev preview mode when tapping Play (a run in progress resumes there).
-  const [previewQuery, setPreviewQuery] = useState('');
-  useEffect(() => {
-    setPreviewQuery(new URLSearchParams(window.location.search).get('preview') === '1' ? '?preview=1' : '');
-  }, [pathname]);
-
-  return (
-    <>
-      <nav className="app-nav" aria-label="Primary">
-        <Link href="/" className="nav-brand">LIFE ASCENSION</Link>
-        <div className="nav-links">
-          {LINKS.map((item) => {
-            const current = isCurrent(pathname, item.href);
-            const play = item.id === 'play';
-            return (
-              <Link
-                key={item.href}
-                href={play ? `${item.href}${previewQuery}` : item.href}
-                className={play ? 'nav-link nav-play' : 'nav-link'}
-                aria-current={current ? 'page' : undefined}
-              >
-                {play ? (
-                  <span className="nav-play-orb"><Icon name="play" /></span>
-                ) : (
-                  <Icon name={item.id as IconName} />
-                )}
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            className="nav-link nav-more"
-            aria-expanded={moreOpen}
-            aria-current={moreCurrent ? 'page' : undefined}
-            onClick={() => setMoreOpen((open) => !open)}
-          >
-            <Icon name="more" />
-            <span>More</span>
-          </button>
-        </div>
-        <div className="nav-secondary">
-          <p className="nav-section">More</p>
-          {SECONDARY.map((item) => {
-            const current = isCurrent(pathname, item.href);
-            return (
-              <Link key={item.href} href={item.href} className="nav-link" aria-current={current ? 'page' : undefined}>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-          {signedIn && (
-            <button type="button" className="nav-link nav-signout" onClick={() => { void logout(); }}>
-              <span>Sign out</span>
-            </button>
-          )}
-        </div>
-      </nav>
-      {moreOpen && (
-        <>
-          <button type="button" className="more-backdrop" aria-label="Close more menu" onClick={() => setMoreOpen(false)} />
-          <div className="more-sheet" role="dialog" aria-label="More">
-            {SECONDARY.map((item) => {
-              const current = isCurrent(pathname, item.href);
-              return (
-                <Link key={item.href} href={item.href} className="nav-link" aria-current={current ? 'page' : undefined}>
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-            {signedIn && (
-              <button type="button" className="nav-link" onClick={() => { void logout(); }}>
-                <span>Sign out</span>
-              </button>
-            )}
-            <button type="button" className="nav-link" onClick={() => setMoreOpen(false)}>
-              <span>Close</span>
-            </button>
-          </div>
-        </>
-      )}
-    </>
-  );
+export function AppNav(){
+ const pathname=usePathname()||'/';
+ const [previewQuery,setPreviewQuery]=useState('');
+ useEffect(()=>{setPreviewQuery(new URLSearchParams(window.location.search).get('preview') === '1'?'?preview=1':'')},[pathname]);
+ return <nav className="app-nav" aria-label="Primary"><Link href="/" className="nav-brand">LIFE ASCENSION</Link><div className="nav-links">{NAV_ITEMS.map(item=>{
+ const current=item.href==='/'?pathname==='/':pathname===item.href||pathname.startsWith(item.href+'/');
+ const play=item.id==='play';
+ return <Link key={item.id} href={play ? `${item.href}${previewQuery}` : item.href} className={play?'nav-link nav-play':'nav-link'} aria-current={current?'page':undefined}><Icon name={item.id}/><span>{item.label}</span></Link>;
+ })}</div></nav>;
 }

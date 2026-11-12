@@ -63,7 +63,7 @@ test('migration keys quests and streaks on the 05:00 game day and rolls back to 
   assert.doesNotMatch(up, /crypt_/i);
   assert.match(down, /% 5040/);
   assert.match(down, /drop function if exists public\.quest_game_day\(timestamptz, text\)/);
-  assert.match(read('app/(app)/quests/page.tsx'), /gameDayParts\(new Date\(\)\)/);
+  assert.match(read('components/quests/PersonalQuestBoard.tsx'), /gameDayParts\(new Date\(\)\)/);
   assert.match(read('app/(app)/page.tsx'), /gameDayParts\(new Date\(\)\)/);
   assert.match(read('app/api/mcp/route.ts'), /gameDayParts\(new Date\(\)\)/);
 });

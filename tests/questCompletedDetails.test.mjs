@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const home = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
-const completedStart = home.indexOf('{showCompleted&&<div id="completed-quests-list">{completedQuests.map');
+const home = readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
+const completedStart = home.indexOf('<div id="completed-quests-list">{completedDisplay.map');
 const completedEnd = home.indexOf('</section>', completedStart);
 const completedCards = home.slice(completedStart, completedEnd);
 const details = '<QuestDetails quest={quest} instance={instance!}/>';
@@ -21,6 +21,6 @@ test('completed details do not invent XP or duplicate completion actions', () =>
   for (const forbidden of ['completionFeedback(', '.rpc(', '+1 XP earned']) {
     assert.equal(completedCards.includes(forbidden), false, forbidden);
   }
-  assert.ok(home.slice(0, completedStart).includes(details),
-    'active quest details must remain available');
+  assert.ok(home.includes('questDetailHref(quest.id)'),
+    'active quest details remain reachable from the title');
 });

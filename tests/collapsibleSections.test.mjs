@@ -44,7 +44,7 @@ test('Journal splits "Done today" and "Completed" into collapsible sections with
 });
 
 test('Home board and Home preview keep Completed closed by default with a count and accessible toggle', () => {
-  const home = read('app/(app)/quests/page.tsx');
+  const home = read('components/quests/PersonalQuestBoard.tsx');
   assert.match(home, /const \[showCompleted,setShowCompleted\]=useState\(false\)/);
   assert.match(home, /aria-expanded=\{showCompleted\}/);
   assert.match(home, /Completed \(\{completed\}\)/);

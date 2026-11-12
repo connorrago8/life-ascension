@@ -18,7 +18,7 @@ export function roleFromCompanionState(input: {
 
 export const COMPANION_NAV = [
   { href: '/companion/home', label: 'Home' },
-  { href: '/companion/quests', label: 'Quests' },
+  { href: '/quests', label: 'Quests' },
   { href: '/companion/character', label: 'Character' },
   { href: '/companion/history', label: 'History' },
 ] as const;
@@ -32,7 +32,7 @@ export function isCompanionOnlyPath(pathname: string): boolean {
 /** Adventurer surfaces. /companion itself stays open as the invite fallback. The no-account Crypt preview is not listed. */
 export function isAdventurerPath(pathname: string): boolean {
   if (pathname === '/') return true;
-  return ['/quests', '/play', '/character', '/health', '/settings'].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return ['/play', '/character', '/health', '/settings'].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export function companionRedirect(pathname: string, role: SessionRole): string | null {

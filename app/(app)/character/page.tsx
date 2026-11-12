@@ -1,4 +1,5 @@
 'use client';
+import {AccountSettings} from '../../../components/AccountSettings';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
@@ -175,7 +176,7 @@ export default function CharacterPage() {
 
   return (
     <main className="screen character-screen">
-      <h1 className="sr-only">{state.name}</h1>
+      <h1 className="sr-only">{state.name}</h1><AccountSettings/>
       {state.preview && <p className="preview-banner" role="status">Layout preview with 2 lifetime XP. Sign in to load your character.</p>}
       <section className="character-summary" aria-label="Level and stats">
         <div className="character-stat-row" role="list" aria-label="Stats">

@@ -8,7 +8,8 @@
     "start": "next start",
     "test": "node --test tests/*.test.mjs",
     "lint": "tsc --noEmit",
-    "test:shield-ui": "node tests/browser/shield-confirmation.mjs"
+    "test:shield-ui": "node tests/browser/shield-confirmation.mjs",
+    "test:workspace-ui": "node tests/browser/quest-workspace.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

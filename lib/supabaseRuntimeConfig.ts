@@ -5,7 +5,7 @@ const PROTECTED_QA_BRANCHES = new Set([
   'audit/qa-isolation-and-reliability-20261027',
   'beta/quest-ui-clean-review',
   'beta/crypt-intro-exit-accessibility-20261029',
-  'grok/companion-dark-fix', 'chatgpt/test-integration-20261111',
+  'grok/companion-dark-fix', 'chatgpt/test-integration-20261111', 'chatgpt/quest-workspace-20261111',
 ]);
 const PRIVILEGED_NONPRODUCTION_KEYS = [
   'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',

@@ -49,7 +49,7 @@ test('open quests stay above a collapsed completed section', () => {
   assert.equal(questGlyph('Do the dishes'), '⚔');
   assert.equal(completedOpenStorageKey('abc'), 'la.companion.completedOpen.abc');
   const board = read('components/companion/QuestBoard.tsx');
-  const page = read('app/(app)/companion/quests/page.tsx');
+  const page = read('components/quests/CompanionAssignmentsPanel.tsx');
   assert.match(board, /Completed \(\{/);
   assert.match(board, /completedOpen \?\? false/);
   assert.match(board, /localStorage/);

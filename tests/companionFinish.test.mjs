@@ -41,5 +41,5 @@ test('companion home reads server metrics and the wardrobe stays off the adventu
   assert.doesNotMatch(wardrobe, /strength|agility|href="\/play"/);
   assert.match(read('components/IzzyProof.tsx'), /role="status"/);
   assert.match(read('app/(app)/companion/CompanionHome.tsx'), /Marked done:/);
-  assert.match(read('app/(app)/companion/quests/page.tsx'), /\/companion#off-day/);
+  assert.match(read('components/quests/CompanionAssignmentsPanel.tsx'), /\/companion#off-day/);
 });

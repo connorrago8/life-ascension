@@ -5,6 +5,7 @@ on:
     branches:
       - chatgpt/shield-explicit-consent-20261111
       - chatgpt/test-integration-20261111
+      - chatgpt/quest-workspace-20261111
   workflow_dispatch:
 
 permissions:
@@ -58,6 +59,14 @@ jobs:
         run: npx playwright install --with-deps chromium --only-shell
       - name: Shield confirmation browser regressions (mock RPC only)
         run: npm run test:shield-ui
+      - name: Workspace navigation and mobile layout
+        run: npm run test:workspace-ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-layout-screens
+          path: /tmp/quest-workspace-screens/*.png
+          retention-days: 7
 
   sql-regressions:
     runs-on: ubuntu-24.04

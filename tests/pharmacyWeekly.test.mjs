@@ -92,14 +92,14 @@ test('pack titles are unique by the same key the database uses, so a second add 
   assert.match(copy, /description is distinct from public\.pharmacy_weekly_description\(q\.title\)/);
   assert.doesNotMatch(copy, /set title|set id|set domain|set cadence|set xp/i);
   assert.match(down, /drop column if exists description/);
-  assert.match(read('app/(app)/quests/page.tsx'), /quest\.description/);
+  assert.match(read('components/quests/PersonalQuestBoard.tsx'), /quest\.description/);
 });
 
 test('migration is additive, keeps the 05:00 streak award, and the board exposes one pack button', () => {
   const sql = read('supabase/migrations/20261112011949_pharmacy_weekly_autopilot.sql');
   const down = read('supabase/rollbacks/20261112011949_pharmacy_weekly_autopilot_down.sql');
   const smoke = read('tests/sql/pharmacy_weekly_smoke.sql');
-  const board = read('app/(app)/quests/page.tsx');
+  const board = read('components/quests/PersonalQuestBoard.tsx');
   const home = read('app/(app)/page.tsx');
   assert.match(sql, /add column if not exists fixed_reveal boolean/);
   assert.match(sql, /add column if not exists weekly_weekday smallint/);
@@ -127,9 +127,9 @@ test('migration is additive, keeps the 05:00 streak award, and the board exposes
   assert.match(smoke, /second complete awards 0/);
   assert.match(smoke, /no companion bonus/);
   assert.doesNotMatch(smoke, /\b(patient name|mrn|diagnosis|hipaa)\b/i);
-  assert.match(board, /Pharmacy weekly pack/);
+  assert.match(board, /Set up Monday work tasks/);
   assert.match(board, /apply_pharmacy_weekly_pack/);
-  assert.match(board, /PHARMACY_WEEKLY_TITLES\.join/);
+  assert.match(board, /area==='work'/);
   assert.match(board, /Weekly · open until Monday 5:00 AM/);
   assert.match(board, /fixed_reveal,weekly_weekday/);
   assert.doesNotMatch(board, /quest_board_v3_ensure_instances/);

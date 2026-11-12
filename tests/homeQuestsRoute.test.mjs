@@ -6,21 +6,21 @@ import { todayGlance, todayGlanceLabel } from '../lib/homeToday.ts';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const home = read('app/(app)/page.tsx');
-const board = read('app/(app)/quests/page.tsx');
+const board = read('components/quests/PersonalQuestBoard.tsx');
 const journal = read('app/(app)/quests/journal/page.tsx');
 const css = read('app/style.css');
 
 test('the quest board lives at /quests and the journal at /quests/journal', () => {
-  assert.ok(existsSync(new URL('../app/(app)/quests/page.tsx', import.meta.url)));
+  assert.ok(existsSync(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url)));
   assert.ok(existsSync(new URL('../app/(app)/quests/journal/page.tsx', import.meta.url)));
-  assert.match(board, /export default function QuestBoard\(\)/);
+  assert.match(board, /export default function PersonalQuestBoard\(/);
   assert.match(board, /set_quest_instance_status_v2/);
   assert.match(board, /ensure_quest_instance/);
   assert.match(board, /ConfirmCompleteButton/);
   assert.match(board, /completed-board-toggle/);
   assert.match(board, /useState\(false\);const \[recoveryIds/); // Completed stays closed by default.
   assert.match(board, /aria-label="Upcoming"/);
-  assert.match(board, /<a href="\/quests\/journal">Quest notes<\/a>/);
+  assert.match(board, /<Link href="\/quests\/journal">Quest notes<\/Link>/);
   assert.match(journal, /href="\/quests">Quest board<\/a>/);
   assert.doesNotMatch(journal, /on Home/);
 });

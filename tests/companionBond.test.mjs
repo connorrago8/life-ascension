@@ -18,11 +18,12 @@ test('companion titles are a small curated list shared with SQL', () => {
   assert.match(read('supabase/rollbacks/202611080002_companion_bond_down.sql'), /drop table if exists public\.companion_bonds/);
 });
 
-test('companion page is a plain mobile screen on the existing More menu', () => {
+test('companion connection remains available through account settings', () => {
   const page = read('app/(app)/companion/page.tsx');
   const nav = read('app/components/AppNav.tsx');
   const css = read('app/style.css');
-  assert.match(nav, /href: '\/companion', label: 'Companion'/);
+  assert.doesNotMatch(nav, /More<\/span>/);
+  assert.match(read('components/AccountSettings.tsx'), /href="\/companion"/);
   assert.match(page, /className="btn ghost companion-back" href="\/"/);
   assert.match(page, /companion_invite/);
   assert.match(page, /companion_accept/);

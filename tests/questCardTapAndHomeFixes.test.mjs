@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { questDetailHref, shouldOpenQuestCard, QUEST_CARD_INTERACTIVE_SELECTOR } from '../lib/questCardTap.ts';
 
 const read = (rel) => readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
-const home = read('app/(app)/quests/page.tsx');
+const home = read('components/quests/PersonalQuestBoard.tsx');
 const journal = read('app/(app)/quests/journal/page.tsx');
 const fakeTarget = (insideControl) => ({ closest: (sel) => (sel === QUEST_CARD_INTERACTIVE_SELECTOR && insideControl ? {} : null) });
 
