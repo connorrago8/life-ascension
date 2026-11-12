@@ -5,6 +5,8 @@ import '../../couple.css';
 import { DateNightOffer } from '../../../components/couple/DateNightOffer';
 import { SundayRecapCard } from '../../../components/couple/SundayRecapCard';
 import { COUPLE_QUEST_PACK } from '../../../lib/coupleQuestPack';
+import { DATE_DURATION_LABEL, DATE_NIGHT_IDEAS, DATE_SETTING_LABEL } from '../../../lib/dateNightIdeas';
+import type { RecapFacts } from '../../../lib/recapTemplate';
 import { parseDateNight, sanitizeDateNight, type DateNightPlan } from '../../../lib/dateNightPlan';
 import { isSundayGameDay } from '../../../lib/coupleRecap';
 import { shieldLabel } from '../../../lib/streakShield';
@@ -25,6 +27,21 @@ type Quest = {
   steps: Step[];
 };
 type Board = { role: string; companionXp: number; quests: Quest[] };
+
+const previewRecap: RecapFacts = {
+  weekStart: '2026-11-08',
+  weekEnd: '2026-11-15',
+  connorXp: 0,
+  connorLevel: 1,
+  izzyXp: 0,
+  izzyLevel: 1,
+  coupleQuestsCompleted: 0,
+  bestMomentTitle: null,
+  coupleQuestTitle: null,
+  unlockNames: [],
+  nextQuestTitle: 'A walk without phones',
+  seed: 'preview',
+};
 
 const PREVIEW_QUESTS: Quest[] = COUPLE_QUEST_PACK.slice(0, 4).map((quest, index) => ({
   id: `preview-${index}`,
@@ -104,6 +121,17 @@ export default function TogetherPage() {
     await load();
   }
 
+  async function chooseIdea(id: number) {
+    if (preview) return;
+    setBusy(true);
+    setMessage('');
+    const { error } = await supabase().rpc('couple_choose_date_idea', { p_id: id });
+    setBusy(false);
+    if (error) { setMessage(error.message); return; }
+    setMessage('Added to your shared quests.');
+    await load();
+  }
+
   async function draftNight(event: React.FormEvent) {
     event.preventDefault();
     setMessage('');
@@ -133,15 +161,10 @@ export default function TogetherPage() {
       <h1>Together</h1>
       <p className="muted">Shared quests for a bonded pair. Connor’s XP stays on his quest streak. Izzy’s share is {board?.companionXp ?? 10} XP in her own ledger, once.</p>
       {preview && <p className="preview-banner" role="status">Layout preview. Sign in to use your bond.</p>}
-      {preview && <p className="streak-shield" role="status">{shieldLabel('used', '2026-03-13')}</p>}
+      {preview && <p className="streak-shield" role="status">{shieldLabel('used', { doneToday: false })}</p>}
       {(sunday || preview) && (
         <section className="couple-card" aria-label="Sunday recap">
-          {preview ? (
-            <div className="couple-recap-grid">
-              <div className="couple-partner"><strong>Connor</strong><span>4 done</span><span>42 XP</span><span>1 levels</span><span>Longest streak 6</span></div>
-              <div className="couple-partner"><strong>Izzy</strong><span>3 done</span><span>30 XP</span><span>1 levels</span><span>Longest streak 3</span></div>
-            </div>
-          ) : <SundayRecapCard />}
+          {preview ? <SundayRecapCard previewFacts={previewRecap} /> : <SundayRecapCard />}
         </section>
       )}
       <section className="couple-card" aria-label="Starter pack">
@@ -157,6 +180,20 @@ export default function TogetherPage() {
           <button className="btn" type="submit" disabled={busy || note.trim().length < 1}>Plan it</button>
         </form>
         {plan && <DateNightOffer plan={plan} onSaved={() => void load()} />}
+      </section>
+      <section className="couple-card" aria-label="Date night ideas">
+        <h2>Thirty ideas</h2>
+        <p className="muted">Cost, length, and whether you stay in. Choosing one does not invent extra steps.</p>
+        <ul className="couple-steps">
+          {DATE_NIGHT_IDEAS.map((idea) => (
+            <li key={idea.id}>
+              <strong>{idea.title}</strong>
+              {' '}{idea.cost} · {DATE_DURATION_LABEL[idea.duration]} · {DATE_SETTING_LABEL[idea.setting]}
+              <div className="muted">{idea.blurb}</div>
+              <button className="btn ghost" type="button" disabled={busy || preview} onClick={() => void chooseIdea(idea.id)}>Choose</button>
+            </li>
+          ))}
+        </ul>
       </section>
       <section aria-label="Shared quests">
         <h2>Shared quests</h2>

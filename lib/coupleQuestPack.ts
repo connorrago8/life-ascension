@@ -1,6 +1,6 @@
-/** Starter couple-quest pack from the content design pack, section 3.
- * Cadence is weekly or monthly. Connor's award ignores any proposed base XP
- * and uses the personal streak formula. Izzy's amount is a server config. */
+/** Starter couple-quest pack. Flavor lines are pack v2 section 7.
+ * Cadence is weekly or monthly. Connor's award ignores any proposed base XP.
+ * Izzy's amount is a server config, default 10, paid once. */
 
 export type CoupleCadence = 'weekly' | 'monthly';
 
@@ -11,21 +11,21 @@ export type CoupleQuestTemplate = {
 };
 
 export const COUPLE_QUEST_PACK: readonly CoupleQuestTemplate[] = [
-  { title: 'Cook dinner together', description: 'Make a meal as a team, from preparation to cleanup.', cadence: 'weekly' },
-  { title: 'A walk without phones', description: 'Spend at least 20 minutes walking and talking without scrolling.', cadence: 'weekly' },
-  { title: 'Coffee date', description: 'Get coffee together and enjoy an uninterrupted conversation.', cadence: 'weekly' },
-  { title: 'Plan our next adventure', description: 'Choose one outing, date, or experience to look forward to.', cadence: 'weekly' },
-  { title: 'One thoughtful surprise', description: 'Do something small and unexpected for each other.', cadence: 'weekly' },
-  { title: 'Game night', description: 'Play a board game, video game, or card game together.', cadence: 'weekly' },
-  { title: 'Sunday reset', description: 'Spend 30 minutes getting your shared space ready for the week.', cadence: 'weekly' },
-  { title: 'Try something new', description: 'Visit somewhere new or try an activity neither of you has done together.', cadence: 'monthly' },
-  { title: 'At-home movie night', description: 'Choose a movie, prepare snacks, and watch it together.', cadence: 'weekly' },
-  { title: 'Make a shared playlist', description: 'Pick songs that remind you of each other or a shared memory.', cadence: 'monthly' },
-  { title: 'Memory lane', description: 'Look through old photos and share favorite memories.', cadence: 'monthly' },
-  { title: 'Workout together', description: 'Complete a walk, gym session, yoga class, or workout as a pair.', cadence: 'weekly' },
-  { title: 'A real check-in', description: 'Talk about what went well this week and what support would help.', cadence: 'weekly' },
-  { title: 'Call someone we love', description: 'Together, reach out to a family member or friend.', cadence: 'weekly' },
-  { title: 'Our next chapter', description: 'Write down one shared goal and the next small step toward it.', cadence: 'monthly' },
+  { title: 'Cook dinner together', description: 'Turn ingredients and teamwork into a meal worth remembering.', cadence: 'weekly' },
+  { title: 'A walk without phones', description: 'Leave the noise behind and rediscover the art of talking.', cadence: 'weekly' },
+  { title: 'Coffee date', description: 'Share a warm drink and an unhurried hour.', cadence: 'weekly' },
+  { title: 'Plan our next adventure', description: 'Put a new pin on the map of your shared story.', cadence: 'weekly' },
+  { title: 'One thoughtful surprise', description: 'Make an ordinary day unexpectedly bright.', cadence: 'weekly' },
+  { title: 'Game night', description: 'Trade the day\'s demands for a little friendly competition.', cadence: 'weekly' },
+  { title: 'Sunday reset', description: 'Restore your shared space before the next chapter begins.', cadence: 'weekly' },
+  { title: 'Try something new', description: 'Step outside the familiar and bring home a new memory.', cadence: 'monthly' },
+  { title: 'At-home movie night', description: 'Dim the lights and disappear into a story together.', cadence: 'weekly' },
+  { title: 'Make a shared playlist', description: 'Build a soundtrack only the two of you fully understand.', cadence: 'monthly' },
+  { title: 'Memory lane', description: 'Revisit the moments that brought you here.', cadence: 'monthly' },
+  { title: 'Workout together', description: 'Move side by side, at your own pace.', cadence: 'weekly' },
+  { title: 'A real check-in', description: 'Make room for the things that matter but rarely get said.', cadence: 'weekly' },
+  { title: 'Call someone we love', description: 'Keep a connection strong beyond your own front door.', cadence: 'weekly' },
+  { title: 'Our next chapter', description: 'Choose one shared goal and take its first small step.', cadence: 'monthly' },
 ];
 
 export function coupleTitleKey(title: string): string {

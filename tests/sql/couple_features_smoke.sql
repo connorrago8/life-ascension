@@ -3,6 +3,9 @@
 
 do $$ begin
   assert (select companion_xp from public.couple_xp_config where singleton) = 10, 'Izzy default is 10';
+  assert (select recap_schedule from public.couple_xp_config where singleton) = 'sunday_chicago_5am_previous_7';
+  assert (select shield_month_reset from public.couple_xp_config where singleton) = 'chicago_5am_on_the_1st';
+  assert (select count(*) from public.date_night_ideas) = 30;
   assert not has_function_privilege('anon', 'public.couple_quest_mark(uuid)', 'execute');
   assert not has_function_privilege('authenticated', 'public._award_personal_quest_xp(uuid,uuid)', 'execute');
   assert not has_table_privilege('authenticated', 'public.couple_quests', 'insert');
@@ -125,10 +128,10 @@ begin
   select coalesce(sum(amount), 0) into xp from public.xp_ledger where owner_id = u;
   early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');
   assert early->>'status' = 'used' and early->>'month' = '2026-02-01' and early->>'bridgedDay' = '2026-02-27', early::text;
-  assert early->>'notice' = 'Streak shield: used. It covered February 27. That missed day granted no XP.', early->>'notice';
+  assert early->>'notice' = 'Streak Shield used · 0 remaining. Streak protected. You missed a day, but your journey continues. No XP was awarded.', early->>'notice';
   late := public._streak_shield_status(u, '2026-03-01 05:00:00 America/Chicago');
   assert late->>'status' = 'ready' and late->>'month' = '2026-03-01', late::text;
-  assert late->>'notice' = 'Streak shield: ready';
+  assert late->>'notice' = 'Streak Shield ready · 1 this month';
   assert (select count(*) from public.streak_shields where owner_id = u) = 1, 'March does not keep February''s shield';
   assert (select coalesce(sum(amount), 0) from public.xp_ledger where owner_id = u) = xp, 'the reset grants no XP';
 end $$;

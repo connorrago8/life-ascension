@@ -157,7 +157,7 @@ export function CompanionHome({
       {board.recap?.visible && (
         <section className="panel companion-card companion-greeting" aria-label="Sunday recap">
           <PixelAvatar who="izzy" size={72} alt="Izzy, your companion" />
-          <SundayRecapCard fallback={board.recap} />
+          <SundayRecapCard />
         </section>
       )}
       <section className="panel companion-card" aria-label="Milestones">

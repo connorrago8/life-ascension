@@ -12,16 +12,22 @@ export function shieldMonth(day: string): string {
   return `${day.slice(0, 7)}-01`;
 }
 
-/** The used line names the covered day. A shield spend is never only a silent flag. */
-export function shieldLabel(status: 'ready' | 'used', bridgedDay?: string | null): string {
-  if (status !== 'used') return 'Streak shield: ready';
-  if (bridgedDay && /^\d{4}-\d{2}-\d{2}$/.test(bridgedDay)) {
-    const when = new Date(`${bridgedDay}T12:00:00Z`).toLocaleDateString('en-US', {
-      month: 'long', day: 'numeric', timeZone: 'UTC',
-    });
-    return `Streak shield: used. It covered ${when}. That missed day granted no XP.`;
-  }
-  return 'Streak shield: used. It covered one missed day. That missed day granted no XP.';
+/** Proposal default. The exact monthly reset instant is not founder-signed. */
+export const SHIELD_RESET_PROPOSAL = 'chicago_5am_on_the_1st';
+
+/** Player copy from pack v2 section 5. The shield is 1 per month and grants no XP. */
+export const SHIELD_READY = 'Streak Shield ready · 1 this month';
+export const SHIELD_USED = 'Streak Shield used · 0 remaining';
+export const SHIELD_PROTECTED = 'Streak protected. You missed a day, but your journey continues. No XP was awarded.';
+export const SHIELD_NUDGE = 'Your shield saved your streak. Complete a quest today to keep it going.';
+export const SHIELD_NONE_LEFT = 'No shields left this month. Your next qualifying day starts a new streak.';
+
+export function shieldLabel(status: 'ready' | 'used', options?: { doneToday?: boolean; blocked?: boolean }): string {
+  if (status !== 'used') return SHIELD_READY;
+  if (options?.blocked) return `${SHIELD_USED} ${SHIELD_NONE_LEFT}`;
+  const lines = [SHIELD_USED, SHIELD_PROTECTED];
+  if (!options?.doneToday) lines.push(SHIELD_NUDGE);
+  return lines.join(' ');
 }
 
 /**

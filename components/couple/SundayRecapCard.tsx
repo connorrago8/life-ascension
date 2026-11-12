@@ -2,35 +2,54 @@
 
 import { useEffect, useState } from 'react';
 import '../../app/couple.css';
-import type { RecapPartner } from '../../lib/coupleRecap';
+import { recapLines, type RecapFacts } from '../../lib/recapTemplate';
 import { supabase } from '../../lib/supabase';
+
+type Partner = {
+  role?: string;
+  xp?: number;
+  level?: number;
+  levelsGained?: number;
+};
 
 type RecapPayload = {
   visible?: boolean;
-  weekStart?: string;
-  partners?: RecapPartner[];
+  weekStart?: string | null;
+  weekEnd?: string | null;
+  coupleQuestsCompleted?: number;
+  bestMomentTitle?: string | null;
+  coupleQuestTitle?: string | null;
+  unlockNames?: string[];
+  nextQuestTitle?: string | null;
+  partners?: Partner[];
 };
 
-type Fallback = { done?: number; streak?: number; xp?: number };
-
-function PartnerLine({ partner }: { partner: RecapPartner }) {
-  const name = partner.role === 'adventurer' ? 'Connor' : 'Izzy';
-  return (
-    <div className="couple-partner">
-      <strong>{name}</strong>
-      <span>{partner.done} done</span>
-      <span>{partner.xp} XP</span>
-      <span>{partner.levelsGained} levels</span>
-      <span>Longest streak {partner.longestStreak}</span>
-    </div>
-  );
+function factsFrom(recap: RecapPayload): RecapFacts | null {
+  if (!recap.weekStart || !recap.weekEnd) return null;
+  const connor = recap.partners?.find((partner) => partner.role === 'adventurer');
+  const izzy = recap.partners?.find((partner) => partner.role === 'companion');
+  return {
+    weekStart: recap.weekStart,
+    weekEnd: recap.weekEnd,
+    connorXp: connor?.xp ?? 0,
+    connorLevel: connor?.level ?? 1,
+    izzyXp: izzy?.xp ?? 0,
+    izzyLevel: izzy?.level ?? 1,
+    coupleQuestsCompleted: recap.coupleQuestsCompleted ?? 0,
+    bestMomentTitle: recap.bestMomentTitle ?? null,
+    coupleQuestTitle: recap.coupleQuestTitle ?? null,
+    unlockNames: recap.unlockNames ?? [],
+    nextQuestTitle: recap.nextQuestTitle ?? null,
+    seed: `${recap.weekStart}:${connor?.xp ?? 0}:${izzy?.xp ?? 0}`,
+  };
 }
 
-/** Fills the existing Sunday recap slot. Falls back to the bond summary if the RPC is absent. */
-export function SundayRecapCard({ fallback }: { fallback?: Fallback | null }) {
+/** Sunday recap. Lines come from the server payload. Missing moments stay the empty sentence. */
+export function SundayRecapCard({ previewFacts }: { previewFacts?: RecapFacts | null }) {
   const [recap, setRecap] = useState<RecapPayload | null>(null);
 
   useEffect(() => {
+    if (previewFacts) return undefined;
     let active = true;
     void (async () => {
       try {
@@ -40,21 +59,17 @@ export function SundayRecapCard({ fallback }: { fallback?: Fallback | null }) {
       } catch { /* Supabase is not configured in this browser. */ }
     })();
     return () => { active = false; };
-  }, []);
+  }, [previewFacts]);
 
-  if (recap && recap.visible === false) return null;
-  const partners = recap?.partners ?? [];
+  const facts = previewFacts ?? (recap ? factsFrom(recap) : null);
+  if (recap && recap.visible === false && !previewFacts) return null;
+  if (!facts) return null;
+  const lines = recapLines(facts);
   return (
     <div>
-      <h2>This week</h2>
-      <p className="muted">Previous Sunday 5:00 AM through this Sunday 4:59 AM, Chicago.</p>
-      {partners.length > 0 ? (
-        <div className="couple-recap-grid">
-          {partners.map((partner) => <PartnerLine key={partner.role} partner={partner} />)}
-        </div>
-      ) : (
-        <p>{fallback?.done ?? 0} of her quests done. Streak {fallback?.streak ?? 0}. {fallback?.xp ?? 0} XP from those quests.</p>
-      )}
+      <h2>{lines[0]}</h2>
+      {lines.slice(1).map((line) => <p key={line}>{line}</p>)}
+      <p className="muted">See our week</p>
     </div>
   );
 }

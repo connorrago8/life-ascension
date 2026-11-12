@@ -10,9 +10,11 @@ test('the monthly allowance flips at 05:00 Chicago on the 1st', () => {
   assert.equal(shieldMonth(before.date), '2026-02-01');
   assert.equal(at.date, '2026-03-01');
   assert.equal(shieldMonth(at.date), '2026-03-01');
-  assert.match(shieldLabel('used', '2026-02-27'), /Streak shield: used\. It covered February 27/);
-  assert.match(shieldLabel('used', '2026-02-27'), /no XP/);
-  assert.equal(shieldLabel('ready'), 'Streak shield: ready');
+  assert.equal(shieldLabel('ready'), 'Streak Shield ready · 1 this month');
+  assert.match(shieldLabel('used', { doneToday: true }), /Streak Shield used · 0 remaining/);
+  assert.match(shieldLabel('used', { doneToday: true }), /No XP was awarded/);
+  assert.match(shieldLabel('used'), /Complete a quest today/);
+  assert.match(shieldLabel('used', { blocked: true }), /No shields left this month/);
 });
 
 test('04:59 is the previous game day and 05:00 opens the next one', () => {
@@ -40,5 +42,5 @@ test('one missed day is bridged, two missed days reset, and a month does not sta
   const again = fireWithShields(['2026-01-10', '2026-01-12', '2026-01-13', '2026-01-15'], '2026-01-16');
   assert.equal(again.fire, 3);
   assert.equal(again.shields.size, 1);
-  assert.match(shieldLabel('used', '2026-04-11'), /April 11/);
+  assert.match(shieldLabel('used', { doneToday: false }), /No XP was awarded/);
 });

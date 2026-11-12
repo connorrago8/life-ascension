@@ -41,6 +41,7 @@ psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_xp10_smoke.sql" | 
 echo "PASS quest_xp10_smoke.sql"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/couple_features_smoke.sql" | grep -q 'couple features smoke passed'
 echo "PASS couple_features_smoke.sql"
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120002_design_pack_v2_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120001_couple_features_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" <<'SQL'
 do $$ begin
