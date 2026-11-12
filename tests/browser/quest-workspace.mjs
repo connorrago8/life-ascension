@@ -35,11 +35,13 @@ const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH
 try{
  mkdirSync('/tmp/quest-workspace-screens',{recursive:true});
  const page=await browser.newPage({viewport:{width:390,height:844}});
+ page.on('pageerror',error=>console.error('Browser error:',error.message));
+
  await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
  await page.goto(base+'/quests');
  await page.getByRole('button',{name:'Complete Make the bed',exact:true}).waitFor();
  assert.equal(await page.locator('.quest-title-link').count(),6,'one six-item page, not every task at once');
- assert.equal(await page.getByRole('navigation',{name:'Primary'}).getByRole('link').count(),5,'brand plus four destinations');
+ assert.equal(await page.locator('.app-nav .nav-links').getByRole('link').count(),4,'four primary destinations');
  assert.equal(await page.getByRole('button',{name:'More',exact:true}).count(),0);
  assert.equal(await page.locator('.quest-time-nav [aria-current="page"]').innerText(),'Today');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'phone has no horizontal overflow');
