@@ -116,6 +116,30 @@ const BASE: readonly Shape[] = [
   [22, 94, 3, 2, GOLD],
   [38, 94, 3, 2, GOLD],
   [28, 96, 2, 2, '#3a3228'],
+  // Subtle, directional pixel lighting keeps the starter outfit intentionally plain.
+  // These are small clusters rather than flat full-width blocks.
+  [25, 14, 2, 7, '#d6a17a'],
+  [39, 15, 1, 8, '#9d6b4e'],
+  [28, 25, 9, 1, '#b47d5d'],
+  [29, 18, 1, 1, '#e6b28a'],
+  [37, 18, 1, 1, '#e6b28a'],
+  [31, 24, 4, 1, '#754a40'],
+  [21, 8, 3, 10, '#252934'],
+  [43, 12, 2, 16, '#242936'],
+  [23, 5, 7, 1, '#55576a'],
+  [18, 33, 3, 4, '#fffaf0'],
+  [21, 39, 2, 12, '#e8e2d7'],
+  [44, 39, 2, 12, '#c3bdb1'],
+  [23, 56, 20, 1, '#c5beb0'],
+  [11, 36, 2, 12, '#dfa782'],
+  [54, 36, 2, 12, '#a87352'],
+  [23, 65, 2, 23, '#544032'],
+  [41, 65, 2, 23, '#2b2019'],
+  [25, 68, 2, 10, '#665041'],
+  [23, 93, 3, 2, '#3e3027'],
+  [40, 93, 3, 2, '#3e3027'],
+  [20, 98, 10, 1, '#45352b'],
+  [36, 98, 10, 1, '#45352b'],
 ];
 
 export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[]; label?: string }) {
@@ -131,6 +155,15 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
       <ellipse cx="40" cy="104" rx="14" ry="2" fill="#07080c" />
       <g shapeRendering="crispEdges">
         <Pixels shapes={BASE} />
+        {/* Hair strands remain visible on the basic character; cosmetic hair overrides them. */}
+        {!on.has('silverhair') && (
+          <g>
+            <rect x="23" y="10" width="2" height="13" fill="#292d3b" />
+            <rect x="43" y="11" width="2" height="19" fill="#2f3341" />
+            <rect x="26" y="7" width="7" height="1" fill="#464a5b" />
+            <rect x="40" y="8" width="2" height="3" fill="#42495c" />
+          </g>
+        )}
         {on.has('streak') && <rect x="44" y="8" width="2" height="18" fill={CYAN} />}
         {on.has('silverhair') && (
           <g>
@@ -181,6 +214,10 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
             <rect x="24" y="58" width="16" height="1" fill={GOLD} />
             <rect x="16" y="70" width="8" height="1" fill={MAGENTA} />
             <rect x="40" y="80" width="8" height="1" fill={MAGENTA} />
+            <rect x="18" y="64" width="2" height="30" fill="#29212d" />
+            <rect x="44" y="64" width="2" height="30" fill="#25202b" />
+            <rect x="20" y="82" width="1" height="14" fill={GOLD} opacity="0.8" />
+            <rect x="43" y="84" width="1" height="12" fill={GOLD} opacity="0.8" />
           </g>
         )}
         {on.has('gloves') && (
@@ -214,6 +251,10 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
             <rect x="48" y="32" width="12" height="14" fill="#14181f" />
             <rect x="8" y="32" width="12" height="1" fill={GOLD} />
             <rect x="48" y="32" width="12" height="1" fill={GOLD} />
+            <rect x="10" y="35" width="2" height="10" fill="#3b414c" />
+            <rect x="56" y="35" width="2" height="10" fill="#080a0e" />
+            <rect x="16" y="38" width="2" height="5" fill="#60616a" />
+            <rect x="50" y="38" width="2" height="5" fill="#60616a" />
           </g>
         )}
         {on.has('trench') && (
@@ -256,6 +297,10 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
             <rect x="22" y="64" width="6" height="4" fill="#2a3140" />
             <rect x="40" y="64" width="6" height="4" fill="#2a3140" />
             <rect x="24" y="66" width="2" height="1" fill={CYAN} />
+            <rect x="21" y="60" width="2" height="29" fill="#303a46" />
+            <rect x="45" y="60" width="2" height="29" fill="#080b10" />
+            <rect x="24" y="68" width="4" height="1" fill="#4b5868" />
+            <rect x="40" y="68" width="4" height="1" fill="#4b5868" />
           </g>
         )}
         {on.has('yoga') && <rect x="22" y="60" width="24" height="10" fill={CYAN} opacity="0.55" />}
