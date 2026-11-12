@@ -24,23 +24,57 @@ test('04:59 is the previous game day and 05:00 opens the next one', () => {
   assert.equal(at.date, '2026-03-14');
 });
 
-test('one missed day is bridged, two missed days reset, and a month does not stack', () => {
-  const one = fireWithShields(['2026-04-10', '2026-04-12'], '2026-04-13');
-  assert.equal(one.fire, 2);
-  assert.equal(one.shields.get(shieldMonth('2026-04-11')), '2026-04-11');
+test('a missing day never spends an unconfirmed shield', () => {
+  const unconfirmed = fireWithShields(['2026-04-10', '2026-04-12'], '2026-04-13');
+  assert.equal(unconfirmed.fire, 1);
+  assert.equal(unconfirmed.shields.size, 0);
 
+  const confirmed = fireWithShields(
+    ['2026-04-10', '2026-04-12'],
+    '2026-04-13',
+    new Map([['2026-04-01', '2026-04-11']]),
+  );
+  assert.equal(confirmed.fire, 2);
+  assert.equal(confirmed.shields.get('2026-04-01'), '2026-04-11');
+});
+
+test('two missed days reset and previously confirmed shields do not stack', () => {
   const two = fireWithShields(['2026-04-10', '2026-04-13'], '2026-04-14');
   assert.equal(two.fire, 1);
   assert.equal(two.shields.size, 0);
 
-  const roll = fireWithShields(['2026-01-29', '2026-01-31', '2026-02-01', '2026-02-03'], '2026-02-04');
+  const roll = fireWithShields(
+    ['2026-01-29', '2026-01-31', '2026-02-01', '2026-02-03'],
+    '2026-02-04',
+    new Map([['2026-01-01', '2026-01-30'], ['2026-02-01', '2026-02-02']]),
+  );
   assert.equal(roll.fire, 4);
   assert.equal(roll.shields.size, 2);
-  assert.equal(roll.shields.get('2026-01-01'), '2026-01-30');
-  assert.equal(roll.shields.get('2026-02-01'), '2026-02-02');
 
-  const again = fireWithShields(['2026-01-10', '2026-01-12', '2026-01-13', '2026-01-15'], '2026-01-16');
-  assert.equal(again.fire, 3);
+  const again = fireWithShields(
+    ['2026-01-10', '2026-01-12', '2026-01-13', '2026-01-15'],
+    '2026-01-16',
+    new Map([['2026-01-01', '2026-01-11']]),
+  );
+  assert.equal(again.fire, 1);
   assert.equal(again.shields.size, 1);
   assert.match(shieldLabel('used', { doneToday: false }), /No XP was awarded/);
+});
+
+
+test('month reset follows Chicago daylight and standard time', () => {
+  for (const [before, at, previousMonth, nextMonth] of [
+    ['2026-04-01T09:59:00Z', '2026-04-01T10:00:00Z', '2026-03-01', '2026-04-01'],
+    ['2026-12-01T10:59:00Z', '2026-12-01T11:00:00Z', '2026-11-01', '2026-12-01'],
+  ]) {
+    assert.equal(shieldMonth(gameDayParts(new Date(before), 'America/Chicago').date), previousMonth);
+    assert.equal(shieldMonth(gameDayParts(new Date(at), 'America/Chicago').date), nextMonth);
+  }
+});
+
+test('streak reads preserve existing receipts and never mutate their input', () => {
+  const receipts = new Map([['2026-04-01', '2026-04-11']]);
+  const result = fireWithShields(['2026-04-10', '2026-04-12'], '2026-04-13', receipts);
+  result.shields.set('2026-05-01', '2026-05-02');
+  assert.deepEqual([...receipts], [['2026-04-01', '2026-04-11']]);
 });

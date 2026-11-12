@@ -29,6 +29,7 @@ drop function if exists public.couple_add_quest_pack();
 drop function if exists public._couple_active_bond();
 drop function if exists public._couple_period(text, date);
 drop function if exists public._couple_plain(text, integer);
+drop function if exists public.confirm_streak_shield(date);
 drop function if exists public.get_streak_shield();
 drop function if exists public._streak_shield_status(uuid, timestamptz);
 drop function if exists public.streak_shield_month(timestamptz);
