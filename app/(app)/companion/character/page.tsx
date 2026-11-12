@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
+import { cosmeticTitle } from '../../../../lib/levelTitles';
 import { clearCompanionRoleCache } from '../../../../lib/companionAccess';
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
@@ -18,7 +19,7 @@ export default function CompanionCharacterPage() {
     window.location.assign('/');
   }
 
-  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
+  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
   return (
     <main className="wrap companion-page">
       <header className="cq-char-head">

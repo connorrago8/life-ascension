@@ -27,8 +27,8 @@ function mockWardrobe(): Wardrobe {
     items: PASS_TIERS.map((tier) => ({
       ...tier,
       owned: tier.unlockLevel <= 7 && tier.grantKind === 'level',
-      worn: tier.id === 'bow' || tier.id === 'sparkle-boots',
-      fresh: tier.id === 'sparkle-boots',
+      worn: tier.id === 'fingerless-gloves' || tier.id === 'cargo-pants',
+      fresh: tier.id === 'cargo-pants',
       activityKey: tier.activityKey ?? null,
       activityNeed: tier.activityNeed ?? null,
     })),
@@ -57,17 +57,16 @@ export function GalleryScreen({ screen, completedOpen }: { screen: 'home' | 'que
                 <h1>Hello, Izzy</h1>
                 <p className="muted">Dawn Herald</p>
                 <p className="cq-level-line">Level 7</p>
-                <div className="cq-heartbar"><span style={{ width: '40%' }} /></div>
-                <p className="cq-next">Next: Lantern pin</p>
+                <div className="cq-xpbar"><span style={{ width: '40%' }} /></div>
+                <p className="cq-next">Next: Midnight Crop</p>
               </div>
             </section>
-            <p className="companion-fanfare cq-sparkles" role="status">
-              <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
-              Unlocked: Sparkly boots ♥
+            <p className="companion-fanfare" role="status">
+              Unlocked: Shadow Cargo
             </p>
             <section className="cq-bubble" aria-label="Hero greeting">
               <PixelAvatar who="connor" size={48} alt="Connor's hero, a pixel knight in silver armor" />
-              <p>Connor&apos;s hero says hi, Izzy. ♥</p>
+              <p>Connor&apos;s hero says hi, Izzy.</p>
             </section>
             <div className="companion-metrics">
               <p className="companion-metric"><strong>2</strong><span>Open quests</span></p>
@@ -76,8 +75,8 @@ export function GalleryScreen({ screen, completedOpen }: { screen: 'home' | 'que
             <section className="companion-card">
               <h2>Recent</h2>
               <ul className="cq-timeline">
-                <li><span aria-hidden="true">✿</span>Went to yoga</li>
-                <li><span aria-hidden="true">✿</span>Cooked dinner</li>
+                <li><span aria-hidden="true">✦</span>Went to yoga</li>
+                <li><span aria-hidden="true">★</span>Cooked dinner</li>
               </ul>
             </section>
             <Link className="btn companion-create" href="/companion/quests">Create quest</Link>
@@ -109,14 +108,14 @@ export function GalleryScreen({ screen, completedOpen }: { screen: 'home' | 'que
               <li className="cq-card is-open">
                 <div className="cq-card-main">
                   <p className="cq-title">Ice cream after the week</p>
-                  <p className="cq-hearts">♥♥♡♡♡</p>
+                  <p className="cq-meter">▮▮▯▯▯</p>
                   <span className="cq-pill">2 of 5</span>
                 </div>
               </li>
               <li className="cq-card is-done">
                 <div className="cq-card-main">
                   <p className="cq-title">Movie night</p>
-                  <p className="cq-hearts">♥♥♥</p>
+                  <p className="cq-meter">▮▮▮</p>
                   <span className="cq-pill is-done">Unlocked</span>
                 </div>
               </li>
@@ -126,7 +125,23 @@ export function GalleryScreen({ screen, completedOpen }: { screen: 'home' | 'que
         {screen === 'character' && (
           <main className="wrap companion-page">
             <header className="cq-char-head"><h1>Character</h1><button className="btn ghost" type="button">Menu</button></header>
-            <CompanionPassView wardrobe={wardrobe} banner={['Sparkly boots']} busy={false} onWear={() => undefined} />
+            <CompanionPassView
+              wardrobe={{
+                ...wardrobe,
+                level: 30,
+                xp: 2320,
+                xpForNext: 155,
+                items: wardrobe.items.map((item) => ({
+                  ...item,
+                  owned: item.grantKind !== 'activity' && item.unlockLevel <= 30,
+                  worn: item.id === 'nightcat-headset' || item.id === 'leather-jacket' || item.id === 'cargo-pants',
+                  fresh: item.id === 'nightcat-headset',
+                })),
+              }}
+              banner={['Nightcat Headset']}
+              busy={false}
+              onWear={() => undefined}
+            />
           </main>
         )}
       </div>

@@ -32,6 +32,7 @@ test('accepts independently pinned QA preview/development and Production fixture
 test('Preview builds reject non-protected branches even with valid QA URL/key/pin', () => {
   assert.equal(validateDeploymentEnv(qa), true);
   assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'beta/quest-ui-clean-review'}), true);
+  assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'grok/companion-dark-fix'}), true);
   for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {
     assert.throws(() => validateDeploymentEnv({ ...qa, VERCEL_GIT_COMMIT_REF: ref }),
@@ -268,6 +269,8 @@ test('runtime server/Edge accepts both approved QA Preview branches and denies u
   assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'beta/quest-ui-clean-review' }))?.url,
     qa.NEXT_PUBLIC_SUPABASE_URL);
   assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'beta/crypt-intro-exit-accessibility-20261029' }))?.url,
+    qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'grok/companion-dark-fix' }))?.url,
     qa.NEXT_PUBLIC_SUPABASE_URL);
   for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {

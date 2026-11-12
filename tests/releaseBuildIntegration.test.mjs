@@ -67,6 +67,7 @@ function syntheticQaEnv(branch = protectedBranch) {
 test('QA prebuild accepts only the protected branch with a pinned QA public key', () => {
   assert.equal(validateDeploymentEnv(syntheticQaEnv()), true);
   assert.equal(validateDeploymentEnv(syntheticQaEnv('beta/quest-ui-clean-review')), true);
+  assert.equal(validateDeploymentEnv(syntheticQaEnv('grok/companion-dark-fix')), true);
   assert.throws(() => validateDeploymentEnv(syntheticQaEnv('untrusted/other-preview')),
     /not the protected QA branch/);
 });

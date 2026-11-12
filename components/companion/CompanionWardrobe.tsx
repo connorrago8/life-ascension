@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { nextLevelTier, PASS_TIERS } from '../../lib/companionPass';
 import { levelProgress } from '../../lib/level';
+import { cosmeticTitle } from '../../lib/levelTitles';
+import { nextEvenUnlock } from '../../lib/levelUpCopy';
 import { supabase } from '../../lib/supabase';
 import { CompanionHero } from './CompanionHero';
 
@@ -17,6 +19,7 @@ export type WardrobeItem = {
   grantKind?: string;
   activityKey?: string | null;
   activityNeed?: number | null;
+  description?: string | null;
 };
 
 export type Wardrobe = {
@@ -55,13 +58,13 @@ export function useCompanionWardrobe() {
     const { data, error } = await supabase().rpc('companion_wear_cosmetic', { p_id: id, p_wear: on });
     setBusy(false);
     if (error) {
-      setNote(error.message);
+      setNote("Gear didn't save. Your previous outfit remains equipped.");
       return;
     }
     setWardrobe(data as Wardrobe);
   }
 
-  return { wardrobe, banner, note, busy, wear };
+  return { wardrobe, banner, note, busy, wear, reload: load };
 }
 
 export function CompanionPassView({
@@ -77,35 +80,63 @@ export function CompanionPassView({
   busy?: boolean;
   onWear?: (id: string, on: boolean) => void;
 }) {
+  const [zoom, setZoom] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const items = wardrobe?.items ?? [];
   const worn = items.filter((item) => item.worn).map((item) => item.id);
   const fraction = wardrobe ? levelProgress(wardrobe.xp) : 0;
   const ordered = [...items].sort((a, b) => a.unlockLevel - b.unlockLevel || a.label.localeCompare(b.label));
+  const ownedGear = items.filter((item) => item.grantKind !== 'activity' && item.owned);
+  const shown = previewId && !worn.includes(previewId) ? [...worn, previewId] : worn;
+  const equipped = items.filter((item) => item.worn);
+  const nextLevel = wardrobe ? nextEvenUnlock(wardrobe.level) : null;
 
   return (
-    <section className="companion-card cq-pass" aria-label="Battle pass">
-      <div className={banner.length > 0 ? 'cq-stage is-celebrating' : 'cq-stage'}>
-        <CompanionHero worn={worn} />
-      </div>
+    <section className="companion-card cq-pass" aria-label="Wardrobe">
+      <button
+        className={zoom ? 'cq-stage is-zoomed' : 'cq-stage'}
+        type="button"
+        aria-pressed={zoom}
+        onClick={() => setZoom((value) => !value)}
+      >
+        <CompanionHero worn={shown} />
+      </button>
       {wardrobe && (
         <div className="cq-level">
           <p>Level {wardrobe.level}</p>
-          <div className="cq-heartbar" aria-label={`${wardrobe.xp} XP toward the next level`}>
+          <p className="cq-title-line">{cosmeticTitle(wardrobe.level, 'izzy')}</p>
+          <div className="cq-xpbar" aria-label={`${wardrobe.xp} XP toward the next level`}>
             <span style={{ width: `${Math.round(fraction * 100)}%` }} />
           </div>
           <p className="muted">{wardrobe.xp} XP · {wardrobe.xpForNext} to the next level</p>
         </div>
       )}
+      {equipped.length > 0 && (
+        <p>Wearing {equipped.map((item) => item.label).join(', ')}.</p>
+      )}
+      {nextLevel != null && <p className="cq-next">Your next unlock is at Level {nextLevel}.</p>}
       {banner.length > 0 && (
-        <p className="companion-fanfare cq-sparkles" role="status">
-          <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
-          New gear: {banner.join(', ')}
+        <p className="companion-fanfare" role="status">
+          New gear unlocked: {banner.join(', ')}.
         </p>
       )}
-      <h2 className="cq-section">Battle pass</h2>
+      <h2 className="cq-section">Slots</h2>
+      <ul className="cq-list">
+        {equipped.map((item) => (
+          <li key={item.id} className="muted">{item.slot}: {item.label}</li>
+        ))}
+      </ul>
+      <h2 className="cq-section">Level 2 to 50</h2>
       <ol className="cq-track">
         {ordered.filter((item) => item.grantKind !== 'activity').map((item) => (
-          <Tier key={item.id} item={item} busy={busy} onWear={onWear} />
+          <Tier
+            key={item.id}
+            item={item}
+            busy={busy}
+            previewing={previewId === item.id}
+            onWear={onWear}
+            onPreview={(id) => setPreviewId((current) => current === id ? null : id)}
+          />
         ))}
       </ol>
       <h2 className="cq-section">From her days</h2>
@@ -114,6 +145,7 @@ export function CompanionPassView({
           <Tier key={item.id} item={item} busy={busy} onWear={onWear} />
         ))}
       </ol>
+      {ownedGear.length === 0 && <p className="empty-state">Your first piece of gear unlocks at Level 2.</p>}
       {items.length === 0 && <p className="muted">{PASS_TIERS.length} cosmetic tiers. Clothes never change quests or combat.</p>}
       {note && <p className="message" role="status">{note}</p>}
     </section>
@@ -136,11 +168,15 @@ export function CompanionWardrobe() {
 function Tier({
   item,
   busy,
+  previewing,
   onWear,
+  onPreview,
 }: {
   item: WardrobeItem;
   busy?: boolean;
+  previewing?: boolean;
   onWear?: (id: string, on: boolean) => void;
+  onPreview?: (id: string) => void;
 }) {
   return (
     <li className={item.owned ? 'cq-tier is-owned' : 'cq-tier'}>
@@ -148,7 +184,9 @@ function Tier({
       <span>
         <strong>{item.label}</strong>
         <small>
-          {item.grantKind === 'activity'
+          {item.description
+            ? item.description
+            : item.grantKind === 'activity'
             ? `Log ${item.activityKey} ${item.activityNeed} times`
             : `Level ${item.unlockLevel}`}
         </small>
@@ -158,7 +196,9 @@ function Tier({
           {item.worn ? 'Take off' : 'Wear'}
         </button>
       ) : (
-        <span className="cq-lock">Locked</span>
+        <button className="btn ghost" type="button" aria-pressed={previewing} onClick={() => onPreview?.(item.id)}>
+          {previewing ? 'Close preview' : 'Preview'}
+        </button>
       )}
     </li>
   );

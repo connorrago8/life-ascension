@@ -19,11 +19,11 @@ export function roleFromCompanionState(input: {
 export const COMPANION_NAV = [
   { href: '/companion/home', label: 'Home' },
   { href: '/companion/quests', label: 'Quests' },
-  { href: '/companion/rewards', label: 'Rewards' },
   { href: '/companion/character', label: 'Character' },
+  { href: '/companion/history', label: 'History' },
 ] as const;
 
-const COMPANION_ONLY = ['/companion/home', '/companion/quests', '/companion/rewards', '/companion/character'] as const;
+const COMPANION_ONLY = ['/companion/home', '/companion/quests', '/companion/rewards', '/companion/character', '/companion/history', '/companion/log'] as const;
 
 export function isCompanionOnlyPath(pathname: string): boolean {
   return COMPANION_ONLY.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

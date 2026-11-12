@@ -52,8 +52,8 @@ test('companions leave adventurer paths and adventurers leave companion-only pat
   assert.equal(companionRedirect('/companion', 'adventurer'), null);
 });
 
-test('companion nav is Home, Quests, Rewards, and Character, with no Play control', () => {
-  assert.deepEqual(COMPANION_NAV.map((item) => item.label), ['Home', 'Quests', 'Rewards', 'Character']);
+test('companion nav is Home, Quests, Character, and History, with no Play control', () => {
+  assert.deepEqual(COMPANION_NAV.map((item) => item.label), ['Home', 'Quests', 'Character', 'History']);
   assert.equal(COMPANION_NAV.some((item) => item.label === 'Play' || item.href === '/play'), false);
   const nav = read('components/CompanionNav.tsx');
   const adventurer = read('app/components/AppNav.tsx');

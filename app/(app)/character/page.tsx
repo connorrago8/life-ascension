@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
 import { AdventurerCosmeticTrack } from '../../../components/AdventurerCosmeticTrack';
+import { COSMETIC_LOOK_LEVEL, COSMETIC_LOOK_WORN } from '../../../lib/adventurerCosmetics';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { parseCryptProfile } from '../../../lib/cryptVault';
 import { levelFor, levelProgress } from '../../../lib/level';
+import { cosmeticTitle } from '../../../lib/levelTitles';
 import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
 import { supabase } from '../../../lib/supabase';
@@ -28,6 +30,8 @@ export default function CharacterPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [equipmentBusy, setEquipmentBusy] = useState(false);
   const [equipmentError, setEquipmentError] = useState('');
+  const [wornIds, setWornIds] = useState<readonly string[]>([]);
+  const [cosmeticError, setCosmeticError] = useState('');
   const loadGate = useRef(createLatestCharacterLoadGate());
   const equipmentMutationInFlight = useRef(false);
 
@@ -125,6 +129,22 @@ export default function CharacterPage() {
     };
   }, [load]);
 
+  const wornLoadKey = state.status === 'ready' && !state.preview ? 'live' : state.status;
+  useEffect(() => {
+    if (wornLoadKey !== 'live') return;
+    let cancel = false;
+    void supabase().rpc('adventurer_get_worn').then(({ data, error }) => {
+      if (cancel) return;
+      if (error) {
+        setCosmeticError(error.message || 'Could not load worn cosmetics.');
+        return;
+      }
+      setCosmeticError('');
+      setWornIds(Array.isArray(data) ? data.filter((id): id is string => typeof id === 'string') : []);
+    });
+    return () => { cancel = true; };
+  }, [wornLoadKey]);
+
   if (state.status === 'loading') return <main className="wrap">Loading your character…</main>;
   if (state.status === 'signed-out') {
     return (
@@ -171,6 +191,7 @@ export default function CharacterPage() {
           <div className="xp-track character-xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label={`Level ${progress.level}: ${progress.xpIntoLevel} of ${progress.xpForNext} XP to next level`}><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
           <span className="character-level-xp" aria-hidden="true">{progress.xpIntoLevel}/{progress.xpForNext}</span>
         </div>
+        <p className="character-level-title">{cosmeticTitle(progress.level, 'connor')}</p>
       </section>
       {state.preview && <p className="muted">Equipment below is a visual demo using starter items.</p>}
       {!state.preview && !state.gear && <p className="muted">Equipment unavailable right now. Refresh to retry.</p>}
@@ -185,7 +206,14 @@ export default function CharacterPage() {
         </p>
       )}
 
-      <AdventurerCosmeticTrack level={progress.level} />
+      <AdventurerCosmeticTrack
+        level={state.preview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cosmeticLook') === '1' ? COSMETIC_LOOK_LEVEL : progress.level}
+        wornIds={state.preview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cosmeticLook') === '1' ? COSMETIC_LOOK_WORN : wornIds}
+        onWornChange={setWornIds}
+        readOnly={state.preview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cosmeticLook') === '1'}
+        label={state.name}
+      />
+      {cosmeticError && <p className="message" role="status">{cosmeticError}</p>}
 
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
         <h2 id="wellness-heading">Wellness</h2>

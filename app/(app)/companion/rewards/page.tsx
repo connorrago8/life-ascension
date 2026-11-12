@@ -24,7 +24,7 @@ export default function CompanionRewardsPage() {
     await reload();
   }
 
-  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
+  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
   return (
     <main className="wrap companion-page">
       <h1>Rewards</h1>
@@ -36,15 +36,16 @@ export default function CompanionRewardsPage() {
         <input id="reward-goal" className="field" type="number" min={1} max={100} value={goal} onChange={(event) => setGoal(event.target.value)} />
         <button className="btn" type="submit" disabled={busy}>Save reward</button>
       </form>
+      {(board?.rewards ?? []).length === 0 && <p className="empty-state">No bonus finds yet. Keep showing up for the things you enjoy.</p>}
       <ul className="cq-list">
         {(board?.rewards ?? []).map((item) => {
           const filled = Math.max(0, Math.min(item.goal, item.progress));
-          const hearts = `${'♥'.repeat(filled)}${'♡'.repeat(Math.max(0, item.goal - filled))}`;
+          const meter = `${'▮'.repeat(filled)}${'▯'.repeat(Math.max(0, item.goal - filled))}`;
           return (
             <li key={item.id} className={item.unlocked ? 'cq-card is-done' : 'cq-card is-open'}>
               <div className="cq-card-main">
                 <p className="cq-title">{item.text}</p>
-                <p className="cq-hearts" aria-label={`${item.progress} of ${item.goal}`}>{hearts}</p>
+                <p className="cq-meter" aria-label={`${item.progress} of ${item.goal}`}>{meter}</p>
                 <span className={item.unlocked ? 'cq-pill is-done' : 'cq-pill'}>{item.unlocked ? 'Unlocked' : `${item.progress} of ${item.goal}`}</span>
               </div>
             </li>
