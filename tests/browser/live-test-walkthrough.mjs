@@ -66,7 +66,14 @@ try{
  stage='companion activity persistence';
  await izzy.goto(base+'/companion/log');await izzy.getByLabel('Activity',{exact:true}).fill('Make the bed');await izzy.getByRole('button',{name:'Save activity',exact:true}).click();
  await izzy.waitForURL(base+'/companion/history');await izzy.getByText('Make the bed',{exact:true}).waitFor();await izzy.reload();await izzy.getByText('Make the bed',{exact:true}).waitFor();
- console.log('PASS shared completion and companion activity survives refresh');
+ const wardrobe=await rpc('izzy','companion_wardrobe');assert.equal(wardrobe.xp,15,'Couple +10 and manual +5 both count toward the companion');
+ stage='cosmetic persistence';
+ await izzy.goto(base+'/companion/character');
+ await izzy.getByRole('button',{name:'Wear',exact:true}).first().click();
+ await izzy.getByRole('button',{name:'Take off',exact:true}).first().waitFor();
+ await izzy.reload();await izzy.getByRole('button',{name:'Take off',exact:true}).first().waitFor();
+ assert.equal((await rpc('izzy','companion_wardrobe')).xp,15,'wearing grants no XP');
+ console.log('PASS shared completion, companion activity refresh, combined +15 XP and cosmetic persistence');
  console.log(JSON.stringify({preview:base,commit:fixture.commit,result:'PASS'}));
-}catch{console.error(`Hosted TEST walkthrough failed at: ${stage}`);process.exitCode=1;}
+}catch(error){let detail=String(error?.message??error);for(const secret of [fixture.password,fixture.connorEmail,fixture.izzyEmail,...Object.values(sessions).map(s=>s.access_token)])detail=detail.replaceAll(secret,'[redacted]');console.error(`Hosted TEST walkthrough failed at: ${stage}: ${detail.slice(0,1800)}`);process.exitCode=1;}
 finally{await browser.close();for(const role of ['connor','izzy']){await fetch(api+'/auth/v1/logout',{method:'POST',headers:{apikey:fixture.key,Authorization:`Bearer ${sessions[role].access_token}`}});}}
