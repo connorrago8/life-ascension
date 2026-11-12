@@ -126,11 +126,11 @@ begin
   perform pg_temp.seed_day(u, '2026-02-26');
   perform pg_temp.seed_day(u, '2026-02-28');
   select coalesce(sum(amount), 0) into xp from public.xp_ledger where owner_id = u;
-  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');\n  assert early->>'status' = 'ready', 'status read cannot spend shield';\n  assert not exists (select 1 from public.streak_shields where owner_id = u);\n  insert into public.streak_shields(owner_id, month_key, bridged_day) values (u, '2026-02-01', '2026-02-27');\n  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');
+  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');\n  assert early->>'status' = 'ready', 'status read cannot spend shield';\n  assert early->>'eligibleMissedDay' = '2026-02-27', 'status identifies eligible bridge';\n  assert not exists (select 1 from public.streak_shields where owner_id = u);\n  insert into public.streak_shields(owner_id, month_key, bridged_day) values (u, '2026-02-01', '2026-02-27');\n  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');
   assert early->>'status' = 'used' and early->>'month' = '2026-02-01' and early->>'bridgedDay' = '2026-02-27', early::text;
   assert early->>'notice' = 'Streak Shield used · 0 remaining. Streak protected. You missed a day, but your journey continues. No XP was awarded.', early->>'notice';
   late := public._streak_shield_status(u, '2026-03-01 05:00:00 America/Chicago');
-  assert late->>'status' = 'ready' and late->>'month' = '2026-03-01', late::text;
+  assert late->>'status' = 'ready' and late->>'month' = '2026-03-01', late::text;\n  assert late->>'eligibleMissedDay' is null, 'old month cannot spend new month allowance';
   assert late->>'notice' = 'Streak Shield ready · 1 this month';
   assert (select count(*) from public.streak_shields where owner_id = u) = 1, 'March does not keep February''s shield';
   assert (select coalesce(sum(amount), 0) from public.xp_ledger where owner_id = u) = xp, 'the reset grants no XP';
