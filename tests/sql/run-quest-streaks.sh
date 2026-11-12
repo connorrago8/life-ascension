@@ -39,6 +39,11 @@ DB="$db" bash "$root/tests/sql/companion_concurrency.sh"
 DB="$db" bash "$root/tests/sql/quest_streaks_concurrency.sh"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_xp10_smoke.sql" | grep -q 'quest xp10 smoke passed'
 echo "PASS quest_xp10_smoke.sql"
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/pharmacy_weekly_smoke.sql" | grep -q 'pharmacy weekly smoke passed'
+echo "PASS pharmacy_weekly_smoke.sql"
+# Restore the seeded reveal before the older rollbacks replace quest_weekly_appears_at.
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120001_pharmacy_weekly_autopilot_down.sql" >/dev/null
+echo "PASS pharmacy weekly rollback"
 # Drop the auto-assign helpers before the game-day rollback removes quest_game_day.
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080006_companion_weekly_now_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080005_companion_batch2_down.sql" >/dev/null
