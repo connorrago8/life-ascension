@@ -205,6 +205,8 @@ declare
   u uuid := '00000000-0000-0000-0000-00000000f704';
   other uuid := '00000000-0000-0000-0000-00000000f705';
   added integer; q uuid; i uuid; i2 uuid; n integer; denied boolean := false;
+  tech_id uuid; tech_title text; tech_domain text; tech_cadence text; tech_for date;
+  tech_active boolean; tech_fixed boolean; tech_dow smallint; tech_xp integer;
 begin
   added := public.apply_pharmacy_weekly_pack();
   assert added = 4, 'skips the two titles that already exist';
@@ -227,6 +229,29 @@ begin
   select count(*) into n from public.quests
    where owner_id = u and active and fixed_reveal is true and weekly_weekday = 1 and cadence = 'weekly' and domain = 'career';
   assert n = 4, 'only the missing titles were added';
+  select id, title, domain, cadence, scheduled_for, active, fixed_reveal, weekly_weekday, xp
+    into tech_id, tech_title, tech_domain, tech_cadence, tech_for, tech_active, tech_fixed, tech_dow, tech_xp
+    from public.quests where owner_id = u and title = 'Tech schedule';
+  assert (select description from public.quests where id = tech_id) = 'Set the crew''s week in motion with a clear, fair plan.';
+  assert (select description from public.quests where owner_id = u and title = 'Pharmacist schedule') = 'Keep the watch covered and every shift accounted for.';
+  assert (select description from public.quests where owner_id = u and title = 'U Learn check') = 'Clear the training ledger and keep your skills sharp.';
+  assert (select description from public.quests where owner_id = u and title = 'PTO check') = 'Mark upcoming absences so the team can plan ahead.';
+  assert (select description from public.quests where id = '00000000-0000-0000-0000-00000000f7d1') is null, 'a different Supplies order keeps its blank description';
+  assert (select description from public.quests where id = '00000000-0000-0000-0000-00000000f7d2') is null, 'an archived different quest is not rewritten';
+  assert public._sync_pharmacy_weekly_descriptions(u) = 0, 'descriptions already match';
+  update public.quests set description = 'temporary' where id = tech_id;
+  assert public._sync_pharmacy_weekly_descriptions(u) = 1, 'a blank or stale sentence is filled again';
+  assert (select description from public.quests where id = tech_id) = 'Set the crew''s week in motion with a clear, fair plan.';
+  assert (select title from public.quests where id = tech_id) = tech_title;
+  assert (select domain from public.quests where id = tech_id) = tech_domain;
+  assert (select cadence from public.quests where id = tech_id) = tech_cadence;
+  assert (select scheduled_for from public.quests where id = tech_id) = tech_for;
+  assert (select active from public.quests where id = tech_id) = tech_active;
+  assert (select fixed_reveal from public.quests where id = tech_id) = tech_fixed;
+  assert (select weekly_weekday from public.quests where id = tech_id) = tech_dow;
+  assert (select xp from public.quests where id = tech_id) = tech_xp;
+  assert (select id from public.quests where id = tech_id) = tech_id;
+  assert public._sync_pharmacy_weekly_descriptions(u) = 0, 'second sync changes nothing';
   assert public.apply_pharmacy_weekly_pack_for_user(u) = 0, 'service helper is idempotent';
   assert public.apply_pharmacy_weekly_pack_for_user(other) = 6, 'another account gets its own six';
   assert public.apply_pharmacy_weekly_pack_for_user(other) = 0;

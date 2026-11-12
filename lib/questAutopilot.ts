@@ -17,6 +17,16 @@ export const PHARMACY_WEEKLY_TITLES = [
   'PTO check',
 ] as const;
 
+/** Board copy for the six pack titles. The database stores the same sentences. */
+export const PHARMACY_WEEKLY_DESCRIPTIONS: Record<(typeof PHARMACY_WEEKLY_TITLES)[number], string> = {
+  'Tech schedule': "Set the crew's week in motion with a clear, fair plan.",
+  'Pharmacist schedule': 'Keep the watch covered and every shift accounted for.',
+  'Supplies order': 'Restock the essentials before the shelves run thin.',
+  'U Learn check': 'Clear the training ledger and keep your skills sharp.',
+  'Attendance check': "Review the week's coverage and catch gaps early.",
+  'PTO check': 'Mark upcoming absences so the team can plan ahead.',
+};
+
 export const ISO_WEEKDAYS = [
   { value: 1, label: 'Monday' },
   { value: 2, label: 'Tuesday' },

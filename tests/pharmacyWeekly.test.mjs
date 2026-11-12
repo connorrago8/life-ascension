@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PHARMACY_WEEKLY_DOMAIN, PHARMACY_WEEKLY_TITLES, PHARMACY_WEEKLY_WEEKDAY, questTitleKey } from '../lib/questAutopilot.ts';
+import { PHARMACY_WEEKLY_DESCRIPTIONS, PHARMACY_WEEKLY_DOMAIN, PHARMACY_WEEKLY_TITLES, PHARMACY_WEEKLY_WEEKDAY, questTitleKey } from '../lib/questAutopilot.ts';
 import { gameDayParts, weekStart, weeklyAppearOffset, weeklyVisible } from '../lib/questStreak.ts';
 import { todayGlance } from '../lib/homeToday.ts';
 
@@ -83,6 +83,16 @@ test('pack titles are unique by the same key the database uses, so a second add 
   }
   assert.match(sql, /public\.quest_title_key\(title\) = public\.quest_title_key\(v_title\)/);
   assert.match(sql, /where owner_id = p_owner\s+and public\.quest_title_key\(title\)/);
+  const copy = read('supabase/migrations/202611120002_pharmacy_weekly_descriptions.sql');
+  const down = read('supabase/rollbacks/202611120002_pharmacy_weekly_descriptions_down.sql');
+  for (const sentence of Object.values(PHARMACY_WEEKLY_DESCRIPTIONS)) {
+    assert.match(copy, new RegExp(sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "''")));
+  }
+  assert.match(copy, /set description = public\.pharmacy_weekly_description\(q\.title\)/);
+  assert.match(copy, /description is distinct from public\.pharmacy_weekly_description\(q\.title\)/);
+  assert.doesNotMatch(copy, /set title|set id|set domain|set cadence|set xp/i);
+  assert.match(down, /drop column if exists description/);
+  assert.match(read('app/(app)/quests/page.tsx'), /quest\.description/);
 });
 
 test('migration is additive, keeps the 05:00 streak award, and the board exposes one pack button', () => {

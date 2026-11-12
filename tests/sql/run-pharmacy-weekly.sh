@@ -24,12 +24,13 @@ for file in "$root"/supabase/migrations/*.sql; do
 done
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/pharmacy_weekly_smoke.sql" | grep -q 'pharmacy weekly smoke passed'
 echo "PASS pharmacy_weekly_smoke.sql"
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120002_pharmacy_weekly_descriptions_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120001_pharmacy_weekly_autopilot_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" <<'SQL'
 do $$ begin
   assert not exists (
     select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'quests' and column_name in ('fixed_reveal', 'weekly_weekday'));
+    where table_schema = 'public' and table_name = 'quests' and column_name in ('fixed_reveal', 'weekly_weekday', 'description'));
   assert position('% 4740' in pg_catalog.pg_get_functiondef('public.quest_weekly_appears_at(uuid,uuid,date,text)'::regprocedure)) > 0;
   assert position('fixed_reveal' in pg_catalog.pg_get_functiondef('public.ensure_quest_instance(uuid,date)'::regprocedure)) = 0;
   assert position('companion_one_shot' in pg_catalog.pg_get_functiondef('public.ensure_quest_instance(uuid,date)'::regprocedure)) > 0;
@@ -39,7 +40,8 @@ end $$;
 SQL
 echo "PASS pharmacy weekly rollback"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/migrations/202611120001_pharmacy_weekly_autopilot.sql" >/dev/null
-psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/migrations/202611120001_pharmacy_weekly_autopilot.sql" >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/migrations/202611120002_pharmacy_weekly_descriptions.sql" >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/migrations/202611120002_pharmacy_weekly_descriptions.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" <<'SQL'
 do $$ begin
   assert public.quest_weekly_appears_at('00000000-0000-0000-0000-00000000d001', '00000000-0000-0000-0000-00000000d0a1', '2026-10-26', 'America/Chicago')
