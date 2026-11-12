@@ -8,21 +8,15 @@ import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../.
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
-type QuestTab = 'today' | 'weekly' | 'couple';
-
 export default function CompanionQuestsPage() {
   const { board, ready, message, setMessage, reload } = useCompanionBoard();
   const [text, setText] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
   const [source, setSource] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<QuestTab>('today');
   const mine = (board?.quests ?? []).filter((quest) => quest.fromUser === board?.userId && quest.status !== 'declined');
-  const visible = mine.filter((quest) => {
-    if (tab === 'weekly') return quest.cadence === 'weekly';
-    if (tab === 'couple') return false;
-    return quest.cadence !== 'weekly';
-  });
+  // One board: daily, weekly and shared assignments are visible together.
+  const visible = mine;
   const activeCount = visible.filter((quest) => quest.status !== 'completed').length;
 
   async function organize(event: React.FormEvent) {
@@ -108,13 +102,7 @@ export default function CompanionQuestsPage() {
     <main className="wrap companion-page" id="send-quest">
       <h1>Quests</h1>
       <p className="cq-level-line">{activeCount} active</p>
-      <div className="cq-tabs" role="tablist" aria-label="Quest groups">
-        {(['today', 'weekly', 'couple'] as const).map((item) => (
-          <button key={item} className={tab === item ? 'btn' : 'btn ghost'} type="button" role="tab" aria-selected={tab === item} onClick={() => setTab(item)}>
-            {item === 'today' ? 'Today' : item === 'weekly' ? 'Weekly' : 'Couple'}
-          </button>
-        ))}
-      </div>
+      <p className="muted">Daily, weekly and shared quests in one place. Your progress stays yours.</p>
       <form className="cq-notebook" onSubmit={(event) => void organize(event)}>
         <label htmlFor="brain-dump">Just type</label>
         <textarea id="brain-dump" className="field" maxLength={1000} placeholder="Example: yoga tonight, dishes after dinner, and a weekly cardboard run" value={text} onChange={(event) => setText(event.target.value)} />
