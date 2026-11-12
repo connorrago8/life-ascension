@@ -277,9 +277,7 @@ declare
   v_today date;
   v_month date;
   v_day date;
-  v_notice text;
-begin
-  if p_owner is null or p_at is null then raise exception 'Authentication required'; end if;
+  v_notice text;\n  v_candidate date;\n  v_cursor date;\nbegin\n  if p_owner is null or p_at is null then raise exception 'Authentication required'; end if;
   v_today := public.quest_game_day(p_at, 'America/Chicago');
   -- Read-only status. No implicit shield consumption.
   v_month := public.streak_shield_month(p_at);
