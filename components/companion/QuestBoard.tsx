@@ -85,7 +85,7 @@ export function QuestBoard({
                   quest={quest}
                   expanded={expanded === quest.id}
                   onToggle={() => setExpanded((id) => id === quest.id ? null : quest.id)}
-                  action={<span className="cq-stamp">Done ♥</span>}
+                  action={<span className="cq-stamp">Done</span>}
                 />
               ))}
             </ul>

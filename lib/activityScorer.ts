@@ -27,6 +27,31 @@ const CATEGORY_KEYWORDS: Record<ActivityCategory, string[]> = {
 const BIG_KEYWORDS = ['deep clean', 'full workout', 'long run', 'major', 'big', 'intense', 'hour', '1hr', '60 min'];
 const SMALL_KEYWORDS = ['quick', '5 min', 'ten min', 'light', 'tiny', 'short'];
 
+/** Hints the server uses to step a tier once. Keep in sync with companion_log_activity_v2. */
+const LONG_DURATION = ['hour', '1hr', '60 min', '90 min', '2 hr'];
+const SHORT_DURATION = ['quick', '5 min', '10 min', 'ten min'];
+
+/** A hint that starts with a digit must not continue a longer number ("10 min" vs "110 min"). */
+export function hasDurationHint(text: string, hint: string): boolean {
+  const escaped = hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = /^\d/.test(hint) ? new RegExp(`(^|[^0-9])${escaped}`) : new RegExp(escaped);
+  return pattern.test(text);
+}
+
+/** One step from the chosen tier. Long and short together leave the tier unchanged. Caps at 5 and 20. */
+export function adjustTierForDuration(tier: XpTier, text: string): XpTier {
+  const hay = text.toLowerCase();
+  const long = LONG_DURATION.some((hint) => hasDurationHint(hay, hint));
+  const short = SHORT_DURATION.some((hint) => hasDurationHint(hay, hint));
+  if (long && !short) return tier === 'small' ? 'medium' : 'big';
+  if (short && !long) return tier === 'big' ? 'medium' : 'small';
+  return tier;
+}
+
+export function xpForTier(tier: XpTier): number {
+  return TIER_XP[tier];
+}
+
 export function scoreActivity(description: string): ScoreResult {
   const text = description.toLowerCase().trim();
   if (!text) return { category: 'other', tier: 'small', xp: 5, confidence: 'low' };

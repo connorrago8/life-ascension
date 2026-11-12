@@ -28,6 +28,8 @@ export default function CharacterPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [equipmentBusy, setEquipmentBusy] = useState(false);
   const [equipmentError, setEquipmentError] = useState('');
+  const [wornIds, setWornIds] = useState<readonly string[]>([]);
+  const [cosmeticError, setCosmeticError] = useState('');
   const loadGate = useRef(createLatestCharacterLoadGate());
   const equipmentMutationInFlight = useRef(false);
 
@@ -125,6 +127,22 @@ export default function CharacterPage() {
     };
   }, [load]);
 
+  const wornLoadKey = state.status === 'ready' && !state.preview ? 'live' : state.status;
+  useEffect(() => {
+    if (wornLoadKey !== 'live') return;
+    let cancel = false;
+    void supabase().rpc('adventurer_get_worn').then(({ data, error }) => {
+      if (cancel) return;
+      if (error) {
+        setCosmeticError(error.message || 'Could not load worn cosmetics.');
+        return;
+      }
+      setCosmeticError('');
+      setWornIds(Array.isArray(data) ? data.filter((id): id is string => typeof id === 'string') : []);
+    });
+    return () => { cancel = true; };
+  }, [wornLoadKey]);
+
   if (state.status === 'loading') return <main className="wrap">Loading your character…</main>;
   if (state.status === 'signed-out') {
     return (
@@ -185,7 +203,8 @@ export default function CharacterPage() {
         </p>
       )}
 
-      <AdventurerCosmeticTrack level={progress.level} />
+      <AdventurerCosmeticTrack level={progress.level} wornIds={wornIds} onWornChange={setWornIds} />
+      {cosmeticError && <p className="message" role="status">{cosmeticError}</p>}
 
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
         <h2 id="wellness-heading">Wellness</h2>

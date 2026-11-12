@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { scoreActivity, type XpTier } from '../../lib/activityScorer';
+import { adjustTierForDuration, scoreActivity, xpForTier, type XpTier } from '../../lib/activityScorer';
 import { supabase } from '../../lib/supabase';
 
 export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
@@ -13,7 +13,8 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
 
   const scored = useMemo(() => scoreActivity(title), [title]);
   const tier = override ?? scored.tier;
-  const xp = tier === 'small' ? 5 : tier === 'medium' ? 10 : 20;
+  const awardedTier = adjustTierForDuration(tier, title);
+  const xp = xpForTier(awardedTier);
 
   const maxDate = new Date().toISOString().slice(0, 10);
   const minDate = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);

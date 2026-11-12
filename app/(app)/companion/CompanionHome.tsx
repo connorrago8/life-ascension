@@ -135,7 +135,7 @@ export function CompanionHome({
         {(board.notices ?? []).map((item) => (
           <div className="companion-quest" key={item.id}>
             {item.kind === 'completed' && <PixelAvatar who="izzy" size={40} alt="Izzy, smiling in her tiara" />}
-            <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `♥ ${item.title ?? 'A quest'} is done`}</p>
+            <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `Marked done: ${item.title ?? 'A quest'}`}</p>
             {izzy && item.kind === 'completed' && item.questId && (
               <button className="btn" type="button" disabled={busy} onClick={() => void call(async () => {
                 const { error } = await supabase().rpc('companion_thank', { p_quest: item.questId });

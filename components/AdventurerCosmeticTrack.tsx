@@ -1,37 +1,43 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ADVENTURER_COSMETICS, type AdventurerCosmetic } from '../lib/adventurerCosmetics';
 import { supabase } from '../lib/supabase';
+
+const EMPTY_WORN: readonly string[] = [];
 
 type Props = {
   level: number;
   wornIds?: readonly string[];
-  onWear?: (id: string, wear: boolean) => void;
+  onWornChange?: (ids: readonly string[]) => void;
 };
 
-export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) {
-  const [localWorn, setLocalWorn] = useState<Set<string>>(new Set(wornIds));
+export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornChange }: Props) {
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setLocalWorn(new Set(wornIds));
-  }, [wornIds]);
+  const [error, setError] = useState('');
+  const worn = new Set(wornIds);
 
   async function toggle(item: AdventurerCosmetic) {
     if (item.unlockLevel > level || busy) return;
-    const next = !localWorn.has(item.id);
+    const next = !worn.has(item.id);
     setBusy(true);
-    const { error } = await supabase().rpc('adventurer_set_worn', { p_id: item.id, p_wear: next });
+    setError('');
+    const { error: rpcError } = await supabase().rpc('adventurer_set_worn', { p_id: item.id, p_wear: next });
     setBusy(false);
-    if (error) return;
-    setLocalWorn((prev) => {
-      const copy = new Set(prev);
-      if (next) copy.add(item.id);
-      else copy.delete(item.id);
-      return copy;
-    });
-    onWear?.(item.id, next);
+    if (rpcError) {
+      setError(rpcError.message || 'Could not update that cosmetic.');
+      return;
+    }
+    const copy = new Set(wornIds);
+    if (next) {
+      for (const other of ADVENTURER_COSMETICS) {
+        if (other.slot === item.slot) copy.delete(other.id);
+      }
+      copy.add(item.id);
+    } else {
+      copy.delete(item.id);
+    }
+    onWornChange?.([...copy]);
   }
 
   return (
@@ -41,7 +47,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) 
       <ul className="cq-track">
         {ADVENTURER_COSMETICS.map((item) => {
           const owned = item.unlockLevel <= level;
-          const worn = localWorn.has(item.id);
+          const isWorn = worn.has(item.id);
           return (
             <li key={item.id} className={owned ? 'cq-tier is-owned' : 'cq-tier'}>
               <span className="cq-tier-level">L{item.unlockLevel}</span>
@@ -56,7 +62,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) 
                   disabled={busy}
                   onClick={() => void toggle(item)}
                 >
-                  {worn ? 'Take off' : 'Wear'}
+                  {isWorn ? 'Take off' : 'Wear'}
                 </button>
               ) : (
                 <span className="cq-lock">Locked</span>
@@ -65,6 +71,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = [], onWear }: Props) 
           );
         })}
       </ul>
+      {error && <p className="message" role="status">{error}</p>}
     </section>
   );
 }

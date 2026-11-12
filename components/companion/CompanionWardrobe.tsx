@@ -90,15 +90,14 @@ export function CompanionPassView({
       {wardrobe && (
         <div className="cq-level">
           <p>Level {wardrobe.level}</p>
-          <div className="cq-heartbar" aria-label={`${wardrobe.xp} XP toward the next level`}>
+          <div className="cq-xpbar" aria-label={`${wardrobe.xp} XP toward the next level`}>
             <span style={{ width: `${Math.round(fraction * 100)}%` }} />
           </div>
           <p className="muted">{wardrobe.xp} XP · {wardrobe.xpForNext} to the next level</p>
         </div>
       )}
       {banner.length > 0 && (
-        <p className="companion-fanfare cq-sparkles" role="status">
-          <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
+        <p className="companion-fanfare" role="status">
           New gear: {banner.join(', ')}
         </p>
       )}

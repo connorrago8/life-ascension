@@ -39,12 +39,12 @@ export default function CompanionRewardsPage() {
       <ul className="cq-list">
         {(board?.rewards ?? []).map((item) => {
           const filled = Math.max(0, Math.min(item.goal, item.progress));
-          const hearts = `${'♥'.repeat(filled)}${'♡'.repeat(Math.max(0, item.goal - filled))}`;
+          const meter = `${'▮'.repeat(filled)}${'▯'.repeat(Math.max(0, item.goal - filled))}`;
           return (
             <li key={item.id} className={item.unlocked ? 'cq-card is-done' : 'cq-card is-open'}>
               <div className="cq-card-main">
                 <p className="cq-title">{item.text}</p>
-                <p className="cq-hearts" aria-label={`${item.progress} of ${item.goal}`}>{hearts}</p>
+                <p className="cq-meter" aria-label={`${item.progress} of ${item.goal}`}>{meter}</p>
                 <span className={item.unlocked ? 'cq-pill is-done' : 'cq-pill'}>{item.unlocked ? 'Unlocked' : `${item.progress} of ${item.goal}`}</span>
               </div>
             </li>

@@ -44,7 +44,7 @@ export default function CompanionModeHome() {
           {wardrobe && (
             <>
               <p className="cq-level-line">Level {wardrobe.level}</p>
-              <div className="cq-heartbar" aria-label={`${wardrobe.xp} experience`}>
+              <div className="cq-xpbar" aria-label={`${wardrobe.xp} experience`}>
                 <span style={{ width: `${Math.round(fraction * 100)}%` }} />
               </div>
             </>
@@ -53,7 +53,7 @@ export default function CompanionModeHome() {
         </div>
       </section>
       {banner.length > 0 && (
-        <p className="companion-fanfare cq-sparkles" role="status">
+        <p className="companion-fanfare" role="status">
           Unlocked: {banner.join(', ')}
         </p>
       )}

@@ -1,69 +1,71 @@
-/* Dark visual system for the main adventurer (Connor). Matches companion palette. */
-.screen,
-.wrap,
-.quest-board,
-.character-screen {
+/* Connor's cosmetic track only. The rest of the adventurer app keeps style.css. */
+.adventurer-track {
   --neon: #ff2bd6;
   --cyan: #00f0ff;
   --gold: #c9a227;
-  --glass: rgba(16, 18, 24, 0.92);
-  --border: #2c313a;
-  background: #0c0e12;
+  margin-top: 16px;
+  padding: 14px;
+  background: #12141a;
   color: #e8eaed;
-}
-
-.quest,
-.panel,
-.companion-card,
-.character-summary,
-.wellness,
-.equip-slot {
-  background: var(--glass);
-  border: 1px solid var(--border);
+  border: 1px solid #2c313a;
   border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.xp-track,
-.progress,
-.character-xp-track {
-  background: #14171c;
-  border-radius: 999px;
-  overflow: hidden;
-}
-.xp-fill,
-.progress span {
-  background: linear-gradient(90deg, var(--cyan), var(--neon));
-  box-shadow: 0 0 6px var(--cyan);
-}
-
-.btn {
-  background: var(--neon);
-  color: #0c0e12;
-  font-weight: 650;
-  border-radius: 12px;
-}
-.btn.ghost {
-  background: transparent;
-  color: #e8eaed;
-  border: 1px solid #3c4450;
-}
-
-.eyebrow,
-.page-brand,
-.character-level {
+.adventurer-track .cq-section {
+  margin: 0 0 8px;
   color: var(--gold);
   letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
 }
 
-.quest-title {
-  color: #e8eaed;
-}
-.muted {
+.adventurer-track .muted {
   color: #9aa3ae;
 }
 
-.equip-slot.is-owned {
+.adventurer-track .cq-track {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.adventurer-track .cq-tier {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 52px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #0c0e12;
+  border: 1px solid #2c313a;
+}
+
+.adventurer-track .cq-tier.is-owned {
   border-color: var(--gold);
-  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.3);
+}
+
+.adventurer-track .cq-tier-level {
+  color: var(--gold);
+  font-weight: 650;
+  text-align: center;
+}
+
+.adventurer-track .cq-lock {
+  color: #6d7580;
+  font-size: 0.78rem;
+}
+
+.adventurer-track .btn {
+  background: var(--neon);
+  color: #0c0e12;
+  border-radius: 12px;
+}
+
+.adventurer-track .btn.ghost {
+  background: transparent;
+  color: #e8eaed;
+  border: 1px solid #3c4450;
 }
