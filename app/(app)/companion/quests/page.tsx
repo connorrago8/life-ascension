@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { QuestBoard } from '../../../../components/companion/QuestBoard';
 import { draftSourceLabel } from '../../../../lib/companionAccess';
@@ -10,6 +10,25 @@ import { useCompanionBoard } from '../useCompanionBoard';
 
 export default function CompanionQuestsPage() {
   const { board, ready, message, setMessage, reload } = useCompanionBoard();
+  const [shared, setShared] = useState<{id:string;title:string;myDone:boolean;partnerDone:boolean;awarded:boolean;cadence:string}[]>([]);
+  const [sharedBusy, setSharedBusy] = useState(false);
+  const [sharedError, setSharedError] = useState('');
+  const refreshShared = useCallback(async () => {
+    const {data,error}=await supabase().rpc('couple_board');
+    if(error){setSharedError('Shared quests unavailable.');return;}
+    const rows=(data as {quests?:unknown}|null)?.quests;
+    if(Array.isArray(rows))setShared(rows.filter((q):q is {id:string;title:string;myDone:boolean;partnerDone:boolean;awarded:boolean;cadence:string}=>typeof q?.id==='string'&&typeof q?.title==='string'));
+    setSharedError('');
+  },[]);
+  useEffect(()=>{if(board?.userId)void refreshShared();else setShared([])},[board?.userId,refreshShared]);
+  async function markShared(id:string){
+    if(sharedBusy)return;
+    setSharedBusy(true);
+    const {error}=await supabase().rpc('couple_quest_mark',{p_quest:id});
+    if(error)setSharedError('Could not confirm shared quest.');
+    else await refreshShared();
+    setSharedBusy(false);
+  }
   const [text, setText] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
   const [source, setSource] = useState<string | null>(null);
@@ -124,6 +143,15 @@ export default function CompanionQuestsPage() {
       )}
       <p className="cq-planner"><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
       <QuestBoard quests={visible} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} onComplete={(id) => void complete(id)} />
+      {shared.length>0&&<section className="companion-card" aria-label="Together quests">
+        <h2>Together</h2>
+        {shared.map(q=><div className="cq-card" key={q.id}>
+          <strong>{q.title}</strong>
+          <p className="muted">{q.cadence} · {q.awarded?'Both completed':q.myDone?'Waiting for Connor':'Your part is open'}</p>
+          <button type="button" className="btn ghost" disabled={sharedBusy||q.myDone} onClick={()=>void markShared(q.id)}>{q.myDone?'✓ Done':'Mark my part'}</button>
+        </div>)}
+      </section>}
+      {sharedError&&<p className="message" role="status">{sharedError}</p>}
       {message && <p className="message" role="status">{message.startsWith("Completion wasn't confirmed") ? message : message}</p>}
     </main>
   );
