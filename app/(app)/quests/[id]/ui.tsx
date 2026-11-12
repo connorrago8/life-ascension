@@ -16,7 +16,7 @@ type Note = {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default function QuestNotes({ questId }: { questId: string }) {
+export default function QuestNotes({ questId, backHref='/quests' }: { questId: string; backHref?: string }) {
   const validId = UUID_PATTERN.test(questId);
   const [ready, setReady] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -100,7 +100,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
   }
 
   if (!validId) {
-    return <main className="wrap"><h1>Quest notes</h1><p className="muted">That quest link is not valid.</p><a className="btn ghost" href="/quests">All notes</a></main>;
+    return <main className="wrap"><h1>Quest notes</h1><p className="muted">That quest link is not valid.</p><a className="btn ghost" href={backHref}>← Back to tasks</a></main>;
   }
   if (!ready) return <main className="wrap">Loading quest notes…</main>;
   if (!userId) {
@@ -122,7 +122,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
           <h1>{quest?.title ?? 'Quest notes'}</h1>
           <p className="muted">Saving a note keeps a journal entry. XP is awarded only when you confirm completion on the quest board.</p>
         </div>
-        <a className="btn ghost" href="/quests">All notes</a>
+        <a className="btn ghost" href={backHref}>← Back to tasks</a>
       </header>
       {!quest && <section className="panel"><p className="muted">Quest not found.</p></section>}
       {quest && (
@@ -163,7 +163,7 @@ export default function QuestNotes({ questId }: { questId: string }) {
         ))}
       </section>
       <p className="message" role="status" aria-live="polite">{message}</p>
-      <p className="foot"><a href="/quests">Quest board</a> · <a href="/settings/api-keys">API keys</a> · <a href="/settings/password">Set or change password</a></p>
+      <p className="foot"><a href={backHref}>Back to tasks</a> · <a href="/settings/api-keys">API keys</a> · <a href="/settings/password">Set or change password</a></p>
     </main>
   );
 }

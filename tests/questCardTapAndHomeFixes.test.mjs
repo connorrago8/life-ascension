@@ -28,8 +28,8 @@ test('Home completed quests collapse into one closed-by-default Completed (N) se
 });
 
 test('Home quest cards are tap-to-open with a keyboard-reachable title link to the detail route', () => {
-  assert.match(home, /<Link className="quest-title-link" href=\{questDetailHref\(quest\.id\)\}/);
-  assert.match(home, /if\(shouldOpenQuestCard\(e\.target as Element,selection\)\)router\.push\(questDetailHref\(quest\.id\)\)/);
+  assert.match(home, /<Link className="quest-title-link" href=\{taskHref\(quest\.id\)\}/);
+  assert.match(home, /if\(shouldOpenQuestCard\(e\.target as Element,selection\)\)router\.push\(taskHref\(quest\.id\)\)/);
   assert.match(home, /<ConfirmCompleteButton label="Complete" questTitle=\{quest\.title\} disabled=\{busy\} onConfirm=\{\(\)=>act\(instance!\.id,'complete'\)\}\/>/);
 });
 

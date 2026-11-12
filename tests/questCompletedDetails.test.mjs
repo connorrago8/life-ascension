@@ -21,6 +21,6 @@ test('completed details do not invent XP or duplicate completion actions', () =>
   for (const forbidden of ['completionFeedback(', '.rpc(', '+1 XP earned']) {
     assert.equal(completedCards.includes(forbidden), false, forbidden);
   }
-  assert.ok(home.includes('questDetailHref(quest.id)'),
+  assert.ok(home.includes('taskHref(quest.id)'),
     'active quest details remain reachable from the title');
 });

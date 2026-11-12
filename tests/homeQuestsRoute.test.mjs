@@ -32,7 +32,7 @@ test('bottom nav: Home is / and the Quests tab points at the board', () => {
 });
 
 test('quest board back-links point at /quests, not Home', () => {
-  assert.match(read('app/(app)/quests/[id]/ui.tsx'), /<a href="\/quests">Quest board<\/a>/);
+  assert.match(read('app/(app)/quests/[id]/ui.tsx'), /<a href=\{backHref\}>Back to tasks<\/a>/);
   assert.match(read('app/(app)/quests/manage/page.tsx'), /<Link href="\/quests">← Back to Quest Board<\/Link>/);
   assert.match(read('app/(app)/settings/api-keys/page.tsx'), /href="\/quests">Quest board/);
   assert.match(read('app/settings/password/page.tsx'), /<a href="\/quests">Quest board<\/a> · <a href="\/quests\/journal">Quest notes<\/a>/);
