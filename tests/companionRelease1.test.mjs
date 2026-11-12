@@ -37,7 +37,7 @@ test('cached companion role is cleared on sign-out and an account switch', () =>
 
 test('companions leave adventurer paths and adventurers leave companion-only paths', () => {
   assert.equal(companionRedirect('/', 'companion'), '/companion/home');
-  assert.equal(companionRedirect('/quests', 'companion'), '/companion/home');
+  assert.equal(companionRedirect('/quests', 'companion'), null);
   assert.equal(companionRedirect('/play', 'companion'), '/companion/home');
   assert.equal(companionRedirect('/play/delve', 'companion'), '/companion/home');
   assert.equal(companionRedirect('/character', 'companion'), '/companion/home');
@@ -69,7 +69,7 @@ test('Just type shows the endpoint source without changing the parser route', ()
   assert.equal(draftSourceLabel('fallback'), 'Basic draft');
   assert.equal(draftSourceLabel('unconfigured'), null);
   const page = read('app/(app)/companion/page.tsx');
-  const quests = read('app/(app)/companion/quests/page.tsx');
+  const quests = read('components/quests/CompanionAssignmentsPanel.tsx');
   const route = read('app/api/companion/draft/route.ts');
   assert.match(page, /companion-draft-source/);
   assert.match(quests, /draftSourceLabel\(source\)/);

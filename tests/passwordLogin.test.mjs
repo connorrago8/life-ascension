@@ -7,7 +7,7 @@ import { requestOrigin } from '../lib/requestOrigin.ts';
 const login = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const forgot = readFileSync(new URL('../app/login/forgot/page.tsx', import.meta.url), 'utf8');
 const password = readFileSync(new URL('../app/settings/password/page.tsx', import.meta.url), 'utf8');
-const board = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
+const board = readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
 const middleware = readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8');
 const server = readFileSync(new URL('../lib/supabaseServer.ts', import.meta.url), 'utf8');
 const browser = readFileSync(new URL('../lib/supabase.ts', import.meta.url), 'utf8');
@@ -93,10 +93,10 @@ test('signed-in users can set a password of at least 8 characters', () => {
   assert.doesNotMatch(password, /setMessage\(error/);
 });
 
-test('the quest board links to set or change password beside quest notes and API keys', () => {
+test('account settings contain password and API keys; task board keeps notes', () => {
   assert.match(board, /Quest notes/);
-  assert.match(board, /API keys/);
-  assert.match(board, /href="\/settings\/password">Set or change password/);
+  assert.match(readFileSync(new URL('../components/AccountSettings.tsx', import.meta.url), 'utf8'), /API keys/);
+  assert.match(readFileSync(new URL('../components/AccountSettings.tsx', import.meta.url), 'utf8'), /href="\/settings\/password">Set or change password/);
 });
 
 test('middleware refreshes the cookie session and does not disable persistence', () => {

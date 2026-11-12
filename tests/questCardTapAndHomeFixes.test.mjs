@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { questDetailHref, shouldOpenQuestCard, QUEST_CARD_INTERACTIVE_SELECTOR } from '../lib/questCardTap.ts';
 
 const read = (rel) => readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
-const home = read('app/(app)/quests/page.tsx');
+const home = read('components/quests/PersonalQuestBoard.tsx');
 const journal = read('app/(app)/quests/journal/page.tsx');
 const fakeTarget = (insideControl) => ({ closest: (sel) => (sel === QUEST_CARD_INTERACTIVE_SELECTOR && insideControl ? {} : null) });
 
@@ -28,8 +28,8 @@ test('Home completed quests collapse into one closed-by-default Completed (N) se
 });
 
 test('Home quest cards are tap-to-open with a keyboard-reachable title link to the detail route', () => {
-  assert.match(home, /<Link className="quest-title-link" href=\{questDetailHref\(quest\.id\)\}/);
-  assert.match(home, /if\(shouldOpenQuestCard\(e\.target as Element,selection\)\)router\.push\(questDetailHref\(quest\.id\)\)/);
+  assert.match(home, /<Link className="quest-title-link" href=\{taskHref\(quest\.id\)\}/);
+  assert.match(home, /if\(shouldOpenQuestCard\(e\.target as Element,selection\)\)router\.push\(taskHref\(quest\.id\)\)/);
   assert.match(home, /<ConfirmCompleteButton label="Complete" questTitle=\{quest\.title\} disabled=\{busy\} onConfirm=\{\(\)=>act\(instance!\.id,'complete'\)\}\/>/);
 });
 

@@ -1,8 +1,7 @@
 import QuestNotes from './ui';
-
-export const metadata = { title: 'Quest notes · LIFE ASCENSION' };
-
-export default async function QuestNotesPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  return <QuestNotes questId={id} />;
+import {parseQuestArea,parseQuestView,questWorkspaceHref} from '../../../../lib/questWorkspace';
+export const metadata = {title:'Task notes · LIFE ASCENSION'};
+export default async function QuestNotesPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{area?:string;view?:string}>}){
+ const [{id},query]=await Promise.all([params,searchParams]);
+ return <QuestNotes questId={id} backHref={questWorkspaceHref(parseQuestArea(query.area),parseQuestView(query.view))}/>;
 }

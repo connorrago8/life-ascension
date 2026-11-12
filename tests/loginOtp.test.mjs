@@ -5,7 +5,7 @@ import test from 'node:test';
 
 const login = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 const callback = readFileSync(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8');
-const board = readFileSync(new URL('../app/(app)/quests/page.tsx', import.meta.url), 'utf8');
+const board = readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
 const whoami = readFileSync(new URL('../app/api/whoami/route.ts', import.meta.url), 'utf8');
 const mcp = readFileSync(new URL('../app/api/mcp/route.ts', import.meta.url), 'utf8');
 const auth = readFileSync(new URL('../lib/apiKeyAuth.ts', import.meta.url), 'utf8');
@@ -44,7 +44,7 @@ test('callback and auth-gated links use safeNext or a fixed same-origin next', (
   assert.match(board, /href=\{loginHref\}/);
   assert.match(board, /setLoginHref\('\/login\?next='\+encodeURIComponent\(next\|\|'\/quests'\)\)/);
   assert.match(board, /Quest notes/);
-  assert.match(board, /API keys/);
+  assert.match(readFileSync(new URL('../components/AccountSettings.tsx', import.meta.url), 'utf8'), /API keys/);
   assert.match(board, /Upcoming/);
 });
 

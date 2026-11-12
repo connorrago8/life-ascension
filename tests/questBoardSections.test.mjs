@@ -9,7 +9,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
 
-const home=readFileSync(new URL('../app/(app)/quests/page.tsx',import.meta.url),'utf8');
+const home=readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx',import.meta.url),'utf8');
 const controls=readFileSync(new URL('../components/QuestProgressControls.tsx',import.meta.url),'utf8');
 const journal=readFileSync(new URL('../app/(app)/quests/journal/page.tsx',import.meta.url),'utf8');
 

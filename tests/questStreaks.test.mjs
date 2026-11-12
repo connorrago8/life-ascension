@@ -156,13 +156,13 @@ test('migration guards: single locked mint, no client mint, Crypt cap and RLS un
   assert.match(rollback, /drop function if exists public\._award_quest_xp/);
 });
 
-test('board UI: fire badge, 5-quest daily board with off-board list, weekly section, 44px targets', () => {
-  const board = read('app/(app)/quests/page.tsx');
+test('board UI: account streak, paginated daily list, weekly section and 44px targets', () => {
+  const board = read('components/quests/PersonalQuestBoard.tsx');
   const css = read('app/style.css');
-  assert.match(board, /className=\{'streak-badge'/);
+  assert.match(board, /workspace-progress/);
   assert.match(board, /dailyBoardIds\(user,today,/);
-  assert.match(board, /More daily quests \(\{offBoardQuests\.length\}\)/);
-  assert.match(board, /still counts: 10 base XP and your streak/);
+  assert.match(board, /todayQuests\.slice\(0,pageSize\)/);
+  assert.match(board, /Show 6 more tasks/);
   assert.match(board, /weeklyVisible\(user,q\.id,today/);
   assert.match(board, /Weekly · open until Monday 5:00 AM/);
   assert.match(board, /gameDayParts\(new Date\(\)\)/);

@@ -15,7 +15,7 @@ test('companion avatars are small cosmetic portraits with pixelated rendering an
   const avatar = read('components/PixelAvatar.tsx');
   const home = read('app/(app)/companion/CompanionHome.tsx');
   const page = read('app/(app)/companion/page.tsx');
-  const board = read('app/(app)/quests/page.tsx');
+  const board = read('components/quests/PersonalQuestBoard.tsx');
   assert.match(css, /image-rendering:\s*pixelated/);
   assert.match(avatar, /alt=\{alt\}/);
   assert.match(page, /alt="Izzy, a pixel princess with a silver tiara"/);

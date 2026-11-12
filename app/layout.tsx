@@ -3,6 +3,7 @@ import './style.css';
 import './companion-dark.css';
 import './adventurer-dark.css';
 import './polish.css';
+import './quest-workspace.css';
 
 export const metadata = {
   title: 'LIFE ASCENSION',
