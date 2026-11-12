@@ -143,14 +143,14 @@ export default function CompanionQuestsPage() {
       )}
       <p className="cq-planner"><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
       <QuestBoard quests={visible} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} onComplete={(id) => void complete(id)} />
-      {shared.length>0&&<section className="companion-card" aria-label="Together quests">
-        <h2>Together</h2>
+      {shared.length>0&&<details className="companion-card" aria-label="Together quests">
+        <summary style={{cursor:"pointer",fontWeight:700,padding:"12px 0"}}>Together ({shared.filter(q=>!q.myDone).length} open)</summary>
         {shared.map(q=><div className="cq-card" key={q.id}>
           <strong>{q.title}</strong>
           <p className="muted">{q.cadence} · {q.awarded?'Both completed':q.myDone?'Waiting for Connor':'Your part is open'}</p>
           <button type="button" className="btn ghost" disabled={sharedBusy||q.myDone} onClick={()=>void markShared(q.id)}>{q.myDone?'✓ Done':'Mark my part'}</button>
         </div>)}
-      </section>}
+      </details>}
       {sharedError&&<p className="message" role="status">{sharedError}</p>}
       {message && <p className="message" role="status">{message.startsWith("Completion wasn't confirmed") ? message : message}</p>}
     </main>
