@@ -27,6 +27,25 @@ export default function QuestBoard(){
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  // The streak is tagged with its account so a sign-out or account switch can never show another account's fire.
  const [streakFor,setStreak]=useState<{owner:string;state:StreakState}|null>(null);const [showOffBoard,setShowOffBoard]=useState(false);
+ const [sharedQuests,setSharedQuests]=useState<{id:string;title:string;myDone:boolean;partnerDone:boolean;awarded:boolean;cadence:string}[]>([]);
+ const [sharedBusy,setSharedBusy]=useState(false);
+ const [sharedMessage,setSharedMessage]=useState('');
+ const refreshShared=useCallback(async()=>{
+  const {data,error}=await supabase().rpc('couple_board');
+  if(error){setSharedMessage('Shared quests unavailable right now.');return;}
+  const rows=(data as {quests?:unknown} | null)?.quests;
+  if(Array.isArray(rows))setSharedQuests(rows.filter((q):q is {id:string;title:string;myDone:boolean;partnerDone:boolean;awarded:boolean;cadence:string}=>typeof q?.id==='string'&&typeof q?.title==='string'));
+  setSharedMessage('');
+ },[]);
+ async function markShared(id:string){
+  if(sharedBusy||layoutPreview)return;
+  setSharedBusy(true);
+  const {error}=await supabase().rpc('couple_quest_mark',{p_quest:id});
+  if(error)setSharedMessage('Could not confirm shared quest. Nothing was changed on this screen.');
+  else await refreshShared();
+  setSharedBusy(false);
+ }
+ useEffect(()=>{if(!user||user==='preview'){setSharedQuests([]);return;}void refreshShared()},[user,refreshShared]);
  const [fromIzzy,setFromIzzy]=useState<Set<string>>(new Set());const [izzyColor,setIzzyColor]=useState('amber');const [nudged,setNudged]=useState<Set<string>>(new Set());
  const router=useRouter();const questFormRef=useRef<HTMLFormElement>(null);const openQuestFormOnRender=useRef(false);
  const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
@@ -264,6 +283,11 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  {mode==='adventure'&&<section className="panel"><div className="eyebrow">CHAPTER I</div><h2>The Awakening</h2><p className="muted">Your character grows through real actions. Fantasy encounters are future upgrades.</p></section>}
  <section className="panel board-panel" aria-label="Quest board"><h2>Quest Board</h2><p className="muted">Your quests, quests from Izzy, and shared activities all belong here. No second board needed.</p>{visible.length===0&&notStarted.length===0&&<p className="muted">Create your first quest below.</p>}{openCount===0&&completed>0&&<p className="muted">All caught up! Your completed quests are tucked away below.</p>}
  <div className="board-section" aria-label="Today"><h3>Today <span className="muted">({todayQuests.length})</span></h3>{todayQuests.length===0?<p className="muted">Nothing open for today.</p>:todayQuests.map(questCard)}{weeklyHidden>0&&<p className="muted weekly-pending">{weeklyHidden===1?'1 weekly quest arrives':`${weeklyHidden} weekly quests arrive`} later this week.</p>}{offBoardQuests.length>0&&<div className="board-offboard"><button type="button" className="btn ghost offboard-toggle" aria-expanded={showOffBoard} aria-controls="offboard-quests-list" onClick={()=>setShowOffBoard(v=>!v)}><span aria-hidden="true">{showOffBoard?'▾':'▸'}</span> More daily quests ({offBoardQuests.length})</button>{showOffBoard&&<div id="offboard-quests-list"><p className="muted">Not on today’s board, but completing one still counts: 10 base XP and your streak.</p>{offBoardQuests.map(questCard)}</div>}</div>}</div>
+ {sharedQuests.length>0&&<div className="board-section" aria-label="Together">
+ <h3>Together <span className="muted">({sharedQuests.filter(q=>!q.myDone).length} left)</span></h3>
+ {sharedQuests.map(q=><div className="quest" key={q.id}><div className="quest-main"><div className="quest-title">{q.title}</div><div className="muted">Together · {q.cadence} · {q.awarded?'Both completed':q.myDone?'Waiting for Izzy':'Your part is open'}</div></div><div className="actions quest-card-actions"><button type="button" className="btn ghost" disabled={sharedBusy||q.myDone} onClick={()=>void markShared(q.id)}>{q.myDone?'✓ Done':'Mark my part'}</button></div></div>)}
+ {sharedMessage&&<p className="message" role="status">{sharedMessage}</p>}
+ </div>}
  <div className="board-section" aria-label="This Week"><h3>This Week <span className="muted">({weekQuests.length+weekNotStarted.length})</span></h3><p className="muted">Due in the next 7 days (Chicago time, day starts at 5:00 AM). Goals can be completed early.</p>{weekQuests.length+weekNotStarted.length===0?<p className="muted">Nothing else due this week.</p>:<>{weekQuests.map(questCard)}{weekNotStarted.map(notStartedCard)}</>}</div>
  <div className="board-section" aria-label="Upcoming"><h3>Upcoming <span className="muted">({laterQuests.length+laterNotStarted.length})</span></h3><p className="muted">Scheduled quests and deadlines after this week.</p>{laterQuests.length+laterNotStarted.length===0?<p className="muted">Nothing scheduled later.</p>:<>{laterQuests.map(questCard)}{laterNotStarted.slice(0,20).map(notStartedCard)}</>}</div>
  {completed>0&&<div className="board-section board-completed" aria-label="Completed"><button type="button" className="btn ghost completed-board-toggle" aria-expanded={showCompleted} aria-controls="completed-quests-list" onClick={()=>setShowCompleted(v=>!v)}><span aria-hidden="true">{showCompleted?'▾':'▸'}</span> Completed ({completed})</button>{showCompleted&&<div id="completed-quests-list">{completedQuests.map(({quest,instance})=><div className="quest quest-tappable" key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}<div className="muted">Completed · {instance?.due_date}</div><QuestDetails quest={quest} instance={instance!}/></div><div className="actions"><span className="tag">✓ Done</span></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance!} disabled={busy} onLog={logProgress}/></div>)}</div>}</div>}</section>
