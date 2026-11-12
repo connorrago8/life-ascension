@@ -33,7 +33,7 @@ export function shieldLabel(status: 'ready' | 'used', options?: { doneToday?: bo
 /**
  * F ending yesterday. A recorded shield, or the one unused shield for that
  * calendar month, bridges exactly one missed day and does not count it.
- * Two missed days in a row stop the walk. A shield never stacks in a month.
+ * Two missed days in a row stop the walk. A shield never stacks in a month.\n * IMPORTANT: This function is read-only. An unused shield MUST NOT be spent\n * or inferred without Connor's explicit confirmation. Only `existing` contains\n * confirmed bridge receipts. The database must enforce the same rule.
  */
 export function fireWithShields(completionDays: Iterable<string>, today: string, existing: ShieldMap = new Map()): { fire: number; shields: ShieldMap } {
   const days = new Set(completionDays);
