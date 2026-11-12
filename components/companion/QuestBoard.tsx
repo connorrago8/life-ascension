@@ -56,8 +56,8 @@ export function QuestBoard({
 
   return (
     <div className="cq-board">
-      <section aria-label="On his board">
-        <h2 className="cq-section">On his board</h2>
+      <details aria-label="Assigned quests" open>
+        <summary className="cq-section" style={{cursor:"pointer",padding:"12px 0",fontWeight:700}}>Assigned quests ({open.length})</summary>
         {open.length === 0 && <p className="empty-state">No active quests right now. Your next adventure will appear here.</p>}
         <ul className="cq-list">
           {open.map((quest) => (
@@ -79,7 +79,7 @@ export function QuestBoard({
             />
           ))}
         </ul>
-      </section>
+      </details>
       <section aria-label="Completed">
         <button id="cq-completed" className="cq-completed-toggle" type="button" aria-expanded={openDone} onClick={toggleDone}>
           <span>Completed ({done.length})</span>
