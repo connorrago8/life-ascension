@@ -63,7 +63,7 @@ export function useCompanionWardrobe() {
     setWardrobe(data as Wardrobe);
   }
 
-  return { wardrobe, banner, note, busy, wear };
+  return { wardrobe, banner, note, busy, wear, reload: load };
 }
 
 export function CompanionPassView({

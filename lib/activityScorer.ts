@@ -1,7 +1,10 @@
 /** Deterministic free-type activity scorer.
- * No external AI. Keywords + simple duration hints → category + XP tier.
- * Tiers: small=5, medium=10, big=20.
+ * The 60 examples in activityGuide are the tier guide.
+ * Uncertain text takes the lower tier. A long duration does not grant 20 XP.
+ * One description is one award; matching two examples does not add their XP.
  */
+
+import { chooseExample } from './activityGuide.ts';
 
 export type XpTier = 'small' | 'medium' | 'big';
 export type ActivityCategory =
@@ -21,6 +24,8 @@ export type ScoreResult = {
   tier: XpTier;
   xp: number;
   confidence: 'high' | 'medium' | 'low';
+  /** Example title when the guide matched. Empty when the lower tier was the fallback. */
+  example: string | null;
 };
 
 const TIER_XP: Record<XpTier, number> = { small: 5, medium: 10, big: 20 };
@@ -38,11 +43,7 @@ const CATEGORY_KEYWORDS: Record<ActivityCategory, string[]> = {
   other: [],
 };
 
-const BIG_KEYWORDS = ['deep clean', 'full workout', 'long run', 'major', 'big', 'intense', 'hour', '1hr', '60 min'];
-const SMALL_KEYWORDS = ['quick', '5 min', 'ten min', 'light', 'tiny', 'short'];
-
-/** Hints the server uses to step a tier once. Keep in sync with companion_log_activity_v2. */
-const LONG_DURATION = ['hour', '1hr', '60 min', '90 min', '2 hr'];
+/** Short wording can lower a tier. It never raises one. */
 const SHORT_DURATION = ['quick', '5 min', '10 min', 'ten min'];
 
 /** A hint that starts with a digit must not continue a longer number ("10 min" vs "110 min"). */
@@ -62,22 +63,26 @@ export function minutesHint(text: string): number | null {
   return null;
 }
 
-/** Duration bands from the content pack: under 15 small, 15–44 medium, 45+ big. Never above 20 XP. */
+/** Named minutes. Under 15 is small and 15–44 is medium. 45 or more is not an automatic 20. */
 export function tierForMinutes(minutes: number): XpTier {
   if (minutes < 15) return 'small';
   if (minutes < 45) return 'medium';
   return 'big';
 }
 
-/** Explicit minutes set the tier. Otherwise one keyword step. Result stays in 5/10/20. */
+/** Minutes can only lower a tier. Forty-five minutes or more does not become 20 XP by itself. */
 export function adjustTierForDuration(tier: XpTier, text: string): XpTier {
   const minutes = minutesHint(text);
-  if (minutes != null) return tierForMinutes(minutes);
+  if (minutes != null) {
+    if (minutes < 15) return 'small';
+    if (minutes < 45 && tier === 'big') return 'medium';
+    return tier;
+  }
   const hay = text.toLowerCase();
-  const long = LONG_DURATION.some((hint) => hasDurationHint(hay, hint));
   const short = SHORT_DURATION.some((hint) => hasDurationHint(hay, hint));
-  if (long && !short) return tier === 'small' ? 'medium' : 'big';
-  if (short && !long) return tier === 'big' ? 'medium' : 'small';
+  if (!short) return tier;
+  if (tier === 'big') return 'medium';
+  if (tier === 'medium') return 'small';
   return tier;
 }
 
@@ -87,7 +92,7 @@ export function xpForTier(tier: XpTier): number {
 
 export function scoreActivity(description: string): ScoreResult {
   const text = description.toLowerCase().trim();
-  if (!text) return { category: 'other', tier: 'small', xp: 5, confidence: 'low' };
+  if (!text) return { category: 'other', tier: 'small', xp: 5, confidence: 'low', example: null };
 
   let category: ActivityCategory = 'other';
   let best = 0;
@@ -99,19 +104,16 @@ export function scoreActivity(description: string): ScoreResult {
     }
   }
 
-  const minutes = minutesHint(text);
-  let tier: XpTier = 'medium';
-  if (minutes != null) tier = tierForMinutes(minutes);
-  else if (BIG_KEYWORDS.some((k) => text.includes(k))) tier = 'big';
-  else if (SMALL_KEYWORDS.some((k) => text.includes(k))) tier = 'small';
-  else if (best === 0) tier = 'small';
-
-  const confidence: ScoreResult['confidence'] = best >= 2 ? 'high' : best === 1 ? 'medium' : 'low';
+  const example = chooseExample(text);
+  // No guide match is uncertain, so the award stays at the lower tier.
+  const tier: XpTier = example?.tier ?? 'small';
+  const confidence: ScoreResult['confidence'] = example ? 'high' : best >= 1 ? 'low' : 'low';
 
   return {
     category,
     tier,
     xp: TIER_XP[tier],
     confidence,
+    example: example?.title ?? null,
   };
 }

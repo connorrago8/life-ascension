@@ -1,81 +1,69 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { adjustTierForDuration, hasDurationHint, scoreActivity as scorePacked } from '../lib/activityScorer.ts';
+import { ACTIVITY_EXAMPLES } from '../lib/activityGuide.ts';
+import { adjustTierForDuration, hasDurationHint, scoreActivity, xpForTier } from '../lib/activityScorer.ts';
+import { levelUpLines, revealForCosmetic } from '../lib/levelUpCopy.ts';
+import { PASS_TIERS } from '../lib/companionPass.ts';
+import { ADVENTURER_COSMETICS } from '../lib/adventurerCosmetics.ts';
+import { readFileSync } from 'node:fs';
 
-// Inline the pure function so the test does not depend on TS compilation.
-function scoreActivity(description) {
-  const text = String(description || '').toLowerCase().trim();
-  if (!text) return { category: 'other', tier: 'small', xp: 5, confidence: 'low' };
-  const CATEGORY_KEYWORDS = {
-    chores: ['dish', 'laundry', 'clean', 'trash', 'recycl', 'cook', 'dinner', 'vacuum', 'sweep', 'mop', 'bathroom', 'kitchen'],
-    fitness: ['yoga', 'run', 'walk', 'gym', 'workout', 'lift', 'cardio', 'stretch', 'exercise', 'hike'],
-    'self-care': ['meditat', 'journal', 'bath', 'skincare', 'sleep', 'nap', 'therapy'],
-    social: ['friend', 'family', 'call', 'date', 'party', 'hangout', 'meetup'],
-    creative: ['draw', 'write', 'paint', 'music', 'code', 'design', 'art', 'photo'],
-    other: [],
-  };
-  const BIG = ['deep clean', 'full workout', 'long run', 'major', 'big', 'intense', 'hour', '1hr', '60 min'];
-  const SMALL = ['quick', '5 min', 'ten min', 'light', 'tiny', 'short'];
-  let category = 'other', best = 0;
-  for (const [cat, keys] of Object.entries(CATEGORY_KEYWORDS)) {
-    const hits = keys.filter((k) => text.includes(k)).length;
-    if (hits > best) { best = hits; category = cat; }
+test('each of the 60 examples scores its own tier and does not stack', () => {
+  assert.equal(ACTIVITY_EXAMPLES.length, 60);
+  for (const example of ACTIVITY_EXAMPLES) {
+    const scored = scoreActivity(example.title);
+    assert.equal(scored.tier, example.tier, example.title);
+    assert.equal(scored.xp, xpForTier(example.tier), example.title);
+    assert.equal(scored.example, example.title);
   }
-  let tier = 'medium';
-  if (BIG.some((k) => text.includes(k))) tier = 'big';
-  else if (SMALL.some((k) => text.includes(k))) tier = 'small';
-  else if (best === 0) tier = 'small';
-  const xp = tier === 'small' ? 5 : tier === 'medium' ? 10 : 20;
-  const confidence = best >= 2 ? 'high' : best === 1 ? 'medium' : 'low';
-  return { category, tier, xp, confidence };
-}
-
-test('yoga 1hr is fitness big 20', () => {
-  const r = scoreActivity('yoga 1hr');
-  assert.equal(r.category, 'fitness');
-  assert.equal(r.tier, 'big');
-  assert.equal(r.xp, 20);
 });
 
-test('dishes is chores medium 10', () => {
-  const r = scoreActivity('did the dishes');
-  assert.equal(r.category, 'chores');
-  assert.equal(r.xp, 10);
-});
-
-test('quick clean is small 5', () => {
-  const r = scoreActivity('quick clean');
-  assert.equal(r.tier, 'small');
-  assert.equal(r.xp, 5);
-});
-
-test('empty is small other', () => {
-  const r = scoreActivity('');
-  assert.equal(r.xp, 5);
-  assert.equal(r.category, 'other');
-});
-
-test('deep cleaned bathroom is big', () => {
-  const r = scoreActivity('deep cleaned the bathroom');
-  assert.equal(r.tier, 'big');
-  assert.equal(r.xp, 20);
-});
-
-test('duration bands stay inside 5, 10, and 20', () => {
-  assert.equal(scorePacked('short stretch 10 min').tier, 'small');
-  assert.equal(scorePacked('30-minute walk').xp, 10);
-  assert.equal(scorePacked('full yoga 45 min').xp, 20);
-  assert.equal(scorePacked('deep clean the bathroom').xp, 20);
-  assert.ok(scorePacked('meal prep for the week').xp <= 20);
-});
-
-test('duration steps one tier and does not treat 110 min as 10 min', () => {
-  assert.equal(adjustTierForDuration('medium', 'yoga 1hr'), 'big');
+test('uncertain wording and a long duration stay at the lower tier', () => {
+  assert.equal(scoreActivity('').xp, 5);
+  assert.equal(scoreActivity('yoga 1hr').tier, 'small');
+  assert.equal(scoreActivity('yoga 1hr').xp, 5);
+  assert.equal(scoreActivity('full yoga 45 min').xp, 5);
+  assert.equal(scoreActivity('30-minute walk').xp, 10);
+  assert.equal(scoreActivity('deep cleaned the bathroom').xp, 20);
+  assert.equal(scoreActivity('make the bed and cook dinner').xp, 5);
+  assert.equal(adjustTierForDuration('medium', 'yoga 1hr'), 'medium');
   assert.equal(adjustTierForDuration('big', 'yoga 1hr'), 'big');
   assert.equal(adjustTierForDuration('medium', 'quick stretch'), 'small');
-  assert.equal(adjustTierForDuration('small', 'quick stretch'), 'small');
   assert.equal(adjustTierForDuration('big', 'quick 60 min'), 'big');
   assert.equal(hasDurationHint('110 min', '10 min'), false);
-  assert.equal(hasDurationHint('ran 10 min', '10 min'), true);
-  assert.equal(adjustTierForDuration('big', '110 min'), 'big');
+  assert.equal(adjustTierForDuration('big', '10 min stretch'), 'small');
+});
+
+test('level-up copy and the 50 reveals stay on the existing ids', () => {
+  const izzy = PASS_TIERS.filter((item) => item.grantKind === 'level');
+  const connor = ADVENTURER_COSMETICS;
+  assert.equal(izzy.length, 25);
+  assert.equal(connor.length, 25);
+  for (const item of izzy) {
+    assert.equal(revealForCosmetic('izzy', item.id), 'From the midnight glow, a new piece of your legend emerges.');
+  }
+  for (const item of connor) {
+    assert.equal(revealForCosmetic('connor', item.id), 'Another hard-earned relic joins your journey.');
+  }
+  assert.notEqual(revealForCosmetic('izzy', 'cyber-visor'), revealForCosmetic('connor', 'cyber-visor'));
+  const reached = levelUpLines('izzy', 30, { id: 'nightcat-headset', label: 'Nightcat Headset' });
+  assert.equal(reached.headline, 'LEVEL UP');
+  assert.equal(reached.subhead, 'Level 30 reached.');
+  assert.equal(reached.body, 'The road remembers every step.');
+  assert.equal(reached.gear, 'New gear unlocked — Nightcat Headset.');
+  assert.equal(reached.awaiting, null);
+  const between = levelUpLines('connor', 3, null);
+  assert.equal(between.gear, null);
+  assert.equal(between.awaiting, 'Your next gear unlock awaits at Level 4.');
+});
+
+test('the activity migration keeps the game day, request id, and refuses a duration upgrade to 20', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/202611120004_activity_guide_v3.sql', import.meta.url), 'utf8');
+  assert.match(sql, /quest_game_day/);
+  assert.match(sql, /Request ID reused with different payload/);
+  assert.match(sql, /char_length\(public\.companion_title_key\(v_title\)\) >= 8/);
+  assert.doesNotMatch(sql, /v_minutes >= 45|else v_xp := 20/);
+  assert.doesNotMatch(sql, /insert into public\.xp_ledger\(/);
+  const pack = readFileSync(new URL('../docs/design-pack-v3.md', import.meta.url), 'utf8');
+  assert.match(pack, /^LIFE ASCENSION — DESIGN PACK V3/);
+  assert.doesNotMatch(readFileSync(new URL('../app/(app)/companion/home/page.tsx', import.meta.url), 'utf8'), /Streak Shield used/);
 });

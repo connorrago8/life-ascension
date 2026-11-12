@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PixelAvatar } from '../../../../components/PixelAvatar';
 import { ActivityLog } from '../../../../components/companion/ActivityLog';
 import { CompanionHero } from '../../../../components/companion/CompanionHero';
 import { nextTierLabel, useCompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
-import { questGlyph } from '../../../../lib/companionPass';
+import { CosmeticLevelUp } from '../../../../components/CosmeticLevelUp';
+import { PASS_TIERS, questGlyph } from '../../../../lib/companionPass';
 import { cosmeticTitle } from '../../../../lib/levelTitles';
 import { levelProgress } from '../../../../lib/level';
 import { supabase } from '../../../../lib/supabase';
@@ -16,7 +17,9 @@ type HomeMetrics = { openQuests: number; doneThisWeek: number };
 
 export default function CompanionModeHome() {
   const { board, ready, message, reload } = useCompanionBoard();
-  const { wardrobe, banner } = useCompanionWardrobe();
+  const { wardrobe, banner, reload: reloadWardrobe } = useCompanionWardrobe();
+  const seenLevel = useRef<number | null>(null);
+  const [levelUp, setLevelUp] = useState<{ level: number; item: { id: string; label: string } | null } | null>(null);
   const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
   useEffect(() => {
     if (!ready || !board) return;
@@ -27,6 +30,21 @@ export default function CompanionModeHome() {
     });
     return () => { cancel = true; };
   }, [ready, board]);
+  useEffect(() => {
+    if (!wardrobe) return;
+    if (seenLevel.current == null) {
+      seenLevel.current = wardrobe.level;
+      return;
+    }
+    if (wardrobe.level > seenLevel.current) {
+      const unlocked = PASS_TIERS.find((item) => item.grantKind === 'level' && item.unlockLevel === wardrobe.level);
+      setLevelUp({
+        level: wardrobe.level,
+        item: unlocked ? { id: unlocked.id, label: unlocked.label } : null,
+      });
+      seenLevel.current = wardrobe.level;
+    }
+  }, [wardrobe]);
   if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
   const name = board?.identity?.displayName || 'Izzy';
   const title = board?.identity?.title;
@@ -69,7 +87,16 @@ export default function CompanionModeHome() {
         <p className="companion-metric"><strong>{metrics ? metrics.openQuests : '…'}</strong><span>Open quests</span></p>
         <p className="companion-metric"><strong>{metrics ? metrics.doneThisWeek : '…'}</strong><span>Done this week</span></p>
       </div>
-      <ActivityLog onLogged={() => void reload()} />
+      <ActivityLog onLogged={() => { void reload(); void reloadWardrobe(); }} />
+      {levelUp && (
+        <CosmeticLevelUp
+          who="izzy"
+          level={levelUp.level}
+          item={levelUp.item}
+          characterHref="/companion/character"
+          onClose={() => setLevelUp(null)}
+        />
+      )}
       {board?.recap?.visible && (
         <section className="companion-card" aria-label="Sunday recap">
           <h2>This week</h2>

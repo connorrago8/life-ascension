@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ADVENTURER_COSMETICS, type AdventurerCosmetic } from '../lib/adventurerCosmetics';
 import { supabase } from '../lib/supabase';
 import { AdventurerCosmeticSprite } from './AdventurerCosmeticSprite';
+import { CosmeticLevelUp } from './CosmeticLevelUp';
 
 const EMPTY_WORN: readonly string[] = [];
 
@@ -19,7 +20,23 @@ type Props = {
 export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornChange, readOnly = false, label }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [levelUp, setLevelUp] = useState<number | null>(null);
   const worn = new Set(wornIds);
+
+  useEffect(() => {
+    if (readOnly || typeof window === 'undefined') return;
+    const key = 'la.cosmetic-level.connor';
+    const stored = window.localStorage.getItem(key);
+    const previous = stored == null ? null : Number(stored);
+    if (previous == null || !Number.isFinite(previous)) {
+      window.localStorage.setItem(key, String(level));
+      return;
+    }
+    if (level > previous) {
+      window.localStorage.setItem(key, String(level));
+      setLevelUp(level);
+    }
+  }, [level, readOnly]);
 
   async function toggle(item: AdventurerCosmetic) {
     if (readOnly || item.unlockLevel > level || busy) return;
@@ -44,8 +61,18 @@ export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornCha
     onWornChange?.([...copy]);
   }
 
+  const unlocked = levelUp == null ? null : ADVENTURER_COSMETICS.find((item) => item.unlockLevel === levelUp) ?? null;
   return (
     <section className="adventurer-track" aria-label="Adventurer cosmetics">
+      {levelUp != null && (
+        <CosmeticLevelUp
+          who="connor"
+          level={levelUp}
+          item={unlocked ? { id: unlocked.id, label: unlocked.label } : null}
+          characterHref="/character"
+          onClose={() => setLevelUp(null)}
+        />
+      )}
       <div className="adventurer-stage">
         <AdventurerCosmeticSprite worn={wornIds} label={label} />
       </div>
