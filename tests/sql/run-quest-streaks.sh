@@ -39,6 +39,18 @@ DB="$db" bash "$root/tests/sql/companion_concurrency.sh"
 DB="$db" bash "$root/tests/sql/quest_streaks_concurrency.sh"
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/quest_xp10_smoke.sql" | grep -q 'quest xp10 smoke passed'
 echo "PASS quest_xp10_smoke.sql"
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/tests/sql/couple_features_smoke.sql" | grep -q 'couple features smoke passed'
+echo "PASS couple_features_smoke.sql"
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120002_design_pack_v2_down.sql" >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611120001_couple_features_down.sql" >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$db" <<'SQL'
+do $$ begin
+  assert to_regclass('public.couple_quests') is null;
+  assert to_regclass('public.streak_shields') is null;
+  assert position('streak_shields' in pg_catalog.pg_get_functiondef('public.quest_streak_fire(uuid,date,text)'::regprocedure)) = 0;
+end $$;
+SQL
+echo "PASS couple features rollback"
 # Drop the auto-assign helpers before the game-day rollback removes quest_game_day.
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080006_companion_weekly_now_down.sql" >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$db" -f "$root/supabase/rollbacks/202611080005_companion_batch2_down.sql" >/dev/null

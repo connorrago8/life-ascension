@@ -3,6 +3,7 @@ import { getVercelOidcToken } from '@vercel/oidc';
 import { generateText, Output } from 'ai';
 import { z } from 'zod';
 import { fallbackQuestDrafts, sanitizeQuestDrafts } from '../../../../lib/companionQuestDraft';
+import { parseDateNight } from '../../../../lib/dateNightPlan';
 import { applyPendingCookies, readSessionUser } from '../../../../lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
@@ -50,8 +51,10 @@ export async function POST(request: NextRequest) {
       setAll: () => undefined,
     },
   });
-  const bond = await client.from('companion_bonds').select('id').eq('companion_id', session.user.id).eq('status', 'active').maybeSingle();
-  if (bond.error || !bond.data) {
+  const bond = await client.from('companion_bonds').select('id').eq('status', 'active')
+    .or(`inviter_id.eq.${session.user.id},companion_id.eq.${session.user.id}`)
+    .limit(1);
+  if (bond.error || !bond.data?.length) {
     return applyPendingCookies(NextResponse.json({ error: 'Companion connection required' }, { status: 403 }), session.pendingCookies);
   }
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -60,6 +63,11 @@ export async function POST(request: NextRequest) {
     return applyPendingCookies(NextResponse.json({ items: fallbackQuestDrafts(text), source: 'fallback' }), session.pendingCookies);
   }
   await client.from('companion_parse_log').insert({ user_id: session.user.id });
+
+  const dateNight = parseDateNight(text);
+  if (dateNight) {
+    return applyPendingCookies(NextResponse.json({ items: [], dateNight, source: 'date-night' }), session.pendingCookies);
+  }
 
   const drafted = await draftWithGateway(text);
   return applyPendingCookies(NextResponse.json(drafted), session.pendingCookies);

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { PixelAvatar } from '../../../components/PixelAvatar';
+import { SundayRecapCard } from '../../../components/couple/SundayRecapCard';
 import { collapseCompanionQuests, companionStatusLabel } from '../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence } from '../../../lib/companionQuestDraft';
 import { gameDayParts, weekStart } from '../../../lib/questStreak';
@@ -151,13 +153,11 @@ export function CompanionHome({
           })}>Mark read</button>
         )}
       </section>
+      <p className="muted"><Link href="/together">Shared quests and date nights</Link></p>
       {board.recap?.visible && (
         <section className="panel companion-card companion-greeting" aria-label="Sunday recap">
           <PixelAvatar who="izzy" size={72} alt="Izzy, your companion" />
-          <div>
-            <h2>This week</h2>
-            <p>{board.recap.done ?? 0} of her quests done. Streak {board.recap.streak ?? 0}. {board.recap.xp ?? 0} XP from those quests.</p>
-          </div>
+          <SundayRecapCard />
         </section>
       )}
       <section className="panel companion-card" aria-label="Milestones">

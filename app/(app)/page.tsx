@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { gameDayParts, parseStreak, type StreakState } from '../../lib/questStreak';
 import { starterSlots } from '../../lib/starterLook';
 import { ReturnBanner } from '../../components/home/ReturnBanner';
+import { StreakShieldNote } from '../../components/couple/StreakShieldNote';
 
 type HomeState =
   | { status: 'loading' }
@@ -199,6 +200,7 @@ export default function Home() {
           <span className="hub-today-chevron" aria-hidden="true">›</span>
         </Link>
       )}
+      <StreakShieldNote />
     </main>
   );
 }
