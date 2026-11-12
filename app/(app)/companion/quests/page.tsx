@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { draftSourceLabel } from '../../../../lib/companionAccess';
 import { companionStatusLabel } from '../../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../../lib/companionQuestDraft';
+import { parseDateNight, sanitizeDateNight, type DateNightPlan } from '../../../../lib/dateNightPlan';
+import { DateNightOffer } from '../../../../components/couple/DateNightOffer';
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
@@ -11,6 +13,7 @@ export default function CompanionQuestsPage() {
   const { board, ready, message, setMessage, reload } = useCompanionBoard();
   const [text, setText] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
+  const [dateNight, setDateNight] = useState<DateNightPlan | null>(null);
   const [source, setSource] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const mine = (board?.quests ?? []).filter((quest) => quest.fromUser === board?.userId && quest.status !== 'declined');
@@ -21,6 +24,7 @@ export default function CompanionQuestsPage() {
     setMessage('');
     let next = fallbackQuestDrafts(text);
     let nextSource: string = 'fallback';
+    let night = parseDateNight(text);
     try {
       const response = await fetch('/api/companion/draft', {
         method: 'POST',
@@ -28,12 +32,15 @@ export default function CompanionQuestsPage() {
         body: JSON.stringify({ text }),
       });
       if (response.ok) {
-        const payload = await response.json() as { items?: QuestDraft[]; source?: string };
-        if (Array.isArray(payload.items) && payload.items.length > 0) next = payload.items;
-        if (payload.source === 'model' || payload.source === 'fallback') nextSource = payload.source;
+        const payload = await response.json() as { items?: QuestDraft[]; source?: string; dateNight?: unknown };
+        night = sanitizeDateNight(payload.dateNight) ?? (payload.dateNight ? null : night);
+        if (night) next = [];
+        else if (Array.isArray(payload.items) && payload.items.length > 0) next = payload.items;
+        if (payload.source === 'model' || payload.source === 'fallback' || payload.source === 'date-night') nextSource = payload.source;
       }
     } catch { /* Local splitter already filled next. */ }
-    setDrafts(next);
+    setDateNight(night);
+    setDrafts(night ? [] : next);
     setSource(nextSource);
     setBusy(false);
   }
@@ -77,6 +84,7 @@ export default function CompanionQuestsPage() {
         <button className="btn" type="submit" disabled={busy || text.trim().length < 1}>Turn into quests</button>
       </form>
       {label && <p className="companion-draft-source" role="status">{label}</p>}
+      {dateNight && <DateNightOffer plan={dateNight} />}
       {drafts.length > 0 && (
         <form onSubmit={(event) => void send(event)}>
           {drafts.map((draft, index) => (
