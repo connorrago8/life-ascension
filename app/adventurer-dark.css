@@ -11,6 +11,23 @@
   border-radius: 14px;
 }
 
+.adventurer-track .adventurer-stage {
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #0c0e12;
+  border: 1px solid #2c313a;
+  border-radius: 16px;
+}
+
+.adventurer-track .adventurer-cosmetic-sprite {
+  width: 180px;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 .adventurer-track .cq-section {
   margin: 0 0 8px;
   color: var(--gold);

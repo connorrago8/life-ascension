@@ -4,7 +4,7 @@
 --
 -- Owned and worn rows move with the map below. When two worn pieces would share
 -- the new slot, the higher unlock level is kept and both ownership rows remain.
--- Cat-ear headset is intentionally not catalogued (pending founder).
+-- The level 30 tactical headset is a later migration, not part of this swap.
 -- Crypt XP is not touched.
 
 alter table public.companion_cosmetic_catalog drop constraint if exists companion_cosmetic_catalog_slot_check;

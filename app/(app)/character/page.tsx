@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
 import { AdventurerCosmeticTrack } from '../../../components/AdventurerCosmeticTrack';
+import { COSMETIC_LOOK_LEVEL, COSMETIC_LOOK_WORN } from '../../../lib/adventurerCosmetics';
 import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { parseCryptProfile } from '../../../lib/cryptVault';
@@ -203,7 +204,13 @@ export default function CharacterPage() {
         </p>
       )}
 
-      <AdventurerCosmeticTrack level={progress.level} wornIds={wornIds} onWornChange={setWornIds} />
+      <AdventurerCosmeticTrack
+        level={state.preview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cosmeticLook') === '1' ? COSMETIC_LOOK_LEVEL : progress.level}
+        wornIds={state.preview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cosmeticLook') === '1' ? COSMETIC_LOOK_WORN : wornIds}
+        onWornChange={setWornIds}
+        readOnly={state.preview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cosmeticLook') === '1'}
+        label={state.name}
+      />
       {cosmeticError && <p className="message" role="status">{cosmeticError}</p>}
 
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">

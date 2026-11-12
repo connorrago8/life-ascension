@@ -125,7 +125,23 @@ export function GalleryScreen({ screen, completedOpen }: { screen: 'home' | 'que
         {screen === 'character' && (
           <main className="wrap companion-page">
             <header className="cq-char-head"><h1>Character</h1><button className="btn ghost" type="button">Menu</button></header>
-            <CompanionPassView wardrobe={wardrobe} banner={['Black cargo pants']} busy={false} onWear={() => undefined} />
+            <CompanionPassView
+              wardrobe={{
+                ...wardrobe,
+                level: 30,
+                xp: 2320,
+                xpForNext: 155,
+                items: wardrobe.items.map((item) => ({
+                  ...item,
+                  owned: item.grantKind !== 'activity' && item.unlockLevel <= 30,
+                  worn: item.id === 'nightcat-headset' || item.id === 'leather-jacket' || item.id === 'cargo-pants',
+                  fresh: item.id === 'nightcat-headset',
+                })),
+              }}
+              banner={['Nightcat Headset']}
+              busy={false}
+              onWear={() => undefined}
+            />
           </main>
         )}
       </div>

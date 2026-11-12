@@ -4,10 +4,11 @@ All migrations below are additive and reversible. Apply only on the disposable T
 
 ## Order
 1. `supabase/migrations/202611110002_companion_pass.sql` is already applied on TEST as the pastel catalog. Do not edit or reapply it.
-2. `supabase/migrations/202611120001_companion_dark_catalog.sql` replaces those 16 rows with the dark catalog. Cat-ear headset is not included.
-3. `supabase/migrations/202611110003_adventurer_cosmetics.sql` (Connor catalog)
-4. `supabase/migrations/202611110004_adventurer_wear.sql` (Connor Wear persistence; `level_for_xp`; select-only RLS)
-5. `supabase/migrations/202611110005_companion_log_activity_v2.sql` (Izzy activity tiers 5/10/20, no quest streak)
+2. `supabase/migrations/202611120001_companion_dark_catalog.sql` replaces those 16 rows with the dark catalog.
+3. `supabase/migrations/202611120002_nightcat_headset.sql` adds the Nightcat Headset at level 30.
+4. `supabase/migrations/202611110003_adventurer_cosmetics.sql` (Connor catalog)
+5. `supabase/migrations/202611110004_adventurer_wear.sql` (Connor Wear persistence; `level_for_xp`; select-only RLS)
+6. `supabase/migrations/202611110005_companion_log_activity_v2.sql` (Izzy activity tiers 5/10/20, no quest streak)
 
 ## How
 From a machine with the Supabase CLI pointed at TEST:

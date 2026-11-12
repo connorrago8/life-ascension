@@ -49,3 +49,30 @@ export const ADVENTURER_COSMETICS: readonly AdventurerCosmetic[] = [
   { id: 'obsidian-pauldrons', label: 'Obsidian pauldrons', slot: 'shoulders', unlockLevel: 48 },
   { id: 'legendary-coat', label: 'Legendary wayfarer coat', slot: 'chest', unlockLevel: 50 },
 ];
+
+/** Layout preview only. Not persisted and not a combat loadout. */
+export const COSMETIC_LOOK_LEVEL = 24;
+export const COSMETIC_LOOK_WORN = [
+  'shadow-hood',
+  'iron-pauldrons',
+  'dark-tunic',
+  'scarred-gloves',
+  'traveler-pants',
+  'road-boots',
+  'storm-cape',
+  'rune-belt',
+] as const;
+
+/** One worn id per slot. A higher unlock replaces a lower one in the same slot. */
+export function visibleCosmeticIds(wornIds: readonly string[]): string[] {
+  const bySlot = new Map<AdventurerSlot, { id: string; unlockLevel: number }>();
+  for (const id of wornIds) {
+    const item = ADVENTURER_COSMETICS.find((cosmetic) => cosmetic.id === id);
+    if (!item) continue;
+    const current = bySlot.get(item.slot);
+    if (!current || item.unlockLevel > current.unlockLevel) {
+      bySlot.set(item.slot, { id: item.id, unlockLevel: item.unlockLevel });
+    }
+  }
+  return [...bySlot.values()].map((item) => item.id);
+}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ADVENTURER_COSMETICS, type AdventurerCosmetic } from '../lib/adventurerCosmetics';
 import { supabase } from '../lib/supabase';
+import { AdventurerCosmeticSprite } from './AdventurerCosmeticSprite';
 
 const EMPTY_WORN: readonly string[] = [];
 
@@ -10,15 +11,18 @@ type Props = {
   level: number;
   wornIds?: readonly string[];
   onWornChange?: (ids: readonly string[]) => void;
+  /** Layout preview only. Wear is not sent to the server. */
+  readOnly?: boolean;
+  label?: string;
 };
 
-export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornChange }: Props) {
+export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornChange, readOnly = false, label }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const worn = new Set(wornIds);
 
   async function toggle(item: AdventurerCosmetic) {
-    if (item.unlockLevel > level || busy) return;
+    if (readOnly || item.unlockLevel > level || busy) return;
     const next = !worn.has(item.id);
     setBusy(true);
     setError('');
@@ -42,8 +46,12 @@ export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornCha
 
   return (
     <section className="adventurer-track" aria-label="Adventurer cosmetics">
+      <div className="adventurer-stage">
+        <AdventurerCosmeticSprite worn={wornIds} label={label} />
+      </div>
       <h2 className="cq-section">Cosmetics</h2>
-      <p className="muted">Unlocks every 2 levels. Wear persists after refresh.</p>
+      <p className="muted">Unlocks every 2 levels from quest XP. Wear saves only through the server.</p>
+      {readOnly && <p className="muted">Preview look. Nothing here is saved.</p>}
       <ul className="cq-track">
         {ADVENTURER_COSMETICS.map((item) => {
           const owned = item.unlockLevel <= level;
@@ -59,7 +67,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornCha
                 <button
                   type="button"
                   className="btn ghost"
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   onClick={() => void toggle(item)}
                 >
                   {isWorn ? 'Take off' : 'Wear'}

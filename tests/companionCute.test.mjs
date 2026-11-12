@@ -5,10 +5,13 @@ import { PASS_TIERS, splitCompanionBoard, questGlyph, completedOpenStorageKey } 
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('battle pass uses the dark style track and leaves the cat-ear headset out', () => {
+test('battle pass uses the dark style track and the tactical Nightcat Headset', () => {
   const byId = Object.fromEntries(PASS_TIERS.map((tier) => [tier.id, tier]));
   assert.equal(byId['fingerless-gloves'].unlockLevel, 2);
   assert.equal(byId['leather-jacket'].unlockLevel, 10);
+  assert.equal(byId['nightcat-headset'].unlockLevel, 30);
+  assert.equal(byId['nightcat-headset'].label, 'Nightcat Headset');
+  assert.equal(byId['nightcat-headset'].slot, 'head');
   assert.equal(byId['obsidian-gown'].unlockLevel, 50);
   assert.equal(byId['neon-yoga-wrap'].grantKind, 'activity');
   assert.equal(byId['rune-cleaning-drone'].activityNeed, 10);
@@ -19,8 +22,14 @@ test('battle pass uses the dark style track and leaves the cat-ear headset out',
   assert.match(applied, /'bubble-aura'/);
   assert.doesNotMatch(applied, /fingerless-gloves/);
   const sql = read('supabase/migrations/202611120001_companion_dark_catalog.sql');
-  for (const tier of PASS_TIERS) assert.match(sql, new RegExp(`'${tier.id}'`));
-  assert.doesNotMatch(sql, /cat-ear-headset/);
+  for (const tier of PASS_TIERS) {
+    if (tier.id === 'nightcat-headset') continue;
+    assert.match(sql, new RegExp(`'${tier.id}'`));
+  }
+  assert.doesNotMatch(sql, /cat-ear-headset|nightcat-headset/);
+  const headset = read('supabase/migrations/202611120002_nightcat_headset.sql');
+  assert.match(headset, /'nightcat-headset', 'Nightcat Headset', 'head', 30, 15, 'level'/);
+  assert.doesNotMatch(headset, /cat-ear-headset|record_crypt_floor_clear|crypt_xp_daily/);
   assert.match(sql, /neon-yoga-wrap/);
   assert.doesNotMatch(sql, /record_crypt_floor_clear|crypt_xp_daily/);
 });
@@ -65,6 +74,8 @@ test('open quests stay above a collapsed completed section', () => {
   assert.doesNotMatch(wear, /grant select, insert, update, delete/);
   const hero = read('components/companion/CompanionHero.tsx');
   assert.doesNotMatch(hero, /#f4f4f4|#c07080|cat-ear-headset/);
+  assert.match(hero, /nightcat-headset/);
+  assert.match(hero, /#5c6570/);
   assert.doesNotMatch(read('app/adventurer-dark.css'), /^\.screen,|^\.btn \{/m);
   assert.doesNotMatch(read('app/polish.css'), /\.screen \*/);
 });

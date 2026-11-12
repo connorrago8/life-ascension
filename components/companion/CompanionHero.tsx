@@ -36,6 +36,7 @@ const SHOW: Record<string, string> = {
   'cyber-visor': 'visor',
   'trench-coat': 'trench',
   'neck-tattoo': 'neck',
+  'nightcat-headset': 'nightcat',
   'rune-lantern': 'lantern',
   'armored-corset': 'corset',
   'hand-tattoos': 'hands',
@@ -146,6 +147,18 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
             <rect x="22" y="4" width="24" height="8" fill="#b7bdc8" />
             <rect x="42" y="8" width="6" height="10" fill={MAGENTA} />
             <rect x="20" y="12" width="4" height="16" fill="#9aa3b2" />
+          </g>
+        )}
+        {on.has('nightcat') && (
+          <g>
+            <rect x="22" y="17" width="20" height="2" fill="#5c6570" />
+            <rect x="18" y="15" width="5" height="6" fill="#3e4650" />
+            <rect x="41" y="15" width="5" height="6" fill="#3e4650" />
+            <rect x="19" y="16" width="3" height="1" fill="#8b949e" />
+            <rect x="42" y="16" width="3" height="1" fill="#8b949e" />
+            <rect x="20" y="19" width="1" height="1" fill={CYAN} opacity="0.75" />
+            <rect x="43" y="19" width="1" height="1" fill={CYAN} opacity="0.75" />
+            <rect x="31" y="17" width="1" height="1" fill={CYAN} opacity="0.4" />
           </g>
         )}
         {on.has('circlet') && <rect x="24" y="13" width="16" height="1" fill="#d5d8de" />}

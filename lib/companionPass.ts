@@ -49,8 +49,9 @@ export const PASS_TIERS: readonly PassTier[] = [
   { id: 'cyber-visor', label: 'Cyber eye visor', slot: 'face', unlockLevel: 24, grantKind: 'level' },
   { id: 'trench-coat', label: 'Long dark trench coat', slot: 'jacket', unlockLevel: 26, grantKind: 'level' },
   { id: 'neck-tattoo', label: 'Glowing magenta neck tattoo', slot: 'tattoo', unlockLevel: 28, grantKind: 'level' },
+  { id: 'nightcat-headset', label: 'Nightcat Headset', slot: 'head', unlockLevel: 30, grantKind: 'level' },
 
-  // Arcane cyberpunk (L32–L40). Cat-ear headset stays out until the founder confirms it.
+  // Arcane cyberpunk (L32–L40).
   { id: 'rune-lantern', label: 'Rune lantern', slot: 'back', unlockLevel: 32, grantKind: 'level' },
   { id: 'armored-corset', label: 'Armored leather corset', slot: 'top', unlockLevel: 34, grantKind: 'level' },
   { id: 'hand-tattoos', label: 'Glowing hand tattoos', slot: 'tattoo', unlockLevel: 36, grantKind: 'level' },
