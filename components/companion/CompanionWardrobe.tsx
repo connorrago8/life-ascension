@@ -17,6 +17,7 @@ export type WardrobeItem = {
   grantKind?: string;
   activityKey?: string | null;
   activityNeed?: number | null;
+  description?: string | null;
 };
 
 export type Wardrobe = {
@@ -147,7 +148,9 @@ function Tier({
       <span>
         <strong>{item.label}</strong>
         <small>
-          {item.grantKind === 'activity'
+          {item.description
+            ? item.description
+            : item.grantKind === 'activity'
             ? `Log ${item.activityKey} ${item.activityNeed} times`
             : `Level ${item.unlockLevel}`}
         </small>

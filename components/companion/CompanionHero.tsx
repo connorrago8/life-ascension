@@ -14,8 +14,8 @@ const CYAN = '#00f0ff';
 const MAGENTA = '#ff2bd6';
 const GOLD = '#c9a227';
 const MOUTH = '#4e342f';
-const TANK = '#1a1e26';
-const TANK_D = '#101218';
+const TANK = '#f3f1ea';
+const TANK_D = '#d9d3c7';
 const PANTS = '#3c2c22';
 const PANTS_D = '#241810';
 const BOOT = '#16110d';
@@ -151,14 +151,13 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
         )}
         {on.has('nightcat') && (
           <g>
-            <rect x="22" y="17" width="20" height="2" fill="#5c6570" />
-            <rect x="18" y="15" width="5" height="6" fill="#3e4650" />
-            <rect x="41" y="15" width="5" height="6" fill="#3e4650" />
-            <rect x="19" y="16" width="3" height="1" fill="#8b949e" />
-            <rect x="42" y="16" width="3" height="1" fill="#8b949e" />
-            <rect x="20" y="19" width="1" height="1" fill={CYAN} opacity="0.75" />
-            <rect x="43" y="19" width="1" height="1" fill={CYAN} opacity="0.75" />
-            <rect x="31" y="17" width="1" height="1" fill={CYAN} opacity="0.4" />
+            <rect x="22" y="17" width="20" height="2" fill="#101218" />
+            <rect x="18" y="15" width="5" height="5" fill="#101218" />
+            <rect x="41" y="15" width="5" height="5" fill="#101218" />
+            <rect x="18" y="15" width="5" height="1" fill={CYAN} opacity="0.7" />
+            <rect x="41" y="15" width="5" height="1" fill={CYAN} opacity="0.7" />
+            <rect x="20" y="18" width="1" height="1" fill={CYAN} opacity="0.55" />
+            <rect x="43" y="18" width="1" height="1" fill={CYAN} opacity="0.55" />
           </g>
         )}
         {on.has('circlet') && <rect x="24" y="13" width="16" height="1" fill="#d5d8de" />}

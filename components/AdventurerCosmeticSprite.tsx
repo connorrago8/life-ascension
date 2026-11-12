@@ -79,31 +79,43 @@ export function AdventurerCosmeticSprite({ worn, label = 'Adventurer' }: { worn:
   const on = new Set(visibleCosmeticIds(worn));
   return (
     <svg className="adventurer-cosmetic-sprite" viewBox="0 0 80 112" role="img" aria-label={`${label}, wearing cosmetic gear`}>
-      {on.has('void-aura') && (
+      {on.has('obsidian-pauldrons') && (
         <g fill="none">
-          <ellipse cx="40" cy="60" rx="30" ry="46" stroke={MAGENTA} strokeWidth="1" opacity="0.65" />
-          <ellipse cx="40" cy="60" rx="34" ry="50" stroke={CYAN} strokeWidth="1" opacity="0.4" />
+          <ellipse cx="40" cy="60" rx="30" ry="46" stroke={CYAN} strokeWidth="1" opacity="0.45" />
+          <ellipse cx="40" cy="60" rx="34" ry="50" stroke={MAGENTA} strokeWidth="1" opacity="0.3" />
         </g>
       )}
-      {(on.has('pathfinder-cloak') || on.has('storm-cape') || on.has('neon-trim-cloak')) && (
+      {on.has('void-aura') && (
         <g>
-          <rect x="10" y="30" width="52" height="40" fill="#07080c" />
-          {on.has('storm-cape') && <rect x="10" y="30" width="52" height="2" fill={CYAN} />}
-          {on.has('neon-trim-cloak') && <rect x="10" y="68" width="52" height="2" fill={MAGENTA} />}
-          {on.has('pathfinder-cloak') && <rect x="34" y="34" width="2" height="28" fill={GOLD} />}
+          <rect x="60" y="22" width="12" height="8" fill="#101218" stroke={CYAN} strokeWidth="0.6" />
+          <rect x="63" y="24" width="4" height="3" fill={CYAN} opacity="0.7" />
         </g>
       )}
+        {on.has('pathfinder-cloak') && (
+        <g>
+          <rect x="12" y="32" width="14" height="16" fill="#1a140f" />
+          <rect x="46" y="32" width="14" height="16" fill="#1a140f" />
+          <rect x="12" y="32" width="14" height="1" fill={GOLD} />
+        </g>
+      )}
+      {on.has('neon-trim-cloak') && <rect x="28" y="40" width="12" height="8" fill={MAGENTA} opacity="0.35" />}
       <g shapeRendering="crispEdges">
         <Pixels shapes={BASE} />
-        {on.has('shadow-hood') && (
+        {on.has('storm-cape') && (
           <g>
-            <rect x="22" y="8" width="24" height="8" fill="#10141a" />
-            <rect x="20" y="14" width="4" height="14" fill="#10141a" />
-            <rect x="44" y="14" width="4" height="14" fill="#10141a" />
-            <rect x="24" y="10" width="4" height="1" fill={CYAN} opacity="0.5" />
+            <rect x="36" y="16" width="8" height="4" fill="#101218" stroke={CYAN} strokeWidth="0.5" />
+            <rect x="38" y="17" width="3" height="2" fill={CYAN} opacity="0.7" />
           </g>
         )}
-        {on.has('ember-circlet') && <rect x="26" y="13" width="16" height="2" fill={GOLD} />}
+        {on.has('shadow-hood') && (
+          <g>
+            <rect x="8" y="48" width="8" height="6" fill="#2a241c" />
+            <rect x="52" y="48" width="8" height="6" fill="#2a241c" />
+            <rect x="8" y="50" width="8" height="1" fill={GOLD} />
+            <rect x="52" y="50" width="8" height="1" fill={GOLD} />
+          </g>
+        )}
+        {on.has('ember-circlet') && <rect x="10" y="38" width="6" height="2" fill={CYAN} />}
         {on.has('silver-mask') && (
           <g>
             <rect x="26" y="16" width="16" height="6" fill="#c5ccd6" />
@@ -118,7 +130,7 @@ export function AdventurerCosmeticSprite({ worn, label = 'Adventurer' }: { worn:
             <rect x="36" y="18" width="5" height="2" fill={MAGENTA} opacity="0.55" />
           </g>
         )}
-        {on.has('dark-tunic') && <rect x="18" y="34" width="32" height="18" fill="#12161c" />}
+        {on.has('dark-tunic') && <rect x="18" y="56" width="32" height="34" fill="#1a1e24" />}
         {on.has('obsidian-vest') && (
           <g>
             <rect x="20" y="34" width="28" height="18" fill="#0c0e12" stroke={GUN} strokeWidth="0.6" />
@@ -142,26 +154,17 @@ export function AdventurerCosmeticSprite({ worn, label = 'Adventurer' }: { worn:
             <rect x="32" y="36" width="4" height="20" fill={MAGENTA} />
           </g>
         )}
-        {on.has('traveler-pants') && (
-          <g>
-            <rect x="18" y="56" width="32" height="36" fill="#1a2228" />
-            <rect x="22" y="64" width="4" height="2" fill={GUN} />
-            <rect x="42" y="64" width="4" height="2" fill={GUN} />
-          </g>
-        )}
+        {on.has('traveler-pants') && <rect x="42" y="8" width="3" height="12" fill="#9ec9d6" />}
         {on.has('rune-belt') && (
           <g>
-            <rect x="20" y="52" width="28" height="4" fill="#2a2418" />
-            <rect x="32" y="52" width="4" height="4" fill={GOLD} />
-            <rect x="24" y="53" width="1" height="1" fill={CYAN} />
+            <rect x="10" y="42" width="6" height="2" fill={CYAN} opacity="0.8" />
+            <rect x="52" y="42" width="6" height="2" fill={CYAN} opacity="0.8" />
           </g>
         )}
         {on.has('road-boots') && (
           <g>
-            <rect x="18" y="90" width="12" height="12" fill="#24180f" />
-            <rect x="38" y="90" width="12" height="12" fill="#24180f" />
-            <rect x="20" y="94" width="4" height="1" fill={GOLD} />
-            <rect x="40" y="94" width="4" height="1" fill={GOLD} />
+            <rect x="20" y="34" width="28" height="16" fill="#242830" />
+            <rect x="24" y="36" width="20" height="1" fill="#3a4150" />
           </g>
         )}
         {on.has('warden-boots') && (
@@ -172,20 +175,8 @@ export function AdventurerCosmeticSprite({ worn, label = 'Adventurer' }: { worn:
             <rect x="40" y="92" width="8" height="1" fill={CYAN} />
           </g>
         )}
-        {on.has('leather-bracers') && (
-          <g>
-            <rect x="8" y="40" width="8" height="6" fill="#3a2a1c" />
-            <rect x="52" y="40" width="8" height="6" fill="#3a2a1c" />
-          </g>
-        )}
-        {on.has('scarred-gloves') && (
-          <g>
-            <rect x="8" y="46" width="8" height="8" fill="#1a140f" />
-            <rect x="52" y="46" width="8" height="8" fill="#1a140f" />
-            <rect x="9" y="48" width="5" height="1" fill="#6a4030" />
-            <rect x="53" y="48" width="5" height="1" fill="#6a4030" />
-          </g>
-        )}
+        {on.has('leather-bracers') && <rect x="14" y="52" width="2" height="2" fill={GUN} />}
+        {on.has('scarred-gloves') && <rect x="26" y="12" width="16" height="2" fill={GOLD} />}
         {on.has('void-gauntlets') && (
           <g>
             <rect x="6" y="42" width="10" height="12" fill="#101218" stroke={MAGENTA} strokeWidth="0.6" />
@@ -202,8 +193,10 @@ export function AdventurerCosmeticSprite({ worn, label = 'Adventurer' }: { worn:
         )}
         {on.has('iron-pauldrons') && (
           <g>
-            <rect x="10" y="30" width="12" height="8" fill="#3a414a" />
-            <rect x="46" y="30" width="12" height="8" fill="#3a414a" />
+            <rect x="16" y="88" width="14" height="14" fill="#1a140f" />
+            <rect x="38" y="88" width="14" height="14" fill="#1a140f" />
+            <rect x="18" y="92" width="6" height="1" fill={GUN} />
+            <rect x="40" y="92" width="6" height="1" fill={GUN} />
           </g>
         )}
         {on.has('arcane-shoulders') && (

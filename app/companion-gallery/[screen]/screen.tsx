@@ -58,11 +58,11 @@ export function GalleryScreen({ screen, completedOpen }: { screen: 'home' | 'que
                 <p className="muted">Dawn Herald</p>
                 <p className="cq-level-line">Level 7</p>
                 <div className="cq-xpbar"><span style={{ width: '40%' }} /></div>
-                <p className="cq-next">Next: Black crop top</p>
+                <p className="cq-next">Next: Midnight Crop</p>
               </div>
             </section>
             <p className="companion-fanfare" role="status">
-              Unlocked: Black cargo pants
+              Unlocked: Shadow Cargo
             </p>
             <section className="cq-bubble" aria-label="Hero greeting">
               <PixelAvatar who="connor" size={48} alt="Connor's hero, a pixel knight in silver armor" />

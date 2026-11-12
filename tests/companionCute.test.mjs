@@ -8,6 +8,10 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 test('battle pass uses the dark style track and the tactical Nightcat Headset', () => {
   const byId = Object.fromEntries(PASS_TIERS.map((tier) => [tier.id, tier]));
   assert.equal(byId['fingerless-gloves'].unlockLevel, 2);
+  assert.equal(byId['fingerless-gloves'].label, 'Nightgrip Gloves');
+  assert.equal(byId['fingerless-gloves'].description, 'Fingerless black gloves worn by the city’s wanderers.');
+  assert.equal(byId['obsidian-gown'].label, 'Obsidian Empress');
+  assert.equal(byId['nightcat-headset'].description, 'Black cat-ear audio gear with subtle illuminated edges.');
   assert.equal(byId['leather-jacket'].unlockLevel, 10);
   assert.equal(byId['nightcat-headset'].unlockLevel, 30);
   assert.equal(byId['nightcat-headset'].label, 'Nightcat Headset');
@@ -75,7 +79,7 @@ test('open quests stay above a collapsed completed section', () => {
   const hero = read('components/companion/CompanionHero.tsx');
   assert.doesNotMatch(hero, /#f4f4f4|#c07080|cat-ear-headset/);
   assert.match(hero, /nightcat-headset/);
-  assert.match(hero, /#5c6570/);
+  assert.match(hero, /on.has\('nightcat'\)/);
   assert.doesNotMatch(read('app/adventurer-dark.css'), /^\.screen,|^\.btn \{/m);
   assert.doesNotMatch(read('app/polish.css'), /\.screen \*/);
 });

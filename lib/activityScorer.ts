@@ -4,7 +4,17 @@
  */
 
 export type XpTier = 'small' | 'medium' | 'big';
-export type ActivityCategory = 'chores' | 'fitness' | 'self-care' | 'social' | 'creative' | 'other';
+export type ActivityCategory =
+  | 'chores'
+  | 'cooking'
+  | 'fitness'
+  | 'self-care'
+  | 'organization'
+  | 'growth'
+  | 'relationships'
+  | 'social'
+  | 'creative'
+  | 'other';
 
 export type ScoreResult = {
   category: ActivityCategory;
@@ -16,10 +26,14 @@ export type ScoreResult = {
 const TIER_XP: Record<XpTier, number> = { small: 5, medium: 10, big: 20 };
 
 const CATEGORY_KEYWORDS: Record<ActivityCategory, string[]> = {
-  chores: ['dish', 'laundry', 'clean', 'trash', 'recycl', 'cook', 'dinner', 'vacuum', 'sweep', 'mop', 'bathroom', 'kitchen'],
+  chores: ['dish', 'laundry', 'clean', 'trash', 'recycl', 'vacuum', 'sweep', 'mop', 'bathroom', 'kitchen'],
+  cooking: ['snack', 'meal prep', 'cook', 'dinner', 'recipe'],
   fitness: ['yoga', 'run', 'walk', 'gym', 'workout', 'lift', 'cardio', 'stretch', 'exercise', 'hike'],
-  'self-care': ['meditat', 'journal', 'bath', 'skincare', 'sleep', 'nap', 'therapy', 'self care'],
-  social: ['friend', 'family', 'call', 'date', 'party', 'hangout', 'meetup'],
+  'self-care': ['meditat', 'journal', 'bath', 'skincare', 'sleep', 'nap', 'therapy', 'self care', 'relax'],
+  organization: ['countertop', 'drawer', 'declutter', 'organize', 'tidy'],
+  growth: ['read', 'study', 'learn', 'lesson', 'practice'],
+  relationships: ['message', 'loved one', 'gathering', 'host', 'call'],
+  social: ['friend', 'family', 'date', 'party', 'hangout', 'meetup'],
   creative: ['draw', 'write', 'paint', 'music', 'code', 'design', 'art', 'photo'],
   other: [],
 };
@@ -38,8 +52,27 @@ export function hasDurationHint(text: string, hint: string): boolean {
   return pattern.test(text);
 }
 
-/** One step from the chosen tier. Long and short together leave the tier unchanged. Caps at 5 and 20. */
+/** Minutes named in the text. An hour is 60. A digit glued to a longer number does not count. */
+export function minutesHint(text: string): number | null {
+  const hay = text.toLowerCase();
+  const minute = hay.match(/(^|[^0-9])(\d+)\s*min/);
+  if (minute) return Number(minute[2]);
+  if (hasDurationHint(hay, '2 hr')) return 120;
+  if (hay.includes('hour') || hasDurationHint(hay, '1hr')) return 60;
+  return null;
+}
+
+/** Duration bands from the content pack: under 15 small, 15–44 medium, 45+ big. Never above 20 XP. */
+export function tierForMinutes(minutes: number): XpTier {
+  if (minutes < 15) return 'small';
+  if (minutes < 45) return 'medium';
+  return 'big';
+}
+
+/** Explicit minutes set the tier. Otherwise one keyword step. Result stays in 5/10/20. */
 export function adjustTierForDuration(tier: XpTier, text: string): XpTier {
+  const minutes = minutesHint(text);
+  if (minutes != null) return tierForMinutes(minutes);
   const hay = text.toLowerCase();
   const long = LONG_DURATION.some((hint) => hasDurationHint(hay, hint));
   const short = SHORT_DURATION.some((hint) => hasDurationHint(hay, hint));
@@ -66,8 +99,10 @@ export function scoreActivity(description: string): ScoreResult {
     }
   }
 
+  const minutes = minutesHint(text);
   let tier: XpTier = 'medium';
-  if (BIG_KEYWORDS.some((k) => text.includes(k))) tier = 'big';
+  if (minutes != null) tier = tierForMinutes(minutes);
+  else if (BIG_KEYWORDS.some((k) => text.includes(k))) tier = 'big';
   else if (SMALL_KEYWORDS.some((k) => text.includes(k))) tier = 'small';
   else if (best === 0) tier = 'small';
 

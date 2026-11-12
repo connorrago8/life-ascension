@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { adjustTierForDuration, hasDurationHint } from '../lib/activityScorer.ts';
+import { adjustTierForDuration, hasDurationHint, scoreActivity as scorePacked } from '../lib/activityScorer.ts';
 
 // Inline the pure function so the test does not depend on TS compilation.
 function scoreActivity(description) {
@@ -59,6 +59,14 @@ test('deep cleaned bathroom is big', () => {
   const r = scoreActivity('deep cleaned the bathroom');
   assert.equal(r.tier, 'big');
   assert.equal(r.xp, 20);
+});
+
+test('duration bands stay inside 5, 10, and 20', () => {
+  assert.equal(scorePacked('short stretch 10 min').tier, 'small');
+  assert.equal(scorePacked('30-minute walk').xp, 10);
+  assert.equal(scorePacked('full yoga 45 min').xp, 20);
+  assert.equal(scorePacked('deep clean the bathroom').xp, 20);
+  assert.ok(scorePacked('meal prep for the week').xp <= 20);
 });
 
 test('duration steps one tier and does not treat 110 min as 10 min', () => {

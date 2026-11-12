@@ -6,7 +6,7 @@ import { visibleCosmeticIds } from '../lib/adventurerCosmetics.ts';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('worn cosmetics keep one piece per slot and do not touch combat stats', () => {
-  assert.deepEqual(visibleCosmeticIds(['shadow-hood', 'ember-circlet']), ['ember-circlet']);
+  assert.deepEqual(visibleCosmeticIds(['scarred-gloves', 'warden-boots']), ['warden-boots']);
   assert.deepEqual(visibleCosmeticIds(['dark-tunic', 'road-boots']).sort(), ['dark-tunic', 'road-boots'].sort());
   assert.deepEqual(visibleCosmeticIds(['not-a-piece']), []);
   const sprite = read('components/AdventurerCosmeticSprite.tsx');

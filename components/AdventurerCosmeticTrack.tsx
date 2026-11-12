@@ -61,7 +61,7 @@ export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornCha
               <span className="cq-tier-level">L{item.unlockLevel}</span>
               <div>
                 <strong>{item.label}</strong>
-                <span className="muted"> · {item.slot}</span>
+                <span className="muted"> · {item.description}</span>
               </div>
               {owned ? (
                 <button
