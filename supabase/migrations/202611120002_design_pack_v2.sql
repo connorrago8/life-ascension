@@ -157,83 +157,55 @@ end $$;
 revoke all on function public.couple_choose_date_idea(integer) from public, anon;
 grant execute on function public.couple_choose_date_idea(integer) to authenticated;
 
--- Pending shield boundary: only the proposal token records a new bridge.
+-- Legacy internal name retained for callers; calculation is strictly read-only.
 create or replace function public._streak_shield_sync(p_owner uuid, p_today date, p_tz text)
-returns integer language plpgsql volatile security definer set search_path = ''
-as $$
-declare d date := p_today - 1; n integer := 0; guard integer := 0; bridged date; m date; v_mode text;
-begin
-  if p_owner is null or p_today is null or p_tz is null then return 0; end if;
-  select shield_month_reset into v_mode from public.couple_xp_config where singleton;
-  if v_mode is distinct from 'chicago_5am_on_the_1st' then
-    return public._quest_streak_fire_at(p_owner, p_today, p_tz);
-  end if;
-  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('streak-shield:' || p_owner::text, 0));
-  while guard < 4000 loop
-    guard := guard + 1;
-    if public.quest_has_completion_on(p_owner, d, p_tz) then
-      n := n + 1;
-      d := d - 1;
-      continue;
-    end if;
-    if public.quest_has_completion_on(p_owner, d - 1, p_tz) then
-      m := pg_catalog.date_trunc('month', d)::date;
-      bridged := null;
-      select s.bridged_day into bridged from public.streak_shields s
-        where s.owner_id = p_owner and s.month_key = m;
-      if not found then
-        insert into public.streak_shields(owner_id, month_key, bridged_day)
-        values (p_owner, m, d)
-        on conflict (owner_id, month_key) do nothing;
-        select s.bridged_day into bridged from public.streak_shields s
-          where s.owner_id = p_owner and s.month_key = m;
-      end if;
-      if bridged = d then
-        d := d - 1;
-        continue;
-      end if;
-    end if;
-    exit;
-  end loop;
-  return n;
-end $$;
+returns integer language sql stable security definer set search_path = ''
+as $$ select public._quest_streak_fire_at(p_owner, p_today, p_tz) $$;
 revoke all on function public._streak_shield_sync(uuid, date, text) from public, anon, authenticated, service_role;
 
 create or replace function public._streak_shield_status(p_owner uuid, p_at timestamptz)
 returns jsonb language plpgsql volatile security definer set search_path = ''
 as $$
 declare
-  v_today date; v_month date; v_day date; v_notice text; v_done boolean; v_yesterday date; v_blocked boolean;
+  v_today date;
+  v_month date;
+  v_day date;
+  v_notice text;
+  v_candidate date;
+  v_cursor date;
 begin
   if p_owner is null or p_at is null then raise exception 'Authentication required'; end if;
   v_today := public.quest_game_day(p_at, 'America/Chicago');
-  perform public.quest_streak_fire(p_owner, v_today, 'America/Chicago');
+  -- Read-only status. No implicit shield consumption.
   v_month := public.streak_shield_month(p_at);
   select s.bridged_day into v_day from public.streak_shields s
     where s.owner_id = p_owner and s.month_key = v_month;
-  v_done := public.quest_has_completion_on(p_owner, v_today, 'America/Chicago');
-  v_yesterday := v_today - 1;
-  v_blocked := v_day is not null
-    and not v_done
-    and not public.quest_has_completion_on(p_owner, v_yesterday, 'America/Chicago')
-    and v_day is distinct from v_yesterday;
   if v_day is null then
+    -- Walk the currently connected run; only offer a real one-day gap in
+    -- the active allowance month. Merely reading this never writes a receipt.
+    v_cursor := v_today - 1;
+    while v_cursor >= v_month loop
+      if public.quest_has_completion_on(p_owner, v_cursor, 'America/Chicago') then
+        v_cursor := v_cursor - 1;
+        continue;
+      end if;
+      if public.quest_has_completion_on(p_owner, v_cursor - 1, 'America/Chicago')
+         and public.quest_has_completion_on(p_owner, v_cursor + 1, 'America/Chicago') then
+        v_candidate := v_cursor;
+      end if;
+      exit;
+    end loop;
     v_notice := 'Streak Shield ready · 1 this month';
-  elsif v_blocked then
-    v_notice := 'Streak Shield used · 0 remaining. No shields left this month. Your next qualifying day starts a new streak.';
   else
     v_notice := 'Streak Shield used · 0 remaining. Streak protected. You missed a day, but your journey continues. No XP was awarded.';
-    if not v_done then
-      v_notice := v_notice || ' Your shield saved your streak. Complete a quest today to keep it going.';
-    end if;
   end if;
   return pg_catalog.jsonb_build_object(
     'status', case when v_day is null then 'ready' else 'used' end,
     'month', v_month,
     'bridgedDay', v_day,
-    'doneToday', v_done,
-    'notice', v_notice,
-    'reset', coalesce((select shield_month_reset from public.couple_xp_config where singleton), 'chicago_5am_on_the_1st'));
+    'eligibleMissedDay', v_candidate,
+    'doneToday', public.quest_has_completion_on(p_owner, v_today, 'America/Chicago'),
+    'notice', v_notice);
 end $$;
 revoke all on function public._streak_shield_status(uuid, timestamptz) from public, anon, authenticated, service_role;
 

@@ -56,7 +56,25 @@ test('two missed days reset and previously confirmed shields do not stack', () =
     '2026-01-16',
     new Map([['2026-01-01', '2026-01-11']]),
   );
-  assert.equal(again.fire, 3);
+  assert.equal(again.fire, 1);
   assert.equal(again.shields.size, 1);
   assert.match(shieldLabel('used', { doneToday: false }), /No XP was awarded/);
+});
+
+
+test('month reset follows Chicago daylight and standard time', () => {
+  for (const [before, at, previousMonth, nextMonth] of [
+    ['2026-04-01T09:59:00Z', '2026-04-01T10:00:00Z', '2026-03-01', '2026-04-01'],
+    ['2026-12-01T10:59:00Z', '2026-12-01T11:00:00Z', '2026-11-01', '2026-12-01'],
+  ]) {
+    assert.equal(shieldMonth(gameDayParts(new Date(before), 'America/Chicago').date), previousMonth);
+    assert.equal(shieldMonth(gameDayParts(new Date(at), 'America/Chicago').date), nextMonth);
+  }
+});
+
+test('streak reads preserve existing receipts and never mutate their input', () => {
+  const receipts = new Map([['2026-04-01', '2026-04-11']]);
+  const result = fireWithShields(['2026-04-10', '2026-04-12'], '2026-04-13', receipts);
+  result.shields.set('2026-05-01', '2026-05-02');
+  assert.deepEqual([...receipts], [['2026-04-01', '2026-04-11']]);
 });

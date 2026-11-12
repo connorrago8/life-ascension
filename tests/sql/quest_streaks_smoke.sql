@@ -72,9 +72,9 @@ begin
   perform pg_temp.seed_day(u, '2026-10-20');
   assert public.quest_streak_fire(u, '2026-10-20', 'America/Chicago') = 7, 'today ignored';
   assert public.quest_streak_fire(u, '2026-10-21', 'America/Chicago') = 8;
-  -- Oct 21 is the only miss, so the October shield bridges it and F stays 8.
-  -- Oct 21 and Oct 22 are both empty, so two misses still reset. The shield grants no XP.
-  assert public.quest_streak_fire(u, '2026-10-22', 'America/Chicago') = 8, 'one missed day is bridged';
+  -- An unconfirmed gap resets the run, regardless of an unused allowance.
+  -- Two consecutive misses also reset. Reads never spend a shield.
+  assert public.quest_streak_fire(u, '2026-10-22', 'America/Chicago') = 0, 'unconfirmed missed day resets';
   assert public.quest_streak_fire(u, '2026-10-23', 'America/Chicago') = 0, 'two missed days reset';
   -- a gap inside the run stops the count
   assert public.quest_streak_fire(u, '2026-10-16', 'America/Chicago') = 3;
@@ -108,7 +108,7 @@ begin
 end $$;
 
 -- Live awards through the real RPCs (relative to the real local today) ---------------------
--- e003: F=7 F7 -> 17 XP; e004: F12 -> 22 XP; e005: one missed day is bridged, F stays 8.
+-- e003: F=7 F7 -> 17 XP; e004: F12 -> 22 XP; e005: unconfirmed miss resets F.
 do $$
 declare today date := public.quest_game_day(pg_catalog.now(), 'America/Chicago'); d integer;
 begin
@@ -167,13 +167,13 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000e005
 do $$
 declare today date := (public.get_quest_streak()->>'today')::date; q uuid; r jsonb;
 begin
-  assert (public.get_quest_streak()->>'fire')::int = 8, 'one missed day keeps the eight days before it';
+  assert (public.get_quest_streak()->>'fire')::int = 0, 'a status read cannot bridge an unconfirmed missed day';
   q := public.create_scheduled_quest('Reset a', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
-  assert (r->>'xp_awarded')::int = 10 and (r->>'first_of_day')::boolean and (r->>'streak_fire')::int = 8, r::text;
+  assert (r->>'xp_awarded')::int = 10 and (r->>'first_of_day')::boolean and (r->>'streak_fire')::int = 0, r::text;
   q := public.create_scheduled_quest('Reset b', 'home', 'daily', today, 'scheduled');
   r := public.set_quest_instance_status_v2(public.ensure_quest_instance(q, today), 'complete');
-  assert (r->>'xp_awarded')::int = 18 and (r->>'streak_fire')::int = 8, r::text;
+  assert (r->>'xp_awarded')::int = 10 and (r->>'streak_fire')::int = 0, r::text;
 end $$;
 
 -- Weekly quests ----------------------------------------------------------------------------

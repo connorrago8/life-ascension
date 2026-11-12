@@ -13,7 +13,7 @@ type ShieldResponse = {
 };
 
 function eligibleDay(value: unknown): string | null {
-  return typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) ? value : null;
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
 /** Read-only status plus a separate, explicitly confirmed monthly shield spend. */
@@ -23,6 +23,7 @@ export function StreakShieldNote() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requiresRefresh, setRequiresRefresh] = useState(false);
   const inFlight = useRef(false);
 
   useEffect(() => {
@@ -49,13 +50,14 @@ export function StreakShieldNote() {
   }, []);
 
   async function confirmSpend() {
-    if (!candidate || !confirming || inFlight.current) return;
+    if (!candidate || !confirming || requiresRefresh || inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
       const { data, error: writeError } = await supabase().rpc('confirm_streak_shield', { p_missed_day: candidate });
       if (writeError || !data || typeof data !== 'object' || (data as ShieldResponse).status !== 'used') {
+        setRequiresRefresh(true);
         setError('Could not confirm your shield. Nothing was changed on this screen. Please refresh before trying again.');
         return;
       }
@@ -64,6 +66,7 @@ export function StreakShieldNote() {
       setCandidate(null);
       setConfirming(false);
     } catch {
+      setRequiresRefresh(true);
       setError('Connection interrupted. Refresh to check whether your shield was used before trying again.');
     } finally {
       inFlight.current = false;
@@ -83,10 +86,10 @@ export function StreakShieldNote() {
       {candidate && confirming && (
         <div>
           <p>Use this month's Streak Shield to protect the missed game day {candidate}? This spends your one shield for that month. No XP is awarded.</p>
-          <button type="button" className="btn" disabled={busy} onClick={() => { void confirmSpend(); }}>
+          <button type="button" className="btn" disabled={busy || requiresRefresh} onClick={() => { void confirmSpend(); }}>
             {busy ? 'Confirming…' : 'Use Shield'}
           </button>
-          <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirming(false)}>
+          <button type="button" className="btn ghost" disabled={busy || requiresRefresh} onClick={() => setConfirming(false)}>
             Not Now
           </button>
         </div>

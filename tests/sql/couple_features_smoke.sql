@@ -10,7 +10,9 @@ do $$ begin
   assert not has_function_privilege('authenticated', 'public._award_personal_quest_xp(uuid,uuid)', 'execute');
   assert not has_table_privilege('authenticated', 'public.couple_quests', 'insert');
   assert not has_table_privilege('authenticated', 'public.companion_xp_ledger', 'insert');
-  assert not has_table_privilege('authenticated', 'public.streak_shields', 'insert');\n  assert has_function_privilege('authenticated', 'public.confirm_streak_shield(date)', 'execute');\n  assert not has_function_privilege('anon', 'public.confirm_streak_shield(date)', 'execute');
+  assert not has_table_privilege('authenticated', 'public.streak_shields', 'insert');
+  assert has_function_privilege('authenticated', 'public.confirm_streak_shield(date)', 'execute');
+  assert not has_function_privilege('anon', 'public.confirm_streak_shield(date)', 'execute');
 end $$;
 
 create or replace function pg_temp.seed_day(p_owner uuid, p_day date, p_hour integer default 12) returns void language plpgsql as $$
@@ -75,10 +77,7 @@ begin
   assert public.quest_has_completion_on(later, '2026-03-14', 'America/Chicago'), '05:00 opens the game day';
   assert not public.quest_has_completion_on(later, '2026-03-13', 'America/Chicago');
   assert public.quest_streak_fire(later, '2026-03-15', 'America/Chicago') = 1, 'unconfirmed gap does not bridge';
-  assert exists (
-    select 1 from public.streak_shields
-    where owner_id = later and month_key = '2026-03-01' and bridged_day = '2026-03-13'
-  ), 'March shield used on the empty game day';
+  assert not exists (select 1 from public.streak_shields where owner_id = later), 'reading never spends a shield';
   select coalesce(sum(amount), 0) into after_xp from public.xp_ledger where owner_id = later;
   assert before_xp = after_xp and (select count(*) from public.xp_ledger where owner_id = later) = 2;
 end $$;
@@ -93,7 +92,12 @@ begin
   perform pg_temp.seed_day(one, '2026-04-10');
   perform pg_temp.seed_day(one, '2026-04-12');
   select coalesce(sum(amount), 0) into before_xp from public.xp_ledger where owner_id = one;
-  assert public.quest_streak_fire(one, '2026-04-13', 'America/Chicago') = 2, 'missed one day';
+  assert public.quest_streak_fire(one, '2026-04-13', 'America/Chicago') = 1, 'unconfirmed gap';
+  perform set_config('request.jwt.claim.sub', one::text, true);
+  perform public.confirm_streak_shield('2026-04-11');
+  perform public.confirm_streak_shield('2026-04-11');
+  assert (select count(*) from public.streak_shields where owner_id = one) = 1, 'retry is idempotent';
+  assert public.quest_streak_fire(one, '2026-04-13', 'America/Chicago') = 2, 'confirmed gap';
   assert (select bridged_day from public.streak_shields where owner_id = one) = '2026-04-11';
   assert (select coalesce(sum(amount), 0) from public.xp_ledger where owner_id = one) = before_xp;
 
@@ -106,7 +110,10 @@ begin
   perform pg_temp.seed_day(roll, '2026-01-31');
   perform pg_temp.seed_day(roll, '2026-02-01');
   perform pg_temp.seed_day(roll, '2026-02-03');
-  assert public.quest_streak_fire(roll, '2026-02-04', 'America/Chicago') = 1, 'no automatic monthly bridges';\n  insert into public.streak_shields(owner_id, month_key, bridged_day) values\n    (roll, '2026-01-01', '2026-01-30'), (roll, '2026-02-01', '2026-02-02');\n  assert public.quest_streak_fire(roll, '2026-02-04', 'America/Chicago') = 4, 'confirmed monthly bridges';
+  assert public.quest_streak_fire(roll, '2026-02-04', 'America/Chicago') = 1, 'no automatic monthly bridges';
+  insert into public.streak_shields(owner_id, month_key, bridged_day) values
+    (roll, '2026-01-01', '2026-01-30'), (roll, '2026-02-01', '2026-02-02');
+  assert public.quest_streak_fire(roll, '2026-02-04', 'America/Chicago') = 4, 'confirmed monthly bridges';
   assert (select count(*) from public.streak_shields where owner_id = roll and month_key = '2026-01-01') = 1;
   assert (select count(*) from public.streak_shields where owner_id = roll and month_key = '2026-02-01') = 1;
   assert (select bridged_day from public.streak_shields where owner_id = roll and month_key = '2026-01-01') = '2026-01-30';
@@ -126,11 +133,17 @@ begin
   perform pg_temp.seed_day(u, '2026-02-26');
   perform pg_temp.seed_day(u, '2026-02-28');
   select coalesce(sum(amount), 0) into xp from public.xp_ledger where owner_id = u;
-  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');\n  assert early->>'status' = 'ready', 'status read cannot spend shield';\n  assert early->>'eligibleMissedDay' = '2026-02-27', 'status identifies eligible bridge';\n  assert not exists (select 1 from public.streak_shields where owner_id = u);\n  insert into public.streak_shields(owner_id, month_key, bridged_day) values (u, '2026-02-01', '2026-02-27');\n  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');
+  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');
+  assert early->>'status' = 'ready', 'status read cannot spend shield';
+  assert early->>'eligibleMissedDay' = '2026-02-27', 'status identifies eligible bridge';
+  assert not exists (select 1 from public.streak_shields where owner_id = u);
+  insert into public.streak_shields(owner_id, month_key, bridged_day) values (u, '2026-02-01', '2026-02-27');
+  early := public._streak_shield_status(u, '2026-03-01 04:59:00 America/Chicago');
   assert early->>'status' = 'used' and early->>'month' = '2026-02-01' and early->>'bridgedDay' = '2026-02-27', early::text;
   assert early->>'notice' = 'Streak Shield used · 0 remaining. Streak protected. You missed a day, but your journey continues. No XP was awarded.', early->>'notice';
   late := public._streak_shield_status(u, '2026-03-01 05:00:00 America/Chicago');
-  assert late->>'status' = 'ready' and late->>'month' = '2026-03-01', late::text;\n  assert late->>'eligibleMissedDay' is null, 'old month cannot spend new month allowance';
+  assert late->>'status' = 'ready' and late->>'month' = '2026-03-01', late::text;
+  assert late->>'eligibleMissedDay' is null, 'old month cannot spend new month allowance';
   assert late->>'notice' = 'Streak Shield ready · 1 this month';
   assert (select count(*) from public.streak_shields where owner_id = u) = 1, 'March does not keep February''s shield';
   assert (select coalesce(sum(amount), 0) from public.xp_ledger where owner_id = u) = xp, 'the reset grants no XP';

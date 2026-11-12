@@ -277,22 +277,41 @@ declare
   v_today date;
   v_month date;
   v_day date;
-  v_notice text;\n  v_candidate date;\n  v_cursor date;\nbegin\n  if p_owner is null or p_at is null then raise exception 'Authentication required'; end if;
+  v_notice text;
+  v_candidate date;
+  v_cursor date;
+begin
+  if p_owner is null or p_at is null then raise exception 'Authentication required'; end if;
   v_today := public.quest_game_day(p_at, 'America/Chicago');
   -- Read-only status. No implicit shield consumption.
   v_month := public.streak_shield_month(p_at);
   select s.bridged_day into v_day from public.streak_shields s
     where s.owner_id = p_owner and s.month_key = v_month;
   if v_day is null then
-    v_notice := 'Streak shield: ready';
+    -- Walk the currently connected run; only offer a real one-day gap in
+    -- the active allowance month. Merely reading this never writes a receipt.
+    v_cursor := v_today - 1;
+    while v_cursor >= v_month loop
+      if public.quest_has_completion_on(p_owner, v_cursor, 'America/Chicago') then
+        v_cursor := v_cursor - 1;
+        continue;
+      end if;
+      if public.quest_has_completion_on(p_owner, v_cursor - 1, 'America/Chicago')
+         and public.quest_has_completion_on(p_owner, v_cursor + 1, 'America/Chicago') then
+        v_candidate := v_cursor;
+      end if;
+      exit;
+    end loop;
+    v_notice := 'Streak Shield ready · 1 this month';
   else
-    v_notice := 'Streak shield: used. It covered ' || pg_catalog.to_char(v_day, 'FMMonth FMDD')
-      || '. That missed day granted no XP.';
+    v_notice := 'Streak Shield used · 0 remaining. Streak protected. You missed a day, but your journey continues. No XP was awarded.';
   end if;
   return pg_catalog.jsonb_build_object(
     'status', case when v_day is null then 'ready' else 'used' end,
     'month', v_month,
     'bridgedDay', v_day,
+    'eligibleMissedDay', v_candidate,
+    'doneToday', public.quest_has_completion_on(p_owner, v_today, 'America/Chicago'),
     'notice', v_notice);
 end $$;
 revoke all on function public._streak_shield_status(uuid, timestamptz) from public, anon, authenticated, service_role;

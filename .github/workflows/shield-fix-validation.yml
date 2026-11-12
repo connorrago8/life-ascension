@@ -28,3 +28,60 @@ jobs:
         run: npm test
       - name: TypeScript check
         run: npm run lint
+
+      - name: Prepare synthetic QA build fixture (no hosted credentials)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const ref = 'njqwwimzrsunheehnnnt';
+          const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const key = [b64({ alg: 'HS256', typ: 'JWT' }),
+            b64({ iss: 'supabase', ref, role: 'anon' }),
+            'synthetic-invalid-signature'].join('.');
+          const pin = createHash('sha256').update(key).digest('hex');
+          appendFileSync(process.env.GITHUB_ENV, [
+            'VERCEL_ENV=preview',
+            // Synthetic CI-only protected-branch identity; never changes hosted routing.
+            'VERCEL_GIT_COMMIT_REF=audit/qa-isolation-and-reliability-20261027',
+            `NEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${key}`,
+            `SUPABASE_PUBLIC_KEY_SHA256=${pin}`,
+            '',
+          ].join('\n'));
+          NODE
+      - name: Production build (isolated synthetic Preview configuration)
+        run: npm run build
+      - name: Install isolated Chromium
+        run: npx playwright install --with-deps chromium --only-shell
+      - name: Shield confirmation browser regressions (mock RPC only)
+        run: npm run test:shield-ui
+
+  sql-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - name: SQL, concurrency, and rollback regressions (disposable database)
+        run: bash tests/sql/run-quest-streaks.sh
