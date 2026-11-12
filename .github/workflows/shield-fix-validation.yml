@@ -1,0 +1,30 @@
+name: Shield Fix Validation (isolated)
+
+on:
+  push:
+    branches:
+      - chatgpt/shield-explicit-consent-20261111
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shield-fix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-and-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Unit tests
+        run: npm test
+      - name: TypeScript check
+        run: npm run lint
