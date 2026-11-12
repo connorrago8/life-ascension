@@ -52,7 +52,7 @@ export function QuestBoard({
     <div className="cq-board">
       <section aria-label="On his board">
         <h2 className="cq-section">On his board</h2>
-        {open.length === 0 && <p className="muted">Nothing waiting on his board.</p>}
+        {open.length === 0 && <p className="empty-state">No quests waiting. Make one worth doing. <a href="#send-quest">New quest</a></p>}
         <ul className="cq-list">
           {open.map((quest) => (
             <QuestCard
@@ -77,7 +77,7 @@ export function QuestBoard({
         </button>
         <div className={openDone ? 'cq-done-panel is-open' : 'cq-done-panel'}>
           <div className="cq-done-inner">
-            {done.length === 0 && <p className="muted">None yet.</p>}
+            {done.length === 0 && <p className="muted">Nothing completed yet. Your first victory is waiting.</p>}
             <ul className="cq-list">
               {done.map((quest) => (
                 <QuestCard

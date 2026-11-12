@@ -8,6 +8,7 @@ import { CharacterScreen } from '../../../components/preview/CharacterScreen';
 import { attributeEntries, adventurerName } from '../../../lib/attributes';
 import { parseCryptProfile } from '../../../lib/cryptVault';
 import { levelFor, levelProgress } from '../../../lib/level';
+import { cosmeticTitle } from '../../../lib/levelTitles';
 import { verifiedLifetimeXp } from '../../../lib/characterXpProof';
 import { createLatestCharacterLoadGate } from '../../../lib/preview/latestCharacterLoadGate';
 import { supabase } from '../../../lib/supabase';
@@ -190,6 +191,7 @@ export default function CharacterPage() {
           <div className="xp-track character-xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={progress.xpForNext} aria-valuenow={progress.xpIntoLevel} aria-label={`Level ${progress.level}: ${progress.xpIntoLevel} of ${progress.xpForNext} XP to next level`}><span className="xp-fill" style={{ width: `${fraction * 100}%` }} /></div>
           <span className="character-level-xp" aria-hidden="true">{progress.xpIntoLevel}/{progress.xpForNext}</span>
         </div>
+        <p className="character-level-title">{cosmeticTitle(progress.level, 'connor')}</p>
       </section>
       {state.preview && <p className="muted">Equipment below is a visual demo using starter items.</p>}
       {!state.preview && !state.gear && <p className="muted">Equipment unavailable right now. Refresh to retry.</p>}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { nextLevelTier, PASS_TIERS } from '../../lib/companionPass';
 import { levelProgress } from '../../lib/level';
+import { cosmeticTitle } from '../../lib/levelTitles';
 import { supabase } from '../../lib/supabase';
 import { CompanionHero } from './CompanionHero';
 
@@ -82,6 +83,8 @@ export function CompanionPassView({
   const worn = items.filter((item) => item.worn).map((item) => item.id);
   const fraction = wardrobe ? levelProgress(wardrobe.xp) : 0;
   const ordered = [...items].sort((a, b) => a.unlockLevel - b.unlockLevel || a.label.localeCompare(b.label));
+  const ownedGear = items.filter((item) => item.grantKind !== 'activity' && item.owned);
+  const lockedGear = items.some((item) => item.grantKind !== 'activity' && !item.owned);
 
   return (
     <section className="companion-card cq-pass" aria-label="Battle pass">
@@ -91,6 +94,7 @@ export function CompanionPassView({
       {wardrobe && (
         <div className="cq-level">
           <p>Level {wardrobe.level}</p>
+          <p className="cq-title-line">{cosmeticTitle(wardrobe.level, 'izzy')}</p>
           <div className="cq-xpbar" aria-label={`${wardrobe.xp} XP toward the next level`}>
             <span style={{ width: `${Math.round(fraction * 100)}%` }} />
           </div>
@@ -114,6 +118,8 @@ export function CompanionPassView({
           <Tier key={item.id} item={item} busy={busy} onWear={onWear} />
         ))}
       </ol>
+      {ownedGear.length === 0 && <p className="empty-state">No extra gear yet. Your first unlock arrives at Level 2.</p>}
+      {ownedGear.length > 0 && lockedGear && <p className="muted">Your next piece is ahead. Keep going to reveal it.</p>}
       {items.length === 0 && <p className="muted">{PASS_TIERS.length} cosmetic tiers. Clothes never change quests or combat.</p>}
       {note && <p className="message" role="status">{note}</p>}
     </section>

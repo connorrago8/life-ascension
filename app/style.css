@@ -1012,6 +1012,7 @@ code { font-family: ui-monospace, monospace; }
 .character-stat-label { font-size: 0.7rem; letter-spacing: 0.08em; opacity: 0.75; }
 .character-stat-value { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .character-level-line { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.character-level-title, .cq-title-line { margin: 4px 0 0; color: var(--cq-gold, #c9a227); font-size: 0.82rem; letter-spacing: 0.04em; }
 .character-level { font-weight: 700; white-space: nowrap; }
 .character-level-xp { opacity: 0.7; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .character-xp-track { flex: 1; height: 6px; margin: 0; }

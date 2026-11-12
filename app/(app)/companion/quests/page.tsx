@@ -79,7 +79,7 @@ export default function CompanionQuestsPage() {
     await reload();
   }
 
-  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
+  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
   const label = draftSourceLabel(source);
   return (
     <main className="wrap companion-page" id="send-quest">

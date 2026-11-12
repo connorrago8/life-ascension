@@ -7,6 +7,7 @@ import { ActivityLog } from '../../../../components/companion/ActivityLog';
 import { CompanionHero } from '../../../../components/companion/CompanionHero';
 import { nextTierLabel, useCompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
 import { questGlyph } from '../../../../lib/companionPass';
+import { cosmeticTitle } from '../../../../lib/levelTitles';
 import { levelProgress } from '../../../../lib/level';
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
@@ -26,7 +27,7 @@ export default function CompanionModeHome() {
     });
     return () => { cancel = true; };
   }, [ready, board]);
-  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Loading…</p></main>;
+  if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
   const name = board?.identity?.displayName || 'Izzy';
   const title = board?.identity?.title;
   const worn = (wardrobe?.items ?? []).filter((item) => item.worn).map((item) => item.id);
@@ -44,6 +45,7 @@ export default function CompanionModeHome() {
           {wardrobe && (
             <>
               <p className="cq-level-line">Level {wardrobe.level}</p>
+              <p className="cq-title-line">{cosmeticTitle(wardrobe.level, 'izzy')}</p>
               <div className="cq-xpbar" aria-label={`${wardrobe.xp} experience`}>
                 <span style={{ width: `${Math.round(fraction * 100)}%` }} />
               </div>
@@ -76,7 +78,9 @@ export default function CompanionModeHome() {
       )}
       <section className="companion-card" aria-label="Recent activity">
         <h2>Recent</h2>
-        {recent.length === 0 && <p className="muted">Nothing new yet.</p>}
+        {recent.length === 0 && (
+          <p className="empty-state">Your story is just beginning. Log your first moment to see it here. <a href="#activity-title">Log an activity</a></p>
+        )}
         <ul className="cq-timeline">
           {recent.map((item) => (
             <li key={item.id}><span aria-hidden="true">{questGlyph(item.title)}</span>{item.title}{item.voided ? ' · voided' : ''}</li>
@@ -84,7 +88,14 @@ export default function CompanionModeHome() {
         </ul>
       </section>
       <Link className="btn companion-create" href="/companion/quests">Create quest</Link>
-      {message && <p className="message" role="status">{message}</p>}
+      {message && (
+        <p className="message" role="status">
+          {message}{' '}
+          {message.startsWith("Couldn't load") && (
+            <button className="btn ghost" type="button" onClick={() => void reload()}>Try again</button>
+          )}
+        </p>
+      )}
     </main>
   );
 }

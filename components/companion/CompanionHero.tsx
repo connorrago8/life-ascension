@@ -1,8 +1,7 @@
 'use client';
 
-/** 16-bit companion. Adult proportions: narrow face, wide shoulders, long legs.
- * Base clothes are charcoal, not a white shirt. Mouth is a dark line.
- * Palette: midnight, neon magenta #ff2bd6, cyan #00f0ff, aged gold #c9a227.
+/** Layered 16-bit pixels. Level 1 is a white tank, loose brown trousers, scuffed boots.
+ * Gear sits on the body and does not cover the face. No CSS clothing blocks.
  */
 
 const SKIN = '#c4926a';
@@ -151,22 +150,22 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
         )}
         {on.has('nightcat') && (
           <g>
-            <rect x="22" y="17" width="20" height="2" fill="#101218" />
-            <rect x="18" y="15" width="5" height="5" fill="#101218" />
-            <rect x="41" y="15" width="5" height="5" fill="#101218" />
-            <rect x="18" y="15" width="5" height="1" fill={CYAN} opacity="0.7" />
-            <rect x="41" y="15" width="5" height="1" fill={CYAN} opacity="0.7" />
-            <rect x="20" y="18" width="1" height="1" fill={CYAN} opacity="0.55" />
-            <rect x="43" y="18" width="1" height="1" fill={CYAN} opacity="0.55" />
+            <rect x="18" y="18" width="4" height="6" fill="#101218" />
+            <rect x="42" y="18" width="4" height="6" fill="#101218" />
+            <rect x="19" y="12" width="2" height="5" fill="#101218" />
+            <rect x="43" y="12" width="2" height="5" fill="#101218" />
+            <rect x="19" y="12" width="2" height="1" fill={CYAN} />
+            <rect x="43" y="12" width="2" height="1" fill={CYAN} />
+            <rect x="19" y="22" width="1" height="1" fill={CYAN} opacity="0.65" />
+            <rect x="44" y="22" width="1" height="1" fill={CYAN} opacity="0.65" />
           </g>
         )}
         {on.has('circlet') && <rect x="24" y="13" width="16" height="1" fill="#d5d8de" />}
         {on.has('nose') && <rect x="32" y="21" width="1" height="1" fill="#d5d8de" />}
         {on.has('visor') && (
           <g>
-            <rect x="24" y="17" width="16" height="6" fill="#05070a" stroke={CYAN} strokeWidth="0.6" />
-            <rect x="26" y="19" width="5" height="2" fill={CYAN} opacity="0.8" />
-            <rect x="34" y="19" width="5" height="2" fill={MAGENTA} opacity="0.7" />
+            <rect x="28" y="15" width="12" height="2" fill="#14181f" />
+            <rect x="28" y="15" width="12" height="1" fill={CYAN} opacity="0.7" />
           </g>
         )}
         {on.has('neck') && <rect x="29" y="27" width="6" height="2" fill={MAGENTA} />}
@@ -185,11 +184,12 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
         )}
         {on.has('gown') && (
           <g>
-            <rect x="16" y="48" width="36" height="44" fill="#07080c" />
-            <rect x="18" y="50" width="32" height="2" fill={GOLD} />
-            <rect x="22" y="60" width="24" height="1" fill={MAGENTA} />
-            <rect x="26" y="72" width="16" height="1" fill={CYAN} />
-            <rect x="30" y="84" width="8" height="1" fill={GOLD} />
+            <rect x="16" y="58" width="8" height="40" fill="#07080c" />
+            <rect x="40" y="58" width="8" height="40" fill="#07080c" />
+            <rect x="22" y="56" width="20" height="8" fill="#12141a" />
+            <rect x="24" y="58" width="16" height="1" fill={GOLD} />
+            <rect x="16" y="70" width="8" height="1" fill={MAGENTA} />
+            <rect x="40" y="80" width="8" height="1" fill={MAGENTA} />
           </g>
         )}
         {on.has('gloves') && (
@@ -227,15 +227,18 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
         )}
         {on.has('trench') && (
           <g>
-            <rect x="12" y="30" width="44" height="40" fill="#0c0e12" opacity="0.92" />
-            <rect x="12" y="30" width="44" height="1" fill={CYAN} />
+            <rect x="10" y="32" width="8" height="40" fill="#1a1e26" />
+            <rect x="46" y="32" width="8" height="40" fill="#1a1e26" />
+            <rect x="16" y="30" width="6" height="6" fill="#1a1e26" />
+            <rect x="42" y="30" width="6" height="6" fill="#1a1e26" />
           </g>
         )}
         {on.has('cloak') && (
           <g>
-            <rect x="8" y="28" width="52" height="36" fill="#07080c" />
-            <rect x="8" y="28" width="52" height="2" fill={MAGENTA} />
-            <rect x="8" y="62" width="52" height="1" fill={CYAN} />
+            <rect x="8" y="30" width="6" height="40" fill="#101218" />
+            <rect x="50" y="30" width="6" height="40" fill="#101218" />
+            <rect x="8" y="30" width="6" height="1" fill={MAGENTA} />
+            <rect x="50" y="68" width="6" height="1" fill={MAGENTA} />
           </g>
         )}
         {on.has('pauldron') && (

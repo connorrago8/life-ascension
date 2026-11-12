@@ -34,7 +34,11 @@ export function ActivityLog({ onLogged }: { onLogged?: () => void }) {
     });
     setBusy(false);
     if (error) {
-      setMessage(error.message);
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const network = /fetch|network/i.test(error.message);
+      setMessage(offline || network
+        ? "This activity wasn't saved. Reconnect and try again."
+        : error.message);
       return;
     }
     setTitle('');

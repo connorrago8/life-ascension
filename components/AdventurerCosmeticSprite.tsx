@@ -137,21 +137,26 @@ export function AdventurerCosmeticSprite({ worn, label = 'Adventurer' }: { worn:
             <rect x="32" y="38" width="4" height="8" fill={GUN} />
           </g>
         )}
-        {on.has('longcoat') && <rect x="14" y="32" width="40" height="36" fill="#0c0e12" />}
+        {on.has('longcoat') && (
+          <g>
+            <rect x="10" y="50" width="6" height="2" fill={CYAN} />
+            <rect x="52" y="50" width="6" height="2" fill={CYAN} />
+            <rect x="12" y="52" width="2" height="2" fill={CYAN} opacity="0.7" />
+          </g>
+        )}
         {on.has('gold-filigree-armor') && (
           <g>
-            <rect x="18" y="34" width="32" height="18" fill="#14120c" />
-            <rect x="22" y="36" width="24" height="1" fill={GOLD} />
-            <rect x="22" y="42" width="24" height="1" fill={GOLD} />
-            <rect x="32" y="36" width="4" height="12" fill={GOLD} />
+            <rect x="8" y="28" width="12" height="10" fill="#12141a" />
+            <rect x="8" y="28" width="12" height="1" fill={GOLD} />
+            <rect x="10" y="32" width="8" height="1" fill={GOLD} />
           </g>
         )}
         {on.has('legendary-coat') && (
           <g>
-            <rect x="12" y="30" width="44" height="40" fill="#07080c" />
-            <rect x="12" y="30" width="44" height="2" fill={GOLD} />
-            <rect x="12" y="68" width="44" height="1" fill={CYAN} />
-            <rect x="32" y="36" width="4" height="20" fill={MAGENTA} />
+            <rect x="10" y="34" width="6" height="28" fill="#101218" />
+            <rect x="52" y="34" width="6" height="28" fill="#101218" />
+            <rect x="12" y="36" width="2" height="16" fill={GOLD} />
+            <rect x="54" y="48" width="2" height="8" fill={CYAN} />
           </g>
         )}
         {on.has('traveler-pants') && <rect x="42" y="8" width="3" height="12" fill="#9ec9d6" />}

@@ -474,17 +474,17 @@ export default function CompanionPage() {
       {showTutorial && (
         <Tutorial
           cards={[
-            { title: 'Welcome', body: "You're Connor's companion in LIFE ASCENSION. His hero greets you. Your real-life quests power him.", art: (
+            { title: 'Your story starts here, Izzy.', body: 'Small things count. Every moment you log adds to your journey, and every level brings a new way to make your character your own.', nextLabel: 'Enter my story', jumpTo: 3, secondary: 'How it works', secondaryIndex: 1, art: (
               <div className="avatar-pair">
                 <PixelAvatar who="izzy" size={72} alt="Izzy, a pixel princess with a silver tiara" />
                 <PixelAvatar who="connor" size={72} alt="Connor's hero, a pixel knight in silver armor" />
               </div>
             ) },
-            { title: 'Send a quest', body: 'Type a task, add a note, and pick a day, like his off day. It lands straight on his board.' },
-            { title: 'Watch progress', body: "You'll see it marked done when he finishes it, and he earns XP." },
-            { title: 'Your first quest', body: 'Send a real one now. It lands on his board.' },
+            { title: 'Live it.', body: 'Cook, move, rest, create, or do something that matters to you.' },
+            { title: 'Log it.', body: 'Write what you did. See your XP before you save it.' },
+            { title: 'Make it yours.', body: 'Level up, unlock new gear, and choose what to wear. Nothing equips itself.' },
           ]}
-          finishLabel="Send your first quest"
+          finishLabel="Start my journey"
           lastCard={(
             <form onSubmit={(event) => {
               event.preventDefault();
@@ -515,7 +515,7 @@ export default function CompanionPage() {
               </select>
               <label htmlFor="tutorial-quest">First quest</label>
               <input id="tutorial-quest" className="field" maxLength={120} value={questTitle} onChange={(event) => setQuestTitle(event.target.value)} required />
-              <button className="btn" type="submit" disabled={busy || !questTitle.trim() || !name.trim()}>Send your first quest</button>
+              <button className="btn" type="submit" disabled={busy || !questTitle.trim() || !name.trim()}>Start my journey</button>
             </form>
           )}
           onClose={() => rememberTutorial('izzy')}

@@ -1,0 +1,217 @@
+LIFE ASCENSION — CONTENT & DESIGN PACK V2
+Design-only handoff | November 11, 2026
+No code, database, branch, or deployment changes authorized.
+
+GLOBAL ART DIRECTION
+Dark fantasy × cyberpunk; detailed 16-bit pixel art; adult, realistic proportions. Charcoal and midnight glass; neon magenta #ff2bd6, cyan #00f0ff, aged gold #c9a227. No pastel, chibi, kawaii, or heart motifs. Pixel edges should remain crisp. All glow should be restrained and legible against dark backgrounds. Each piece must work as a modular layer without changing the base character silhouette unnecessarily. Cosmetics have no combat stats. Existing item identifiers and unlocks must be preserved; names below are display copy proposals.
+
+1. SPRITE BRIEFS — 50 COSMETICS
+
+IZZY (default L1: white tank, loose brown trousers, scuffed boots)
+L02 Nightgrip Gloves [gloves]: Short black fingerless leather gloves; narrow silhouette, worn seams, dull graphite knuckles, no glow.
+L04 Silver Thorn [face]: Tiny silver nostril hoop; single cool-metal pixel highlight, subtle profile visibility, no glow.
+L06 Shadow Cargo [bottom]: Loose charcoal cargo trousers with asymmetric pocket flaps and worn knees; black webbing, no glow.
+L08 Midnight Crop [top]: Close-fitting black cropped top with straight neckline; matte cotton and faint gunmetal seam pixels, no glow.
+L10 Rogue's Leather [jacket]: Waist-length black leather jacket, angled lapels and cropped sleeves; cracked leather and aged-silver hardware, no glow.
+L12 First Mark [tattoo/wrist]: Small black thorn-and-rune wrist mark; crisp two-tone ink, no glow, stacks with later tattoos.
+L14 Ironstep Boots [boots]: Heavy ankle-high combat boots, thick soles and diagonal buckles; worn black leather, muted steel, no glow.
+L16 Moonsteel Circlet [head]: Thin silver band framing forehead without covering hair; aged-metal center glyph, tiny cyan reflection only.
+L18 Neon Rebellion [hair accent]: One asymmetric magenta streak following existing hair volume; pixel-highlight strands, low-intensity glow at tips.
+L20 Azure Serpent [tattoo/arm]: Cyan serpent-shaped circuit tattoo wrapping one arm; luminous narrow lines, skin remains visible.
+L22 Wanderer's Rig [hip]: Low-profile black utility belt with one side pouch and hanging clip; dark nylon, antique brass, no glow.
+L24 Spectral Sight [face/visor]: Slim single-eye translucent visor angled over brow; smoked glass, cyan edge illumination, face stays readable.
+L26 Nightfall Trench [jacket/outer]: Long split-tail charcoal trench coat with high collar; weathered leather, graphite panels, no glow.
+L28 Magenta Oath [tattoo/neck]: Fine magenta rune tracing side of neck; thin controlled emission, no broad neon bloom.
+L30 Nightcat Headset [head]: Sleek black over-ear headset with two short angular cat-ear antennae; gunmetal shell, faint cyan status dots; tactical, not cute.
+L32 Runebearer's Lantern [back/accessory]: Small floating antique lantern at shoulder height; dark iron cage, contained cyan flame, modest halo.
+L34 Arcsteel Corset [top/armor]: Structured black leather bodice with steel ribs and narrow waist silhouette; aged-gold clasps, no glow.
+L36 Spellbound Hands [tattoo/hands]: Delicate cyan glyphs across fingers and backs of hands; thin circuit-rune glow, stacks with wrist ink.
+L38 Eclipse Mantle [back/cloak]: Hooded black cloak with split hem; heavy charcoal fabric, fine magenta trim that glows only at edges.
+L40 Wisp Drone [companion]: Palm-sized hovering faceted rune drone beside shoulder; obsidian metal, cyan central eye, sparse floating pixels.
+L42 Obsidian Guard [shoulder]: One asymmetrical black pauldron, broad but not bulky; chipped obsidian plating, engraved aged-gold border.
+L44 Sovereign's Ink [tattoo/back]: Large symmetrical black-and-magenta arcane circuitry across upper back; visible when clothing allows, layered under garments.
+L46 Ghostsilver Hair [hair]: Full silver hair recolor with dark roots and magenta-cyan tip pixels; retains chosen haircut silhouette, faint tip glow.
+L48 Astral Veil [aura]: Thin broken arcs of cyan and magenta around feet and shoulders; sparse slow particles, no face obscuring bloom.
+L50 Obsidian Empress [outfit/top+bottom visual set]: Floor-length split-panel black techwear gown with fitted armored bodice; aged-gold filigree, tiny magenta seams, elegant adult silhouette. Equip as one cosmetic set if existing slots permit, otherwise coordinate linked layers without overriding other choices silently.
+
+CONNOR (base L1: plain neutral adventurer clothes, practical boots; exact base outfit must follow existing implementation)
+L02 Wanderer's Wraps [gloves]: Frayed charcoal hand wraps with exposed fingers; compact silhouette, rough linen texture, no glow.
+L04 Iron Signet [hand accessory]: Heavy blackened-steel signet ring; square aged-gold crest and one specular pixel, no glow.
+L06 Ranger's Trousers [bottom]: Straight-cut dark charcoal travel trousers with knee reinforcement; waxed canvas and leather straps, no glow.
+L08 Ashen Tunic [top]: Fitted soot-black tunic with asymmetrical seam and rolled cuffs; coarse woven fabric, no glow.
+L10 Blackthorn Jacket [jacket]: Rugged hip-length leather jacket with angular shoulders; black-brown grain, dark steel fasteners, no glow.
+L12 First Oath [tattoo/forearm]: Minimal black angular oath rune along inner forearm; sharp edges, no glow, tattoo-stack compatible.
+L14 Ironbound Boots [boots]: Tall black boots with reinforced toe caps and stacked soles; scuffed leather and muted iron, no glow.
+L16 Wayfinder's Circlet [head]: Narrow dark-metal forehead band with aged-gold compass engraving; unobtrusive profile, no glow.
+L18 Emberstreak [hair accent]: One cool silver-blue streak through existing hair; preserve hair silhouette, subtle cyan tip glint.
+L20 Riftbrand [tattoo/arm]: Vertical cyan runic fracture down one arm; broken luminous linework with minimal bloom.
+L22 Pathfinder's Rig [hip]: Broad black utility belt with compact pouches and a hanging relic hook; brass hardware, no glow.
+L24 Voidglass Lens [face]: Single angular eyepiece over one eye; smoked violet lens, cyan reticle pixel, face remains visible.
+L26 Duskwalker Coat [jacket/outer]: Knee-length split charcoal coat with structured armored collar; matte fabric and black leather panels.
+L28 Oathbound Sigil [tattoo/neck]: Small magenta sigil climbing one side of neck; fine luminous line, subdued halo.
+L30 Shadowcomms [head]: Low-profile black tactical earpiece with slim headband; graphite plating, tiny cyan indicator, no animal-ear shape.
+L32 Lantern of Resolve [back/accessory]: Floating angular iron lantern behind shoulder; blue arcane flame behind smoky glass, contained glow.
+L34 Riftbound Harness [top/armor]: Layered black leather chest harness over fitted armor panels; dark steel buckles, aged-gold rivets.
+L36 Runeforged Hands [tattoo/hands]: Geometric cyan runes across hands and knuckles; fine lines, stackable with forearm tattoo.
+L38 Nightfall Cloak [back/cloak]: Long split-tail hooded cloak in black wool; narrow cyan piping and weighted hem, subtle edge glow.
+L40 Sentinel Wisp [companion]: Small hovering triangular scout with rotating ring silhouette; black metal, one cyan eye, restrained particle trail.
+L42 Obsidian Vanguard [shoulder]: Angular one-sided pauldron with layered obsidian plates; engraved aged-gold ridges, heroic not oversized.
+L44 Ascendant's Mark [tattoo/back]: Full-back interconnected rune map in charcoal and magenta; appears beneath clothing, visible with exposed back.
+L46 Stormsilver Hair [hair]: Silver recolor with icy blue tips and dark roots; preserve haircut shape, faint cyan edge glimmer.
+L48 Riftwalker Aura [aura]: Sparse blue-violet rift fragments orbit near shoulders and boots; no constant full-body glow or visual obstruction.
+L50 Obsidian Ascendant [outfit/armor set]: Tailored black armor with layered plates, long split coat tails and aged-gold filigree; small cyan rune channels, regal adult silhouette. Equip as a coordinated set without silently changing other slots.
+
+ART IMPLEMENTATION NOTES: Maintain consistent sprite canvas, anchor points, lighting direction, and front/back layer ordering. Headgear must not erase hair unless intentionally masked. Tattoos render beneath clothes; auras and floating companions render separately. Equipment may be worn or removed explicitly. The cat-ear headset stays as an optional L30 unlock.
+
+2. IZZY'S FIRST LOGIN — COPY
+
+Welcome headline: "Your story starts here, Izzy."
+Welcome body: "Small things count. Every moment you log adds to your journey, and every level brings a new way to make your character your own."
+Primary CTA: "Enter my story"
+Secondary CTA: "How it works"
+
+Three-step intro:
+Step 1 — "Live it." / "Cook, move, rest, create, or do something that matters to you."
+Step 2 — "Log it." / "Write what you did. See your XP before you save it."
+Step 3 — "Make it yours." / "Level up, unlock new gear, and choose what to wear. Nothing equips itself."
+Completion CTA: "Start my journey"
+
+Empty states:
+Home / recent activity: "Your story is just beginning. Log your first moment to see it here." CTA: "Log an activity"
+Quests / open: "No quests waiting. Make one worth doing." CTA: "New quest"
+Quests / completed: "Nothing completed yet. Your first victory is waiting."
+Character / unlocks: "Your next piece is ahead. Keep going to reveal it."
+Character / wardrobe: "No extra gear yet. Your first unlock arrives at Level 2."
+Rewards / bonus drops: "No bonus finds yet. Keep showing up for the things you enjoy."
+Activity history: "No moments logged yet. Even the small ones belong here."
+Couple quests: "Your next shared adventure hasn't been chosen yet." CTA: "Explore couple quests"
+Loading: "Gathering your story…"
+Error: "Couldn't load this right now. Your progress hasn't been changed." CTA: "Try again"
+Offline save failure: "This activity wasn't saved. Reconnect and try again."
+
+3. SUNDAY WEEKLY RECAP — TEMPLATE
+
+Schedule/display proposal: Show on Sunday in America/Chicago after the 5:00 AM game-day boundary. Define recap week explicitly as previous Sunday 5:00 AM through current Sunday 4:59:59 AM (seven complete game days); do not silently change existing weekly quest/reset rules. If the product wants the current Sunday included, label the recap as in progress and only finalize after the next boundary. No fabricated activity or inferred emotional sentiment.
+
+Headline: "{headline}"
+Subheading: "Your week in Life Ascension · {start_date}–{end_date}"
+Connor XP: "Connor: +{connor_xp} XP · Level {connor_level}"
+Izzy XP: "Izzy: +{izzy_xp} XP · Level {izzy_level}"
+Shared quests: "Together: {completed_couple_quests} couple quest{plural} completed"
+Best moment: "Moment worth remembering: {actual_activity_title}." If none: "Your next favorite moment is still ahead."
+Couple highlight: "Together this week: {actual_completed_couple_quest}." If none: "No couple quest completed this week. Pick one small thing to do together."
+Unlocks: "New looks: {actual_unlock_names}." If none: "No new gear this week. Every bit of XP still counts."
+Next-week nudge: "One idea for next week: {suggested_uncompleted_quest}." If no candidate: "Choose one small quest and make it yours."
+CTA: "See our week"
+
+10 example headlines:
+1. "Another chapter written."
+2. "Small wins. Real progress."
+3. "The week you kept showing up."
+4. "Two paths, one adventure."
+5. "A little stronger than last Sunday."
+6. "Your story is taking shape."
+7. "Progress looks good on you."
+8. "Every moment left a mark."
+9. "This week belongs in the story."
+10. "Onward to the next chapter."
+
+4. DATE-NIGHT PLANNER — 30 IDEAS
+
+Cost legend: $ = inexpensive, $$ = moderate, $$$ = splurge. Tags are relative, not quoted prices. Short ~1–2 hours; Evening ~2–5 hours; Full day ~5+ hours. Home/out indicates main setting.
+
+01 | Cook a new recipe together | $ | Evening | Home | "Pick a dish neither of you has made and turn dinner into a shared experiment."
+02 | No-phone walk | $ | Short | Out | "Leave the scrolling behind and follow whichever street looks interesting."
+03 | Candlelit takeout | $$ | Evening | Home | "Dress up your favorite delivery like a reservation for two."
+04 | Board-game duel | $ | Evening | Home | "Choose a game, invent a prize, and let friendly rivalry take over."
+05 | Sunset lookout | $ | Short | Out | "Find a view and stay until the city lights come on."
+06 | Coffee-shop crawl | $$ | Short | Out | "Split two drinks at two cafés and pick your favorite."
+07 | Build a shared playlist | $ | Short | Home | "Trade songs and tell the stories attached to them."
+08 | Museum afternoon | $$ | Full day | Out | "Choose exhibits for each other and compare what caught your eye."
+09 | Make homemade pizza | $ | Evening | Home | "Each design half a pizza, then trade slices."
+10 | Thrift-store challenge | $ | Short | Out | "Find each other the funniest useful item under a small budget."
+11 | Backyard or living-room picnic | $ | Evening | Home | "Lay out a blanket, snacks, and a little change of scenery."
+12 | Pottery or art class | $$$ | Evening | Out | "Make imperfect keepsakes you'll remember longer than the lesson."
+13 | Photo scavenger hunt | $ | Short | Out | "Find five textures, colors, or moments worth photographing together."
+14 | Recreate your first date | $$ | Evening | Out | "Return to the details that started your story."
+15 | Stargazing drive | $ | Evening | Out | "Find darker skies, bring blankets, and name your own constellations."
+16 | Bookstore exchange | $ | Short | Out | "Choose a book for each other and explain why."
+17 | At-home spa evening | $ | Evening | Home | "Put on music, slow down, and make rest the plan."
+18 | Live jazz or small concert | $$$ | Evening | Out | "Let someone else's music set the pace for the night."
+19 | Neighborhood food tour | $$ | Evening | Out | "Share one small dish at each of three stops."
+20 | Mini-golf rivalry | $$ | Short | Out | "Compete for bragging rights, not a serious scorecard."
+21 | Bake something ambitious | $ | Evening | Home | "Attempt a dessert that's slightly beyond your usual comfort zone."
+22 | Day trip to a nearby town | $$ | Full day | Out | "Pick a destination and discover it one block at a time."
+23 | Rooftop dinner | $$$ | Evening | Out | "Make an ordinary evening feel like an occasion."
+24 | Build a memory box | $ | Evening | Home | "Gather tickets, notes, and photos from the moments you want to keep."
+25 | Farmers-market morning | $ | Short | Out | "Choose one ingredient and invent a meal around it."
+26 | Arcade night | $$ | Evening | Out | "Trade tokens, challenge each other, and laugh at the high scores."
+27 | Movie marathon with a theme | $ | Evening | Home | "Pick a genre, make matching snacks, and settle in."
+28 | Botanical garden wander | $$ | Full day | Out | "Spend a slow day somewhere green and unfamiliar."
+29 | Hotel staycation | $$$ | Full day | Out | "Explore your own city as though you've just arrived."
+30 | Plan a dream trip | $ | Evening | Home | "Build a fantasy itinerary, then choose one affordable piece to make real."
+
+5. STREAK SHIELD — PLAYER-FACING RULES AND COPY
+
+PROPOSAL, NOT CONFIRMED EXISTING MECHANIC. Requires Connor's approval before implementation. Never silently change streak calculations.
+
+Rules text: "Once each calendar month, a Streak Shield can protect your daily streak if you miss one qualifying game day. It keeps your streak from resetting, but it does not complete a quest, award XP, or increase your streak count for the missed day. Your next qualifying day continues from your last earned streak count. Unused shields do not roll over. A second missed day without a shield resets the streak."
+Boundary: "A game day runs from 5:00 AM to 4:59 AM America/Chicago. The monthly allowance resets at the first 5:00 AM game-day boundary assigned to the new local calendar month; this exact interpretation needs product approval."
+Available label: "Streak Shield ready · 1 this month"
+Used label: "Streak Shield used · 0 remaining"
+Activation: "Streak protected. You missed a day, but your journey continues. No XP was awarded."
+Next-day nudge: "Your shield saved your streak. Complete a quest today to keep it going."
+No shield remaining: "No shields left this month. Your next qualifying day starts a new streak."
+Accessibility: Never rely on glow/color alone; always show the shield state in text.
+
+6. LEVEL TITLES — L1 TO L50 (EVERY FIVE LEVELS, PLUS L1)
+
+Level | Connor | Izzy
+L01 | The Unmarked | The Unwritten
+L05 | Ember Walker | Streetborn
+L10 | Ashbound Wanderer | Night Rogue
+L15 | Iron Wayfinder | Silver Thorn
+L20 | Rift Initiate | Azure Marked
+L25 | Shadow Pathfinder | Neon Drifter
+L30 | Voidrunner | Nightcat Operative
+L35 | Rune Warden | Arcsteel Adept
+L40 | Rift Sentinel | Wisp Arcanist
+L45 | Obsidian Vanguard | Obsidian Heiress
+L50 | The Ascendant | Obsidian Sovereign
+
+Titles are cosmetic labels, not stats or permanent character names. If an existing title conflicts, preserve its identifier and treat this as optional display copy. Between milestones, display the most recently earned title. Avoid implying couple hierarchy.
+
+7. QUEST FLAVOR TEXT — SIX PHARMACY + FIFTEEN COUPLE QUESTS
+
+PHARMACY (weekly; work-related, no patient or confidential information):
+1. Technician schedule — "Set the crew's week in motion with a clear, fair plan."
+2. Pharmacist schedule — "Keep the watch covered and every shift accounted for."
+3. Supplies order — "Restock the essentials before the shelves run thin."
+4. ULearn check — "Clear the training ledger and keep your skills sharp."
+5. Attendance check — "Review the week's coverage and catch gaps early."
+6. PTO check — "Mark upcoming absences so the team can plan ahead."
+
+COUPLE QUESTS:
+1. Cook dinner together — "Turn ingredients and teamwork into a meal worth remembering."
+2. A walk without phones — "Leave the noise behind and rediscover the art of talking."
+3. Coffee date — "Share a warm drink and an unhurried hour."
+4. Plan our next adventure — "Put a new pin on the map of your shared story."
+5. One thoughtful surprise — "Make an ordinary day unexpectedly bright."
+6. Game night — "Trade the day's demands for a little friendly competition."
+7. Sunday reset — "Restore your shared space before the next chapter begins."
+8. Try something new — "Step outside the familiar and bring home a new memory."
+9. At-home movie night — "Dim the lights and disappear into a story together."
+10. Make a shared playlist — "Build a soundtrack only the two of you fully understand."
+11. Memory lane — "Revisit the moments that brought you here."
+12. Workout together — "Move side by side, at your own pace."
+13. A real check-in — "Make room for the things that matter but rarely get said."
+14. Call someone we love — "Keep a connection strong beyond your own front door."
+15. Our next chapter — "Choose one shared goal and take its first small step."
+
+FINAL HANDOFF NOTES
+- This is copy and art direction only. No changes to source code, branches, migrations, environments, or production.
+- The Streak Shield is a new design proposal and must not be treated as approved behavior.
+- Weekly recap timing is a proposal; confirm it against existing weekly reset semantics.
+- Preserve existing IDs, unlocked items, ownership, XP history, and equipped state.
+- For art, use sprite layers, not CSS rectangles or effects that obscure the character.
+- Maintain independent progression for Connor and Izzy. Couple quest rewards must not silently double-award XP.
