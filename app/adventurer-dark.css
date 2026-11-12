@@ -1,0 +1,88 @@
+/* Connor's cosmetic track only. The rest of the adventurer app keeps style.css. */
+.adventurer-track {
+  --neon: #ff2bd6;
+  --cyan: #00f0ff;
+  --gold: #c9a227;
+  margin-top: 16px;
+  padding: 14px;
+  background: #12141a;
+  color: #e8eaed;
+  border: 1px solid #2c313a;
+  border-radius: 14px;
+}
+
+.adventurer-track .adventurer-stage {
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #0c0e12;
+  border: 1px solid #2c313a;
+  border-radius: 16px;
+}
+
+.adventurer-track .adventurer-cosmetic-sprite {
+  width: 180px;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.adventurer-track .cq-section {
+  margin: 0 0 8px;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.adventurer-track .muted {
+  color: #9aa3ae;
+}
+
+.adventurer-track .cq-track {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.adventurer-track .cq-tier {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 52px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #0c0e12;
+  border: 1px solid #2c313a;
+}
+
+.adventurer-track .cq-tier.is-owned {
+  border-color: var(--gold);
+}
+
+.adventurer-track .cq-tier-level {
+  color: var(--gold);
+  font-weight: 650;
+  text-align: center;
+}
+
+.adventurer-track .cq-lock {
+  color: #6d7580;
+  font-size: 0.78rem;
+}
+
+.adventurer-track .btn {
+  background: var(--neon);
+  color: #0c0e12;
+  border-radius: 12px;
+}
+
+.adventurer-track .btn.ghost {
+  background: transparent;
+  color: #e8eaed;
+  border: 1px solid #3c4450;
+}

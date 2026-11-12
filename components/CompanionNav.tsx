@@ -8,8 +8,20 @@ function current(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function CompanionNav() {
-  const pathname = usePathname() || '/companion/home';
+function Icon({ href }: { href: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      {href.endsWith('/home') && <path d="M4 11.5 12 4l8 7.5V20h-5v-6H9v6H4z" />}
+      {href.endsWith('/quests') && <path d="M7 4h10v16H7zM9 8h6M9 12h6M9 16h4" />}
+      {href.endsWith('/character') && <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-6 8a6 6 0 0 1 12 0" />}
+      {href.endsWith('/history') && <path d="M6 4h12v16H6zM8 8h8M8 12h8M8 16h5" />}
+    </svg>
+  );
+}
+
+export function CompanionNav({ pathname }: { pathname?: string }) {
+  const live = usePathname() || '/companion/home';
+  const path = pathname ?? live;
   return (
     <nav className="app-nav companion-nav" aria-label="Companion">
       <Link href="/companion/home" className="nav-brand">LIFE ASCENSION</Link>
@@ -19,8 +31,9 @@ export function CompanionNav() {
             key={item.href}
             href={item.href}
             className="nav-link"
-            aria-current={current(pathname, item.href) ? 'page' : undefined}
+            aria-current={current(path, item.href) ? 'page' : undefined}
           >
+            <Icon href={item.href} />
             <span>{item.label}</span>
           </Link>
         ))}

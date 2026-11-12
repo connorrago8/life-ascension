@@ -7,6 +7,8 @@ import { collapseCompanionQuests, companionStatusLabel, COMPANION_COLORS, COMPAN
 import { CompanionHome, type CompanionView } from './CompanionHome';
 import { COMPANION_INVITE_STORAGE_KEY, companionInvitePath, readInviteCode } from '../../../lib/companionInvite';
 import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../../lib/companionQuestDraft';
+import { parseDateNight, sanitizeDateNight, type DateNightPlan } from '../../../lib/dateNightPlan';
+import { DateNightOffer } from '../../../components/couple/DateNightOffer';
 import { gameDayParts, weekStart } from '../../../lib/questStreak';
 import { supabase } from '../../../lib/supabase';
 import { PixelAvatar } from '../../../components/PixelAvatar';
@@ -78,6 +80,7 @@ export default function CompanionPage() {
   const [justType, setJustType] = useState(false);
   const [brainDump, setBrainDump] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
+  const [dateNight, setDateNight] = useState<DateNightPlan | null>(null);
   const [draftSource, setDraftSource] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showConnorTip, setShowConnorTip] = useState(false);
@@ -278,6 +281,7 @@ export default function CompanionPage() {
                 void run(async () => {
                   let next = fallbackQuestDrafts(brainDump);
                   let source = 'fallback';
+                  let night = parseDateNight(brainDump);
                   try {
                     const response = await fetch('/api/companion/draft', {
                       method: 'POST',
@@ -285,20 +289,24 @@ export default function CompanionPage() {
                       body: JSON.stringify({ text: brainDump }),
                     });
                     if (response.ok) {
-                      const payload = await response.json() as { items?: QuestDraft[]; source?: string };
-                      if (Array.isArray(payload.items) && payload.items.length > 0) next = payload.items;
-                      if (payload.source === 'model' || payload.source === 'fallback') source = payload.source;
+                      const payload = await response.json() as { items?: QuestDraft[]; source?: string; dateNight?: unknown };
+                      night = sanitizeDateNight(payload.dateNight) ?? (payload.dateNight ? null : night);
+                      if (night) next = [];
+                      else if (Array.isArray(payload.items) && payload.items.length > 0) next = payload.items;
+                      if (payload.source === 'model' || payload.source === 'fallback' || payload.source === 'date-night') source = payload.source;
                     }
                   } catch { /* The local splitter already filled next. */ }
-                  setDrafts(next);
+                  setDateNight(night);
+                  setDrafts(night ? [] : next);
                   setDraftSource(source);
-                  setMessage(next.length ? 'Check the list, then send.' : 'No quests found in that note.');
+                  setMessage(night ? 'That reads as a date night.' : next.length ? 'Check the list, then send.' : 'No quests found in that note.');
                 });
               }}>
                 <label htmlFor="brain-dump">Type everything on your mind</label>
                 <textarea id="brain-dump" className="field" maxLength={1000} value={brainDump} onChange={(event) => setBrainDump(event.target.value)} />
                 <button className="btn" type="submit" disabled={busy || brainDump.trim().length < 1}>Turn into quests</button>
                 {draftSourceLabel(draftSource) && <p className="companion-draft-source" role="status">{draftSourceLabel(draftSource)}</p>}
+                {dateNight && <DateNightOffer plan={dateNight} />}
               </form>
             ) : (
             <form onSubmit={(event) => {
@@ -474,17 +482,17 @@ export default function CompanionPage() {
       {showTutorial && (
         <Tutorial
           cards={[
-            { title: 'Welcome', body: "You're Connor's companion in LIFE ASCENSION. His hero greets you. Your real-life quests power him.", art: (
+            { title: 'Your story starts here, Izzy.', body: 'Small things count. Every moment you log adds to your journey, and every level brings a new way to make your character your own.', nextLabel: 'Enter my story', jumpTo: 3, secondary: 'How it works', secondaryIndex: 1, art: (
               <div className="avatar-pair">
                 <PixelAvatar who="izzy" size={72} alt="Izzy, a pixel princess with a silver tiara" />
                 <PixelAvatar who="connor" size={72} alt="Connor's hero, a pixel knight in silver armor" />
               </div>
             ) },
-            { title: 'Send a quest', body: 'Type a task, add a note, and pick a day, like his off day. It lands straight on his board.' },
-            { title: 'Watch progress', body: "You'll see it marked done when he finishes it, and he earns XP." },
-            { title: 'Your first quest', body: 'Send a real one now. It lands on his board.' },
+            { title: 'Live it.', body: 'Cook, move, rest, create, or do something that matters to you.' },
+            { title: 'Log it.', body: 'Write what you did. See your XP before you save it.' },
+            { title: 'Make it yours.', body: 'Level up, unlock new gear, and choose what to wear. Nothing equips itself.' },
           ]}
-          finishLabel="Send your first quest"
+          finishLabel="Start my journey"
           lastCard={(
             <form onSubmit={(event) => {
               event.preventDefault();
@@ -515,7 +523,7 @@ export default function CompanionPage() {
               </select>
               <label htmlFor="tutorial-quest">First quest</label>
               <input id="tutorial-quest" className="field" maxLength={120} value={questTitle} onChange={(event) => setQuestTitle(event.target.value)} required />
-              <button className="btn" type="submit" disabled={busy || !questTitle.trim() || !name.trim()}>Send your first quest</button>
+              <button className="btn" type="submit" disabled={busy || !questTitle.trim() || !name.trim()}>Start my journey</button>
             </form>
           )}
           onClose={() => rememberTutorial('izzy')}

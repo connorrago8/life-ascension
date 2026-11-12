@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { PixelAvatar } from '../../../components/PixelAvatar';
+import { SundayRecapCard } from '../../../components/couple/SundayRecapCard';
 import { collapseCompanionQuests, companionStatusLabel } from '../../../lib/companion';
 import { fallbackQuestDrafts, type QuestCadence } from '../../../lib/companionQuestDraft';
 import { gameDayParts, weekStart } from '../../../lib/questStreak';
@@ -10,11 +12,14 @@ import { supabase } from '../../../lib/supabase';
 type Quest = {
   id: string;
   title: string;
+  description?: string | null;
   dueOn: string | null;
+  rewardText?: string | null;
   status: string;
   cadence?: string | null;
   instanceId?: string | null;
   fromUser: string;
+  toUser?: string;
   nudgedToday?: boolean;
 };
 type Notice = { id: string; kind: string; questId: string | null; title: string | null; readAt: string | null };
@@ -28,7 +33,7 @@ export type CompanionView = {
   bond: { role: 'inviter' | 'companion'; partnerName?: string | null; partnerTitle?: string | null } | null;
   identity: { displayName: string; title: string; questColor?: string; avatarPath?: string | null } | null;
   quests: Quest[];
-  activities?: { id: string; title: string; voided?: boolean }[];
+  activities?: { id: string; title: string; voided?: boolean; xp?: number | null; createdAt?: string; note?: string | null }[];
   notices?: Notice[];
   rewards?: Reward[];
   repeats?: Repeat[];
@@ -135,7 +140,7 @@ export function CompanionHome({
         {(board.notices ?? []).map((item) => (
           <div className="companion-quest" key={item.id}>
             {item.kind === 'completed' && <PixelAvatar who="izzy" size={40} alt="Izzy, smiling in her tiara" />}
-            <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `${item.title ?? 'A quest'} is done`}</p>
+            <p>{item.kind === 'thanks' ? `Thank you for ${item.title ?? 'that quest'}` : `Marked done: ${item.title ?? 'A quest'}`}</p>
             {izzy && item.kind === 'completed' && item.questId && (
               <button className="btn" type="button" disabled={busy} onClick={() => void call(async () => {
                 const { error } = await supabase().rpc('companion_thank', { p_quest: item.questId });
@@ -151,13 +156,11 @@ export function CompanionHome({
           })}>Mark read</button>
         )}
       </section>
+      <p className="muted"><Link href="/together">Shared quests and date nights</Link></p>
       {board.recap?.visible && (
         <section className="panel companion-card companion-greeting" aria-label="Sunday recap">
           <PixelAvatar who="izzy" size={72} alt="Izzy, your companion" />
-          <div>
-            <h2>This week</h2>
-            <p>{board.recap.done ?? 0} of her quests done. Streak {board.recap.streak ?? 0}. {board.recap.xp ?? 0} XP from those quests.</p>
-          </div>
+          <SundayRecapCard />
         </section>
       )}
       <section className="panel companion-card" aria-label="Milestones">
@@ -190,7 +193,7 @@ export function CompanionHome({
               <p key={item.id}>{item.unlocked ? `Unlocked: ${item.text}` : `${item.progress} of ${item.goal}. ${item.text}`}</p>
             ))}
           </section>
-          <section className="panel companion-card">
+          <section className="panel companion-card" id="off-day">
             <h2>Plan an off day</h2>
             {tip('izzy-planner', 'Pick a future day. The quest waits on his board until that game day.')}
             <form onSubmit={(event) => {

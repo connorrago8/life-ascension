@@ -1,0 +1,72 @@
+/* Polish for the companion shell and Connor's cosmetic track. Not the adventurer app. */
+
+@media (prefers-reduced-motion: reduce) {
+  .companion-shell *,
+  .companion-page *,
+  .adventurer-track * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .companion-page .cq-xpbar span,
+  .adventurer-track .xp-fill {
+    box-shadow: none;
+  }
+}
+
+.companion-shell .empty-state,
+.companion-page .empty-state {
+  background: rgba(16, 18, 24, 0.92);
+  border: 1px solid #2c313a;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  color: #9aa3ae;
+}
+
+.companion-shell .unlock-banner,
+.adventurer-track .unlock-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0c0e12;
+  color: #00f0ff;
+  border: 1px solid #00f0ff;
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+  z-index: 50;
+  font-weight: 650;
+}
+
+.companion-shell .domain-chip,
+.companion-page .domain-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  border: 1px solid #2c313a;
+}
+.companion-shell .domain-chip.hygiene,
+.companion-page .domain-chip.hygiene { border-color: #00f0ff; color: #00f0ff; }
+.companion-shell .domain-chip.home,
+.companion-page .domain-chip.home { border-color: #c9a227; color: #c9a227; }
+.companion-shell .domain-chip.physical_health,
+.companion-page .domain-chip.physical_health { border-color: #ff2bd6; color: #ff2bd6; }
+.companion-shell .domain-chip.mental_health,
+.companion-page .domain-chip.mental_health { border-color: #8aa0b8; color: #8aa0b8; }
+
+.companion-shell .bond-milestones,
+.companion-page .bond-milestones {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.companion-shell .next-piece,
+.companion-page .next-piece {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}

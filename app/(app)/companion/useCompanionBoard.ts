@@ -20,14 +20,14 @@ export function useCompanionBoard() {
       }
       const { data, error } = await client.rpc('companion_state');
       if (error) {
-        setMessage(error.message);
+        setMessage("Couldn't load this right now. Your progress hasn't been changed.");
         setReady(true);
         return;
       }
       setBoard(data as CompanionView);
       setReady(true);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Something went wrong');
+    } catch {
+      setMessage("Couldn't load this right now. Your progress hasn't been changed.");
       setReady(true);
     }
   }, []);

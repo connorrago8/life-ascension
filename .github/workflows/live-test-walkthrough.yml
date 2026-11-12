@@ -1,0 +1,39 @@
+name: Hosted TEST player walkthrough
+on:
+  push:
+    branches: [chatgpt/test-integration-20261111]
+    paths:
+      - .github/workflows/live-test-walkthrough.yml
+      - tests/browser/live-test-walkthrough.mjs
+permissions:
+  contents: read
+jobs:
+  hosted-walkthrough:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium --only-shell
+      - name: Prepare ephemeral encryption key
+        run: |
+          node --input-type=module <<'JS'
+          import {generateKeyPairSync} from 'node:crypto';
+          import {writeFileSync} from 'node:fs';
+          const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+          writeFileSync('/tmp/live-private.pem',privateKey.export({type:'pkcs8',format:'pem'}),{mode:0o600});
+          writeFileSync('/tmp/live-public.pem',publicKey.export({type:'spki',format:'pem'}));
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-test-public-key
+          path: /tmp/live-public.pem
+          retention-days: 1
+      - name: Run signed-in hosted TEST walkthrough
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tests/browser/live-test-walkthrough.mjs
