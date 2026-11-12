@@ -9,6 +9,10 @@ export type BoardQuest = {
   title: string;
   status: string;
   nudgedToday?: boolean;
+  description?: string | null;
+  rewardText?: string | null;
+  dueOn?: string | null;
+  toUser?: string;
 };
 
 export function QuestBoard({
@@ -16,12 +20,14 @@ export function QuestBoard({
   userId,
   busy,
   onNudge,
+  onComplete,
   completedOpen,
 }: {
   quests: readonly BoardQuest[];
   userId?: string | null;
   busy: boolean;
   onNudge: (id: string) => void;
+  onComplete?: (id: string) => void;
   /** When set, skip saved state. The live board leaves this unset and starts collapsed. */
   completedOpen?: boolean;
 }) {
@@ -52,7 +58,7 @@ export function QuestBoard({
     <div className="cq-board">
       <section aria-label="On his board">
         <h2 className="cq-section">On his board</h2>
-        {open.length === 0 && <p className="empty-state">No quests waiting. Make one worth doing. <a href="#send-quest">New quest</a></p>}
+        {open.length === 0 && <p className="empty-state">No active quests right now. Your next adventure will appear here.</p>}
         <ul className="cq-list">
           {open.map((quest) => (
             <QuestCard
@@ -61,10 +67,14 @@ export function QuestBoard({
               expanded={expanded === quest.id}
               onToggle={() => setExpanded((id) => id === quest.id ? null : quest.id)}
               action={quest.status !== 'completed' ? (
-                <button className="cq-nudge" type="button" disabled={busy || quest.nudgedToday} onClick={() => onNudge(quest.id)}>
-                  <span aria-hidden="true">♪</span>
-                  {quest.nudgedToday ? 'Nudged' : 'Nudge'}
-                </button>
+                <>
+                  {onComplete && quest.toUser && quest.toUser === userId && (
+                    <button className="btn" type="button" disabled={busy} onClick={() => onComplete(quest.id)}>Complete</button>
+                  )}
+                  <button className="cq-nudge" type="button" disabled={busy || quest.nudgedToday} onClick={() => onNudge(quest.id)}>
+                    {quest.nudgedToday ? 'Nudged' : 'Nudge'}
+                  </button>
+                </>
               ) : null}
             />
           ))}
@@ -113,7 +123,12 @@ function QuestCard({
     return (
       <li className="cq-card is-done is-compact">
         <span className="cq-glyph" aria-hidden="true">{questGlyph(quest.title)}</span>
-        <p className={expanded ? 'cq-title' : 'cq-title is-one'}>{quest.title}</p>
+        <div className="cq-card-main">
+          <p className={expanded ? 'cq-title' : 'cq-title is-one'}>{quest.title}</p>
+          {quest.description && <p className="muted">{quest.description}</p>}
+          {quest.rewardText && <p className="muted">Reward: {quest.rewardText}</p>}
+          {quest.dueOn && <p className="muted">Due {quest.dueOn}</p>}
+        </div>
         {long && (
           <button className="cq-more" type="button" aria-expanded={expanded} onClick={onToggle}>
             {expanded ? 'Less' : 'More'}
@@ -128,6 +143,9 @@ function QuestCard({
       <span className="cq-glyph" aria-hidden="true">{questGlyph(quest.title)}</span>
       <div className="cq-card-main">
         <p className={expanded || !long ? 'cq-title' : 'cq-title is-clamped'}>{quest.title}</p>
+        {quest.description && <p className="muted">{quest.description}</p>}
+        {quest.rewardText && <p className="muted">Reward: {quest.rewardText}</p>}
+        {quest.dueOn && <p className="muted">Due {quest.dueOn}</p>}
         {long && (
           <button className="cq-more" type="button" aria-expanded={expanded} onClick={onToggle}>
             {expanded ? 'Less' : 'More'}

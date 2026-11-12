@@ -1430,8 +1430,12 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
   padding: 14px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
-.companion-shell .cq-hero-card { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; align-items: center; }
-.companion-shell .companion-hero { width: 112px; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.companion-shell .cq-hero-card { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 12px; align-items: center; }
+.companion-shell .companion-hero { width: 160px; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.companion-shell .cq-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.companion-shell button.cq-stage { width: 100%; cursor: zoom-in; color: inherit; font: inherit; }
+.companion-shell .cq-stage .companion-hero { width: 240px; }
+.companion-shell .cq-stage.is-zoomed .companion-hero { width: 320px; }
 .companion-shell .cq-level-line { margin: 4px 0; font-weight: 700; color: var(--cq-gold); }
 .companion-shell .cq-xpbar { height: 10px; border-radius: 999px; background: #0c0e12; overflow: hidden; border: 1px solid var(--cq-line); }
 .companion-shell .cq-xpbar span { display: block; height: 100%; background: linear-gradient(90deg, var(--cq-cyan), var(--cq-magenta)); }

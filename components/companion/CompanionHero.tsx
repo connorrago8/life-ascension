@@ -1,7 +1,10 @@
 'use client';
 
-/** Layered 16-bit pixels. Level 1 is a white tank, loose brown trousers, scuffed boots.
- * Gear sits on the body and does not cover the face. No CSS clothing blocks.
+/** Layered 16-bit pixels on the existing 80×112 canvas.
+ * The production sheet's 64×96 frame is not applied: this pipeline stays put.
+ * Feet rest near y=104 and the centerline is x=40, not the sheet's (32,88) and x=32.
+ * Draw order: rear aura, ground shadow, body, clothes, face, hair accent, headwear, then floating props.
+ * One static frame. No walk or equip loops.
  */
 
 const SKIN = '#c4926a';
@@ -125,19 +128,7 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
           <ellipse cx="40" cy="58" rx="34" ry="52" stroke={CYAN} strokeWidth="1" opacity="0.45" />
         </g>
       )}
-      {on.has('drone') && (
-        <g>
-          <rect x="62" y="18" width="14" height="8" fill="#101218" stroke={CYAN} strokeWidth="1" />
-          <rect x="66" y="20" width="6" height="4" fill={MAGENTA} />
-          <rect x="64" y="26" width="10" height="1" fill={CYAN} />
-        </g>
-      )}
-      {on.has('clean') && (
-        <g>
-          <rect x="64" y="40" width="12" height="8" fill="#101218" stroke={GOLD} strokeWidth="1" />
-          <rect x="67" y="42" width="6" height="4" fill={CYAN} />
-        </g>
-      )}
+      <ellipse cx="40" cy="104" rx="14" ry="2" fill="#07080c" />
       <g shapeRendering="crispEdges">
         <Pixels shapes={BASE} />
         {on.has('streak') && <rect x="44" y="8" width="2" height="18" fill={CYAN} />}
@@ -280,6 +271,19 @@ export function CompanionHero({ worn, label = 'Izzy' }: { worn: readonly string[
         )}
         {on.has('back') && <rect x="28" y="40" width="12" height="10" fill="#222838" opacity="0.55" />}
       </g>
+      {on.has('drone') && (
+        <g shapeRendering="crispEdges">
+          <rect x="62" y="18" width="14" height="8" fill="#101218" stroke={CYAN} strokeWidth="1" />
+          <rect x="66" y="20" width="6" height="4" fill={MAGENTA} />
+          <rect x="64" y="26" width="10" height="1" fill={CYAN} />
+        </g>
+      )}
+      {on.has('clean') && (
+        <g shapeRendering="crispEdges">
+          <rect x="64" y="40" width="12" height="8" fill="#101218" stroke={GOLD} strokeWidth="1" />
+          <rect x="67" y="42" width="6" height="4" fill={CYAN} />
+        </g>
+      )}
     </svg>
   );
 }

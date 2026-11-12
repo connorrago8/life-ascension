@@ -39,7 +39,7 @@ export function levelUpLines(who: CosmeticBearer, level: number, item: { id: str
     headline: 'LEVEL UP',
     subhead: `Level ${level} reached.`,
     body: 'The road remembers every step.',
-    gear: item ? `New gear unlocked — ${item.label}.` : null,
+    gear: item ? `New gear unlocked: ${item.label}.` : null,
     reveal,
     awaiting: next == null ? null : `Your next gear unlock awaits at Level ${next}.`,
   };

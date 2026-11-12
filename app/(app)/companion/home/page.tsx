@@ -1,48 +1,49 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { PixelAvatar } from '../../../../components/PixelAvatar';
-import { ActivityLog } from '../../../../components/companion/ActivityLog';
+import { useEffect, useState } from 'react';
 import { CompanionHero } from '../../../../components/companion/CompanionHero';
-import { nextTierLabel, useCompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
+import { useCompanionWardrobe } from '../../../../components/companion/CompanionWardrobe';
 import { CosmeticLevelUp } from '../../../../components/CosmeticLevelUp';
-import { PASS_TIERS, questGlyph } from '../../../../lib/companionPass';
+import { PASS_TIERS } from '../../../../lib/companionPass';
 import { cosmeticTitle } from '../../../../lib/levelTitles';
+import { nextEvenUnlock } from '../../../../lib/levelUpCopy';
 import { levelProgress } from '../../../../lib/level';
+import { gameDayParts } from '../../../../lib/questStreak';
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
-type HomeMetrics = { openQuests: number; doneThisWeek: number };
-
 export default function CompanionModeHome() {
   const { board, ready, message, reload } = useCompanionBoard();
-  const { wardrobe, banner, reload: reloadWardrobe } = useCompanionWardrobe();
-  const seenLevel = useRef<number | null>(null);
+  const { wardrobe, banner } = useCompanionWardrobe();
+  const [openQuests, setOpenQuests] = useState<number | null>(null);
   const [levelUp, setLevelUp] = useState<{ level: number; item: { id: string; label: string } | null } | null>(null);
-  const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
   useEffect(() => {
     if (!ready || !board) return;
     let cancel = false;
     void supabase().rpc('companion_home_metrics').then(({ data, error }) => {
       if (cancel || error || !data) return;
-      setMetrics(data as HomeMetrics);
+      const metrics = data as { openQuests?: number };
+      setOpenQuests(typeof metrics.openQuests === 'number' ? metrics.openQuests : null);
     });
     return () => { cancel = true; };
   }, [ready, board]);
   useEffect(() => {
-    if (!wardrobe) return;
-    if (seenLevel.current == null) {
-      seenLevel.current = wardrobe.level;
+    if (!wardrobe || typeof window === 'undefined') return;
+    const key = 'la.cosmetic-level.izzy';
+    const stored = window.sessionStorage.getItem(key);
+    const previous = stored == null ? null : Number(stored);
+    if (previous == null || !Number.isFinite(previous)) {
+      window.sessionStorage.setItem(key, String(wardrobe.level));
       return;
     }
-    if (wardrobe.level > seenLevel.current) {
+    if (wardrobe.level > previous) {
       const unlocked = PASS_TIERS.find((item) => item.grantKind === 'level' && item.unlockLevel === wardrobe.level);
       setLevelUp({
         level: wardrobe.level,
         item: unlocked ? { id: unlocked.id, label: unlocked.label } : null,
       });
-      seenLevel.current = wardrobe.level;
+      window.sessionStorage.setItem(key, String(wardrobe.level));
     }
   }, [wardrobe]);
   if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
@@ -50,44 +51,48 @@ export default function CompanionModeHome() {
   const title = board?.identity?.title;
   const worn = (wardrobe?.items ?? []).filter((item) => item.worn).map((item) => item.id);
   const fraction = wardrobe ? levelProgress(wardrobe.xp) : 0;
-  const upcoming = wardrobe ? nextTierLabel(wardrobe.items) : null;
-  const recent = [...(board?.activities ?? [])].slice(0, 4);
+  const nextLevel = wardrobe ? nextEvenUnlock(wardrobe.level) : null;
+  const today = gameDayParts(new Date()).date;
+  const activities = (board?.activities ?? []).filter((item) => !item.voided);
+  const todayCount = activities.filter((item) => item.createdAt && gameDayParts(new Date(item.createdAt)).date === today).length;
+  const last = activities[0] ?? null;
+  const openQuest = (board?.quests ?? []).find((row) => row.status !== 'completed' && row.status !== 'declined');
+  const loadFailed = Boolean(message && message.startsWith("Couldn't load"));
   return (
     <main className="wrap companion-page companion-mode-home">
       <section className="cq-hero-card">
         <CompanionHero worn={worn} label={name} />
         <div>
-          <p className="cq-kicker">Her home</p>
-          <h1>Hello, {name}</h1>
-          {title && <p className="muted">{title}</p>}
+          <p className="cq-kicker">{title || 'Companion'}</p>
+          <h1>{name}</h1>
           {wardrobe && (
             <>
               <p className="cq-level-line">Level {wardrobe.level}</p>
               <p className="cq-title-line">{cosmeticTitle(wardrobe.level, 'izzy')}</p>
+              <p className="muted">{wardrobe.xp} XP</p>
               <div className="cq-xpbar" aria-label={`${wardrobe.xp} experience`}>
                 <span style={{ width: `${Math.round(fraction * 100)}%` }} />
               </div>
             </>
           )}
-          {upcoming && <p className="cq-next">Next: {upcoming}</p>}
         </div>
       </section>
+      <Link className="btn companion-create" href="/companion/log">Log activity</Link>
+      <p className="cq-level-line">{todayCount} logged today</p>
+      {last ? (
+        <p><Link href={`/companion/history?entry=${last.id}`}>{last.title}</Link></p>
+      ) : (
+        <p className="empty-state">Your next chapter begins with one small thing.</p>
+      )}
+      {nextLevel != null && (
+        <p className="cq-next"><Link href="/companion/character">Your next unlock is at Level {nextLevel}.</Link></p>
+      )}
+      {openQuest && (
+        <p><Link href="/companion/quests">{openQuest.title}</Link>{openQuests != null ? ` · ${openQuests} open` : ''}</p>
+      )}
       {banner.length > 0 && (
-        <p className="companion-fanfare" role="status">
-          Unlocked: {banner.join(', ')}
-        </p>
+        <p className="companion-fanfare" role="status">New gear unlocked: {banner.join(', ')}.</p>
       )}
-      {board?.bond?.role === 'companion' && board.identity && (
-        <section className="cq-bubble" aria-label="Hero greeting">
-          <PixelAvatar who="connor" size={48} alt="Connor's hero, a pixel knight in silver armor" />
-          <p>Connor's hero says hi, {board.identity.displayName}.</p>
-        </section>
-      )}
-      <div className="companion-metrics" aria-label="Quest metrics">
-        <p className="companion-metric"><strong>{metrics ? metrics.openQuests : '…'}</strong><span>Open quests</span></p>
-        <p className="companion-metric"><strong>{metrics ? metrics.doneThisWeek : '…'}</strong><span>Done this week</span></p>
-      </div>
-      <ActivityLog onLogged={() => { void reload(); void reloadWardrobe(); }} />
       {levelUp && (
         <CosmeticLevelUp
           who="izzy"
@@ -97,30 +102,10 @@ export default function CompanionModeHome() {
           onClose={() => setLevelUp(null)}
         />
       )}
-      {board?.recap?.visible && (
-        <section className="companion-card" aria-label="Sunday recap">
-          <h2>This week</h2>
-          <p>{board.recap.done ?? 0} quests done. Streak {board.recap.streak ?? 0}. {board.recap.xp ?? 0} XP from those quests.</p>
-        </section>
-      )}
-      <section className="companion-card" aria-label="Recent activity">
-        <h2>Recent</h2>
-        {recent.length === 0 && (
-          <p className="empty-state">Your story is just beginning. Log your first moment to see it here. <a href="#activity-title">Log an activity</a></p>
-        )}
-        <ul className="cq-timeline">
-          {recent.map((item) => (
-            <li key={item.id}><span aria-hidden="true">{questGlyph(item.title)}</span>{item.title}{item.voided ? ' · voided' : ''}</li>
-          ))}
-        </ul>
-      </section>
-      <Link className="btn companion-create" href="/companion/quests">Create quest</Link>
-      {message && (
+      {loadFailed && (
         <p className="message" role="status">
-          {message}{' '}
-          {message.startsWith("Couldn't load") && (
-            <button className="btn ghost" type="button" onClick={() => void reload()}>Try again</button>
-          )}
+          Home couldn't load. Your saved progress is unchanged.{' '}
+          <button className="btn ghost" type="button" onClick={() => void reload()}>Try again</button>
         </p>
       )}
     </main>

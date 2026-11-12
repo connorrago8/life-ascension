@@ -49,7 +49,7 @@ test('level-up copy and the 50 reveals stay on the existing ids', () => {
   assert.equal(reached.headline, 'LEVEL UP');
   assert.equal(reached.subhead, 'Level 30 reached.');
   assert.equal(reached.body, 'The road remembers every step.');
-  assert.equal(reached.gear, 'New gear unlocked — Nightcat Headset.');
+  assert.equal(reached.gear, 'New gear unlocked: Nightcat Headset.');
   assert.equal(reached.awaiting, null);
   const between = levelUpLines('connor', 3, null);
   assert.equal(between.gear, null);

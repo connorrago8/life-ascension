@@ -8,13 +8,22 @@ import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../.
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
+type QuestTab = 'today' | 'weekly' | 'couple';
+
 export default function CompanionQuestsPage() {
   const { board, ready, message, setMessage, reload } = useCompanionBoard();
   const [text, setText] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
   const [source, setSource] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<QuestTab>('today');
   const mine = (board?.quests ?? []).filter((quest) => quest.fromUser === board?.userId && quest.status !== 'declined');
+  const visible = mine.filter((quest) => {
+    if (tab === 'weekly') return quest.cadence === 'weekly';
+    if (tab === 'couple') return false;
+    return quest.cadence !== 'weekly';
+  });
+  const activeCount = visible.filter((quest) => quest.status !== 'completed').length;
 
   async function organize(event: React.FormEvent) {
     event.preventDefault();
@@ -79,15 +88,37 @@ export default function CompanionQuestsPage() {
     await reload();
   }
 
+  async function complete(id: string) {
+    setBusy(true);
+    const { data, error } = await supabase().rpc('companion_complete_quest', { p_quest: id });
+    setBusy(false);
+    if (error) {
+      setMessage("Completion wasn't confirmed. Your progress hasn't changed.");
+      return;
+    }
+    const receipt = data as { already?: boolean; xp_awarded?: number; xpAwarded?: number } | null;
+    const xp = receipt?.xp_awarded ?? receipt?.xpAwarded ?? 0;
+    setMessage(receipt?.already || xp < 1 ? 'Quest complete.' : `Quest complete. +${xp} XP.`);
+    await reload();
+  }
+
   if (!ready) return <main className="wrap companion-page"><p className="role-loading" role="status">Gathering your story…</p></main>;
   const label = draftSourceLabel(source);
   return (
     <main className="wrap companion-page" id="send-quest">
       <h1>Quests</h1>
+      <p className="cq-level-line">{activeCount} active</p>
+      <div className="cq-tabs" role="tablist" aria-label="Quest groups">
+        {(['today', 'weekly', 'couple'] as const).map((item) => (
+          <button key={item} className={tab === item ? 'btn' : 'btn ghost'} type="button" role="tab" aria-selected={tab === item} onClick={() => setTab(item)}>
+            {item === 'today' ? 'Today' : item === 'weekly' ? 'Weekly' : 'Couple'}
+          </button>
+        ))}
+      </div>
       <form className="cq-notebook" onSubmit={(event) => void organize(event)}>
         <label htmlFor="brain-dump">Just type</label>
         <textarea id="brain-dump" className="field" maxLength={1000} placeholder="Example: yoga tonight, dishes after dinner, and a weekly cardboard run" value={text} onChange={(event) => setText(event.target.value)} />
-        <button className="btn cq-spark" type="submit" disabled={busy || text.trim().length < 1}>✦ Turn into quests</button>
+        <button className="btn cq-spark" type="submit" disabled={busy || text.trim().length < 1}>Turn into quests</button>
       </form>
       {label && <p className="companion-draft-source" role="status">{label}</p>}
       {drafts.length > 0 && (
@@ -104,8 +135,8 @@ export default function CompanionQuestsPage() {
         </form>
       )}
       <p className="cq-planner"><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
-      <QuestBoard quests={mine} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} />
-      {message && <p className="message" role="status">{message}</p>}
+      <QuestBoard quests={visible} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} onComplete={(id) => void complete(id)} />
+      {message && <p className="message" role="status">{message.startsWith("Completion wasn't confirmed") ? message : message}</p>}
     </main>
   );
 }

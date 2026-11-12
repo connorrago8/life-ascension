@@ -10,11 +10,14 @@ import { supabase } from '../../../lib/supabase';
 type Quest = {
   id: string;
   title: string;
+  description?: string | null;
   dueOn: string | null;
+  rewardText?: string | null;
   status: string;
   cadence?: string | null;
   instanceId?: string | null;
   fromUser: string;
+  toUser?: string;
   nudgedToday?: boolean;
 };
 type Notice = { id: string; kind: string; questId: string | null; title: string | null; readAt: string | null };
@@ -28,7 +31,7 @@ export type CompanionView = {
   bond: { role: 'inviter' | 'companion'; partnerName?: string | null; partnerTitle?: string | null } | null;
   identity: { displayName: string; title: string; questColor?: string; avatarPath?: string | null } | null;
   quests: Quest[];
-  activities?: { id: string; title: string; voided?: boolean }[];
+  activities?: { id: string; title: string; voided?: boolean; xp?: number | null; createdAt?: string; note?: string | null }[];
   notices?: Notice[];
   rewards?: Reward[];
   repeats?: Repeat[];
