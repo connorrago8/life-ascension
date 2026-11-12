@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { COUPLE_QUEST_PACK, coupleTitleKey, packTitlesToAdd } from '../lib/coupleQuestPack.ts';
 
-const migration = readFileSync(new URL('../supabase/migrations/202611120001_couple_features.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../supabase/migrations/20261112020810_couple_features.sql', import.meta.url), 'utf8');
 
 test('the starter pack is 15 weekly or monthly quests and carries no base XP', () => {
   assert.equal(COUPLE_QUEST_PACK.length, 15);

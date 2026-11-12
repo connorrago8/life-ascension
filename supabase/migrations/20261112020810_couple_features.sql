@@ -1,5 +1,5 @@
 -- Couple quests, Sunday recap, date-night plans, and Connor's monthly streak shield.
--- Additive. Reverse with supabase/rollbacks/202611120001_couple_features_down.sql.
+-- Additive. Reverse with supabase/rollbacks/20261112020810_couple_features_down.sql.
 -- Apply to TEST only. Do not apply to production.
 --
 -- Connor's couple-quest XP is minted only by _award_personal_quest_xp (base 10,

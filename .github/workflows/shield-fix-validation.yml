@@ -1,9 +1,10 @@
-name: Shield Fix Validation (isolated)
+name: Integrated TEST validation (isolated)
 
 on:
   push:
     branches:
       - chatgpt/shield-explicit-consent-20261111
+      - chatgpt/test-integration-20261111
   workflow_dispatch:
 
 permissions:

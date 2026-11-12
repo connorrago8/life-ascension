@@ -68,7 +68,7 @@ export default function Home() {
         client.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
         client.rpc('get_earned_gear'),
         client.rpc('get_crypt_profile'),
-        client.from('quests').select('id,cadence,quest_type,scheduled_for').eq('active', true).limit(1000),
+        client.from('quests').select('id,cadence,quest_type,scheduled_for,fixed_reveal,weekly_weekday').eq('active', true).limit(1000),
         client.from('quest_instances').select('quest_id,due_date,status').eq('owner_id', user.id).lte('due_date', today).or(`status.eq.available,due_date.eq.${today}`).limit(1000),
         // Optional: a database without get_quest_streak just hides the badge.
         Promise.resolve(client.rpc('get_quest_streak')).catch(() => ({ data: null, error: true })),

@@ -15,9 +15,10 @@
  *    Normal quest, manual/off-board and weekly completions all use base 10 XP.
  *  - Daily board: up to DAILY_BOARD_SIZE daily quests a game day, picked per user
  *    per game day (stable across reloads). Off-board completions still count.
- *  - The week runs Monday 05:00 to the next Monday 05:00. Weekly quests appear at
- *    a seeded time between Monday 05:00 and Thursday 12:00 local and stay until
- *    done or the next Monday 05:00.
+ *  - The week runs Monday 05:00 to the next Monday 05:00. Weekly quests with no
+ *    assigned weekday appear at a seeded time between Monday 05:00 and Thursday
+ *    12:00 local. A weekday-assigned weekly quest appears at 05:00 local on that
+ *    weekday. Either way it stays until done or the next Monday 05:00.
  *  - Local time: the profile's time zone when one is stored; today there is no such
  *    column, so every account uses America/Chicago. The server enforces the same
  *    05:00 boundary (public.quest_game_day).
@@ -104,8 +105,14 @@ export function weekStart(date: string): string {
   return addDays(date, 1 - isoDow);
 }
 
+export type WeeklyReveal = { fixedReveal?: boolean | null; weekday?: number | null };
+
 /** Minutes after Monday 05:00 local when a weekly quest appears. Same as SQL. */
-export function weeklyAppearOffset(userId: string, questId: string, week: string): number {
+export function weeklyAppearOffset(userId: string, questId: string, week: string, reveal?: WeeklyReveal): number {
+  if (reveal?.fixedReveal) {
+    const weekday = reveal.weekday != null && reveal.weekday >= 1 && reveal.weekday <= 7 ? Math.floor(reveal.weekday) : 1;
+    return (weekday - 1) * 1440;
+  }
   return fnv1a32(`${userId}:${questId}:${week}`) % WEEKLY_WINDOW_MINUTES;
 }
 
@@ -115,11 +122,11 @@ export function minutesIntoWeek(date: string, minutesOfDay: number): number {
   return days * 1440 + minutesOfDay;
 }
 
-/** Whether a weekly quest is on this week's board. `date` is the game day and `minutesOfDay` is minutes since 05:00. Companion one-shots skip the seeded reveal and are open for the whole week. */
-export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number, immediate = false): boolean {
+/** Whether a weekly quest is on this week's board. `date` is the game day and `minutesOfDay` is minutes since 05:00. Companion one-shots skip the reveal and are open for the whole week. A fixed weekday opens at 05:00 local on that day. */
+export function weeklyVisible(userId: string, questId: string, date: string, minutesOfDay: number, immediate = false, reveal?: WeeklyReveal): boolean {
   if (immediate) return true;
   const week = weekStart(date);
-  return minutesIntoWeek(date, minutesOfDay) >= weeklyAppearOffset(userId, questId, week);
+  return minutesIntoWeek(date, minutesOfDay) >= weeklyAppearOffset(userId, questId, week, reveal);
 }
 
 /** "Thu 9:41 AM" style label for when a weekly quest appears. Offset is minutes after Monday 05:00. */

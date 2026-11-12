@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const migration = readFileSync(new URL('../supabase/migrations/202611120001_couple_features.sql', import.meta.url), 'utf8');
-const rollback = readFileSync(new URL('../supabase/rollbacks/202611120001_couple_features_down.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../supabase/migrations/20261112020810_couple_features.sql', import.meta.url), 'utf8');
+const rollback = readFileSync(new URL('../supabase/rollbacks/20261112020810_couple_features_down.sql', import.meta.url), 'utf8');
 
 test('couple features migration is additive, RLS-scoped, and reversible', () => {
   assert.match(migration, /companion_xp integer not null default 10/);

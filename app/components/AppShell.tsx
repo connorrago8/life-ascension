@@ -29,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (next) return <RoleRedirect href={next} />;
 
   return (
-    <div className="shell">
+    <div className={role.mode === 'companion' ? 'shell companion-shell' : 'shell'}>
       {role.mode === 'companion' ? <CompanionNav /> : <AppNav />}
       <div className="shell-main">{children}</div>
     </div>

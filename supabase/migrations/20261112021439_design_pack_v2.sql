@@ -1,4 +1,4 @@
--- Pack v2 copy and catalogs. Reverse with supabase/rollbacks/202611120002_design_pack_v2_down.sql.
+-- Pack v2 copy and catalogs. Reverse with supabase/rollbacks/20261112021439_design_pack_v2_down.sql.
 -- Apply to TEST only. Do not apply to production.
 --
 -- Pending founder sign-off (proposal defaults only):

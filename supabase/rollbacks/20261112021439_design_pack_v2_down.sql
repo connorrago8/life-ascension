@@ -1,4 +1,4 @@
--- Reverse 202611120002_design_pack_v2.sql. Does not remove Izzy XP already paid.
+-- Reverse 20261112021439_design_pack_v2.sql. Does not remove Izzy XP already paid.
 begin;
 
 drop function if exists public.couple_choose_date_idea(integer);

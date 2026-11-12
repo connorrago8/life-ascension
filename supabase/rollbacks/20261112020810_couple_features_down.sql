@@ -1,4 +1,4 @@
--- Reverse 202611120001_couple_features.sql.
+-- Reverse 20261112020810_couple_features.sql.
 -- Couple-quest personal awards are removed with the quests they created.
 -- Other xp_ledger rows are left as they were. Shield rows go away with the table.
 
