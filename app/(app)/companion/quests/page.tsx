@@ -121,7 +121,8 @@ export default function CompanionQuestsPage() {
     <main className="wrap companion-page" id="send-quest">
       <h1>Quests</h1>
       <p className="cq-level-line">{activeCount} active</p>
-      <p className="muted">Daily, weekly and shared quests in one place. Your progress stays yours.</p>
+      <p className="muted">Your quests and partner activities. Your XP, levels and streak belong only to you.</p>
+      <details className="board-section"><summary className="board-section-toggle"><strong>+ Create or assign quests</strong><span aria-hidden="true">⌄</span></summary>
       <form className="cq-notebook" onSubmit={(event) => void organize(event)}>
         <label htmlFor="brain-dump">Just type</label>
         <textarea id="brain-dump" className="field" maxLength={1000} placeholder="Example: yoga tonight, dishes after dinner, and a weekly cardboard run" value={text} onChange={(event) => setText(event.target.value)} />
@@ -141,10 +142,13 @@ export default function CompanionQuestsPage() {
           <button className="btn" type="submit" disabled={busy}>Send</button>
         </form>
       )}
-      <p className="cq-planner"><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
+      <p className="cq-planner"><Link href="/companion#off-day">Advanced planning and partner settings</Link></p>
+      </details>
+      <section className="board-panel" aria-label="Your quests"><h2>Your quests</h2>
       <QuestBoard quests={visible} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} onComplete={(id) => void complete(id)} />
-      {shared.length>0&&<details className="companion-card" aria-label="Together quests">
-        <summary style={{cursor:"pointer",fontWeight:700,padding:"12px 0"}}>Together ({shared.filter(q=>!q.myDone).length} open)</summary>
+      </section>
+      {shared.length>0&&<details className="board-section" aria-label="Together quests">
+        <summary className="board-section-toggle"><strong>Activities together ({shared.filter(q=>!q.myDone).length} open)</strong><span aria-hidden="true">⌄</span></summary>
         {shared.map(q=><div className="cq-card" key={q.id}>
           <strong>{q.title}</strong>
           <p className="muted">{q.cadence} · {q.awarded?'Both completed':q.myDone?'Waiting for Connor':'Your part is open'}</p>
