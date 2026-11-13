@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase';
 const LINKS = NAV_ITEMS.filter((item): item is NavItem & { href: string } => item.href !== null);
 
 const SECONDARY = [
-  { href: '/companion', label: 'Companion' },
+  { href: '/companion', label: 'Partner settings' },
   { href: '/quests/manage', label: 'Manage quests' },
   { href: '/settings/api-keys', label: 'API keys' },
 ] as const;
@@ -66,6 +66,7 @@ export function AppNav() {
   const pathname = usePathname() || '/';
   const [moreOpen, setMoreOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [companionAccount, setCompanionAccount] = useState(false);
 
   useEffect(() => {
     setMoreOpen(false);
@@ -92,6 +93,22 @@ export function AppNav() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    async function checkRole() {
+      try {
+        const client = supabase();
+        const {data:auth}=await client.auth.getUser();
+        if (!auth.user) { if(active)setCompanionAccount(false); return; }
+        const {data,error}=await client.rpc('companion_state');
+        const state=data as {bond?:{status?:string;role?:string}} | null;
+        if(active)setCompanionAccount(!error&&state?.bond?.status==='active'&&state.bond.role==='companion');
+      } catch { if(active)setCompanionAccount(false); }
+    }
+    void checkRole();
+    return ()=>{active=false};
+  }, [pathname]);
+
   async function logout() {
     try {
       await supabase().auth.signOut();
@@ -114,12 +131,13 @@ export function AppNav() {
         <Link href="/" className="nav-brand">LIFE ASCENSION</Link>
         <div className="nav-links">
           {LINKS.map((item) => {
-            const current = isCurrent(pathname, item.href);
+            const destination = item.id === 'quests' && companionAccount ? '/companion/quests' : item.href;
+            const current = isCurrent(pathname, destination);
             const play = item.id === 'play';
             return (
               <Link
                 key={item.href}
-                href={play ? `${item.href}${previewQuery}` : item.href}
+                href={play ? `${item.href}${previewQuery}` : destination}
                 className={play ? 'nav-link nav-play' : 'nav-link'}
                 aria-current={current ? 'page' : undefined}
               >

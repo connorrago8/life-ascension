@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { QuestBoard } from '../../../../components/companion/QuestBoard';
 import { draftSourceLabel } from '../../../../lib/companionAccess';
@@ -8,21 +8,34 @@ import { fallbackQuestDrafts, type QuestCadence, type QuestDraft } from '../../.
 import { supabase } from '../../../../lib/supabase';
 import { useCompanionBoard } from '../useCompanionBoard';
 
-type QuestTab = 'today' | 'weekly' | 'couple';
-
 export default function CompanionQuestsPage() {
   const { board, ready, message, setMessage, reload } = useCompanionBoard();
+  const [shared, setShared] = useState<{id:string;title:string;myDone:boolean;partnerDone:boolean;awarded:boolean;cadence:string}[]>([]);
+  const [sharedBusy, setSharedBusy] = useState(false);
+  const [sharedError, setSharedError] = useState('');
+  const refreshShared = useCallback(async () => {
+    const {data,error}=await supabase().rpc('couple_board');
+    if(error){setSharedError('Shared quests unavailable.');return;}
+    const rows=(data as {quests?:unknown}|null)?.quests;
+    if(Array.isArray(rows))setShared(rows.filter((q):q is {id:string;title:string;myDone:boolean;partnerDone:boolean;awarded:boolean;cadence:string}=>typeof q?.id==='string'&&typeof q?.title==='string'));
+    setSharedError('');
+  },[]);
+  useEffect(()=>{if(board?.userId)void refreshShared();else setShared([])},[board?.userId,refreshShared]);
+  async function markShared(id:string){
+    if(sharedBusy)return;
+    setSharedBusy(true);
+    const {error}=await supabase().rpc('couple_quest_mark',{p_quest:id});
+    if(error)setSharedError('Could not confirm shared quest.');
+    else await refreshShared();
+    setSharedBusy(false);
+  }
   const [text, setText] = useState('');
   const [drafts, setDrafts] = useState<QuestDraft[]>([]);
   const [source, setSource] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<QuestTab>('today');
   const mine = (board?.quests ?? []).filter((quest) => quest.fromUser === board?.userId && quest.status !== 'declined');
-  const visible = mine.filter((quest) => {
-    if (tab === 'weekly') return quest.cadence === 'weekly';
-    if (tab === 'couple') return false;
-    return quest.cadence !== 'weekly';
-  });
+  // One board: daily, weekly and shared assignments are visible together.
+  const visible = mine;
   const activeCount = visible.filter((quest) => quest.status !== 'completed').length;
 
   async function organize(event: React.FormEvent) {
@@ -108,13 +121,8 @@ export default function CompanionQuestsPage() {
     <main className="wrap companion-page" id="send-quest">
       <h1>Quests</h1>
       <p className="cq-level-line">{activeCount} active</p>
-      <div className="cq-tabs" role="tablist" aria-label="Quest groups">
-        {(['today', 'weekly', 'couple'] as const).map((item) => (
-          <button key={item} className={tab === item ? 'btn' : 'btn ghost'} type="button" role="tab" aria-selected={tab === item} onClick={() => setTab(item)}>
-            {item === 'today' ? 'Today' : item === 'weekly' ? 'Weekly' : 'Couple'}
-          </button>
-        ))}
-      </div>
+      <p className="muted">Your quests and partner activities. Your XP, levels and streak belong only to you.</p>
+      <details className="board-section"><summary className="board-section-toggle"><strong>+ Create or assign quests</strong><span aria-hidden="true">⌄</span></summary>
       <form className="cq-notebook" onSubmit={(event) => void organize(event)}>
         <label htmlFor="brain-dump">Just type</label>
         <textarea id="brain-dump" className="field" maxLength={1000} placeholder="Example: yoga tonight, dishes after dinner, and a weekly cardboard run" value={text} onChange={(event) => setText(event.target.value)} />
@@ -134,8 +142,20 @@ export default function CompanionQuestsPage() {
           <button className="btn" type="submit" disabled={busy}>Send</button>
         </form>
       )}
-      <p className="cq-planner"><Link href="/companion#off-day">Plan an off day or a repeating chore</Link></p>
+      <p className="cq-planner"><Link href="/companion#off-day">Advanced planning and partner settings</Link></p>
+      </details>
+      <section className="board-panel" aria-label="Your quests"><h2>Your quests</h2>
       <QuestBoard quests={visible} userId={board?.userId} busy={busy} onNudge={(id) => void nudge(id)} onComplete={(id) => void complete(id)} />
+      </section>
+      {shared.length>0&&<details className="board-section" aria-label="Together quests">
+        <summary className="board-section-toggle"><strong>Activities together ({shared.filter(q=>!q.myDone).length} open)</strong><span aria-hidden="true">⌄</span></summary>
+        {shared.map(q=><div className="cq-card" key={q.id}>
+          <strong>{q.title}</strong>
+          <p className="muted">{q.cadence} · {q.awarded?'Both completed':q.myDone?'Waiting for Connor':'Your part is open'}</p>
+          <button type="button" className="btn ghost" disabled={sharedBusy||q.myDone} onClick={()=>void markShared(q.id)}>{q.myDone?'✓ Done':'Mark my part'}</button>
+        </div>)}
+      </details>}
+      {sharedError&&<p className="message" role="status">{sharedError}</p>}
       {message && <p className="message" role="status">{message.startsWith("Completion wasn't confirmed") ? message : message}</p>}
     </main>
   );
