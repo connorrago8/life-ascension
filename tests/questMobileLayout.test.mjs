@@ -57,8 +57,8 @@ test('definitive progress failures are announced to assistive technology', () =>
 
 test('mobile quest card prioritizes completion without removing secondary actions', () => {
   const home = readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
-  assert.match(home, /quest-card-actions/);
-  assert.match(home, /aria-label=\{\x60Actions for \$\{quest\.title\}\x60\}/);
+  assert.match(home, /quest-row/);
+  assert.match(home, /<ConfirmCompleteButton label="Complete"/);
   assert.match(css, /\.quest-card-actions \.btn \{ min-height: 48px;/);
   assert.match(css, /\.quest-card-actions \.btn:not\(\.ghost\) \{ order: -1;/);
 });

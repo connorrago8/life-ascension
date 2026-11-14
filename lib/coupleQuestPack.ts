@@ -11,7 +11,7 @@ export type CoupleQuestTemplate = {
 };
 
 export const COUPLE_QUEST_PACK: readonly CoupleQuestTemplate[] = [
-  { title: 'Cook dinner together', description: 'Turn ingredients and teamwork into a meal worth remembering.', cadence: 'weekly' },
+  { title: 'Evening wind-down', description: 'Put the day down together before sleep.', cadence: 'weekly' },
   { title: 'A walk without phones', description: 'Leave the noise behind and rediscover the art of talking.', cadence: 'weekly' },
   { title: 'Coffee date', description: 'Share a warm drink and an unhurried hour.', cadence: 'weekly' },
   { title: 'Plan our next adventure', description: 'Put a new pin on the map of your shared story.', cadence: 'weekly' },

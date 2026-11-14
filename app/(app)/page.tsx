@@ -19,6 +19,8 @@ import { gameDayParts, parseStreak, type StreakState } from '../../lib/questStre
 import { starterSlots } from '../../lib/starterLook';
 import { ReturnBanner } from '../../components/home/ReturnBanner';
 import { StreakShieldNote } from '../../components/couple/StreakShieldNote';
+import { useCompanionRole } from '../../components/useCompanionRole';
+import CompanionModeHome from './companion/home/page';
 
 type HomeState =
   | { status: 'loading' }
@@ -43,6 +45,13 @@ const FALLBACK_APPEARANCE = appearanceFromLoadout({ equipmentIds: [] });
  * the bottom nav, so this screen adds no duplicate "go to" buttons.
  */
 export default function Home() {
+  const role = useCompanionRole();
+  if (role.status === 'loading') return <main className="wrap home-hub" aria-busy="true"><p className="muted" role="status">Loading…</p></main>;
+  if (role.mode === 'companion') return <CompanionModeHome />;
+  return <AdventurerHome />;
+}
+
+function AdventurerHome() {
   const [state, setState] = useState<HomeState>({ status: 'loading' });
   const loadSeq = useRef(0);
 

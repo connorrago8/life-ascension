@@ -129,7 +129,7 @@ test('migration is additive, keeps the 05:00 streak award, and the board exposes
   assert.doesNotMatch(smoke, /\b(patient name|mrn|diagnosis|hipaa)\b/i);
   assert.match(board, /Set up Monday work tasks/);
   assert.match(board, /apply_pharmacy_weekly_pack/);
-  assert.match(board, /area==='work'/);
+  assert.match(board, /chip==='work'/);
   assert.match(board, /Weekly · open until Monday 5:00 AM/);
   assert.match(board, /fixed_reveal,weekly_weekday/);
   assert.doesNotMatch(board, /quest_board_v3_ensure_instances/);

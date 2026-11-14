@@ -308,7 +308,7 @@ test('Home exposes completed progress retry after refresh without creating anoth
   const home = await readFile(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
   assert.match(home, /hasPendingCompletedRecovery\(instances,key=>localStorage\.getItem\(key\)\)/);
   assert.match(home, /setShowCompleted\(true\)/);
-  assert.match(home, /completedDisplay\.map\(\(\{quest,instance\}\)=>/);
+  assert.match(home, /completedDisplay\.map\(questCard\)/);
   assert.match(home, /<QuestProgressControls onJournalResolved=\{journalResolved\} quest=\{quest\} instance=\{instance!\}/);
 });
 
@@ -349,7 +349,7 @@ test('Home loads only owner-scoped older completed journals and renders retry se
 test('archived completed quest keeps pending retry metadata owner-scoped', async () => {
   // Static integration contract: not an authenticated Supabase/browser test.
   const home = await readFile(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
-  assert.match(home, /missingRecoveryQuestIds=\[\.\.\.new Set\(\(recoveries\|\|\[\]\)\.map\(row=>row\.quest_id\)\)\]/);
+  assert.match(home, /missingRecoveryQuestIds=\[\.\.\.new Set\(\(recoveriesKept\|\|\[\]\)\.map\(row=>row\.quest_id\)\)\]/);
   assert.match(home, /\.eq\('owner_id',user\.id\)\.in\('id',missingRecoveryQuestIds\)\.limit\(100\)/);
   assert.match(home, /setRecoveryQuests\(missingRecoveryQuests\|\|\[\]\)/);
   assert.match(home, /recoverableCompletedEntries\(instances,recoveryIds,quests,recoveryQuests/);

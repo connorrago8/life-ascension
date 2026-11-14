@@ -35,33 +35,38 @@ test('cached companion role is cleared on sign-out and an account switch', () =>
   assert.match(hook, /cached\.userId !== userId/);
 });
 
-test('companions leave adventurer paths and adventurers leave companion-only paths', () => {
-  assert.equal(companionRedirect('/', 'companion'), '/companion/home');
+test('old companion and together URLs resolve to the shared homes for every account', () => {
+  assert.equal(companionRedirect('/', 'companion'), null);
   assert.equal(companionRedirect('/quests', 'companion'), null);
-  assert.equal(companionRedirect('/play', 'companion'), '/companion/home');
-  assert.equal(companionRedirect('/play/delve', 'companion'), '/companion/home');
-  assert.equal(companionRedirect('/character', 'companion'), '/companion/home');
-  assert.equal(companionRedirect('/companion', 'companion'), null);
-  assert.equal(companionRedirect('/companion/home', 'companion'), null);
+  assert.equal(companionRedirect('/play', 'companion'), null);
+  assert.equal(companionRedirect('/character', 'companion'), null);
+  assert.equal(companionRedirect('/more', 'companion'), null);
   assert.equal(companionRedirect('/play/crypt', 'companion'), null);
-  assert.equal(companionRedirect('/companion/home', 'adventurer'), '/');
-  assert.equal(companionRedirect('/companion/quests', 'adventurer'), '/');
-  assert.equal(companionRedirect('/companion/rewards', 'signed-out'), '/');
-  assert.equal(companionRedirect('/companion/character', 'adventurer'), '/');
-  assert.equal(companionRedirect('/quests', 'adventurer'), null);
-  assert.equal(companionRedirect('/companion', 'adventurer'), null);
+  assert.equal(companionRedirect('/companion/home', 'companion'), '/');
+  assert.equal(companionRedirect('/companion/quests', 'adventurer'), '/quests');
+  assert.equal(companionRedirect('/companion/character', 'companion'), '/character');
+  assert.equal(companionRedirect('/companion/rewards', 'signed-out'), '/more/rewards');
+  assert.equal(companionRedirect('/companion/history', 'companion'), '/more/history');
+  assert.equal(companionRedirect('/companion/log', 'companion'), '/log');
+  assert.equal(companionRedirect('/companion', 'companion', 'invite=abc12345'), '/more/relationship?invite=abc12345');
+  assert.equal(companionRedirect('/together', 'adventurer'), '/quests?chip=together');
+  assert.equal(companionRedirect('/together/plans', 'companion'), '/quests?chip=together');
 });
 
-test('companion nav is Home, Quests, Character, and History, with no Play control', () => {
-  assert.deepEqual(COMPANION_NAV.map((item) => item.label), ['Home', 'Quests', 'Character', 'History']);
+test('both accounts share Home, Quests, Character, and More, and companions omit Play', () => {
+  assert.deepEqual(COMPANION_NAV.map((item) => item.label), ['Home', 'Quests', 'Character', 'More']);
   assert.equal(COMPANION_NAV.some((item) => item.label === 'Play' || item.href === '/play'), false);
-  const nav = read('components/CompanionNav.tsx');
   const adventurer = read('app/components/AppNav.tsx');
-  assert.doesNotMatch(nav, /nav-play|href="\/play"/);
   assert.match(adventurer, /NAV_ITEMS/);
   assert.match(adventurer, /nav-play/);
-  assert.match(read('app/components/AppShell.tsx'), /role\.mode === 'companion' \? <CompanionNav \/> : <AppNav \/>/);
-  assert.match(read('app/components/AppShell.tsx'), /role-loading/);
+  assert.match(adventurer, /role\.mode !== 'companion'/);
+  const shell = read('app/components/AppShell.tsx');
+  assert.match(shell, /<AppNav \/>/);
+  assert.match(shell, /data-slot="engagement-status"/);
+  assert.doesNotMatch(shell, /status pill|engagement pill/i);
+  assert.doesNotMatch(shell, /CompanionNav/);
+  assert.match(shell, /role-loading/);
+  assert.match(read('components/play/AdventureHub.tsx'), /role\.mode === 'companion'/);
 });
 
 test('Just type shows the endpoint source without changing the parser route', () => {

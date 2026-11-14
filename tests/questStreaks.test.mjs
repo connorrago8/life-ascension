@@ -156,17 +156,13 @@ test('migration guards: single locked mint, no client mint, Crypt cap and RLS un
   assert.match(rollback, /drop function if exists public\._award_quest_xp/);
 });
 
-test('board UI: account streak, paginated daily list, weekly section and 44px targets', () => {
+test('board UI: account streak, weekly window, and compact rows', () => {
   const board = read('components/quests/PersonalQuestBoard.tsx');
-  const css = read('app/style.css');
   assert.match(board, /workspace-progress/);
-  assert.match(board, /dailyBoardIds\(user,today,/);
-  assert.match(board, /todayQuests\.slice\(0,pageSize\)/);
-  assert.match(board, /Show 6 more tasks/);
   assert.match(board, /weeklyVisible\(user,q\.id,today/);
   assert.match(board, /Weekly · open until Monday 5:00 AM/);
   assert.match(board, /gameDayParts\(new Date\(\)\)/);
   assert.match(board, /streakFor&&streakFor\.owner===user/, 'never shows another account’s streak');
-  assert.match(css, /\.streak-badge \{[^}]*min-height: 44px/);
-  assert.match(css, /\.offboard-toggle \{[^}]*min-height: 44px/);
+  assert.match(board, /label="This Week"/);
+  assert.doesNotMatch(board, /todayQuests\.slice\(0,pageSize\)/);
 });

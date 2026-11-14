@@ -131,7 +131,7 @@ export default function CompanionHistoryPage() {
           <p className="muted">{quest.dueOn ?? 'Completed'}</p>
         </article>
       ))}
-      <Link className="btn ghost" href="/companion/home">Back</Link>
+      <Link className="btn ghost" href="/">Back</Link>
     </main>
   );
 }

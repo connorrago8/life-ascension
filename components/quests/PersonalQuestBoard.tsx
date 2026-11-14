@@ -1,43 +1,50 @@
 'use client';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
-import {questDetailHref,shouldOpenQuestCard} from '../../lib/questCardTap';
+import {questDetailHref} from '../../lib/questCardTap';
 import {supabase} from '../../lib/supabase';
-import {ADVENTURER_CLASS} from '../../lib/character';
 import {levelFor} from '../../lib/level';
 import {verifiedLifetimeXp} from '../../lib/characterXpProof';
 import {QuestProgressControls} from '../../components/QuestProgressControls';
 import {QuestDetails} from '../../components/QuestDetails';
 import {ConfirmCompleteButton} from '../../components/ConfirmCompleteButton';
 import {IzzyProof} from '../../components/IzzyProof';
-import {PixelAvatar} from '../../components/PixelAvatar';
 import {completionFeedback} from '../../lib/preview/questReceipt.mjs';
 import {confirmedProgressResult} from '../../lib/preview/progressDelta.mjs';
 import {hasPendingCompletedRecovery,pendingProgressInstanceIds,recoverableCompletedEntries} from '../../lib/preview/pendingProgress';
-import {dailyBoardIds,gameDayParts,parseStreak,streakHint,weekStart,weeklyAppearOffset,weeklyVisible,type StreakState} from '../../lib/questStreak';
+import {gameDayParts,parseStreak,weekStart,weeklyAppearOffset,weeklyVisible,type StreakState} from '../../lib/questStreak';
 import {StreakShieldNote} from '../../components/couple/StreakShieldNote';
 import {PHARMACY_WEEKLY_TITLES,weekdayLabel} from '../../lib/questAutopilot';
 import {previewBoard} from '../../lib/questBoardPreview';
-import {prioritizePending,taskArea,questWorkspaceHref,type QuestArea,type QuestView} from '../../lib/questWorkspace';
+import {matchesChip,partnerChipLabel,prioritizePending,questDetailChip,taskArea,type QuestChip} from '../../lib/questWorkspace';
+import {awardStamp,claimAward,confirmedAwardAmount,emptyCopy,restoreRow,sectionSlice,shouldVibrate,withStatus} from '../../lib/questPolish';
+import {readSectionOpen,writeSectionOpen,type QuestSectionId} from '../../lib/questSections';
+import {coupleBucket,type CoupleQuestView} from '../../lib/coupleQuestView';
+import {useCompanionRole} from '../useCompanionRole';
+import TogetherQuestPanel from './TogetherQuestPanel';
 type Quest={id:string;title:string;domain:string;cadence:'once'|'daily'|'weekly';created_at:string;scheduled_for:string|null;quest_type:'scheduled'|'goal';target_amount:number|null;progress_unit:string|null;progress_increment:number|null;companion_one_shot?:boolean|null;fixed_reveal?:boolean|null;weekly_weekday?:number|null;description?:string|null};
 type Instance={id:string;quest_id:string;due_date:string;status:'available'|'completed'|'deferred';current_amount:number};
 const DOMAINS=[['hygiene','Hygiene & appearance'],['home','Home & environment'],['mental_health','Mental health & recovery'],['personal_growth','Growth & hobbies'],['finance','Financial health'],['career','Career & productivity'],['relationships','Relationships'],['physical_health','Physical health']];
 function todayLocal(){return gameDayParts(new Date()).date}
-export default function PersonalQuestBoard({area,view}:{area:Exclude<QuestArea,'together'>;view:QuestView}){
- const [pageSize,setPageSize]=useState(6);
- useEffect(()=>{setPageSize(6);setShowCompleted(view==='done')},[area,view]);
- useEffect(()=>{setDomain(area==='work'?'career':'home')},[area]);
+export default function PersonalQuestBoard({chip,focus,couple,onMarkCouple,coupleBusy}:{chip:QuestChip;focus:'today'|'week'|'later'|'done';couple:CoupleQuestView[];onMarkCouple:(id:string)=>void;coupleBusy:boolean}){
+ const role=useCompanionRole();
+ const companion=role.mode==='companion';
+ const partnerLabel=partnerChipLabel(companion);
+ useEffect(()=>{setDomain(chip==='work'?'career':'home')},[chip]);
  const [user,setUser]=useState<string|null>(null),[ready,setReady]=useState(false),[quests,setQuests]=useState<Quest[]>([]),[instances,setInstances]=useState<Instance[]>([]),[xp,setXp]=useState<number|null>(null),[title,setTitle]=useState(''),[dueDate,setDueDate]=useState(''),[questType,setQuestType]=useState<'scheduled'|'goal'>('scheduled'),[domain,setDomain]=useState('home'),[cadence,setCadence]=useState<'once'|'daily'|'weekly'>('daily'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[loginHref,setLoginHref]=useState('/login?next=%2Fquests');
  const [trackProgress,setTrackProgress]=useState(false),[targetAmount,setTargetAmount]=useState('8'),[progressUnit,setProgressUnit]=useState('glasses'),[progressIncrement,setProgressIncrement]=useState('1');
  const [layoutPreview,setLayoutPreview]=useState(false);const [showCompleted,setShowCompleted]=useState(false);const [recoveryIds,setRecoveryIds]=useState<string[]>([]);const [recoveryQuests,setRecoveryQuests]=useState<Quest[]>([]);const [showQuestForm,setShowQuestForm]=useState(false);
  // The streak is tagged with its account so a sign-out or account switch can never show another account's fire.
- const [streakFor,setStreak]=useState<{owner:string;state:StreakState}|null>(null);const [showOffBoard,setShowOffBoard]=useState(false);
+ const [streakFor,setStreak]=useState<{owner:string;state:StreakState}|null>(null);
  const [fromIzzy,setFromIzzy]=useState<Set<string>>(new Set());const [izzyColor,setIzzyColor]=useState('amber');const [nudged,setNudged]=useState<Set<string>>(new Set());
- const router=useRouter();const questFormRef=useRef<HTMLFormElement>(null);const openQuestFormOnRender=useRef(false);
+ const questFormRef=useRef<HTMLFormElement>(null);const openQuestFormOnRender=useRef(false);
  const loadEpoch=useRef(0);const accountRef=useRef<string|null>(null);
  const questCreateInFlight=useRef(false);
  const questActionInFlight=useRef(false);
+ const seenAwards=useRef(new Set<string>());
+ const buckets=useRef({today:[] as Instance[],goals:[] as Instance[],once:[] as Instance[],weekly:[] as Instance[],recovery:[] as Instance[]});
+ const [sectionErrors,setSectionErrors]=useState<Record<string,string>>({});
+ const [award,setAward]=useState<{id:string;amount:number;key:string}|null>(null);
  // A completed quest with an unconfirmed request must expose Retry after refresh.
  useEffect(()=>{
   if(hasPendingCompletedRecovery(instances,key=>localStorage.getItem(key)))setShowCompleted(true);
@@ -89,10 +96,26 @@ const [{data:todayRows,error:te},{data:goals,error:ge},{data:openOnce,error:oe},
  Promise.resolve(s.rpc('get_quest_streak')).catch(()=>({data:null,error:true}))
 ]);
 if(epoch!==loadEpoch.current)return false;
-if(te||ge||oe||le||re||we){setMessage(te?.message||ge?.message||oe?.message||le?.message||re?.message||we?.message||'Unable to load');return false}
+const todaySlice=sectionSlice(buckets.current.today,te,todayRows);
+const goalSlice=sectionSlice(buckets.current.goals,ge,goals);
+const onceSlice=sectionSlice(buckets.current.once,oe,openOnce);
+const weekSlice=sectionSlice(buckets.current.weekly,we,weeklyRows);
+const recoverySlice=sectionSlice(buckets.current.recovery,re,recoveries);
+buckets.current={today:todaySlice.rows,goals:goalSlice.rows,once:onceSlice.rows,weekly:weekSlice.rows,recovery:recoverySlice.rows};
+const nextErrors={today:'',week:'',upcoming:'',completed:''};
+if(todaySlice.error)nextErrors.today=todaySlice.error;
+if(weekSlice.error)nextErrors.week=weekSlice.error;
+if(goalSlice.error||onceSlice.error)nextErrors.upcoming=goalSlice.error||onceSlice.error||'Could not load this section.';
+if(recoverySlice.error)nextErrors.completed=recoverySlice.error;
+setSectionErrors(nextErrors);
+if(le||todaySlice.error||weekSlice.error||goalSlice.error||onceSlice.error||recoverySlice.error){
+ setMessage(le?'Lifetime XP could not be verified. Refresh to retry; no XP was changed.':'Part of the board could not refresh.');
+ return false;
+}
+const todayRowsKept=todaySlice.rows,goalsKept=goalSlice.rows,openOnceKept=onceSlice.rows,recoveriesKept=recoverySlice.rows,weeklyRowsKept=weekSlice.rows;
 // A pending retry must remain visible if its quest was archived after completion.
 // Fetch metadata only for server-confirmed, owner-scoped recovered instances.
-const missingRecoveryQuestIds=[...new Set((recoveries||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
+const missingRecoveryQuestIds=[...new Set((recoveriesKept||[]).map(row=>row.quest_id))].filter(id=>!all.some(quest=>quest.id===id));
 const {data:missingRecoveryQuests,error:missingRecoveryError}=missingRecoveryQuestIds.length
  ?await s.from('quests').select('id,title,domain,cadence,created_at,scheduled_for,quest_type,target_amount,progress_unit,progress_increment,companion_one_shot,fixed_reveal,weekly_weekday,description').eq('owner_id',user.id).in('id',missingRecoveryQuestIds).limit(100)
  :{data:[] as Quest[],error:null};
@@ -100,11 +123,11 @@ if(epoch!==loadEpoch.current)return false;
 if(missingRecoveryError){setMessage(missingRecoveryError.message);return false}
 const verifiedXp = verifiedLifetimeXp(ledger);
 setQuests(all);setRecoveryQuests(missingRecoveryQuests||[]);
-const rows=new Map<string,Instance>();for(const row of [...(todayRows||[]),...(goals||[]),...(openOnce||[]),...(recoveries||[]),...(weeklyRows||[])])rows.set(row.id,row);
-setRecoveryIds((recoveries||[]).map(row=>row.id));setInstances([...rows.values()]);setXp(verifiedXp);{const parsed=streakResult.error?null:parseStreak(streakResult.data);setStreak(parsed?{owner:user.id,state:parsed}:null)}
+const rows=new Map<string,Instance>();for(const row of [...todayRowsKept,...goalsKept,...openOnceKept,...recoveriesKept,...weeklyRowsKept])rows.set(row.id,row);
+setRecoveryIds(recoveriesKept.map(row=>row.id));setInstances([...rows.values()]);setXp(verifiedXp);{const parsed=streakResult.error?null:parseStreak(streakResult.data);setStreak(parsed?{owner:user.id,state:parsed}:null)}
 if(verifiedXp===null){
  setMessage('Lifetime XP could not be verified. Refresh to retry; no XP was changed.');
- return false;
+ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false;
 }
 // A successful page reload is not proof of this save if its instance was omitted.
 // Keep the original idempotent request until an owner-scoped refreshed row is visible.
@@ -191,14 +214,30 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
   // A second tap can fire before React commits the busy state.
   questActionInFlight.current=true;
   const operationAccount=accountRef.current;
+  const previous=action==='complete'?instances.find(row=>row.id===id):undefined;
+  if(previous)setInstances(rows=>withStatus(rows,id,'completed'));
   setBusy(true);
+  let confirmed=false;
   try {
     if(action==='complete'){
       // Only the versioned, quest-scoped receipt may justify a new XP claim.
-      // QA must include Alpha PR #31's reviewed v2 migration before this draft is deployed.
       const {data,error}=await supabase().rpc('set_quest_instance_status_v2',{p_instance_id:id,p_action:action});
       if(accountRef.current!==operationAccount)return;
-      setMessage(error?.message||completionFeedback(data,id));
+      if(error){
+        if(previous)setInstances(rows=>restoreRow(rows,previous));
+        setMessage(error.message);
+        return;
+      }
+      const amount=confirmedAwardAmount(data,id);
+      const claimed=claimAward(id,awardStamp(data),amount,seenAwards.current);
+      if(claimed){
+        seenAwards.current.add(claimed.key);
+        setAward({id,amount:claimed.amount,key:claimed.key});
+        const reduced=typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(shouldVibrate(reduced,claimed.amount)&&typeof navigator!=='undefined'&&typeof navigator.vibrate==='function')navigator.vibrate(10);
+      }
+      setMessage(completionFeedback(data,id));
+      confirmed=true;
     } else {
       const {error}=await supabase().rpc('set_quest_instance_status',{p_instance_id:id,p_action:action});
       if(accountRef.current!==operationAccount)return;
@@ -206,6 +245,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
     }
     await load();
   } catch {
+    if(!confirmed&&previous)setInstances(rows=>restoreRow(rows,previous));
     if(accountRef.current===operationAccount)setMessage('Quest update not confirmed. Refresh before retrying.');
   } finally {
     questActionInFlight.current=false;
@@ -259,52 +299,91 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  // Reconcile the parent recovery list without another network query.
  function journalResolved(instanceId:string){setRecoveryIds(ids=>ids.filter(id=>id!==instanceId))}
  async function logout(){if(layoutPreview){window.location.assign('/login');return}try{const {error}=await supabase().auth.signOut();if(error){setMessage('Sign out was not confirmed. Please retry.');return}++loadEpoch.current;accountRef.current=null;setQuests([]);setInstances([]);setRecoveryQuests([]);setRecoveryIds([]);setXp(null);setUser(null)}catch{setMessage('Sign out was not confirmed. Please retry.')}}
- if(!ready)return <section className="wrap">Loading your character…</section>;
+ if(!ready)return <section className="wrap quest-board-page" aria-busy="true"><p className="muted">Loading your board…</p><div className="board-skeleton">{[0,1,2,3].map(item=><div className="skeleton-row" key={item}/>)}</div></section>;
  if(!user)return <section className="wrap"><div className="eyebrow">LIFE ASCENSION</div><h1>Your adventure awaits</h1><p className="muted">Real actions. Real progress. Your private quest journal.</p><a className="btn" href={loginHref}>Sign in</a></section>;
  const streak=streakFor&&streakFor.owner===user?streakFor.state:null;
  const today=todayLocal();const nowGame=gameDayParts(new Date());const thisWeek=weekStart(today);
  // Weekly quests stay hidden until their seeded appearance time (server enforces the same window).
  const weeklyReveal=(q:Quest)=>q.fixed_reveal?{fixedReveal:true,weekday:q.weekly_weekday??1}:undefined;
  const weeklyOpen=(q:Quest)=>q.cadence!=='weekly'||weeklyVisible(user,q.id,today,nowGame.minutes,q.companion_one_shot===true,weeklyReveal(q));
- const visible=quests.filter(q=>taskArea(q,fromIzzy)===area).map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):q.cadence==='weekly'?instances.find(i=>i.quest_id===q.id&&i.due_date===thisWeek):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&weeklyOpen(x.quest)&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.quest.cadence==='weekly'||x.instance!.status!=='completed'||x.instance!.due_date===today));
- const weeklyHidden=quests.filter(q=>taskArea(q,fromIzzy)===area&&q.cadence==='weekly'&&instances.some(i=>i.quest_id===q.id&&i.due_date===thisWeek)&&!weeklyOpen(q)).length;
- // Daily board: up to 5 daily quests a day, seeded per user and local day; the rest stay one tap away and still count.
- const boardIds=dailyBoardIds(user,today,quests.filter(q=>q.cadence==='daily'&&(!q.scheduled_for||q.scheduled_for<=today)).map(q=>q.id));for(const id of fromIzzy){const q=quests.find(item=>item.id===id);if(q?.cadence==='daily')boardIds.add(id)}const completedQuests=visible.filter(x=>x.instance?.status==='completed');const completedDisplay=prioritizePending(completedQuests,recoveryIds,pageSize);const earlierRecoveries=recoverableCompletedEntries(instances,recoveryIds,quests,recoveryQuests,completedQuests.map(x=>x.instance!.id));const activeQuests=visible.filter(x=>x.instance?.status!=='completed');const completed=completedQuests.length;const lvl=xp===null?null:levelFor(xp);
- // Issue #46: the board shows every open quest the Journal counts, grouped by when it is due.
- // Today = daily quests and anything due today or overdue; This Week = due in the next 7 days; Upcoming = later.
+ const visible=quests.filter(q=>matchesChip(taskArea(q,fromIzzy),chip)).map(q=>({quest:q,instance:q.cadence==='daily'?instances.find(i=>i.quest_id===q.id&&i.due_date===today):q.cadence==='weekly'?instances.find(i=>i.quest_id===q.id&&i.due_date===thisWeek):instances.find(i=>i.quest_id===q.id)})).filter(x=>!!x.instance&&weeklyOpen(x.quest)&&(x.quest.quest_type==='goal'?x.instance!.status!=='completed'||x.instance!.due_date===today:x.quest.cadence==='daily'||x.quest.cadence==='weekly'||x.instance!.status!=='completed'||x.instance!.due_date===today));
+ const weeklyHidden=quests.filter(q=>matchesChip(taskArea(q,fromIzzy),chip)&&q.cadence==='weekly'&&instances.some(i=>i.quest_id===q.id&&i.due_date===thisWeek)&&!weeklyOpen(q)).length;
+ const completedQuests=visible.filter(x=>x.instance?.status==='completed');const completedDisplay=prioritizePending(completedQuests,recoveryIds,completedQuests.length);const earlierRecoveries=recoverableCompletedEntries(instances,recoveryIds,quests,recoveryQuests,completedQuests.map(x=>x.instance!.id));const activeQuests=visible.filter(x=>x.instance?.status!=='completed');const completed=completedQuests.length;const lvl=xp===null?null:levelFor(xp);
  const weekEnd=addDays(today,7);
  const sectionFor=(due:string)=>due<=today?'today':due<=weekEnd?'week':'upcoming';
  const weeklyQuests=activeQuests.filter(x=>x.quest.cadence==='weekly').sort((a,b)=>weeklyAppearOffset(user,a.quest.id,thisWeek,weeklyReveal(a.quest))-weeklyAppearOffset(user,b.quest.id,thisWeek,weeklyReveal(b.quest)));
- const offBoardQuests=activeQuests.filter(x=>x.quest.cadence==='daily'&&!boardIds.has(x.quest.id));
- const todayQuests=[...activeQuests.filter(x=>(x.quest.cadence==='daily'&&boardIds.has(x.quest.id))||(x.quest.cadence!=='daily'&&x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='today')),...offBoardQuests,...weeklyQuests];
- const weekQuests=activeQuests.filter(x=>x.quest.cadence!=='daily'&&x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='week');
+ const todayQuests=activeQuests.filter(x=>x.quest.cadence==='daily'||(x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='today'));
+ const weekQuests=[...weeklyQuests,...activeQuests.filter(x=>x.quest.cadence!=='daily'&&x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='week')];
  const laterQuests=activeQuests.filter(x=>x.quest.cadence!=='daily'&&x.quest.cadence!=='weekly'&&sectionFor(x.instance!.due_date)==='upcoming');
+ const showShared=chip==='all'||chip==='together';
+ const sharedToday=showShared?couple.filter(q=>coupleBucket(q,today,weekEnd)==='today'):[];
+ const sharedWeek=showShared?couple.filter(q=>coupleBucket(q,today,weekEnd)==='week'):[];
+ const sharedLater=showShared?couple.filter(q=>coupleBucket(q,today,weekEnd)==='upcoming'):[];
+ const sharedDone=showShared?couple.filter(q=>coupleBucket(q,today,weekEnd)==='completed'):[];
  // Quests that start in the future and have no instance yet (e.g. a daily habit starting next week).
- const notStarted=quests.filter(q=>taskArea(q,fromIzzy)===area&&q.scheduled_for&&q.scheduled_for>today&&!visible.some(v=>v.quest.id===q.id)&&!instances.some(i=>i.quest_id===q.id)).sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||''));
+ const notStarted=quests.filter(q=>matchesChip(taskArea(q,fromIzzy),chip)&&q.scheduled_for&&q.scheduled_for>today&&!visible.some(v=>v.quest.id===q.id)&&!instances.some(i=>i.quest_id===q.id)).sort((a,b)=>(a.scheduled_for||'').localeCompare(b.scheduled_for||''));
  const weekNotStarted=notStarted.filter(q=>q.scheduled_for!<=weekEnd),laterNotStarted=notStarted.filter(q=>q.scheduled_for!>weekEnd);
- const openCount=activeQuests.length+notStarted.length;const todayTotal=todayQuests.length+completed;
  // Mirrors the server completion window: one-time chores open on their due date; goals may finish early.
  const canComplete=(quest:Quest,instance:Instance)=>instance.status==='available'&&(quest.cadence==='weekly'?instance.due_date===thisWeek:quest.cadence==='daily'?instance.due_date<=today:quest.quest_type==='goal'||instance.due_date<=today);
- const taskHref=(id:string)=>`${questDetailHref(id)}?area=${area}&view=${view}`;
- const openCard=(e:React.MouseEvent<HTMLElement>,quest:Quest)=>{const selection=typeof window!=='undefined'?String(window.getSelection?.()??''):'';if(shouldOpenQuestCard(e.target as Element,selection))router.push(taskHref(quest.id))};
- const cardTitle=(quest:Quest)=><div className="quest-title"><Link className="quest-title-link" href={taskHref(quest.id)} prefetch={false} aria-label={`Open ${quest.title}`}>{quest.title}</Link></div>;
- const questCopy=(quest:Quest)=>quest.description?<p className="muted">{quest.description}</p>:null;
- const questCard=({quest,instance}:{quest:Quest;instance?:Instance})=><div className={"quest quest-tappable"+(fromIzzy.has(quest.id)?` from-izzy from-izzy-${izzyColor}`:'')} key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}{questCopy(quest)}<div className="muted">{fromIzzy.has(quest.id)?<span className="avatar-chip"><PixelAvatar who="izzy" size={28} alt="From Izzy" /></span>:null}{fromIzzy.has(quest.id)?'From Izzy · ':''}{nudged.has(quest.id)?<span className="tag">Nudge</span>:null}{quest.cadence==='weekly'?(quest.fixed_reveal?`Weekly · ${weekdayLabel(quest.weekly_weekday)??'Monday'} 5:00 AM`:'Weekly · open until Monday 5:00 AM'):<>{quest.quest_type==='goal'?'Deadline':'Due'} {instance?.due_date}{instance&&instance.due_date<today&&instance.status!=='completed'?' · Overdue':''}{quest.cadence==='daily'?' · Daily':''}</>}</div></div>{instance?.status==='available'&&quest.target_amount!=null&&canComplete(quest,instance)&&<QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/> }<div className="actions quest-card-actions" aria-label={`Actions for ${quest.title}`}>{instance?.status==='completed'?<>{fromIzzy.has(quest.id)&&<span className="muted">Optional photo</span>}{fromIzzy.has(quest.id)&&<IzzyProof instanceId={instance.id} disabled={busy}/>}<span className="tag">✓ Done</span></>:instance?.status==='deferred'?<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'resume')}>Resume</button>:instance&&canComplete(quest,instance)?<><button className="btn ghost" disabled={busy} onClick={()=>act(instance!.id,'defer')}>Defer</button>{(quest.target_amount==null||instance.current_amount>=quest.target_amount)&&<ConfirmCompleteButton label="Complete" questTitle={quest.title} disabled={busy} onConfirm={()=>act(instance!.id,'complete')}/>}</>:<span className="muted">Opens {instance?.due_date}</span>}</div></div>;
- const notStartedCard=(q:Quest)=><div className="quest quest-tappable" key={q.id} onClick={e=>openCard(e,q)}><div className="quest-main">{cardTitle(q)}{questCopy(q)}<div className="muted">{q.cadence==='daily'?'Daily · starts':q.quest_type==='goal'?'Deadline':'Scheduled'} · {q.scheduled_for}</div></div></div>;
- return <section className="quest-board-page workspace-board">{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}<header className="workspace-list-heading"><h2>{area==='work'?'Work tasks':area==='izzy'?'From Izzy':'Life tasks'}</h2>{area!=='izzy'&&<button type="button" className="btn" aria-expanded={showQuestForm} aria-controls="quest-create-form" onClick={()=>{openQuestFormOnRender.current=!showQuestForm;setShowQuestForm(v=>!v)}}>{showQuestForm?'Close':'+ Add task'}</button>}</header>
- <nav className="quest-time-nav" aria-label="When">{([['today','Today'],['week','This week'],['later','Later'],['done','Done']] as const).map(([id,label])=><Link key={id} href={questWorkspaceHref(area,id)} aria-current={view===id?'page':undefined} prefetch={false}>{label}</Link>)}</nav>
- <p className="workspace-progress">{todayQuests.length} open today · {completed} done{streak&&<span> · 🔥 {streak.fire}</span>}</p>
- <details className="workspace-disclosure"><summary>Streak &amp; shield</summary><StreakShieldNote/>{lvl?<p className="muted">Level {lvl.level} · {xp} lifetime XP</p>:<p className="muted">LEVEL UNAVAILABLE · XP NOT VERIFIED</p>}</details>
- <section className="panel board-panel" aria-label="Quest board">{visible.length===0&&notStarted.length===0&&<p className="muted">Create your first quest below.</p>}{openCount===0&&completed>0&&<p className="muted">All caught up! Your completed quests are tucked away below.</p>}
- {view==='today'&&<div className="board-section" aria-label="Today"><h3>Today <span className="muted">({todayQuests.length})</span></h3>{todayQuests.length===0?<p className="muted">Nothing open for today.</p>:todayQuests.slice(0,pageSize).map(questCard)}{weeklyHidden>0&&<p className="muted weekly-pending">{weeklyHidden===1?'1 weekly quest arrives':`${weeklyHidden} weekly quests arrive`} later this week.</p>}{todayQuests.length>pageSize&&<button type="button" className="btn ghost workspace-load-more" onClick={()=>setPageSize(n=>n+6)}>Show 6 more tasks ({todayQuests.length-pageSize} remaining)</button>}</div>}
-
- {view==='week'&&<div className="board-section" aria-label="This Week"><h3>This Week <span className="muted">({weekQuests.length+weekNotStarted.length})</span></h3><p className="muted">Due in the next 7 days (Chicago time, day starts at 5:00 AM). Goals can be completed early.</p>{weekQuests.length+weekNotStarted.length===0?<p className="muted">Nothing else due this week.</p>:<>{weekQuests.slice(0,pageSize).map(questCard)}{weekNotStarted.slice(0,Math.max(0,pageSize-weekQuests.length)).map(notStartedCard)}</>}{weekQuests.length+weekNotStarted.length>pageSize&&<button className="btn ghost" onClick={()=>setPageSize(n=>n+6)}>Show 6 more tasks</button>}</div>}
- {view==='later'&&<div className="board-section" aria-label="Upcoming"><h3>Upcoming <span className="muted">({laterQuests.length+laterNotStarted.length})</span></h3><p className="muted">Scheduled quests and deadlines after this week.</p>{laterQuests.length+laterNotStarted.length===0?<p className="muted">Nothing scheduled later.</p>:<>{laterQuests.slice(0,pageSize).map(questCard)}{laterNotStarted.slice(0,Math.max(0,pageSize-laterQuests.length)).map(notStartedCard)}</>}{laterQuests.length+laterNotStarted.length>pageSize&&<button className="btn ghost" onClick={()=>setPageSize(n=>n+6)}>Show 6 more tasks</button>}</div>}
- {(view==='done'||(showCompleted&&recoveryIds.length>0))&&<div className="board-section board-completed" aria-label="Completed">{view==='done'?<p className="muted">{completed} completed</p>:<button type="button" className="btn ghost completed-board-toggle" aria-expanded={showCompleted} aria-controls="completed-quests-list" onClick={()=>setShowCompleted(v=>!v)}> Completed ({completed})</button>}{(showCompleted||view==='done')&&<div id="completed-quests-list">{completedDisplay.map(({quest,instance})=><div className="quest quest-tappable" key={quest.id} onClick={e=>openCard(e,quest)}><div className="quest-main">{cardTitle(quest)}{questCopy(quest)}<div className="muted">Completed · {instance?.due_date}</div><QuestDetails quest={quest} instance={instance!}/></div><div className="actions"><span className="tag">✓ Done</span></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance!} disabled={busy} onLog={logProgress}/></div>)}{completed>pageSize&&<button className="btn ghost" onClick={()=>setPageSize(n=>n+6)}>Show 6 more completed tasks</button>}{completed===0&&<p className="muted">No completed tasks in this section.</p>}</div>}</div>}</section>
- {earlierRecoveries.length>0&&<section className="panel"><h2>Completed quests with pending saves</h2><p className="muted">Review the original saved request before logging new progress. Retry never creates another request ID.</p>{earlierRecoveries.map(({quest,instance})=><div className="quest" key={instance.id}><div className="quest-main"><div className="quest-title">{quest.title}</div><div className="muted">Completed · {instance.due_date}</div></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/></div>)}</section>}
- {area==='work'&&<details className="workspace-disclosure"><summary>Set up Monday work tasks</summary><p className="muted">Add the six pharmacy weeklies once. Existing tasks are skipped.</p><button type="button" className="btn" disabled={busy} onClick={()=>void addPharmacyPack()}>Add work tasks</button></details>}
- {showQuestForm&&<section className="panel board-create"><button type="button" className="btn ghost board-create-toggle" aria-expanded={showQuestForm} aria-controls="quest-create-form" onClick={()=>{openQuestFormOnRender.current=!showQuestForm;setShowQuestForm(value=>!value)}}>Close task form</button>{showQuestForm&&<form id="quest-create-form" ref={questFormRef} className="quest-create-form" onSubmit={add}><h2>Create or approve a quest</h2><p className="muted">Quests proposed in ChatGPT can open here prefilled. Review before saving.</p><label htmlFor="quest-title">What real-world action will you take?</label><input id="quest-title" className="field" maxLength={120} required placeholder="e.g. Fold and put away laundry" value={title} onChange={e=>setTitle(e.target.value)}/><details className="workspace-disclosure"><summary>Schedule &amp; tracking</summary><div className="form-row"><label>Life domain<select className="field" value={domain} onChange={e=>setDomain(e.target.value)}>{DOMAINS.map(d=><option key={d[0]} value={d[0]}>{d[1]}</option>)}</select></label><label>Frequency<select className="field" value={cadence} disabled={questType==='goal'} onChange={e=>setCadence(e.target.value as 'once'|'daily'|'weekly')}><option value="daily">Every day</option><option value="weekly">Once a week</option><option value="once">One-time</option></select></label></div><label>Quest type<select className="field" value={questType} onChange={e=>{const v=e.target.value as 'scheduled'|'goal';setQuestType(v);if(v==='goal')setCadence('once')}}><option value="scheduled">Scheduled chore / habit</option><option value="goal">Goal with deadline (early completion allowed)</option></select></label><label htmlFor="quest-date">{questType==='goal'?'Goal deadline':'First due date'} (Chicago time, day starts at 5:00 AM)</label><input id="quest-date" className="field" type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><label style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" checked={trackProgress} onChange={e=>setTrackProgress(e.target.checked)}/> Track partial progress (optional)</label>{trackProgress&&<div className="form-row"><label>Target amount<input className="field" type="number" min={1} max={1000000} step={1} value={targetAmount} onChange={e=>setTargetAmount(e.target.value)}/></label><label>Unit<input className="field" maxLength={32} value={progressUnit} onChange={e=>setProgressUnit(e.target.value)}/></label><label>Quick-log increment<input className="field" type="number" min={1} max={targetAmount||1} step={1} value={progressIncrement} onChange={e=>setProgressIncrement(e.target.value)}/></label></div>}</details><button className="btn" disabled={busy||!title.trim()||(trackProgress&&(!Number.isInteger(Number(targetAmount))||Number(targetAmount)<1||Number(targetAmount)>1000000||!progressUnit.trim()||!Number.isInteger(Number(progressIncrement))||Number(progressIncrement)<1||Number(progressIncrement)>Number(targetAmount)))}>Schedule quest</button></form>}</section>}
- <p className="message" role="status" aria-live="polite">{message}</p><footer className="workspace-footer"><Link href="/quests/manage">Organize tasks</Link><Link href="/quests/journal">Quest notes</Link></footer></section>
+ const taskHref=(id:string)=>`${questDetailHref(id)}${questDetailChip(chip)}`;
+ const ownership=(quest:Quest)=>fromIzzy.has(quest.id)?partnerLabel:quest.domain==='career'?'Work':'Life';
+ const questCard=({quest,instance}:{quest:Quest;instance?:Instance})=>{
+  const finish=instance&&canComplete(quest,instance)&&(quest.target_amount==null||instance.current_amount>=quest.target_amount);
+  const meta=[ownership(quest),quest.cadence==='weekly'?(quest.fixed_reveal?`${weekdayLabel(quest.weekly_weekday)??'Monday'} 5:00 AM`:'Weekly · open until Monday 5:00 AM'):quest.cadence==='daily'?'Daily':instance?.due_date].filter(Boolean).join(' · ');
+  return <article className={instance&&award?.id===instance.id?'quest-row is-awarded':'quest-row'} key={quest.id}><div className="quest-row-main"><Link className="quest-row-title quest-title-link" href={taskHref(quest.id)} prefetch={false}>{quest.title}</Link><span className="quest-row-meta">{meta}{nudged.has(quest.id)?' · Nudge':''}{finish?' ' : ''}{finish&&<span className="quest-row-xp">XP</span>}{instance&&award?.id===instance.id&&<span className="xp-float">+{award.amount} XP</span>}</span></div>{instance?.status==='deferred'?<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'resume')}>Resume</button>:finish?<ConfirmCompleteButton label="Complete" questTitle={quest.title} disabled={busy} onConfirm={()=>act(instance!.id,'complete')}/>:instance?.status==='completed'?<span className="tag">Done</span>:<span className="muted quest-row-wait">Opens {instance?.due_date}</span>}<QuestRowDetails><p className="muted">{quest.description||'No extra note.'}</p>{instance?.status==='available'&&quest.target_amount!=null&&canComplete(quest,instance)&&<QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/>}{instance&&canComplete(quest,instance)&&<button className="btn ghost" disabled={busy} onClick={()=>act(instance.id,'defer')}>Defer</button>}{instance?.status==='completed'&&<><QuestDetails quest={quest} instance={instance!}/>{fromIzzy.has(quest.id)&&<IzzyProof instanceId={instance.id} disabled={busy}/>}<QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance!} disabled={busy} onLog={logProgress}/></>}</QuestRowDetails></article>;
+ };
+ const notStartedCard=(q:Quest)=><article className="quest-row" key={q.id}><div className="quest-row-main"><Link className="quest-row-title quest-title-link" href={taskHref(q.id)} prefetch={false}>{q.title}</Link><span className="quest-row-meta">{ownership(q)} · starts {q.scheduled_for}</span></div></article>;
+ const coupleCard=(quest:CoupleQuestView)=><article className="quest-row" key={quest.id}><div className="quest-row-main"><span className="quest-row-title">{quest.title}</span><span className="quest-row-meta">Together · {quest.cadence}{quest.myDone?'':' ' }{!quest.myDone&&<span className="quest-row-xp">XP</span>}</span></div><button type="button" className="btn" disabled={coupleBusy||quest.myDone} onClick={()=>onMarkCouple(quest.id)}>{quest.myDone?'Marked':'Mark my part'}</button><QuestRowDetails><p className="muted">{quest.description||'Shared activity.'}</p><p className="muted">{quest.myDone?'You marked done':'Your part is open'} · {quest.partnerDone?'Partner marked done':'Partner still open'}</p></QuestRowDetails></article>;
+ return <section className="quest-board-page workspace-board">{layoutPreview&&<p className="preview-banner" role="status">Layout preview. Sign in to load your quests.</p>}
+ <div className="quest-board-tools"><p className="workspace-progress">{todayQuests.length+sharedToday.length} open today{streak?` · ${streak.fire} day streak`:''}{xp===null?' · LEVEL UNAVAILABLE · XP NOT VERIFIED':` · Lv ${lvl?.level}`}</p><button type="button" className="btn quest-add" aria-expanded={showQuestForm} aria-controls="quest-create-form" onClick={()=>{openQuestFormOnRender.current=!showQuestForm;setShowQuestForm(v=>!v)}}>{showQuestForm?'Close':'＋'}</button></div>
+ <StreakShieldNote/>
+ <div className="board-panel" aria-label="Quest board">
+ <BoardSection id="today" label="Today" count={todayQuests.length+sharedToday.length} fallbackOpen={focus==='today'}>{sectionErrors.today&&<p className="section-retry">{sectionErrors.today} <button type="button" className="btn ghost" onClick={()=>void load()}>Retry</button></p>}{todayQuests.map(questCard)}{sharedToday.map(coupleCard)}{todayQuests.length+sharedToday.length===0&&!sectionErrors.today&&<p className="muted">{emptyCopy('today',chip)}</p>}{weeklyHidden>0&&<p className="muted weekly-pending">{weeklyHidden===1?'1 weekly quest arrives':`${weeklyHidden} weekly quests arrive`} later this week.</p>}</BoardSection>
+ <BoardSection id="week" label="This Week" count={weekQuests.length+weekNotStarted.length+sharedWeek.length} fallbackOpen={focus==='week'}>{sectionErrors.week&&<p className="section-retry">{sectionErrors.week} <button type="button" className="btn ghost" onClick={()=>void load()}>Retry</button></p>}{weekQuests.map(questCard)}{weekNotStarted.map(notStartedCard)}{sharedWeek.map(coupleCard)}{weekQuests.length+weekNotStarted.length+sharedWeek.length===0&&!sectionErrors.week&&<p className="muted">{emptyCopy('week',chip)}</p>}</BoardSection>
+ <BoardSection id="upcoming" label="Upcoming" count={laterQuests.length+laterNotStarted.length+sharedLater.length} fallbackOpen={focus==='later'}>{sectionErrors.upcoming&&<p className="section-retry">{sectionErrors.upcoming} <button type="button" className="btn ghost" onClick={()=>void load()}>Retry</button></p>}{laterQuests.map(questCard)}{laterNotStarted.map(notStartedCard)}{sharedLater.map(coupleCard)}{laterQuests.length+laterNotStarted.length+sharedLater.length===0&&!sectionErrors.upcoming&&<p className="muted">{emptyCopy('upcoming',chip)}</p>}</BoardSection>
+ <BoardSection id="completed" label="Completed" count={completed+sharedDone.length} fallbackOpen={focus==='done'||showCompleted}>{sectionErrors.completed&&<p className="section-retry">{sectionErrors.completed} <button type="button" className="btn ghost" onClick={()=>void load()}>Retry</button></p>}{completedDisplay.map(questCard)}{sharedDone.map(coupleCard)}{completed+sharedDone.length===0&&!sectionErrors.completed&&<p className="muted">{emptyCopy('completed',chip)}</p>}</BoardSection>
+ </div>
+ {earlierRecoveries.length>0&&<section className="panel"><h2>Completed quests with pending saves</h2>{earlierRecoveries.map(({quest,instance})=><div className="quest-row" key={instance.id}><div className="quest-row-main"><span className="quest-row-title">{quest.title}</span><span className="quest-row-meta">Completed · {instance.due_date}</span></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/></div>)}</section>}
+ {showQuestForm&&<div className="quest-sheet" id="quest-create-sheet" role="dialog" aria-label="Add a quest"><button type="button" className="btn ghost" onClick={()=>setShowQuestForm(false)}>Close</button>
+ {chip!=='partner'&&<form id="quest-create-form" ref={questFormRef} className="quest-create-form" onSubmit={add}><h2>New quest</h2><label htmlFor="quest-title">What real-world action will you take?</label><input id="quest-title" className="field" maxLength={120} required placeholder="Fold and put away laundry" value={title} onChange={e=>setTitle(e.target.value)}/><div className="form-row"><label>Life domain<select className="field" value={domain} onChange={e=>setDomain(e.target.value)}>{DOMAINS.map(d=><option key={d[0]} value={d[0]}>{d[1]}</option>)}</select></label><label>Frequency<select className="field" value={cadence} disabled={questType==='goal'} onChange={e=>setCadence(e.target.value as 'once'|'daily'|'weekly')}><option value="daily">Every day</option><option value="weekly">Once a week</option><option value="once">One-time</option></select></label></div><label>Quest type<select className="field" value={questType} onChange={e=>{const v=e.target.value as 'scheduled'|'goal';setQuestType(v);if(v==='goal')setCadence('once')}}><option value="scheduled">Scheduled chore / habit</option><option value="goal">Goal with deadline</option></select></label><label htmlFor="quest-date">{questType==='goal'?'Goal deadline':'First due date'}</label><input id="quest-date" className="field" type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><label className="quest-check"><input type="checkbox" checked={trackProgress} onChange={e=>setTrackProgress(e.target.checked)}/> Track partial progress</label>{trackProgress&&<div className="form-row"><label>Target amount<input className="field" type="number" min={1} max={1000000} step={1} value={targetAmount} onChange={e=>setTargetAmount(e.target.value)}/></label><label>Unit<input className="field" maxLength={32} value={progressUnit} onChange={e=>setProgressUnit(e.target.value)}/></label><label>Quick-log increment<input className="field" type="number" min={1} max={targetAmount||1} step={1} value={progressIncrement} onChange={e=>setProgressIncrement(e.target.value)}/></label></div>}<button className="btn" disabled={busy||!title.trim()||(trackProgress&&(!Number.isInteger(Number(targetAmount))||Number(targetAmount)<1||Number(targetAmount)>1000000||!progressUnit.trim()||!Number.isInteger(Number(progressIncrement))||Number(progressIncrement)<1||Number(progressIncrement)>Number(targetAmount)))}>Schedule quest</button></form>}
+ {companion&&<AssignToConnor/>}
+ {(chip==='work'||chip==='all')&&<div><h2>Set up Monday work tasks</h2><button type="button" className="btn" disabled={busy} onClick={()=>void addPharmacyPack()}>Add work tasks</button></div>}
+ {(chip==='together'||chip==='all')&&<div><h2>Shared plans</h2><TogetherPlans/></div>}
+ <p><Link href="/quests/manage">Organize tasks</Link> · <Link href="/quests/journal">Quest notes</Link> · <Link href="/more">More settings</Link></p>
+ </div>}
+ <p className="message" role="status" aria-live="polite">{message}</p></section>
 }
-function dateString(){return todayLocal()}
 function addDays(date:string,days:number){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
+
+function BoardSection({id,label,count,fallbackOpen,children}:{id:QuestSectionId;label:string;count:number;fallbackOpen:boolean;children:ReactNode}){
+ const [open,setOpen]=useState(fallbackOpen);
+ useEffect(()=>{setOpen(readSectionOpen(id,fallbackOpen,window.localStorage)||(id==='completed'&&fallbackOpen));},[id,fallbackOpen]);
+ return <section className="board-section" aria-label={label}>
+  <button type="button" className={id==='completed'?'board-section-toggle completed-board-toggle':'board-section-toggle'} aria-expanded={open} onClick={()=>{const next=!open;setOpen(next);writeSectionOpen(id,next,window.localStorage);}}>{label} ({count})</button>
+  {open&&<div className="board-section-body">{children}</div>}
+ </section>;
+}
+function QuestRowDetails({children}:{children:ReactNode}){
+ const [open,setOpen]=useState(false);
+ return <div className="quest-row-extra"><button type="button" className="btn ghost quest-row-more" aria-expanded={open} onClick={()=>setOpen(value=>!value)}>{open?'Hide':'Details'}</button>{open&&<div className="quest-row-details">{children}</div>}</div>;
+}
+function AssignToConnor(){
+ const [text,setText]=useState('');
+ const [note,setNote]=useState('');
+ const [cadence,setCadence]=useState<'daily'|'weekly'>('daily');
+ const [busy,setBusy]=useState(false);
+ const [status,setStatus]=useState('');
+ async function send(event:React.FormEvent){
+  event.preventDefault();
+  if(!text.trim()||busy)return;
+  setBusy(true);
+  const {error}=await supabase().rpc('companion_send_quest',{p_title:text.trim(),p_description:note.trim(),p_due:null,p_reward:'',p_cadence:cadence});
+  setBusy(false);
+  if(error){setStatus(error.message);return;}
+  setText('');setNote('');setStatus('Sent to Connor. It is on his board, with his XP.');
+ }
+ return <form onSubmit={event=>{void send(event);}}><h2>Assign to Connor</h2><label htmlFor="assign-title">Quest</label><input id="assign-title" className="field" maxLength={120} required value={text} onChange={event=>setText(event.target.value)}/><label htmlFor="assign-note">Note</label><input id="assign-note" className="field" maxLength={500} value={note} onChange={event=>setNote(event.target.value)}/><label>Cadence<select className="field" value={cadence} onChange={event=>setCadence(event.target.value==='weekly'?'weekly':'daily')}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label><button className="btn" disabled={busy||!text.trim()}>Send</button>{status&&<p className="message" role="status">{status}</p>}</form>;
+}
+function TogetherPlans(){
+ return <TogetherQuestPanel plansOnly/>;
+}

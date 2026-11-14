@@ -13,8 +13,8 @@ const home=readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx',im
 const controls=readFileSync(new URL('../components/QuestProgressControls.tsx',import.meta.url),'utf8');
 const journal=readFileSync(new URL('../app/(app)/quests/journal/page.tsx',import.meta.url),'utf8');
 
-test('board renders Today, This Week and Upcoming sections',()=>{
- for(const label of ['Today','This Week','Upcoming'])assert.match(home,new RegExp(`aria-label="${label}"><h3>${label} `));
+test('board renders Today, This Week, Upcoming, and Completed together',()=>{
+ for(const label of ['Today','This Week','Upcoming','Completed'])assert.match(home,new RegExp(`label="${label}"`));
 });
 
 test('future one-time instances are loaded so weekly and future quests are visible',()=>{
@@ -22,9 +22,10 @@ test('future one-time instances are loaded so weekly and future quests are visib
  assert.doesNotMatch(home,/\.in\('quest_id',onceIds\)\.lte\(/);
 });
 
-test('All caught up appears only when no section has open quests',()=>{
- assert.match(home,/const openCount=activeQuests\.length\+notStarted\.length/);
- assert.match(home,/\{openCount===0&&completed>0&&<p className="muted">All caught up!/);
+test('an empty Today section stays on the board with the other sections',()=>{
+ assert.match(home,/emptyCopy\('today',chip\)/);
+ assert.match(readFileSync(new URL('../lib/questPolish.ts',import.meta.url),'utf8'),/Nothing open for today/);
+ assert.doesNotMatch(home,/openCount===0&&completed>0/);
 });
 
 test('completion uses the in-app confirm and the existing receipt RPC only',()=>{

@@ -28,7 +28,7 @@ export default function CompanionRewardsPage() {
   return (
     <main className="wrap companion-page">
       <h1>Rewards</h1>
-      <p className="muted">A real-life treat. It never grants XP.</p>
+      <p className="muted">A personal note for later. Saving it records the goal and grants no XP.</p>
       <form className="companion-card" onSubmit={(event) => void save(event)}>
         <label htmlFor="reward-text">Reward</label>
         <input id="reward-text" className="field" maxLength={200} value={text} onChange={(event) => setText(event.target.value)} required />

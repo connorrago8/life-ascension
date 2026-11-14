@@ -18,8 +18,8 @@ test('the quest board lives at /quests and the journal at /quests/journal', () =
   assert.match(board, /ensure_quest_instance/);
   assert.match(board, /ConfirmCompleteButton/);
   assert.match(board, /completed-board-toggle/);
-  assert.match(board, /useState\(false\);const \[recoveryIds/); // Completed stays closed by default.
-  assert.match(board, /aria-label="Upcoming"/);
+  assert.match(board, /showCompleted,setShowCompleted\]=useState\(false\)/);
+  assert.match(board, /aria-label=\{label\}/);
   assert.match(board, /<Link href="\/quests\/journal">Quest notes<\/Link>/);
   assert.match(journal, /href="\/quests">Quest board<\/a>/);
   assert.doesNotMatch(journal, /on Home/);

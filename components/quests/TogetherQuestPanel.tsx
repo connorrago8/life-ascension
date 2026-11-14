@@ -56,7 +56,7 @@ const PREVIEW_QUESTS: Quest[] = COUPLE_QUEST_PACK.slice(0, 4).map((quest, index)
   steps: [],
 }));
 
-export default function TogetherQuestPanel() {
+export default function TogetherQuestPanel({ plansOnly = false }: { plansOnly?: boolean }) {
   const [section, setSection] = useState<'tasks'|'dates'|'recap'>('tasks');
   const [ideaLimit, setIdeaLimit] = useState(6);
   const [preview, setPreview] = useState(false);
@@ -108,7 +108,7 @@ export default function TogetherQuestPanel() {
     setBusy(false);
     if (error) { setMessage(error.message); return; }
     const row = data as { awarded?: boolean; already?: boolean; connorXp?: number; izzyXp?: number };
-    if (row.awarded) setMessage(`Both done. Connor ${row.connorXp ?? 0} XP. Izzy ${row.izzyXp ?? 0} XP.`);
+    if (row.awarded) setMessage('Both parts are done. XP stays on each account.');
     else if (row.already) setMessage('Already awarded for this period.');
     else setMessage('Your part is marked. It awards when you both finish.');
     await load();
@@ -159,21 +159,21 @@ export default function TogetherQuestPanel() {
 
   return (
     <section className="couple-page workspace-together">
-      <header className="workspace-list-heading"><h2>Together</h2><span className="muted">Your shared space</span></header>
-      <nav className="quest-time-nav" aria-label="Together sections">{([['tasks','Shared tasks'],['dates','Date night'],['recap','Recap']] as const).map(([id,label])=><button key={id} type="button" aria-pressed={section===id} onClick={()=>setSection(id)}>{label}</button>)}</nav>
+      {!plansOnly && <header className="workspace-list-heading"><h2>Together</h2><span className="muted">Your shared space</span></header>}
+      {!plansOnly && <nav className="quest-time-nav" aria-label="Together sections">{([['tasks','Shared tasks'],['dates','Date night'],['recap','Recap']] as const).map(([id,label])=><button key={id} type="button" aria-pressed={section===id} onClick={()=>setSection(id)}>{label}</button>)}</nav>}
       {preview && <p className="preview-banner" role="status">Layout preview. Sign in to use your bond.</p>}
       {preview && <p className="streak-shield" role="status">{shieldLabel('used', { doneToday: false })}</p>}
-      {section==='recap' && (sunday || preview) && (
+      {(plansOnly || section==='recap') && (sunday || preview) && (
         <section className="couple-card" aria-label="Sunday recap">
           {preview ? <SundayRecapCard previewFacts={previewRecap} /> : <SundayRecapCard />}
         </section>
       )}
-      {section==='tasks'&&<details className="workspace-disclosure"><summary>Add shared task ideas</summary><section className="couple-card" aria-label="Starter pack">
+      {!plansOnly && section==='tasks'&&<details className="workspace-disclosure"><summary>Add shared task ideas</summary><section className="couple-card" aria-label="Starter pack">
         <h2>Starter pack</h2>
         <p className="muted">Fifteen shared quests. A second tap skips titles you already have.</p>
         <button className="btn" type="button" disabled={busy || preview} onClick={() => void addPack()}>Add the 15</button>
       </section></details>}
-      {section==='dates'&&<><section className="couple-card" aria-label="Date night planner">
+      {(plansOnly || section==='dates')&&<><section className="couple-card" aria-label="Date night planner">
         <h2>Date night</h2>
         <form onSubmit={(event) => void draftNight(event)}>
           <label htmlFor="date-night-note">Say it in one line</label>
@@ -197,8 +197,8 @@ export default function TogetherQuestPanel() {
         </ul>
         {ideaLimit<DATE_NIGHT_IDEAS.length&&<button className="btn ghost" onClick={()=>setIdeaLimit(n=>n+6)}>Show 6 more ideas</button>}
       </section></>}
-      {section==='recap'&&!sunday&&!preview&&<p className="workspace-empty">Your weekly recap opens Sunday at 5 AM Chicago time.</p>}
-      {section==='tasks'&&<section aria-label="Shared quests">
+      {(plansOnly || section==='recap')&&!sunday&&!preview&&<p className="workspace-empty">Your weekly recap opens Sunday at 5 AM Chicago time.</p>}
+      {!plansOnly && section==='tasks'&&<section aria-label="Shared quests">
         <h2>Shared quests</h2>
         {(board?.quests ?? []).length === 0 && <p className="muted">Nothing shared yet.</p>}
         {(board?.quests ?? []).map((quest) => (

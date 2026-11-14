@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const home = readFileSync(new URL('../components/quests/PersonalQuestBoard.tsx', import.meta.url), 'utf8');
-const completedStart = home.indexOf('<div id="completed-quests-list">{completedDisplay.map');
-const completedEnd = home.indexOf('</section>', completedStart);
+const completedStart = home.indexOf("instance?.status==='completed'");
+const completedEnd = home.indexOf('</article>;', completedStart);
 const completedCards = home.slice(completedStart, completedEnd);
 const details = '<QuestDetails quest={quest} instance={instance!}/>';
 

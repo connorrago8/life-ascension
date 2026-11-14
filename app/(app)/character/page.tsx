@@ -16,6 +16,8 @@ import { supabase } from '../../../lib/supabase';
 import { earnedArmorMilestone, parseAuthenticatedGearSnapshot, type AuthenticatedGearSnapshot } from '../../../lib/preview/characterGearView';
 import { SERVER_EQUIPPABLE_ITEMS, canRequestEquip, isSlotUnlocked, levelForVerifiedXp, slotLockText, type GearSlotKey } from '../../../lib/gearSlots';
 import { WELLNESS_EMPTY, WELLNESS_HELP_HREF, WELLNESS_READING_COLUMNS, formatSleep, formatSteps, formatWellnessDate, wellnessSnapshot, type WellnessSnapshot } from '../../../lib/wellness';
+import { useCompanionRole } from '../../../components/useCompanionRole';
+import CompanionCharacter from '../companion/character/page';
 
 type LoadState =
   | { status: 'loading' }
@@ -28,6 +30,7 @@ function loginHref() {
 }
 
 export default function CharacterPage() {
+  const role = useCompanionRole();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [equipmentBusy, setEquipmentBusy] = useState(false);
   const [equipmentError, setEquipmentError] = useState('');
@@ -146,6 +149,8 @@ export default function CharacterPage() {
     return () => { cancel = true; };
   }, [wornLoadKey]);
 
+  if (role.status === 'loading') return <main className="wrap"><p className="role-loading" role="status">Loading…</p></main>;
+  if (role.mode === 'companion') return <CompanionCharacter />;
   if (state.status === 'loading') return <main className="wrap">Loading your character…</main>;
   if (state.status === 'signed-out') {
     return (
