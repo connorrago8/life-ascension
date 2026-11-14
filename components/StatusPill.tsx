@@ -95,13 +95,12 @@ export function StatusPill({ mode }: { mode: Mode }) {
     <div className={'engage-pill' + (expanded ? ' is-open' : '')}>
       <button type="button" className="engage-face" aria-expanded={expanded} aria-label={pillAriaLabel(snapshot, snapshot.href)} onClick={() => setExpanded((value) => !value)}>
         <ProgressRing fraction={ring} />
-        <span className="engage-flame" aria-hidden="true">🔥 {snapshot.streak}</span>
       </button>
       {expanded && (
         <div className="engage-extra">
-          <Link href={snapshot.href}>{snapshot.questLabel}</Link>
+          <span className="engage-dim">{Math.max(0, snapshot.xpForNext - snapshot.xpIntoLevel)} XP to next</span>
           <span className="engage-dim">{resetLabel}</span>
-          <span className="engage-dim">{snapshot.xpLabel} XP</span>
+          <Link className="engage-dim" href={snapshot.href}>Quests</Link>
         </div>
       )}
       <button type="button" className="engage-hide" aria-label="Hide today status" onClick={() => place('hidden')}>×</button>

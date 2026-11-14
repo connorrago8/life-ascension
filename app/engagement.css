@@ -31,7 +31,6 @@
 .engage-ring{width:28px;height:28px;flex:none;}
 .engage-ring circle{fill:none;stroke:#2a3340;stroke-width:3;}
 .engage-ring circle:last-child{stroke:#3de1ff;stroke-linecap:round;transform:rotate(-90deg);transform-origin:14px 14px;}
-.engage-flame{font-size:18px;font-weight:750;color:#ff2bd6;}
 .engage-extra{display:flex;gap:8px;align-items:center;min-width:0;}
 .engage-dim{font-size:11px;color:#8b95a3;}
 .engage-hide{width:28px;height:28px;border:0;border-radius:999px;background:transparent;color:#8b95a3;cursor:pointer;}

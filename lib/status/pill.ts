@@ -56,5 +56,6 @@ export function pillModel(input: PillInput): PillModel {
 
 export function pillAriaLabel(model: PillModel, href: string): string {
   const where = href.startsWith('/companion') ? 'companion quests' : 'quests';
-  return `Today ${model.completed} of ${model.total} quests, streak ${model.streak}, level ${model.level}, ${model.xpIntoLevel} of ${model.xpForNext} XP. Open ${where}.`;
+  const toNext = Math.max(0, model.xpForNext - model.xpIntoLevel);
+  return `Today ${model.completed} of ${model.total} quests, ${toNext} XP to next level. Open ${where}.`;
 }

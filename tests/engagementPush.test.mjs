@@ -97,7 +97,11 @@ test('the status pill uses this account totals, streak, and XP, and clears a zer
   assert.equal(done.questLabel, '5/5');
   assert.equal(done.badge, 0);
   assert.equal(pillModel({ completed: -1, remaining: 1.9, streak: 0, xp: 0 }).questLabel, '0/1');
-  assert.match(pillAriaLabel(open, '/quests'), /2 of 5 quests, streak 4/);
+  assert.match(pillAriaLabel(open, '/quests'), /2 of 5 quests, 11 XP to next level/);
+  assert.doesNotMatch(pillAriaLabel(open, '/quests'), /streak/);
+  const face = readFileSync(new URL('../components/StatusPill.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(face, /engage-flame/);
+  assert.match(face, /XP to next/);
 });
 
 test('the service worker replaces daily progress and does not cache authenticated pages', () => {
