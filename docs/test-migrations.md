@@ -30,4 +30,7 @@ select proname from pg_proc where proname in ('companion_log_activity_v2','adven
 ## Rollback (if needed)
 Run the matching files in `supabase/rollbacks/` in reverse order.
 
+## Engagement push (2026-11-14)
+`supabase/migrations/202611140001_engagement_pwa_push.sql` adds push subscriptions, notification preferences, the outbox, and widget tokens. Roll back with `supabase/rollbacks/202611140001_engagement_pwa_push_down.sql`. See `docs/engagement-push.md`. Production must not receive it.
+
 Production must not receive these.
