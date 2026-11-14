@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
       { source: '/companion', destination: '/more/relationship', permanent: false },
       { source: '/together', destination: '/quests?chip=together', permanent: false },
       { source: '/together/:path*', destination: '/quests?chip=together', permanent: false },
+      { source: '/settings/notifications', destination: '/more/notifications', permanent: false },
     ];
   },
 };

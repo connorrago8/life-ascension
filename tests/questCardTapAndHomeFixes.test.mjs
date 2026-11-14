@@ -26,7 +26,7 @@ test('Home completed quests collapse into one closed-by-default Completed sectio
 });
 
 test('quest titles are keyboard-reachable links and completion stays on its own button', () => {
-  assert.match(home, /className="quest-row-title quest-title-link" href=\{taskHref\(quest\.id\)\}/);
+  assert.match(home, /className="log-title quest-title-link" href=\{taskHref\(quest\.id\)\}/);
   assert.match(home, /<ConfirmCompleteButton label="Complete" questTitle=\{quest\.title\} disabled=\{busy\} onConfirm=\{\(\)=>act\(instance!\.id,'complete'\)\}\/>/);
 });
 

@@ -446,6 +446,12 @@ code { font-family: ui-monospace, monospace; }
     height: 28px;
     bottom: calc(64px + env(safe-area-inset-bottom));
     pointer-events: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    height: auto;
+    min-height: 28px;
+    padding: 0 8px;
   }
   .shell-main { padding-bottom: calc(114px + env(safe-area-inset-bottom)); }
   .shell-main .wrap { padding-bottom: 20px; }

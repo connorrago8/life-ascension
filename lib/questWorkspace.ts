@@ -2,6 +2,7 @@ export const QUEST_CHIPS = [
   { id: 'all', label: 'All' },
   { id: 'life', label: 'Life' },
   { id: 'partner', label: 'Partner' },
+  { id: 'sent', label: 'Sent' },
   { id: 'work', label: 'Work' },
   { id: 'together', label: 'Together' },
 ] as const;
@@ -22,7 +23,7 @@ export function chipLabel(chip: QuestChip, companion: boolean): string {
 /** Legacy area links (`izzy`) land on the partner chip. Unknown values stay on All. */
 export function parseQuestChip(value: unknown): QuestChip {
   if (value === 'izzy' || value === 'partner') return 'partner';
-  if (value === 'all' || value === 'life' || value === 'work' || value === 'together') return value;
+  if (value === 'all' || value === 'life' || value === 'work' || value === 'together' || value === 'sent') return value;
   return 'all';
 }
 

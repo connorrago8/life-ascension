@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/more/rewards', label: 'Reward notes', note: 'A personal note. Nothing here is redeemed.' },
   { href: '/quests/manage', label: 'Manage quests', note: 'Edit and archive your own quests' },
   { href: '/quests/journal', label: 'Quest notes', note: 'Notes on your completions' },
+  { href: '/more/notifications', label: 'Notifications', note: 'Push, quiet hours, and the evening reminder' },
   { href: '/settings/api-keys', label: 'API keys', note: 'Private keys for your account' },
   { href: '/settings/wellness', label: 'Wellness', note: 'Readings stay on your account' },
 ] as const;

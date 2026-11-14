@@ -5,7 +5,7 @@ import { coupleBucket } from '../lib/coupleQuestView.ts';
 import { readSectionOpen, writeSectionOpen } from '../lib/questSections.ts';
 
 test('filters stay on the quest board and old area links still resolve', () => {
-  assert.deepEqual(QUEST_CHIPS.map((chip) => chip.id), ['all', 'life', 'partner', 'work', 'together']);
+  assert.deepEqual(QUEST_CHIPS.map((chip) => chip.id), ['all', 'life', 'partner', 'sent', 'work', 'together']);
   for (const value of [null, 'other', '//outside.example', '<script>']) assert.equal(parseQuestChip(value), 'all');
   assert.equal(parseQuestChip('izzy'), 'partner');
   assert.equal(parseQuestView('done'), 'done');
