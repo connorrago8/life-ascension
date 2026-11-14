@@ -156,7 +156,7 @@ export function CompanionHome({
           })}>Mark read</button>
         )}
       </section>
-      <p className="muted"><Link href="/together">Shared quests and date nights</Link></p>
+      <p className="muted"><Link href="/quests?chip=together">Shared quests</Link></p>
       {board.recap?.visible && (
         <section className="panel companion-card companion-greeting" aria-label="Sunday recap">
           <PixelAvatar who="izzy" size={72} alt="Izzy, your companion" />

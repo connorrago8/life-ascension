@@ -346,7 +346,7 @@ return !expectedProgressInstanceId||rows.get(expectedProgressInstanceId)||false}
  {earlierRecoveries.length>0&&<section className="panel"><h2>Completed quests with pending saves</h2>{earlierRecoveries.map(({quest,instance})=><div className="quest-row" key={instance.id}><div className="quest-row-main"><span className="quest-row-title">{quest.title}</span><span className="quest-row-meta">Completed · {instance.due_date}</span></div><QuestProgressControls onJournalResolved={journalResolved} quest={quest} instance={instance} disabled={busy} onLog={logProgress}/></div>)}</section>}
  {showQuestForm&&<div className="quest-sheet" id="quest-create-sheet" role="dialog" aria-label="Add a quest"><button type="button" className="btn ghost" onClick={()=>setShowQuestForm(false)}>Close</button>
  {chip!=='partner'&&<form id="quest-create-form" ref={questFormRef} className="quest-create-form" onSubmit={add}><h2>New quest</h2><label htmlFor="quest-title">What real-world action will you take?</label><input id="quest-title" className="field" maxLength={120} required placeholder="Fold and put away laundry" value={title} onChange={e=>setTitle(e.target.value)}/><div className="form-row"><label>Life domain<select className="field" value={domain} onChange={e=>setDomain(e.target.value)}>{DOMAINS.map(d=><option key={d[0]} value={d[0]}>{d[1]}</option>)}</select></label><label>Frequency<select className="field" value={cadence} disabled={questType==='goal'} onChange={e=>setCadence(e.target.value as 'once'|'daily'|'weekly')}><option value="daily">Every day</option><option value="weekly">Once a week</option><option value="once">One-time</option></select></label></div><label>Quest type<select className="field" value={questType} onChange={e=>{const v=e.target.value as 'scheduled'|'goal';setQuestType(v);if(v==='goal')setCadence('once')}}><option value="scheduled">Scheduled chore / habit</option><option value="goal">Goal with deadline</option></select></label><label htmlFor="quest-date">{questType==='goal'?'Goal deadline':'First due date'}</label><input id="quest-date" className="field" type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><label className="quest-check"><input type="checkbox" checked={trackProgress} onChange={e=>setTrackProgress(e.target.checked)}/> Track partial progress</label>{trackProgress&&<div className="form-row"><label>Target amount<input className="field" type="number" min={1} max={1000000} step={1} value={targetAmount} onChange={e=>setTargetAmount(e.target.value)}/></label><label>Unit<input className="field" maxLength={32} value={progressUnit} onChange={e=>setProgressUnit(e.target.value)}/></label><label>Quick-log increment<input className="field" type="number" min={1} max={targetAmount||1} step={1} value={progressIncrement} onChange={e=>setProgressIncrement(e.target.value)}/></label></div>}<button className="btn" disabled={busy||!title.trim()||(trackProgress&&(!Number.isInteger(Number(targetAmount))||Number(targetAmount)<1||Number(targetAmount)>1000000||!progressUnit.trim()||!Number.isInteger(Number(progressIncrement))||Number(progressIncrement)<1||Number(progressIncrement)>Number(targetAmount)))}>Schedule quest</button></form>}
- {companion&&<AssignToConnor/>}
+ {user&&user!=='preview'&&<AssignToPartner companion={companion}/>}
  {(chip==='work'||chip==='all')&&<div><h2>Set up Monday work tasks</h2><button type="button" className="btn" disabled={busy} onClick={()=>void addPharmacyPack()}>Add work tasks</button></div>}
  {(chip==='together'||chip==='all')&&<div><h2>Shared plans</h2><TogetherPlans/></div>}
  <p><Link href="/quests/manage">Organize tasks</Link> · <Link href="/quests/journal">Quest notes</Link> · <Link href="/more">More settings</Link></p>
@@ -367,7 +367,8 @@ function QuestRowDetails({children}:{children:ReactNode}){
  const [open,setOpen]=useState(false);
  return <div className="quest-row-extra"><button type="button" className="btn ghost quest-row-more" aria-expanded={open} onClick={()=>setOpen(value=>!value)}>{open?'Hide':'Details'}</button>{open&&<div className="quest-row-details">{children}</div>}</div>;
 }
-function AssignToConnor(){
+function AssignToPartner({companion}:{companion:boolean}){
+ const partner=companion?'Connor':'Izzy';
  const [text,setText]=useState('');
  const [note,setNote]=useState('');
  const [cadence,setCadence]=useState<'daily'|'weekly'>('daily');
@@ -377,12 +378,14 @@ function AssignToConnor(){
   event.preventDefault();
   if(!text.trim()||busy)return;
   setBusy(true);
-  const {error}=await supabase().rpc('companion_send_quest',{p_title:text.trim(),p_description:note.trim(),p_due:null,p_reward:'',p_cadence:cadence});
+  const {data,error}=await supabase().rpc('companion_send_quest',{p_title:text.trim(),p_description:note.trim(),p_due:null,p_reward:'',p_cadence:cadence});
   setBusy(false);
   if(error){setStatus(error.message);return;}
-  setText('');setNote('');setStatus('Sent to Connor. It is on his board, with his XP.');
+  const again=(data as {idempotent?:boolean}|null)?.idempotent===true;
+  setText('');setNote('');
+  setStatus(again?`Already on ${partner}'s board.`:`Sent to ${partner}. It is on their board, with their XP.`);
  }
- return <form onSubmit={event=>{void send(event);}}><h2>Assign to Connor</h2><label htmlFor="assign-title">Quest</label><input id="assign-title" className="field" maxLength={120} required value={text} onChange={event=>setText(event.target.value)}/><label htmlFor="assign-note">Note</label><input id="assign-note" className="field" maxLength={500} value={note} onChange={event=>setNote(event.target.value)}/><label>Cadence<select className="field" value={cadence} onChange={event=>setCadence(event.target.value==='weekly'?'weekly':'daily')}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label><button className="btn" disabled={busy||!text.trim()}>Send</button>{status&&<p className="message" role="status">{status}</p>}</form>;
+ return <form onSubmit={event=>{void send(event);}}><h2>Assign to {partner}</h2><label htmlFor="assign-title">Quest</label><input id="assign-title" className="field" maxLength={120} required value={text} onChange={event=>setText(event.target.value)}/><label htmlFor="assign-note">Note</label><input id="assign-note" className="field" maxLength={500} value={note} onChange={event=>setNote(event.target.value)}/><label>Cadence<select className="field" value={cadence} onChange={event=>setCadence(event.target.value==='weekly'?'weekly':'daily')}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label><button className="btn" disabled={busy||!text.trim()}>Send</button>{status&&<p className="message" role="status">{status}</p>}</form>;
 }
 function TogetherPlans(){
  return <TogetherQuestPanel plansOnly/>;
