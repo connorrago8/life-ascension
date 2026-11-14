@@ -37,7 +37,14 @@ test('Sunday recap uses the ten headlines and refuses an invented moment', () =>
   assert.match(lines[6], /No couple quest completed this week/);
   assert.match(lines[7], /No new gear this week/);
   assert.equal(recapHeadline('bond-1'), recapHeadline('bond-1'));
+  const current = readFileSync(new URL('../supabase/migrations/202611140001_replace_cook_dinner_pack.sql', import.meta.url), 'utf8');
   for (const quest of COUPLE_QUEST_PACK) {
+    if (quest.title === 'Evening wind-down') {
+      assert.match(current, /Evening wind-down/);
+      assert.match(pack, /Cook dinner together/);
+      assert.equal(COUPLE_QUEST_PACK.some((item) => item.title === 'Cook dinner together'), false);
+      continue;
+    }
     const sql = quest.description.replace(/'/g, "''").replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     assert.match(migration, new RegExp(sql));
     assert.equal(pack.includes(quest.description), true);

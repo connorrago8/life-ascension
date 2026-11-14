@@ -46,8 +46,8 @@ test('Journal splits "Done today" and "Completed" into collapsible sections with
 test('Home board and Home preview keep Completed closed by default with a count and accessible toggle', () => {
   const home = read('components/quests/PersonalQuestBoard.tsx');
   assert.match(home, /const \[showCompleted,setShowCompleted\]=useState\(false\)/);
-  assert.match(home, /aria-expanded=\{showCompleted\}/);
-  assert.match(home, /Completed \(\{completed\}\)/);
+  assert.match(home, /label="Completed"/);
+  assert.match(home, /fallbackOpen=\{focus==='done'\|\|showCompleted\}/);
   const preview = read('components/preview/HomeScreen.tsx');
   assert.match(preview, /const \[showCompleted, setShowCompleted\] = useState\(false\)/);
   assert.match(preview, /aria-expanded=\{showCompleted\}/);

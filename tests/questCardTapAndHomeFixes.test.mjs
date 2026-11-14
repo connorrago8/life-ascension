@@ -19,17 +19,14 @@ test('card taps open details but never hijack nested controls or text selection'
   }
 });
 
-test('Home completed quests collapse into one closed-by-default Completed (N) section', () => {
+test('Home completed quests collapse into one closed-by-default Completed section', () => {
   assert.match(home, /const \[showCompleted,setShowCompleted\]=useState\(false\)/);
-  assert.match(home, /className="board-section board-completed" aria-label="Completed"/);
-  assert.match(home, /aria-expanded=\{showCompleted\} aria-controls="completed-quests-list"/);
-  assert.match(home, / Completed \(\{completed\}\)<\/button>/);
-  assert.equal((home.match(/Completed \(\{completed\}\)/g) ?? []).length, 1);
+  assert.match(home, /label="Completed"/);
+  assert.match(home, /fallbackOpen=\{focus==='done'\|\|showCompleted\}/);
 });
 
-test('Home quest cards are tap-to-open with a keyboard-reachable title link to the detail route', () => {
-  assert.match(home, /<Link className="quest-title-link" href=\{taskHref\(quest\.id\)\}/);
-  assert.match(home, /if\(shouldOpenQuestCard\(e\.target as Element,selection\)\)router\.push\(taskHref\(quest\.id\)\)/);
+test('quest titles are keyboard-reachable links and completion stays on its own button', () => {
+  assert.match(home, /className="quest-row-title quest-title-link" href=\{taskHref\(quest\.id\)\}/);
   assert.match(home, /<ConfirmCompleteButton label="Complete" questTitle=\{quest\.title\} disabled=\{busy\} onConfirm=\{\(\)=>act\(instance!\.id,'complete'\)\}\/>/);
 });
 

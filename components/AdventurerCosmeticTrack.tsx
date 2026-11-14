@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { ADVENTURER_COSMETICS, type AdventurerCosmetic } from '../lib/adventurerCosmetics';
 import { supabase } from '../lib/supabase';
-import { AdventurerCosmeticSprite } from './AdventurerCosmeticSprite';
 import { CosmeticLevelUp } from './CosmeticLevelUp';
 
 const EMPTY_WORN: readonly string[] = [];
@@ -19,6 +18,7 @@ type Props = {
 
 export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornChange, readOnly = false, label }: Props) {
   const [busy, setBusy] = useState(false);
+  const [wardrobeOpen, setWardrobeOpen] = useState(false);
   const [error, setError] = useState('');
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const worn = new Set(wornIds);
@@ -73,12 +73,20 @@ export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornCha
           onClose={() => setLevelUp(null)}
         />
       )}
-      <div className="adventurer-stage">
-        <AdventurerCosmeticSprite worn={wornIds} label={label} />
-      </div>
-      <h2 className="cq-section">Cosmetics</h2>
-      <p className="muted">Unlocks every 2 levels from quest XP. Wear saves only through the server.</p>
-      {readOnly && <p className="muted">Preview look. Nothing here is saved.</p>}
+      <button
+        type="button"
+        className="btn ghost"
+        aria-expanded={wardrobeOpen}
+        aria-controls="adventurer-wardrobe-rewards"
+        onClick={() => setWardrobeOpen((open) => !open)}
+      >
+        {wardrobeOpen ? 'Close Wardrobe' : 'Wardrobe'}
+      </button>
+      {wardrobeOpen && (
+        <div id="adventurer-wardrobe-rewards">
+          <h2 className="cq-section">Cosmetics</h2>
+          <p className="muted">Unlock a new piece every 2 levels. Cosmetics never change stats.</p>
+          {readOnly && <p className="muted">Preview only. Nothing here is saved.</p>}
       <ul className="cq-track">
         {ADVENTURER_COSMETICS.map((item) => {
           const owned = item.unlockLevel <= level;
@@ -106,6 +114,8 @@ export function AdventurerCosmeticTrack({ level, wornIds = EMPTY_WORN, onWornCha
           );
         })}
       </ul>
+        </div>
+      )}
       {error && <p className="message" role="status">{error}</p>}
     </section>
   );

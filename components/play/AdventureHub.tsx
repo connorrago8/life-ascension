@@ -11,6 +11,7 @@ import { SPRITES } from '../../lib/crypt/art';
 import { HUB, PLAYER, PREVIEW_BANNER } from '../../lib/crypt/content';
 import { WayfarerMark } from './WayfarerMark';
 import { ACTIVE_RUN_KEY } from '../../lib/cryptActiveRun';
+import { useCompanionRole } from '../useCompanionRole';
 
 // Default Rusty Sword / Rusty Armor (0 stats) on the hero sprite.
 const STARTER_OVERLAYS = gearOverlays({});
@@ -38,6 +39,7 @@ function Star() {
 
 export function AdventureHub() {
   const router = useRouter();
+  const role = useCompanionRole();
   const [selectedId, setSelectedId] = useState(HUB.locations[0].id);
   const selected = HUB.locations.find((location) => location.id === selectedId) ?? HUB.locations[0];
   // Keep ?preview=1 on the way in, and say "Continue run" when an unfinished run is waiting.
@@ -55,6 +57,17 @@ export function AdventureHub() {
   function choose(location: (typeof HUB.locations)[number]) {
     setSelectedId(location.id);
     if (location.kind === 'preview') router.push(entryHref);
+  }
+
+  if (role.status === 'ready' && role.mode === 'companion') {
+    return (
+      <main className="wrap play-quiet">
+        <p className="eyebrow">PLAY</p>
+        <h1>Optional for you</h1>
+        <p>Play is Connor&apos;s adventure. Your level comes from the quests and activities you log.</p>
+        <Link className="btn" href="/quests">Go to quests</Link>
+      </main>
+    );
   }
 
   return (

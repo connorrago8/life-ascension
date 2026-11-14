@@ -16,7 +16,8 @@ function extractLoad() {
  return new Function('supabase','setUser','setReady','setQuests','setRecoveryQuests',
   'setInstances','setXp','setMessage','setRecoveryIds','setLayoutPreview',
   'todayLocal','verifiedLifetimeXp','pendingProgressInstanceIds','localStorage','process',
-  'loadEpoch','accountRef','setStreak','weekStart','parseStreak','previewBoard','return ('+code+');');
+  'loadEpoch','accountRef','setStreak','weekStart','parseStreak','previewBoard',
+  'sectionSlice','setSectionErrors','buckets','return ('+code+');');
 }
 
 function setup(failure) {
@@ -30,7 +31,9 @@ function setup(failure) {
  const load=extractLoad()(supabase,v=>{state.user=v},()=>{},v=>{state.quests=v},()=>{},
   v=>{state.instances=v},v=>{state.xp=v},v=>{state.message=v},()=>{},()=>{},
   ()=>'2026-10-29',v=>v,()=>[],{length:0,key:()=>null},{env:{NODE_ENV:'test'}},
-  {current:0},{current:'account-1'},()=>{},d=>d,()=>null,()=>({}));
+  {current:0},{current:'account-1'},()=>{},d=>d,()=>null,()=>({}),
+  (previous,error,data)=>error?{rows:previous,error:error.message||'Could not load this section.'}:{rows:data||[],error:null},
+  ()=>{},{current:{today:[],goals:[],once:[],weekly:[],recovery:[]}});
  return {load,state};
 }
 for(const failure of ['instances','xp'])test('failed '+failure+' read keeps prior consistent quest/progress/XP snapshot',async()=>{

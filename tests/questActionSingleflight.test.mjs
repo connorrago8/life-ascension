@@ -12,6 +12,7 @@ const source=home.slice(start,end).replace(
 );
 const make=new Function('layoutPreview','busy','questActionInFlight','accountRef',
  'setMessage','setBusy','window','supabase','completionFeedback','load',
+ 'instances','setInstances','withStatus','restoreRow','confirmedAwardAmount','claimAward','awardStamp','seenAwards','navigator',
  'return ('+source+');');
 function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no});return {promise,resolve,reject}}
 function scenario(pending=deferred()){
@@ -19,9 +20,10 @@ function scenario(pending=deferred()){
  const lock={current:false};
  const account={get current(){return state.account}};
  const action=make(false,false,lock,account,m=>state.messages.push(m),
-  b=>{state.busy=b},{confirm:()=>{state.confirms++;return true}},
+  b=>{state.busy=b},{confirm:()=>{state.confirms++;return true},matchMedia:()=>({matches:true})},
   ()=>({rpc:()=>{state.calls++;return pending.promise}}),
-  ()=> 'Verified completion',async()=>{state.loads++});
+  ()=> 'Verified completion',async()=>{state.loads++},
+  [],()=>{},rows=>rows,rows=>rows,()=>null,()=>null,()=>null,{current:new Set()},{});
  return {action,pending,state,lock};
 }
 test('rapid complete taps send only one RPC and release the lock',async()=>{

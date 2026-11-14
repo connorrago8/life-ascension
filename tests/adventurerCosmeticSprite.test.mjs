@@ -16,7 +16,8 @@ test('worn cosmetics keep one piece per slot and do not touch combat stats', () 
   assert.doesNotMatch(sprite, /strength|agility|crypt_xp|record_crypt/);
   const track = read('components/AdventurerCosmeticTrack.tsx');
   assert.match(track, /adventurer_set_worn/);
-  assert.match(track, /AdventurerCosmeticSprite/);
+  assert.match(track, /Wardrobe/);
+  assert.doesNotMatch(track, /AdventurerCosmeticSprite/);
   assert.doesNotMatch(track, /from\('adventurer_worn'\)|insert into public\.adventurer_worn/);
   const page = read('app/(app)/character/page.tsx');
   assert.match(page, /AdventurerCosmeticTrack/);

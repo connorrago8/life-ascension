@@ -1,9 +1,12 @@
 'use client';
 import Link from 'next/link';
-import {useEffect,useState} from 'react';
-import {usePathname} from 'next/navigation';
-import {NAV_ITEMS} from '../../lib/nav';
-type IconName='home'|'quests'|'play'|'character'|'more';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { NAV_ITEMS } from '../../lib/nav';
+import { useCompanionRole } from '../../components/useCompanionRole';
+
+type IconName = 'home' | 'quests' | 'play' | 'character' | 'more';
+
 function Icon({ name }: { name: IconName }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -42,13 +45,27 @@ function Icon({ name }: { name: IconName }) {
   );
 }
 
-export function AppNav(){
- const pathname=usePathname()||'/';
- const [previewQuery,setPreviewQuery]=useState('');
- useEffect(()=>{setPreviewQuery(new URLSearchParams(window.location.search).get('preview') === '1'?'?preview=1':'')},[pathname]);
- return <nav className="app-nav" aria-label="Primary"><Link href="/" className="nav-brand">LIFE ASCENSION</Link><div className="nav-links">{NAV_ITEMS.map(item=>{
- const current=item.href==='/'?pathname==='/':pathname===item.href||pathname.startsWith(item.href+'/');
- const play=item.id==='play';
- return <Link key={item.id} href={play ? `${item.href}${previewQuery}` : item.href} className={play?'nav-link nav-play':'nav-link'} aria-current={current?'page':undefined}><Icon name={item.id}/><span>{item.label}</span></Link>;
- })}</div></nav>;
+export function AppNav() {
+  const pathname = usePathname() || '/';
+  const role = useCompanionRole();
+  const [previewQuery, setPreviewQuery] = useState('');
+  useEffect(() => { setPreviewQuery(new URLSearchParams(window.location.search).get('preview') === '1' ? '?preview=1' : ''); }, [pathname]);
+  const items = NAV_ITEMS.filter((item) => item.id !== 'play' || role.mode !== 'companion');
+  return (
+    <nav className="app-nav" aria-label="Primary">
+      <Link href="/" className="nav-brand">LIFE ASCENSION</Link>
+      <div className="nav-links">
+        {items.map((item) => {
+          const current = item.href === '/' ? pathname === '/' : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const play = item.id === 'play';
+          return (
+            <Link key={item.id} href={play ? `${item.href}${previewQuery}` : item.href} className={play ? 'nav-link nav-play' : 'nav-link'} aria-current={current ? 'page' : undefined}>
+              <Icon name={item.id} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
 }

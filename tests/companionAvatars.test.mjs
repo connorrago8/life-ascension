@@ -22,6 +22,7 @@ test('companion avatars are small cosmetic portraits with pixelated rendering an
   assert.match(page, /alt="Connor's hero, a pixel knight in silver armor"/);
   assert.match(home, /who="connor"/);
   assert.match(home, /Sunday recap/);
-  assert.match(board, /alt="From Izzy"/);
+  assert.match(read('lib/questWorkspace.ts'), /From Izzy/);
+  assert.doesNotMatch(board, /PixelAvatar/);
   assert.doesNotMatch(read('components/crypt/DelveRun.tsx'), /\/avatars\/connor/);
 });

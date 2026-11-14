@@ -77,18 +77,18 @@ export default function CompanionModeHome() {
           )}
         </div>
       </section>
-      <Link className="btn companion-create" href="/companion/log">Log activity</Link>
+      <Link className="btn companion-create" href="/log">Log activity</Link>
       <p className="cq-level-line">{todayCount} logged today</p>
       {last ? (
-        <p><Link href={`/companion/history?entry=${last.id}`}>{last.title}</Link></p>
+        <p><Link href={`/more/history?entry=${last.id}`}>{last.title}</Link></p>
       ) : (
         <p className="empty-state">Your next chapter begins with one small thing.</p>
       )}
       {nextLevel != null && (
-        <p className="cq-next"><Link href="/companion/character">Your next unlock is at Level {nextLevel}.</Link></p>
+        <p className="cq-next"><Link href="/character">Your next unlock is at Level {nextLevel}.</Link></p>
       )}
       {openQuest && (
-        <p><Link href="/companion/quests">{openQuest.title}</Link>{openQuests != null ? ` · ${openQuests} open` : ''}</p>
+        <p><Link href="/quests">{openQuest.title}</Link>{openQuests != null ? ` · ${openQuests} open` : ''}</p>
       )}
       {banner.length > 0 && (
         <p className="companion-fanfare" role="status">New gear unlocked: {banner.join(', ')}.</p>
@@ -98,7 +98,7 @@ export default function CompanionModeHome() {
           who="izzy"
           level={levelUp.level}
           item={levelUp.item}
-          characterHref="/companion/character"
+          characterHref="/character"
           onClose={() => setLevelUp(null)}
         />
       )}

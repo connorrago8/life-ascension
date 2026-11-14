@@ -20,7 +20,7 @@ const quests=[...Array.from({length:9},(_,i)=>make('life-'+i,['Make the bed','Go
 const instances=quests.map(q=>({id:'instance-'+q.id,quest_id:q.id,owner_id:user.id,due_date:q.cadence==='weekly'?week:today,status:'available',current_amount:0}));
 const tables={quests,quest_instances:instances,companion_quests:[{id:'request-1',quest_id:'izzy-1',to_user:user.id,status:'accepted'}],companion_bonds:[{inviter_id:user.id,companion_id:'partner',status:'active'}],companion_identities:[{user_id:'partner',quest_color:'amber'}],companion_nudges:[]};
 function from(table){let rows=tables[table]??[];let single=false;const query={select(){return query},order(){return query},limit(n){rows=rows.slice(0,n);return query},eq(k,v){rows=rows.filter(r=>r[k]===v);return query},neq(k,v){rows=rows.filter(r=>r[k]!==v);return query},in(k,values){rows=rows.filter(r=>values.includes(r[k]));return query},maybeSingle(){single=true;return query},then(resolve,reject){return Promise.resolve({data:single?(rows[0]??null):rows,error:null}).then(resolve,reject)}};return query}
-export function supabase(){return {from,auth:{getUser:async()=>({data:{user},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({error:null})},rpc:async(name)=>({error:null,data:name==='get_lifetime_xp'?100:name==='get_quest_streak'?{fire:4,done_today:false,today}:name==='get_streak_shield'?{status:'ready',notice:'Streak Shield ready · 1 this month'}:name==='companion_state'?{userId:user.id,bond:{status:'active',role:'inviter'}}:name==='couple_board'?{role:'adventurer',companionXp:10,quests:[{id:'shared-1',title:'A walk without phones',description:'A little time together.',cadence:'once',kind:'shared',steps:[],myDone:false,partnerDone:false,awarded:false}]}:null})}}
+export function supabase(){return {from,auth:{getUser:async()=>({data:{user},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({error:null})},rpc:async(name)=>({error:null,data:name==='get_lifetime_xp'?100:name==='get_quest_streak'?{fire:4,done_today:false,today}:name==='get_streak_shield'?{status:'ready',notice:'Streak Shield ready · 1 this month'}:name==='companion_state'?{userId:user.id,bond:{status:'active',role:'inviter'}}:name==='couple_board'?{role:'adventurer',companionXp:10,quests:[{id:'shared-1',title:'A walk without phones',description:'A little time together.',cadence:'weekly',kind:'shared',steps:[],myDone:false,partnerDone:false,awarded:false}]}:null})}}
 `;
 const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {AppNav} from './app/components/AppNav';import {QuestWorkspace} from './components/quests/QuestWorkspace';createRoot(document.getElementById('root')).render(<div className="shell"><AppNav/><div className="shell-main"><QuestWorkspace/></div></div>);`,resolveDir:root,loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'},loader:{'.css':'empty'},plugins:[{name:'isolated-fixtures',setup(b){
  b.onResolve({filter:/^next\/(navigation|link|dynamic)$/},a=>({path:a.path,namespace:'mock'}));
@@ -40,35 +40,32 @@ try{
  await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
  await page.goto(base+'/quests');
  await page.getByRole('button',{name:'Complete Make the bed',exact:true}).waitFor();
- assert.equal(await page.locator('.quest-title-link').count(),6,'one six-item page, not every task at once');
- assert.equal(await page.locator('.app-nav .nav-links').getByRole('link').count(),4,'four primary destinations');
- assert.equal(await page.getByRole('button',{name:'More',exact:true}).count(),0);
- assert.equal(await page.locator('.quest-time-nav [aria-current="page"]').innerText(),'Today');
+ assert.equal(await page.locator('.app-nav .nav-links').getByRole('link').count(),5,'Home, Quests, Play, Character, More');
+ await page.getByRole('link',{name:'More',exact:true}).waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'phone has no horizontal overflow');
  await page.screenshot({path:'/tmp/quest-workspace-screens/life-mobile.png',fullPage:true});
- await page.getByRole('link',{name:'Work Pharmacy & career tasks',exact:false}).click();
+ async function openSection(name){const button=page.getByRole('button',{name,exact:false}).first();if(await button.getAttribute('aria-expanded')!=='true')await button.click();}
+ await page.getByRole('tab',{name:'Work',exact:true}).click();
+ await openSection('This Week');
  await page.getByRole('button',{name:'Complete Tech schedule',exact:true}).waitFor();
  assert.equal(await page.getByText('Make the bed',{exact:true}).count(),0);
  assert.equal(await page.getByText('Pick up dry cleaning',{exact:true}).count(),0);
  await page.screenshot({path:'/tmp/quest-workspace-screens/work-mobile.png',fullPage:true});
- await page.getByRole('link',{name:'Izzy Tasks from your partner',exact:false}).click();
+ await page.getByRole('tab',{name:'From Izzy',exact:true}).click();
  await page.getByRole('button',{name:'Complete Pick up dry cleaning',exact:true}).waitFor();
  assert.equal(await page.getByText('Tech schedule',{exact:true}).count(),0);
- await page.getByRole('link',{name:'Together Shared plans & activities',exact:false}).click();
- await page.getByRole('heading',{name:'A walk without phones',exact:true}).waitFor();
- assert.equal(await page.getByRole('button',{name:'Choose',exact:true}).count(),0,'date catalogue is not dumped onto shared tasks');
- await page.getByRole('button',{name:'Date night',exact:true}).click();
- assert.equal(await page.getByRole('button',{name:'Choose',exact:true}).count(),6,'only six date ideas initially');
- await page.getByRole('link',{name:'Life Home, health & everyday tasks',exact:false}).click();
- await page.getByRole('link',{name:'Done',exact:true}).click();
+ await page.getByRole('tab',{name:'Together',exact:true}).click();
+ await openSection('This Week');
+ await page.getByText('A walk without phones',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Choose',exact:true}).count(),0,'date ideas stay in the add sheet');
+ await page.getByRole('tab',{name:'All',exact:true}).click();
+ await openSection('Completed');
  await page.getByText('No completed tasks in this section.',{exact:true}).waitFor();
- await page.getByRole('link',{name:'Today',exact:true}).click();
- await page.getByRole('button',{name:'Show 6 more tasks (3 remaining)',exact:true}).click();
- assert.equal(await page.locator('.quest-title-link').count(),9);
  await page.setViewportSize({width:1280,height:900});
- await page.goto(base+'/quests?area=work&view=today');
+ await page.goto(base+'/quests?chip=work');
+ await openSection('This Week');
  await page.getByRole('button',{name:'Complete Tech schedule',exact:true}).waitFor();
  await page.screenshot({path:'/tmp/quest-workspace-screens/work-desktop.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- console.log('PASS workspace: four categories, category isolation, one time group, six-item pagination, shared/date separation, phone and desktop layout');
+ console.log('PASS workspace: shared nav, chips, sections, partner isolation, together rows, phone and desktop layout');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
