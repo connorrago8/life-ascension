@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { formatResetCountdown, minutesUntilGameDayReset } from '../lib/gameDayReset';
 import { supabase } from '../lib/supabase';
 import { loadPillSnapshot, type PillSnapshot } from '../lib/status/loadPill';
 import { pillAriaLabel } from '../lib/status/pill';
@@ -36,9 +37,18 @@ async function syncBadge(count: number) {
 export function StatusPill({ mode }: { mode: Mode }) {
   const [snapshot, setSnapshot] = useState<PillSnapshot | null>(null);
   const [placement, setPlacement] = useState<Placement>('open');
+  const [expanded, setExpanded] = useState(false);
+  const [resetLabel, setResetLabel] = useState('');
 
   useEffect(() => {
     setPlacement(readPlacement());
+  }, []);
+
+  useEffect(() => {
+    const tick = () => setResetLabel(formatResetCountdown(minutesUntilGameDayReset(new Date())));
+    tick();
+    const timer = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -80,21 +90,33 @@ export function StatusPill({ mode }: { mode: Mode }) {
     );
   }
 
+  const ring = snapshot.total > 0 ? snapshot.completed / snapshot.total : 0;
   return (
-    <div className={'engage-pill' + (placement === 'collapsed' ? ' is-collapsed' : '')}>
-      {placement === 'open' && (
-        <Link href={snapshot.href} className="engage-pill-link" aria-label={pillAriaLabel(snapshot, snapshot.href)}>
-          <span className="engage-pill-quests">{snapshot.questLabel}</span>
-          <span className="engage-pill-streak">🔥 {snapshot.streak}</span>
-          <span className="engage-pill-xp">{snapshot.xpLabel}</span>
-        </Link>
+    <div className={'engage-pill' + (expanded ? ' is-open' : '')}>
+      <button type="button" className="engage-face" aria-expanded={expanded} aria-label={pillAriaLabel(snapshot, snapshot.href)} onClick={() => setExpanded((value) => !value)}>
+        <ProgressRing fraction={ring} />
+        <span className="engage-flame" aria-hidden="true">🔥 {snapshot.streak}</span>
+      </button>
+      {expanded && (
+        <div className="engage-extra">
+          <Link href={snapshot.href}>{snapshot.questLabel}</Link>
+          <span className="engage-dim">{resetLabel}</span>
+          <span className="engage-dim">{snapshot.xpLabel} XP</span>
+        </div>
       )}
-      <div className="engage-pill-actions">
-        <button type="button" aria-label={placement === 'collapsed' ? 'Expand today status' : 'Collapse today status'} onClick={() => place(placement === 'collapsed' ? 'open' : 'collapsed')}>
-          {placement === 'collapsed' ? snapshot.questLabel : '–'}
-        </button>
-        <button type="button" aria-label="Hide today status" onClick={() => place('hidden')}>×</button>
-      </div>
+      <button type="button" className="engage-hide" aria-label="Hide today status" onClick={() => place('hidden')}>×</button>
     </div>
+  );
+}
+
+function ProgressRing({ fraction }: { fraction: number }) {
+  const radius = 11;
+  const turn = 2 * Math.PI * radius;
+  const filled = Math.max(0, Math.min(1, fraction)) * turn;
+  return (
+    <svg className="engage-ring" viewBox="0 0 28 28" aria-hidden="true">
+      <circle cx="14" cy="14" r={radius} />
+      <circle cx="14" cy="14" r={radius} strokeDasharray={`${filled} ${turn}`} />
+    </svg>
   );
 }

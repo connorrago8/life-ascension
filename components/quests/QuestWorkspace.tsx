@@ -20,6 +20,7 @@ export function QuestWorkspace() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [floatXp, setFloatXp] = useState<number | null>(null);
+  const [unseen, setUnseen] = useState(0);
 
   const load = useCallback(async () => {
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1') {
@@ -71,13 +72,16 @@ export function QuestWorkspace() {
           const selected = chip === item.id;
           const href = item.id === 'all' ? '/quests' : `/quests?chip=${item.id}`;
           return (
-            <Link key={item.id} role="tab" aria-selected={selected} className={selected ? 'quest-chip is-on' : 'quest-chip'} href={href}>
-              {chipLabel(item.id, companion)}
-            </Link>
+            <span key={item.id} className="chip-wrap">
+              <Link role="tab" aria-selected={selected} aria-label={chipLabel(item.id, companion)} className={selected ? 'quest-chip is-on' : 'quest-chip'} href={href}>
+                {chipLabel(item.id, companion)}
+              </Link>
+              {item.id === 'partner' && unseen > 0 && <span className="chip-badge" aria-hidden="true">{unseen}</span>}
+            </span>
           );
         })}
       </div>
-      <PersonalQuestBoard chip={chip} focus={focus} couple={couple} onMarkCouple={(id) => { void mark(id); }} coupleBusy={busy} />
+      <PersonalQuestBoard chip={chip} focus={focus} couple={couple} onMarkCouple={(id) => { void mark(id); }} coupleBusy={busy} onUnseen={setUnseen} />
       {floatXp != null && <p className="xp-float xp-float-board" role="status">+{floatXp} XP</p>}
       {note && <p className="message" role="status">{note}</p>}
     </main>

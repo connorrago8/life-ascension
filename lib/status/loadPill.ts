@@ -18,7 +18,7 @@ export async function loadPillSnapshot(client: SupabaseClient, userId: string, m
   if (mode === 'signed-out') return null;
   const now = gameDayParts(new Date());
   const today = now.date || chicagoToday();
-  const href = mode === 'companion' ? '/companion/quests' : '/quests';
+  const href = '/quests';
   const [xpResult, questsResult, instancesResult, streakResult, wardrobeResult] = await Promise.all([
     client.rpc('get_lifetime_xp'),
     client.from('quests').select('id,cadence,quest_type,scheduled_for,companion_one_shot,fixed_reveal,weekly_weekday').eq('active', true).limit(1000),

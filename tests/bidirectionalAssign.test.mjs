@@ -27,7 +27,7 @@ test('either bond member can assign the other, and sending awards no XP', () => 
 
 test('the board assigns in both directions and Together is a filter, not a page', () => {
   assert.match(board, /Assign to \{partner\}/);
-  assert.match(board, /companion\?'Connor':'Izzy'/);
+  assert.match(board, /assignTargetName\(false, companion\)/);
   assert.match(board, /chip==='all'\|\|chip==='together'/);
   assert.doesNotMatch(board, /href="\/together"/);
   assert.doesNotMatch(home, /href="\/together"/);
