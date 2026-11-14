@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e1016'/%3E%3C/svg%3E">
+<title>Live progress · LIFE ASCENSION</title>
+<script>
+try {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.dataset.lpReduce = 'on';
+  }
+} catch (err) { /* matchMedia missing */ }
+</script>
+<style>
+:root {
+  --lp-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --lp-in: cubic-bezier(0.3, 0, 1, 1);
+  --lp-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --lp-press: 140ms;
+  --lp-check: 220ms;
+  --lp-ring: 320ms;
+  --lp-fly: 360ms;
+  --lp-roll: 280ms;
+  --lp-glow: 280ms;
+  --lp-flame: 320ms;
+  --lp-seal: 400ms;
+  --lp-row: 200ms;
+  --lp-toast-in: 280ms;
+  --lp-toast-out: 180ms;
+  --lp-toast-hold: 3200ms;
+  --lp-sheet-out: 220ms;
+  --lp-lab: 200ms;
+  --lp-glow-a: 0.35;
+  --lp-spring: var(--lp-drawer);
+  --lp-spring-dur: 320ms;
+  --bg: #0e1016;
+  --panel: #141820;
+  --border: #2a3340;
+  --text: #f4f7fb;
+  --muted: #9aa6b5;
+  --magenta: #ff2bd6;
+  --cyan: #3de1ff;
+  --gold: #c9a227;
+  --ink: #140712;
+  color-scheme: dark;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  background: #07080c;
+  color: var(--text);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font-size: 16px; line-height: 1.45; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.lp-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.lp-stage { min-height: 100%; display: grid; place-items: center; }
+.lp-phone {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  max-width: 430px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 42% at 90% -8%, rgba(255, 43, 214, 0.08), transparent 48%),
+    radial-gradient(80% 36% at 0% 100%, rgba(61, 225, 255, 0.05), transparent 46%),
+    var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 900px) {
+  .lp-phone {
+    width: 390px;
+    height: 844px;
+    max-width: none;
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  }
+}
+.lp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 16px 0; }
+.lp-eyebrow { margin: 0 0 2px; font-size: 10px; letter-spacing: 0.14em; color: var(--cyan); font-weight: 650; }
+.lp-top h1 { margin: 0; font-size: 28px; line-height: 1.1; letter-spacing: -0.03em; font-weight: 650; }
+.lp-sub { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.lp-lab-toggle, .lp-hit { transition: transform var(--lp-press) var(--lp-out); }
+.lp-hit:active { transform: scale(0.97); }
+.lp-lab-toggle {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #31404e;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lp-main { flex: 1; min-height: 0; overflow: auto; padding: 8px 16px 128px; }
+.lp-progress { display: flex; align-items: center; gap: 12px; padding: 6px 0 10px; }
+.lp-ring-wrap { position: relative; width: 84px; height: 84px; flex: none; }
+.lp-ring-wrap svg { display: block; width: 84px; height: 84px; }
+.lp-track { fill: none; stroke: #232833; stroke-width: 6; }
+.lp-track-xp { stroke-width: 4; }
+.lp-today, .lp-xp-arc {
+  fill: none;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 42px 42px;
+  transition: stroke-dashoffset var(--lp-ring) var(--lp-out), stroke var(--lp-glow) var(--lp-out);
+}
+.lp-today { stroke: var(--magenta); stroke-width: 6; }
+.lp-xp-arc { stroke: var(--gold); stroke-width: 4; }
+.lp-ring-wrap.is-closed .lp-today { stroke: var(--gold); }
+.lp-ring-caption { position: absolute; inset: 0; display: grid; place-items: center; font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 650; }
+@keyframes lp-seal { 0% { transform: scale(1); } 45% { transform: scale(1.045); } 100% { transform: scale(1); } }
+.lp-ring-wrap.is-sealed { animation: lp-seal var(--lp-seal) var(--lp-out); }
+.lp-copy { min-width: 0; }
+.lp-copy p { margin: 0; }
+.lp-kicker { margin: 0 0 2px; font-size: 10px; letter-spacing: 0.13em; color: var(--gold); font-weight: 700; }
+.lp-today-line { font-weight: 650; }
+.lp-xp-line, .lp-note { color: var(--muted); font-size: 13px; }
+.lp-note { color: var(--gold); margin: 4px 0 8px; }
+.lp-hero { margin-left: auto; width: 56px; flex: none; }
+.lp-hero svg, .lp-sheet-hero svg { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.lp-worn { margin: 4px 0 0; font-size: 11px; color: var(--gold); }
+.lp-section { margin: 4px 0 0; font-size: 14px; font-weight: 700; color: var(--gold); }
+.lp-other { color: var(--muted); margin: 12px 0; }
+.lp-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #232a34; }
+.lp-row.is-new { animation: lp-row-in var(--lp-row) var(--lp-out); }
+@keyframes lp-row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.lp-row-main { min-width: 0; display: grid; gap: 2px; }
+.lp-row-title { font-weight: 650; color: #f4f7fb; overflow-wrap: anywhere; }
+.lp-row.is-done .lp-row-title { opacity: 0.72; }
+.lp-row-meta { font-size: 12px; color: var(--muted); }
+.lp-row-xp { margin-left: 6px; color: var(--cyan); font-size: 11px; letter-spacing: 0.04em; }
+.lp-complete {
+  width: 44px; height: 44px; border-radius: 999px; border: 1px solid #31404e;
+  background: var(--panel); color: var(--cyan); cursor: pointer; padding: 0;
+  display: grid; place-items: center;
+}
+.lp-complete svg { width: 16px; height: 16px; }
+.lp-complete path {
+  fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 16; stroke-dashoffset: 16;
+  transition: stroke-dashoffset var(--lp-check) var(--lp-out);
+}
+.lp-row.is-done .lp-complete { border-color: var(--gold); color: var(--gold); cursor: default; }
+.lp-row.is-done .lp-complete path { stroke-dashoffset: 0; }
+.lp-nav {
+  position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: calc(64px + env(safe-area-inset-bottom));
+  display: flex; align-items: flex-end; padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+  background: var(--bg); border-top: 1px solid var(--border);
+}
+.lp-nav button {
+  flex: 1 1 0; min-width: 0; min-height: 48px; border: 0; background: transparent; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;
+  font-size: 10px; font-weight: 600; cursor: pointer; padding: 2px 0;
+}
+.lp-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
+.lp-nav button[aria-current="page"] { color: var(--cyan); }
+.lp-pill {
+  position: absolute; z-index: 30; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: 232px; height: 44px; overflow: hidden;
+  background: #161b24; color: var(--text);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 10px 24px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+}
+.lp-pill.is-open { border-radius: 22px; }
+.lp-body { display: flex; flex-direction: column-reverse; width: 232px; }
+.lp-pill-toggle {
+  height: 44px; width: 100%; border: 0; background: transparent; color: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 650; padding: 0 12px;
+}
+.lp-flame { width: 14px; height: 14px; color: #b08a3e; flex: none; }
+.lp-flame.is-held { color: var(--gold); }
+@keyframes lp-flame { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+.lp-flame.is-pulse { animation: lp-flame var(--lp-flame) var(--lp-out); }
+.lp-xp-label { color: var(--gold); }
+.lp-summary { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #d5dde8; }
+.lp-summary p { margin: 0; }
+.lp-gear { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.lp-mini {
+  min-height: 32px; padding: 0 10px; border-radius: 999px; border: 0; background: var(--magenta); color: var(--ink);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.lp-mini.ghost { background: transparent; color: var(--text); border: 1px solid #31404e; }
+.lp-glow {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 18px rgba(255, 43, 214, var(--lp-glow-a));
+  opacity: 0;
+  transition: opacity var(--lp-glow) var(--lp-out);
+}
+.lp-pill.is-hot .lp-glow { opacity: 1; }
+.lp-odometer { display: inline-block; height: 1em; overflow: hidden; vertical-align: bottom; line-height: 1; }
+.lp-odometer-col { display: flex; flex-direction: column; transition: transform var(--lp-roll) var(--lp-out); }
+.lp-odometer-col span { height: 1em; display: block; }
+.lp-toast {
+  position: absolute; z-index: 34; left: 16px; right: 16px;
+  bottom: calc(72px + var(--lp-vis, 44px) + 8px + env(safe-area-inset-bottom));
+  min-height: 40px; max-height: 56px; padding: 8px 12px;
+  border-radius: 14px; border: 1px solid #31404e; border-left: 2px solid var(--magenta);
+  background: var(--panel); color: var(--text); font-size: 13px; font-weight: 650;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  opacity: 0; transform: translateY(8px);
+  transition: transform var(--lp-toast-in) var(--lp-out), opacity 200ms var(--lp-out);
+}
+.lp-toast.is-in { opacity: 1; transform: none; }
+.lp-toast.is-out { transition: transform var(--lp-toast-out) var(--lp-in), opacity 160ms var(--lp-in); opacity: 0; transform: translateY(8px); }
+.lp-lab {
+  position: absolute; z-index: 36; left: 12px; right: 12px; top: 78px; max-height: 48%;
+  overflow: auto; padding: 10px; border-radius: 16px; border: 1px solid #31404e; background: #12151c;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  opacity: 0; transform: translateY(-6px); visibility: hidden; pointer-events: none;
+  transition: opacity var(--lp-lab) var(--lp-out), transform var(--lp-lab) var(--lp-out), visibility 0s linear var(--lp-lab);
+}
+.lp-lab.is-open { opacity: 1; transform: none; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.lp-lab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp-lab button, .lp-seg button {
+  min-height: 44px; border-radius: 12px; border: 1px solid #31404e; background: var(--panel);
+  color: var(--text); font-size: 12px; font-weight: 650; cursor: pointer; padding: 6px 8px;
+}
+.lp-lab button[aria-pressed="true"], .lp-seg button[aria-pressed="true"] { background: var(--cyan); color: #071014; border-color: var(--cyan); }
+.lp-lab button:disabled { opacity: 0.45; cursor: default; }
+.lp-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; grid-column: 1 / -1; }
+.lp-text { grid-column: 1 / -1; background: transparent !important; border: 0 !important; color: var(--muted) !important; min-height: 36px !important; }
+#lp-tune { margin-top: 8px; }
+#lp-tune .tp-dfwv {
+  width: 100% !important;
+  --tp-base-background-color: hsla(230, 12%, 8%, 0.96);
+  --tp-base-shadow-color: transparent;
+  --tp-button-background-color: #1c2430;
+  --tp-button-background-color-hover: #243041;
+  --tp-button-background-color-active: #243041;
+  --tp-button-background-color-focus: #243041;
+  --tp-button-foreground-color: #f4f7fb;
+  --tp-container-background-color: hsla(230, 14%, 9%, 0.96);
+  --tp-container-background-color-hover: #1a222c;
+  --tp-container-background-color-active: #1a222c;
+  --tp-container-background-color-focus: #1a222c;
+  --tp-container-foreground-color: #d5dde8;
+  --tp-groove-foreground-color: #3de1ff;
+  --tp-input-background-color: #10151c;
+  --tp-input-background-color-hover: #10151c;
+  --tp-input-background-color-active: #10151c;
+  --tp-input-background-color-focus: #10151c;
+  --tp-input-foreground-color: #f4f7fb;
+  --tp-label-foreground-color: #9aa6b5;
+  --tp-monitor-background-color: #10151c;
+  --tp-monitor-foreground-color: #c9a227;
+  --tp-base-font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+.lp-scrim { position: absolute; inset: 0; z-index: 45; background: rgba(8, 10, 12, 0.55); border: 0; padding: 0; }
+.lp-sheet {
+  position: absolute; z-index: 50; left: 10px; right: 10px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  max-height: calc(100% - 96px); overflow: auto;
+  padding: 16px; border-radius: 16px; border: 1px solid #31404e; background: #12151c;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  transform: translateY(16px) scale(0.98); opacity: 0;
+  transition: transform var(--lp-spring-dur) var(--lp-spring), opacity 200ms var(--lp-out);
+}
+.lp-sheet.is-in { transform: none; opacity: 1; }
+.lp-sheet.is-out { transition: transform var(--lp-sheet-out) var(--lp-in), opacity 160ms var(--lp-in); }
+.lp-sheet h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.02em; }
+.lp-sheet p { margin: 0 0 8px; }
+.lp-sheet-hero { width: 112px; margin: 8px auto; }
+.lp-sheet-actions { display: flex; gap: 8px; margin-top: 8px; }
+.lp-wear, .lp-ghost { min-height: 44px; padding: 0 16px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+.lp-wear { border: 0; background: var(--magenta); color: var(--ink); flex: 1; }
+.lp-ghost { border: 1px solid #31404e; background: transparent; color: var(--text); }
+.lp-fly {
+  position: fixed; z-index: 70; pointer-events: none; color: var(--gold);
+  font-size: 12px; font-weight: 700; translate: -50% -50%;
+}
+.lp-fx { position: absolute; inset: 0; z-index: 60; width: 100%; height: 100%; pointer-events: none; }
+html[data-lp-reduce="on"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+</style>
+</head>
+<body>
+<div class="lp-stage">
+  <div class="lp-phone" id="lp-phone">
+    <header class="lp-top">
+      <div>
+        <p class="lp-eyebrow">LIFE ASCENSION</p>
+        <h1 id="lp-title">Quests</h1>
+        <p class="lp-sub" id="lp-sub"></p>
+      </div>
+      <button type="button" class="lp-lab-toggle lp-hit" id="lp-lab-toggle" aria-expanded="false" aria-controls="lp-lab">Simulate</button>
+    </header>
+    <main class="lp-main" id="lp-main">
+      <section class="lp-progress">
+        <div class="lp-ring-wrap" id="lp-ring-wrap">
+          <svg viewBox="0 0 84 84" aria-hidden="true">
+            <circle class="lp-track" cx="42" cy="42" r="28"></circle>
+            <circle class="lp-today" id="lp-today" cx="42" cy="42" r="28"></circle>
+            <circle class="lp-track lp-track-xp" cx="42" cy="42" r="20"></circle>
+            <circle class="lp-xp-arc" id="lp-xp-arc" cx="42" cy="42" r="20"></circle>
+          </svg>
+          <div class="lp-ring-caption"><strong id="lp-ring-count">0/3</strong></div>
+        </div>
+        <div class="lp-copy">
+          <p class="lp-kicker">TODAY</p>
+          <p class="lp-today-line" id="lp-today-line"></p>
+          <p class="lp-xp-line" id="lp-xp-line"></p>
+        </div>
+        <div class="lp-hero" id="lp-hero" hidden></div>
+      </section>
+      <p class="lp-note" id="lp-note" hidden></p>
+      <p class="lp-worn" id="lp-worn" hidden></p>
+      <h2 class="lp-section" id="lp-section">Today</h2>
+      <div id="lp-list"></div>
+      <p class="lp-other" id="lp-other" hidden></p>
+    </main>
+    <div class="lp-lab" id="lp-lab" aria-label="Simulate">
+      <div class="lp-lab-grid">
+        <button type="button" class="lp-hit" id="lp-act-complete">Complete a quest</button>
+        <button type="button" class="lp-hit" id="lp-act-assign">Partner assigns quest</button>
+        <button type="button" class="lp-hit" id="lp-act-xp">Gain XP</button>
+        <button type="button" class="lp-hit" id="lp-act-level">Level up</button>
+        <button type="button" class="lp-hit" id="lp-act-reduce" role="switch" aria-checked="false">Reduced motion</button>
+        <button type="button" class="lp-hit" id="lp-act-sound" role="switch" aria-checked="false">Sound</button>
+        <div class="lp-seg" role="group" aria-label="Account">
+          <button type="button" class="lp-hit" id="lp-acc-connor" aria-pressed="true">Connor</button>
+          <button type="button" class="lp-hit" id="lp-acc-izzy" aria-pressed="false">Izzy</button>
+        </div>
+        <button type="button" class="lp-text" id="lp-act-reset">Reset account</button>
+      </div>
+      <div id="lp-tune"></div>
+    </div>
+    <div class="lp-toast" id="lp-toast" role="status" hidden></div>
+    <div class="lp-pill" id="lp-pill">
+      <div class="lp-body" id="lp-body">
+        <button type="button" class="lp-pill-toggle" id="lp-pill-toggle" aria-expanded="false" aria-controls="lp-summary">
+          <span id="lp-frac">0/3</span>
+          <svg class="lp-flame" id="lp-flame" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.4c.4 2-.6 3-1.5 4C5.2 6.6 4 7.8 4 10a4 4 0 0 0 8 0c0-1.5-.7-2.6-1.6-3.4-.2.9-.8 1.5-1.5 1.5C8.8 6.6 9.4 5 9.8 3.6 9.2 2.6 8.6 1.9 8 1.4z"></path></svg>
+          <span id="lp-streak">6</span>
+          <span class="lp-xp-label"><span id="lp-left">15</span> XP</span>
+        </button>
+        <div class="lp-summary" id="lp-summary" aria-hidden="true"></div>
+      </div>
+      <span class="lp-glow" aria-hidden="true"></span>
+    </div>
+    <nav class="lp-nav" id="lp-nav" aria-label="Primary"></nav>
+    <button type="button" class="lp-scrim" id="lp-scrim" hidden aria-label="Dismiss"></button>
+    <div class="lp-sheet" id="lp-sheet" role="dialog" aria-modal="true" aria-labelledby="lp-sheet-title" hidden>
+      <p class="lp-kicker">LEVEL UP</p>
+      <h2 id="lp-sheet-title"></h2>
+      <p id="lp-sheet-road"></p>
+      <p id="lp-sheet-gear"></p>
+      <p id="lp-sheet-reveal"></p>
+      <div class="lp-sheet-hero" id="lp-sheet-hero"></div>
+      <div class="lp-sheet-actions">
+        <button type="button" class="lp-wear lp-hit" id="lp-wear">Wear</button>
+        <button type="button" class="lp-ghost lp-hit" id="lp-later">Not now</button>
+      </div>
+    </div>
+    <canvas class="lp-fx" id="lp-fx" width="390" height="844" aria-hidden="true"></canvas>
+  </div>
+</div>
+<p id="lp-live" class="lp-sr" aria-live="polite"></p>
+<script type="module">
+import { Pane } from './tweakpane.min.js';
+
+const $ = (id) => document.getElementById(id);
+const phone = $('lp-phone');
+const pill = $('lp-pill');
+const bodyEl = $('lp-body');
+const summary = $('lp-summary');
+const toggle = $('lp-pill-toggle');
+const sheet = $('lp-sheet');
+const scrim = $('lp-scrim');
+const toast = $('lp-toast');
+const cvs = $('lp-fx');
+const ctx = cvs.getContext('2d', { alpha: true });
+const C_TODAY = 2 * Math.PI * 28;
+const C_XP = 2 * Math.PI * 20;
+const REVEAL = 'From the midnight glow, a new piece of your legend emerges.';
+const OTHER = {
+  home: 'Home keeps this same pill. Today, the streak, and XP stay above the nav.',
+  play: 'Play is optional. Real-life quests are the only permanent power.',
+  character: 'Nothing here wears itself. Gear changes when you tap Wear.',
+  more: 'Relationship, history, and rewards live here.',
+};
+const NAV = [
+  ['home', 'Home', 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z'],
+  ['quests', 'Quests', 'M7 4.5h8.2A2.8 2.8 0 0 1 18 7.3V19H8.5M7 4.5A2.5 2.5 0 0 0 4.5 7v11.2A2.3 2.3 0 0 1 6.8 20M9.2 9.2h5.2M9.2 12.4h5.2M9.2 15.6h3.2'],
+  ['play', 'Play', 'M6.2 5.2 15.4 16.8M17.8 5.2 8.6 16.8M4.8 8.4 7.5 5.4M19.2 8.4 16.5 5.4M14.4 16.2 16.2 19.6M9.6 16.2 7.8 19.6'],
+  ['character', 'Character', ''],
+  ['more', 'More', ''],
+];
+const PIECES = [
+  { id: 'fingerless-gloves', label: 'Nightgrip Gloves', level: 2, slot: 'gloves', description: 'Fingerless black gloves worn by the city wanderers.' },
+  { id: 'nose-ring', label: 'Silver Thorn', level: 4, slot: 'nose', description: 'A delicate silver nose ring with a rebellious edge.' },
+  { id: 'cargo-pants', label: 'Shadow Cargo', level: 6, slot: 'cargo', description: 'Dark utility pants with reinforced pockets.' },
+  { id: 'crop-top', label: 'Midnight Crop', level: 8, slot: 'crop', description: 'A fitted black top made for movement.' },
+  { id: 'leather-jacket', label: 'Rogue\u2019s Leather', level: 10, slot: 'leather', description: 'A cropped jacket, weathered by countless nights.' },
+  { id: 'wrist-tattoo', label: 'First Mark', level: 12, slot: 'wrist', description: 'A small wrist tattoo marking the beginning of her journey.' },
+];
+const SKIN = '#c4926a';
+const BASE = [
+  [24, 4, 20, 3, '#101218'], [22, 7, 24, 4, '#101218'], [20, 11, 4, 22, '#101218'], [44, 11, 4, 30, '#101218'],
+  [26, 6, 3, 2, '#3a4254'], [38, 8, 2, 2, '#3a4254'], [24, 14, 16, 12, SKIN], [24, 24, 16, 2, '#8d5e42'],
+  [28, 26, 8, 4, SKIN], [26, 17, 4, 1, '#101218'], [36, 17, 4, 1, '#101218'],
+  [26, 18, 3, 3, '#0c0e12'], [37, 18, 3, 3, '#0c0e12'], [27, 19, 1, 1, '#00f0ff'], [38, 19, 1, 1, '#00f0ff'],
+  [31, 20, 2, 2, '#8d5e42'], [28, 23, 8, 1, '#4e342f'],
+  [16, 32, 36, 6, '#f3f1ea'], [20, 38, 28, 16, '#f3f1ea'], [22, 54, 24, 4, '#d9d3c7'], [26, 32, 16, 1, '#c9a227'],
+  [32, 46, 2, 1, '#ff2bd6'], [10, 34, 8, 16, SKIN], [50, 34, 8, 16, SKIN],
+  [10, 50, 2, 5, SKIN], [13, 50, 2, 5, SKIN], [16, 50, 2, 4, SKIN], [50, 50, 2, 4, SKIN], [53, 50, 2, 5, SKIN], [56, 50, 2, 5, SKIN],
+  [20, 58, 28, 6, '#3c2c22'], [22, 64, 8, 28, '#3c2c22'], [38, 64, 8, 28, '#3c2c22'],
+  [20, 92, 12, 8, '#16110d'], [36, 92, 12, 8, '#16110d'], [20, 100, 12, 2, '#0a0806'], [36, 100, 12, 2, '#0a0806'],
+  [22, 94, 3, 2, '#c9a227'], [38, 94, 3, 2, '#c9a227'],
+];
+const OVERLAYS = {
+  gloves: [[10, 48, 8, 7, '#0c0e12'], [50, 48, 8, 7, '#0c0e12'], [10, 50, 8, 1, SKIN]],
+  nose: [[32, 21, 1, 1, '#d5d8de']],
+  wrist: [[12, 46, 4, 2, '#00f0ff'], [52, 46, 4, 2, '#00f0ff']],
+  cargo: [[20, 58, 28, 34, '#14181f'], [22, 64, 6, 4, '#2a3140'], [40, 64, 6, 4, '#2a3140'], [24, 66, 2, 1, '#00f0ff']],
+  crop: [[22, 34, 24, 12, '#0c0e12'], [26, 34, 16, 1, '#c9a227'], [24, 46, 20, 1, SKIN]],
+  leather: [[8, 32, 12, 14, '#14181f'], [48, 32, 12, 14, '#14181f'], [8, 32, 12, 1, '#c9a227'], [48, 32, 12, 1, '#c9a227']],
+};
+const ASSIGN = {
+  connor: [
+    ['Fold and put away clothes on the floor', 'From Izzy', 5],
+    ['Put away laundry', 'From Izzy', 5],
+    ['Tidy up', 'From Izzy', 5],
+  ],
+  izzy: [
+    ['Take out the trash', 'From Connor', 5],
+    ['Unload the dishwasher', 'From Connor', 5],
+    ['Review budget 10 min', 'From Connor', 10],
+  ],
+};
+
+const tune = { stiffness: 170, damping: 18, glow: 0.35, particles: 30, check: 220, ring: 320, fly: 360, roll: 280, toastIn: 280, sheet: 320, seal: 400 };
+const meter = { springMs: 400 };
+let reduceOverride = document.documentElement.dataset.lpReduce === 'on' ? true : null;
+let soundOn = false;
+let who = 'connor';
+let tab = 'quests';
+let pillOpen = false;
+let labOpen = false;
+let sheetPiece = null;
+let sheetGen = 0;
+let restoreFocus = null;
+let toastTimer = 0;
+let questSeq = 1;
+const flies = [];
+const morph = { p: 0, v: 0, tp: 0, running: false, last: 0, raf: 0, boxW: 248, boxH: 60, contentW: 232, contentH: 44 };
+const pool = [];
+let poolHead = 0;
+let rafP = 0;
+let lastP = 0;
+const MAX = 48;
+
+function reduced() {
+  if (reduceOverride !== null) return reduceOverride;
+  return matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+function applyReduce() {
+  document.documentElement.dataset.lpReduce = reduced() ? 'on' : 'off';
+  const sw = $('lp-act-reduce');
+  sw.setAttribute('aria-checked', reduced() ? 'true' : 'false');
+  sw.setAttribute('aria-pressed', reduced() ? 'true' : 'false');
+}
+function xpToAdvance(level) { return 5 * (Math.max(1, Math.floor(level)) + 1); }
+function xpToReachLevel(level) {
+  const target = Math.max(1, Math.floor(level));
+  if (target === 1) return 0;
+  return (5 * (target * (target + 1) - 2)) / 2;
+}
+function levelFor(xp) {
+  const total = Math.max(0, Math.floor(xp));
+  if (total === 0) return { level: 1, xpIntoLevel: 0, xpForNext: xpToAdvance(1) };
+  const estimate = Math.floor((-1 + Math.sqrt(1 + 8 * (total / 5 + 1))) / 2);
+  let level = Number.isFinite(estimate) ? Math.max(1, estimate) : 1;
+  for (let step = 0; step < 8 && xpToReachLevel(level + 1) <= total; step += 1) level += 1;
+  for (let step = 0; step < 8 && level > 1 && xpToReachLevel(level) > total; step += 1) level -= 1;
+  const base = xpToReachLevel(level);
+  return { level, xpIntoLevel: total - base, xpForNext: xpToAdvance(level) };
+}
+function snapshot(acc) {
+  const lvl = levelFor(acc.xp);
+  let done = 0;
+  for (let i = 0; i < acc.quests.length; i += 1) if (acc.quests[i].done) done += 1;
+  return { done, total: acc.quests.length, streak: acc.streak, held: acc.streakHeld, xp: acc.xp, level: lvl.level, into: lvl.xpIntoLevel, next: lvl.xpForNext };
+}
+function quest(id, title, own, xp) { return { id, title, own, xp, done: false }; }
+function decorate(acc) {
+  acc.shown = snapshot(acc);
+  acc.queue = [];
+  acc.unlocked = acc.unlocked || [];
+  acc.worn = acc.worn || [];
+  acc.assignI = acc.assignI || 0;
+  return acc;
+}
+function freshConnor() {
+  return decorate({
+    id: 'connor', name: 'Connor', partner: 'Izzy', xp: 30, streak: 6, streakHeld: false,
+    quests: [quest('c-trash', 'Take out the trash', 'Life', 5), quest('c-dish', 'Unload the dishwasher', 'Life', 5), quest('c-wind', 'Evening wind-down', 'Together', 10)],
+  });
+}
+function freshIzzy() {
+  return decorate({
+    id: 'izzy', name: 'Izzy', partner: 'Connor', xp: 5, streak: 3, streakHeld: false,
+    quests: [quest('i-outfit', 'Pick out an outfit', 'Life', 5), quest('i-tidy', 'Tidy up', 'Life', 5), quest('i-wind', 'Evening wind-down', 'Together', 10)],
+  });
+}
+const accounts = { connor: freshConnor(), izzy: freshIzzy() };
+const S = () => accounts[who];
+
+function sampleLinear(k, damp) {
+  const dt = 1 / 60;
+  const pts = [0];
+  let x = 0;
+  let v = 0;
+  let steps = 0;
+  for (let i = 0; i < 96; i += 1) {
+    const a = -k * (x - 1) - damp * v;
+    v += a * dt;
+    x += v * dt;
+    steps += 1;
+    if (i % 2 === 1) pts.push(Math.round(x * 1000) / 1000);
+    if (Math.abs(x - 1) < 0.004 && Math.abs(v) < 0.03 && i > 8) break;
+  }
+  if (pts[pts.length - 1] !== 1) pts.push(1);
+  return { dur: Math.round(Math.max(0.16, steps * dt) * 1000), easing: `linear(${pts.join(',')})` };
+}
+function applyTune() {
+  const root = document.documentElement;
+  const spring = sampleLinear(tune.stiffness, tune.damping);
+  meter.springMs = spring.dur;
+  root.style.setProperty('--lp-check', `${tune.check}ms`);
+  root.style.setProperty('--lp-ring', `${tune.ring}ms`);
+  root.style.setProperty('--lp-fly', `${tune.fly}ms`);
+  root.style.setProperty('--lp-roll', `${tune.roll}ms`);
+  root.style.setProperty('--lp-toast-in', `${tune.toastIn}ms`);
+  root.style.setProperty('--lp-seal', `${tune.seal}ms`);
+  root.style.setProperty('--lp-glow-a', String(tune.glow));
+  root.style.setProperty('--lp-spring', spring.easing);
+  root.style.setProperty('--lp-spring-dur', `${Math.min(tune.sheet, spring.dur)}ms`);
+}
+function mountPane() {
+  const pane = new Pane({ container: $('lp-tune'), title: 'Tune', expanded: false });
+  pane.addBinding(tune, 'stiffness', { min: 80, max: 420, step: 1 });
+  pane.addBinding(tune, 'damping', { min: 8, max: 40, step: 0.5 });
+  pane.addBinding(tune, 'glow', { min: 0, max: 1, step: 0.01, label: 'glow' });
+  pane.addBinding(tune, 'particles', { min: 0, max: 48, step: 1 });
+  const folder = pane.addFolder({ title: 'Durations', expanded: false });
+  folder.addBinding(tune, 'check', { min: 80, max: 400, step: 10 });
+  folder.addBinding(tune, 'ring', { min: 120, max: 500, step: 10 });
+  folder.addBinding(tune, 'fly', { min: 160, max: 520, step: 10 });
+  folder.addBinding(tune, 'roll', { min: 120, max: 400, step: 10 });
+  folder.addBinding(tune, 'toastIn', { min: 120, max: 400, step: 10, label: 'toast' });
+  folder.addBinding(tune, 'sheet', { min: 200, max: 520, step: 10 });
+  folder.addBinding(tune, 'seal', { min: 200, max: 600, step: 10 });
+  pane.addBinding(meter, 'springMs', { readonly: true, label: 'spring ms' });
+  pane.addButton({ title: 'Preview burst' }).on('click', () => {
+    const r = phone.getBoundingClientRect();
+    burst(r.width / 2, r.height * 0.42);
+  });
+  let refreshing = false;
+  pane.on('change', () => {
+    if (refreshing) return;
+    applyTune();
+    refreshing = true;
+    pane.refresh();
+    refreshing = false;
+  });
+  applyTune();
+}
+
+function compactW() { return Math.min(232, phone.clientWidth - 32); }
+function measureContent() {
+  const w = Math.max(compactW(), phone.clientWidth - 24);
+  bodyEl.style.width = `${w}px`;
+  return { w, h: Math.max(44, bodyEl.offsetHeight) };
+}
+function visualSize(p) {
+  const cw = Math.min(232, morph.contentW);
+  return {
+    w: cw + (morph.contentW - cw) * p,
+    h: 44 + (morph.contentH - 44) * p,
+  };
+}
+function paintClip(p) {
+  const vis = visualSize(p);
+  const top = Math.max(0, morph.boxH - vis.h);
+  const side = Math.max(0, (morph.boxW - vis.w) / 2);
+  const rad = 22 + 977 * (1 - Math.min(1, Math.max(0, p)));
+  pill.style.clipPath = `inset(${top}px ${side}px 0px ${side}px round ${rad}px)`;
+  summary.style.opacity = String(Math.max(0, (p - 0.22) / 0.78));
+  phone.style.setProperty('--lp-vis', `${Math.max(44, vis.h)}px`);
+}
+function applyRest() {
+  morph.p = morph.tp;
+  morph.v = 0;
+  pill.style.clipPath = 'none';
+  pill.style.willChange = '';
+  pill.classList.toggle('is-open', pillOpen);
+  if (pillOpen) {
+    const size = measureContent();
+    morph.contentW = size.w;
+    morph.contentH = size.h;
+    pill.style.width = `${size.w}px`;
+    pill.style.height = `${size.h}px`;
+    bodyEl.style.width = `${size.w}px`;
+    summary.style.opacity = '1';
+    phone.style.setProperty('--lp-vis', `${size.h}px`);
+  } else {
+    const w = compactW();
+    pill.style.width = `${w}px`;
+    pill.style.height = '44px';
+    bodyEl.style.width = `${w}px`;
+    summary.style.opacity = '0';
+    phone.style.setProperty('--lp-vis', '44px');
+  }
+  summary.toggleAttribute('inert', !pillOpen);
+  summary.setAttribute('aria-hidden', pillOpen ? 'false' : 'true');
+  toggle.setAttribute('aria-expanded', pillOpen ? 'true' : 'false');
+  toggle.setAttribute('aria-label', pillOpen ? 'Collapse status' : statusLabel());
+}
+function prepareBox() {
+  const size = measureContent();
+  morph.contentW = size.w;
+  morph.contentH = size.h;
+  morph.boxW = size.w + 16;
+  morph.boxH = size.h + 16;
+  pill.style.width = `${morph.boxW}px`;
+  pill.style.height = `${morph.boxH}px`;
+  bodyEl.style.width = `${size.w}px`;
+}
+function springStep(now) {
+  if (document.hidden) {
+    morph.last = 0;
+    morph.raf = requestAnimationFrame(springStep);
+    return;
+  }
+  const dt = Math.min(0.032, morph.last ? (now - morph.last) / 1000 : 0.016);
+  morph.last = now;
+  if (reduced()) {
+    morph.p = morph.tp;
+    morph.v = 0;
+  } else {
+    const a = -tune.stiffness * (morph.p - morph.tp) - tune.damping * morph.v;
+    morph.v += a * dt;
+    morph.p += morph.v * dt;
+  }
+  paintClip(morph.p);
+  const settled = reduced() || (Math.abs(morph.p - morph.tp) < 0.004 && Math.abs(morph.v) < 0.03);
+  if (settled) {
+    morph.running = false;
+    applyRest();
+    return;
+  }
+  morph.raf = requestAnimationFrame(springStep);
+}
+function startSpring() {
+  toggle.setAttribute('aria-expanded', pillOpen ? 'true' : 'false');
+  if (reduced()) {
+    morph.tp = pillOpen ? 1 : 0;
+    applyRest();
+    return;
+  }
+  prepareBox();
+  pill.style.willChange = 'clip-path';
+  pill.classList.toggle('is-open', pillOpen);
+  if (!morph.running) {
+    morph.running = true;
+    morph.last = 0;
+    morph.raf = requestAnimationFrame(springStep);
+  }
+}
+function setPill(open) {
+  pillOpen = open;
+  morph.tp = open ? 1 : 0;
+  summary.toggleAttribute('inert', !open);
+  summary.setAttribute('aria-hidden', open ? 'false' : 'true');
+  startSpring();
+}
+
+function sizeCanvas() {
+  const w = phone.clientWidth;
+  const h = phone.clientHeight;
+  if (cvs.width !== w) cvs.width = w;
+  if (cvs.height !== h) cvs.height = h;
+}
+function burst(x, y) {
+  if (reduced() || tune.particles <= 0) return;
+  sizeCanvas();
+  const n = tune.particles | 0;
+  const cols = ['#ff2bd6', '#3de1ff', '#c9a227'];
+  for (let i = 0; i < n; i += 1) {
+    const p = pool[poolHead] || (pool[poolHead] = {});
+    poolHead = (poolHead + 1) % MAX;
+    const a = Math.random() * 6.2831853;
+    const sp = 46 + Math.random() * 86;
+    p.x = x; p.y = y; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp - 28;
+    p.life = 0.42 + Math.random() * 0.22; p.age = 0; p.s = 2 + (Math.random() * 2 | 0); p.c = cols[i % 3]; p.on = 1;
+  }
+  if (!rafP) { lastP = 0; rafP = requestAnimationFrame(stepP); }
+}
+function stepP(now) {
+  const dt = Math.min(0.032, lastP ? (now - lastP) / 1000 : 0.016);
+  lastP = now;
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  let alive = 0;
+  for (let i = 0; i < pool.length; i += 1) {
+    const p = pool[i];
+    if (!p.on) continue;
+    p.age += dt;
+    if (p.age >= p.life) { p.on = 0; continue; }
+    p.vy += 80 * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    ctx.globalAlpha = 1 - p.age / p.life;
+    ctx.fillStyle = p.c;
+    ctx.fillRect(p.x | 0, p.y | 0, p.s, p.s);
+    alive += 1;
+  }
+  ctx.globalAlpha = 1;
+  rafP = alive ? requestAnimationFrame(stepP) : 0;
+}
+function relCenter(el) {
+  const a = el.getBoundingClientRect();
+  const b = phone.getBoundingClientRect();
+  return { x: a.left - b.left - phone.clientLeft + a.width / 2, y: a.top - b.top - phone.clientTop + a.height / 2 };
+}
+
+const sfx = {
+  check: new Audio('./sfx/check.mp3'),
+  level: new Audio('./sfx/level.mp3'),
+  unlock: new Audio('./sfx/unlock.mp3'),
+};
+function play(name) {
+  if (!soundOn) return;
+  const audio = sfx[name];
+  if (!audio) return;
+  try {
+    audio.currentTime = 0;
+    const pending = audio.play();
+    if (pending) pending.catch(() => {});
+  } catch (err) { /* autoplay blocked */ }
+}
+
+function drawHero(host, worn, spot) {
+  host.replaceChildren();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 80 112');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', spot ? `${spot.label}, not worn yet` : 'Izzy');
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('shape-rendering', 'crispEdges');
+  const add = (list, hot) => {
+    for (let i = 0; i < list.length; i += 1) {
+      const [x, y, w, h, fill] = list[i];
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y); rect.setAttribute('width', w); rect.setAttribute('height', h); rect.setAttribute('fill', fill);
+      g.append(rect);
+    }
+  };
+  add(BASE, false);
+  const slots = new Set();
+  for (let i = 0; i < worn.length; i += 1) {
+    const piece = PIECES.find((item) => item.id === worn[i]);
+    if (piece) slots.add(piece.slot);
+  }
+  if (spot) slots.add(spot.slot);
+  slots.forEach((slot) => { if (OVERLAYS[slot]) add(OVERLAYS[slot], false); });
+  if (spot && OVERLAYS[spot.slot]) {
+    let x0 = 80, y0 = 112, x1 = 0, y1 = 0;
+    for (const [x, y, w, h] of OVERLAYS[spot.slot]) {
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + w); y1 = Math.max(y1, y + h);
+    }
+    const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    frame.setAttribute('x', x0 - 1); frame.setAttribute('y', y0 - 1);
+    frame.setAttribute('width', x1 - x0 + 2); frame.setAttribute('height', y1 - y0 + 2);
+    frame.setAttribute('fill', 'none'); frame.setAttribute('stroke', '#c9a227');
+    g.append(frame);
+  }
+  svg.append(g);
+  host.append(svg);
+}
+
+function roll(node, value) {
+  const next = String(value);
+  if (node.dataset.v === next) return;
+  const prev = node.dataset.v;
+  node.dataset.v = next;
+  if (prev == null || reduced()) { node.textContent = next; return; }
+  const token = (node._tok = (node._tok || 0) + 1);
+  node.textContent = '';
+  const wrap = document.createElement('span');
+  wrap.className = 'lp-odometer';
+  const col = document.createElement('span');
+  col.className = 'lp-odometer-col';
+  const a = document.createElement('span');
+  a.textContent = prev;
+  const b = document.createElement('span');
+  b.textContent = next;
+  col.append(a, b);
+  wrap.append(col);
+  node.append(wrap);
+  requestAnimationFrame(() => { col.style.transform = 'translateY(-50%)'; });
+  col.addEventListener('transitionend', () => { if (node._tok === token) node.textContent = next; }, { once: true });
+}
+function statusLabel() {
+  const s = S().shown;
+  const left = s.next - s.into;
+  return `Today ${s.done} of ${s.total}, streak ${s.streak}, ${left} XP to level ${s.level + 1}`;
+}
+function gearSig(acc) { return `${acc.unlocked.join(',')}|${acc.worn.join(',')}`; }
+let paintedGear = '';
+function paintSummary() {
+  const acc = S();
+  const s = acc.shown;
+  const left = s.next - s.into;
+  summary.replaceChildren();
+  const lines = [
+    `Today ${s.done} of ${s.total}`,
+    `Streak ${s.streak} day${s.streak === 1 ? '' : 's'}`,
+    `Level ${s.level} \u00b7 ${s.into} / ${s.next} XP \u00b7 ${left} to next`,
+  ];
+  for (let i = 0; i < lines.length; i += 1) {
+    const p = document.createElement('p');
+    p.textContent = lines[i];
+    summary.append(p);
+  }
+  if (acc.id !== 'izzy') return;
+  for (let i = 0; i < acc.unlocked.length; i += 1) {
+    const id = acc.unlocked[i];
+    const piece = PIECES.find((item) => item.id === id);
+    if (!piece) continue;
+    const row = document.createElement('div');
+    row.className = 'lp-gear';
+    const label = document.createElement('span');
+    const worn = acc.worn.includes(id);
+    label.textContent = worn ? `Wearing ${piece.label}` : `${piece.label} unlocked`;
+    row.append(label);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = worn ? 'lp-mini ghost lp-hit' : 'lp-mini lp-hit';
+    btn.textContent = worn ? 'Take off' : 'Wear';
+    btn.addEventListener('click', () => (worn ? takeOff(id) : wear(id)));
+    row.append(btn);
+    summary.append(row);
+  }
+  paintedGear = gearSig(acc);
+}
+function paintStatus() {
+  const acc = S();
+  const s = acc.shown;
+  const truth = snapshot(acc);
+  roll($('lp-frac'), `${s.done}/${s.total}`);
+  roll($('lp-streak'), s.streak);
+  roll($('lp-left'), s.next - s.into);
+  roll($('lp-ring-count'), `${truth.done}/${truth.total}`);
+  $('lp-today-line').textContent = truth.total && truth.done === truth.total ? 'Today complete' : `${truth.done} of ${truth.total} complete`;
+  $('lp-xp-line').textContent = `${s.into} / ${s.next} XP`;
+  $('lp-sub').textContent = `${acc.name} \u00b7 Level ${s.level}`;
+  $('lp-flame').classList.toggle('is-held', s.held);
+  if (!pillOpen) toggle.setAttribute('aria-label', statusLabel());
+  const ring = $('lp-ring-wrap');
+  ring.classList.toggle('is-closed', truth.total > 0 && truth.done === truth.total);
+  ring.setAttribute('aria-label', $('lp-today-line').textContent);
+  const today = $('lp-today');
+  const arc = $('lp-xp-arc');
+  const todayP = truth.total ? truth.done / truth.total : 0;
+  const xpP = s.next ? s.into / s.next : 0;
+  today.style.strokeDasharray = String(C_TODAY);
+  arc.style.strokeDasharray = String(C_XP);
+  today.style.strokeDashoffset = String(C_TODAY * (1 - todayP));
+  arc.style.strokeDashoffset = String(C_XP * (1 - xpP));
+  today.style.opacity = todayP === 0 ? '0' : '1';
+  arc.style.opacity = xpP === 0 ? '0' : '1';
+  if (gearSig(acc) !== paintedGear || summary.childElementCount === 0) paintSummary();
+  const worn = $('lp-worn');
+  if (acc.id === 'izzy' && acc.worn.length) {
+    const names = acc.worn.map((id) => PIECES.find((item) => item.id === id)?.label).filter(Boolean);
+    worn.hidden = false;
+    worn.textContent = `Wearing ${names.join(', ')}`;
+  } else worn.hidden = true;
+}
+function paintRows() {
+  const list = $('lp-list');
+  const quests = S().quests;
+  const onQuests = tab === 'quests';
+  $('lp-section').hidden = !onQuests;
+  list.hidden = !onQuests;
+  $('lp-other').hidden = onQuests;
+  if (!onQuests) {
+    $('lp-other').textContent = OTHER[tab] || '';
+    return;
+  }
+  const have = new Map();
+  list.querySelectorAll('.lp-row').forEach((row) => have.set(row.dataset.id, row));
+  const keep = new Set();
+  for (let i = 0; i < quests.length; i += 1) {
+    const q = quests[i];
+    keep.add(q.id);
+    let row = have.get(q.id);
+    if (!row) {
+      row = document.createElement('article');
+      row.className = 'lp-row';
+      row.dataset.id = q.id;
+      row.innerHTML = '<div class="lp-row-main"><div class="lp-row-title"></div><div class="lp-row-meta"><span class="lp-own"></span><span class="lp-row-xp">XP</span></div></div><button type="button" class="lp-complete lp-hit"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"></path></svg></button>';
+      row.querySelector('button').addEventListener('click', () => completeQuest(q.id));
+      list.append(row);
+      if (q.fresh) { row.classList.add('is-new'); q.fresh = false; }
+    }
+    row.querySelector('.lp-row-title').textContent = q.title;
+    row.querySelector('.lp-own').textContent = q.own;
+    const btn = row.querySelector('button');
+    btn.disabled = q.done;
+    btn.setAttribute('aria-label', q.done ? `Completed ${q.title}` : `Complete ${q.title}`);
+    row.classList.toggle('is-done', q.done);
+  }
+  have.forEach((row, id) => { if (!keep.has(id)) row.remove(); });
+}
+function paintNav() {
+  const nav = $('lp-nav');
+  nav.replaceChildren();
+  for (let i = 0; i < NAV.length; i += 1) {
+    const [id, label, d] = NAV[i];
+    if (id === 'play' && who === 'izzy') continue;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lp-hit';
+    btn.dataset.tab = id;
+    if (tab === id) btn.setAttribute('aria-current', 'page');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    if (id === 'character') {
+      svg.innerHTML = '<circle cx="12" cy="8.4" r="3.1"></circle><path d="M5.6 19.4c1.1-2.8 3.4-4.2 6.4-4.2s5.3 1.4 6.4 4.2"></path>';
+    } else if (id === 'more') {
+      svg.innerHTML = '<circle cx="6" cy="12" r="1.35" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"></circle><circle cx="18" cy="12" r="1.35" fill="currentColor" stroke="none"></circle>';
+    } else {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      svg.append(path);
+    }
+    const span = document.createElement('span');
+    span.textContent = label;
+    btn.append(svg, span);
+    btn.addEventListener('click', () => { tab = id; $('lp-title').textContent = label; paintNav(); paintRows(); });
+    nav.append(btn);
+  }
+}
+function paintHero() {
+  const host = $('lp-hero');
+  if (who !== 'izzy') { host.hidden = true; host.replaceChildren(); return; }
+  host.hidden = false;
+  drawHero(host, S().worn, null);
+}
+function paintLab() {
+  const open = S().quests.some((q) => !q.done);
+  $('lp-act-complete').disabled = !open;
+  $('lp-acc-connor').setAttribute('aria-pressed', who === 'connor' ? 'true' : 'false');
+  $('lp-acc-izzy').setAttribute('aria-pressed', who === 'izzy' ? 'true' : 'false');
+  $('lp-act-sound').setAttribute('aria-checked', soundOn ? 'true' : 'false');
+  $('lp-act-sound').setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+}
+function render() {
+  $('lp-title').textContent = tab === 'quests' ? 'Quests' : OTHER[tab] ? tab[0].toUpperCase() + tab.slice(1) : 'Quests';
+  if (tab !== 'quests') {
+    const names = { home: 'Home', play: 'Play', character: 'Character', more: 'More' };
+    $('lp-title').textContent = names[tab];
+  }
+  paintStatus();
+  paintRows();
+  paintNav();
+  paintHero();
+  paintLab();
+  applyReduce();
+}
+function announce(text) {
+  const live = $('lp-live');
+  live.textContent = '';
+  requestAnimationFrame(() => { live.textContent = text; });
+}
+function setNote(text) {
+  const note = $('lp-note');
+  note.hidden = !text;
+  note.textContent = text || '';
+}
+function pulse() {
+  if (reduced()) return;
+  pill.classList.remove('is-hot');
+  void pill.offsetWidth;
+  pill.classList.add('is-hot');
+  clearTimeout(pulse.t);
+  pulse.t = setTimeout(() => pill.classList.remove('is-hot'), tune.seal);
+}
+function pulseFlame() {
+  const flame = $('lp-flame');
+  if (reduced()) return;
+  flame.classList.remove('is-pulse');
+  void flame.offsetWidth;
+  flame.classList.add('is-pulse');
+}
+function cancelFlies() {
+  for (let i = 0; i < flies.length; i += 1) flies[i]();
+  flies.length = 0;
+}
+function flyXp(fromEl, text, done) {
+  if (reduced() || !fromEl) { done(); return () => {}; }
+  const node = document.createElement('span');
+  node.className = 'lp-fly';
+  node.textContent = text;
+  document.body.append(node);
+  const a = fromEl.getBoundingClientRect();
+  const startX = a.left + a.width / 2;
+  const startY = a.top + a.height / 2;
+  const pillBox = pill.getBoundingClientRect();
+  const endX = pillBox.left + pillBox.width / 2;
+  const endY = pillBox.bottom - 22;
+  node.style.left = `${startX}px`;
+  node.style.top = `${startY}px`;
+  const dur = tune.fly;
+  const t0 = performance.now();
+  let raf = 0;
+  let dead = false;
+  const frame = (now) => {
+    if (dead) return;
+    const t = Math.min(1, (now - t0) / dur);
+    const e = 1 - (1 - t) ** 3;
+    const arc = Math.sin(t * Math.PI) * -14;
+    node.style.transform = `translate(${(endX - startX) * e}px, ${(endY - startY) * e + arc}px)`;
+    if (t < 1) raf = requestAnimationFrame(frame);
+    else { cleanup(); done(); }
+  };
+  function cleanup() { dead = true; cancelAnimationFrame(raf); node.remove(); }
+  raf = requestAnimationFrame(frame);
+  return cleanup;
+}
+function land(acc) {
+  const item = acc.queue.shift();
+  if (!item) return;
+  const prev = acc.shown;
+  acc.shown = item.snap;
+  if (acc.id !== who) return;
+  paintStatus();
+  pulse();
+  if (prev && item.snap.streak > prev.streak) pulseFlame();
+  if (item.piece) openSheet(item.piece, item.snap.level);
+  else if (item.note) {
+    setNote(item.note);
+    const spot = relCenter(pill);
+    burst(spot.x, spot.y);
+    play('level');
+    announce(item.note);
+  }
+  if (pillOpen) startSpring();
+}
+function enqueue(acc, fromEl, text, extra) {
+  acc.queue.push({ snap: snapshot(acc), piece: extra.piece || null, note: extra.note || '', streak: acc.streak });
+  if (reduced()) {
+    while (acc.queue.length) land(acc);
+    return;
+  }
+  const cancel = flyXp(fromEl, text, () => land(acc));
+  flies.push(cancel);
+}
+function ratioDone(acc) {
+  let done = 0;
+  for (let i = 0; i < acc.quests.length; i += 1) if (acc.quests[i].done) done += 1;
+  return { done, total: acc.quests.length };
+}
+function applyXp(acc, amount) {
+  const before = levelFor(acc.xp).level;
+  acc.xp += amount;
+  const after = levelFor(acc.xp).level;
+  let piece = null;
+  if (acc.id === 'izzy' && after > before) {
+    for (let lv = before + 1; lv <= after; lv += 1) {
+      const found = PIECES.find((item) => item.level === lv);
+      if (found && !acc.unlocked.includes(found.id)) {
+        acc.unlocked.push(found.id);
+        if (!piece) piece = found;
+      }
+    }
+  }
+  return { before, after, piece };
+}
+function markStreak(acc) {
+  const now = ratioDone(acc);
+  if (now.total > 0 && now.done === now.total && !acc.streakHeld) {
+    acc.streak += 1;
+    acc.streakHeld = true;
+    return true;
+  }
+  return false;
+}
+function completeQuest(id) {
+  const acc = S();
+  const q = acc.quests.find((item) => item.id === id);
+  if (!q || q.done) return;
+  const before = ratioDone(acc);
+  q.done = true;
+  const grew = applyXp(acc, q.xp);
+  const justClosed = ratioDone(acc).done === ratioDone(acc).total && before.done !== before.total;
+  markStreak(acc);
+  paintRows();
+  paintStatus();
+  if (justClosed) {
+    const wrap = $('lp-ring-wrap');
+    wrap.classList.remove('is-sealed');
+    void wrap.offsetWidth;
+    wrap.classList.add('is-sealed');
+    const spot = relCenter(wrap);
+    burst(spot.x, spot.y);
+  }
+  const row = document.querySelector(`[data-id="${q.id}"] .lp-row-xp`);
+  const note = !grew.piece && grew.after > grew.before ? `Level ${grew.after} reached.` : '';
+  enqueue(acc, row, `+${q.xp} XP`, { piece: grew.piece, note });
+  play('check');
+  announce(`Completed ${q.title}. +${q.xp} XP.`);
+  paintLab();
+  if (grew.piece) announce(`Level ${grew.after} reached. ${grew.piece.label} unlocked. Not worn until you tap Wear.`);
+}
+function firstOpen() { return S().quests.find((q) => !q.done); }
+function assignQuest() {
+  const acc = S();
+  const pool = ASSIGN[acc.id];
+  const spec = pool[acc.assignI % pool.length];
+  acc.assignI += 1;
+  const q = quest(`${acc.id}-a${questSeq += 1}`, spec[0], spec[1], spec[2]);
+  q.fresh = true;
+  acc.quests.unshift(q);
+  const text = `${acc.partner} sent you: ${q.title}`;
+  showToast(text);
+  render();
+  announce(text);
+}
+function showToast(text) {
+  clearTimeout(toastTimer);
+  toast.hidden = false;
+  toast.classList.remove('is-in', 'is-out');
+  toast.textContent = text;
+  toast.setAttribute('title', text);
+  if (reduced()) { toast.classList.add('is-in'); }
+  else requestAnimationFrame(() => toast.classList.add('is-in'));
+  toastTimer = setTimeout(hideToast, 3200);
+}
+function hideToast() {
+  if (toast.hidden) return;
+  toast.classList.remove('is-in');
+  toast.classList.add('is-out');
+  const done = () => { toast.hidden = true; toast.classList.remove('is-out'); };
+  if (reduced()) done();
+  else toast.addEventListener('transitionend', done, { once: true });
+}
+function gain(amount) {
+  const acc = S();
+  cancelFlies();
+  acc.queue = [];
+  const grew = applyXp(acc, amount);
+  acc.shown = snapshot(acc);
+  const note = !grew.piece && grew.after > grew.before ? `Level ${grew.after} reached.` : '';
+  render();
+  pulse();
+  if (grew.piece) {
+    openSheet(grew.piece, grew.after);
+    announce(`Level ${grew.after} reached. ${grew.piece.label} unlocked. Not worn until you tap Wear.`);
+  } else if (note) {
+    setNote(note);
+    const spot = relCenter(pill);
+    burst(spot.x, spot.y);
+    play('level');
+    announce(note);
+  } else announce(`+${amount} XP.`);
+  if (pillOpen) startSpring();
+}
+function levelUp() {
+  const acc = S();
+  const lvl = levelFor(acc.xp);
+  gain(Math.max(1, lvl.xpForNext - lvl.xpIntoLevel));
+}
+function wear(id) {
+  const acc = S();
+  if (!acc.unlocked.includes(id)) return;
+  if (!acc.worn.includes(id)) acc.worn.push(id);
+  const piece = PIECES.find((item) => item.id === id);
+  closeSheet();
+  paintedGear = '';
+  render();
+  announce(piece ? `Wearing ${piece.label}.` : 'Wearing gear.');
+}
+function takeOff(id) {
+  const acc = S();
+  acc.worn = acc.worn.filter((item) => item !== id);
+  paintedGear = '';
+  render();
+}
+function openSheet(piece, level) {
+  sheetGen += 1;
+  const gen = sheetGen;
+  setLab(false);
+  sheetPiece = piece;
+  $('lp-sheet-title').textContent = `Level ${level} reached.`;
+  $('lp-sheet-road').textContent = 'The road remembers every step.';
+  $('lp-sheet-gear').textContent = `New gear unlocked: ${piece.label}.`;
+  $('lp-sheet-reveal').textContent = REVEAL;
+  const preview = S().worn.filter((id) => id !== piece.id);
+  drawHero($('lp-sheet-hero'), preview, piece);
+  $('lp-wear').textContent = 'Wear';
+  $('lp-wear').setAttribute('aria-label', `Wear ${piece.label}`);
+  restoreFocus = document.activeElement;
+  sheet.hidden = false;
+  scrim.hidden = false;
+  sheet.classList.remove('is-out');
+  $('lp-main').inert = true;
+  $('lp-nav').inert = true;
+  if (reduced()) sheet.classList.add('is-in');
+  else requestAnimationFrame(() => sheet.classList.add('is-in'));
+  $('lp-wear').focus();
+  const fire = () => {
+    const spot = relCenter($('lp-sheet-hero'));
+    burst(spot.x, spot.y);
+    play('unlock');
+  };
+  if (reduced()) fire();
+  else sheet.addEventListener('transitionend', function once(event) {
+    if (gen !== sheetGen || event.target !== sheet || event.propertyName !== 'transform') return;
+    sheet.removeEventListener('transitionend', once);
+    fire();
+  });
+}
+function closeSheet() {
+  if (sheet.hidden) return;
+  const gen = sheetGen;
+  sheet.classList.remove('is-in');
+  sheet.classList.add('is-out');
+  let closed = false;
+  const done = () => {
+    if (closed || gen !== sheetGen) return;
+    closed = true;
+    sheet.hidden = true;
+    scrim.hidden = true;
+    sheet.classList.remove('is-out');
+    $('lp-main').inert = false;
+    $('lp-nav').inert = false;
+    sheetPiece = null;
+    if (restoreFocus && restoreFocus.focus) restoreFocus.focus();
+  };
+  if (reduced()) done();
+  else {
+    sheet.addEventListener('transitionend', done, { once: true });
+    setTimeout(done, tune.sheet + 80);
+  }
+}
+function setWho(id) {
+  if (!accounts[id]) return;
+  cancelFlies();
+  accounts[who].queue = [];
+  accounts[who].shown = snapshot(accounts[who]);
+  clearTimeout(toastTimer);
+  toast.hidden = true;
+  toast.classList.remove('is-in', 'is-out');
+  sheetGen += 1;
+  sheet.hidden = true;
+  scrim.hidden = true;
+  sheet.classList.remove('is-in', 'is-out');
+  $('lp-main').inert = false;
+  $('lp-nav').inert = false;
+  sheetPiece = null;
+  who = id;
+  if (tab === 'play' && id === 'izzy') tab = 'quests';
+  paintedGear = '';
+  setNote('');
+  pillOpen = false;
+  morph.tp = 0;
+  morph.p = 0;
+  render();
+  applyRest();
+  announce(id === 'izzy' ? 'Izzy. Play is hidden.' : 'Connor. Play is in the nav.');
+}
+function resetAccount() {
+  cancelFlies();
+  closeSheet();
+  accounts[who] = who === 'connor' ? freshConnor() : freshIzzy();
+  paintedGear = '';
+  setNote('');
+  pillOpen = false;
+  morph.p = 0;
+  morph.tp = 0;
+  tab = 'quests';
+  render();
+  applyRest();
+  announce(`${S().name} reset.`);
+}
+function setLab(open) {
+  labOpen = open;
+  $('lp-lab').classList.toggle('is-open', open);
+  $('lp-lab-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function bootHash() {
+  const bits = new Set(location.hash.slice(1).split(/[&,]/).filter(Boolean));
+  if (bits.has('reduce')) reduceOverride = true;
+  if (bits.has('izzy') || bits.has('sheet')) who = 'izzy';
+  if (bits.has('reduce')) {
+    const acc = S();
+    const q = acc.quests.find((item) => !item.done);
+    if (q) { q.done = true; applyXp(acc, q.xp); markStreak(acc); acc.shown = snapshot(acc); }
+  }
+  if (bits.has('closed')) {
+    who = 'connor';
+    const acc = accounts.connor;
+    for (let i = 0; i < acc.quests.length; i += 1) {
+      if (!acc.quests[i].done) { acc.quests[i].done = true; applyXp(acc, acc.quests[i].xp); }
+    }
+    markStreak(acc);
+    acc.shown = snapshot(acc);
+  }
+  if (bits.has('toast')) {
+    const acc = S();
+    const spec = ASSIGN[acc.id][0];
+    const q = quest(`${acc.id}-toast`, spec[0], spec[1], spec[2]);
+    acc.quests.unshift(q);
+    acc.shown = snapshot(acc);
+  }
+  if (bits.has('sheet')) {
+    const acc = accounts.izzy;
+    acc.xp = 10;
+    acc.unlocked = ['fingerless-gloves'];
+    acc.worn = [];
+    acc.shown = snapshot(acc);
+  }
+  if (bits.has('expanded')) { pillOpen = true; morph.tp = 1; morph.p = 1; }
+  render();
+  applyRest();
+  if (bits.has('toast')) showToast(`${S().partner} sent you: ${ASSIGN[S().id][0][0]}`);
+  if (bits.has('sheet')) openSheet(PIECES[0], 2);
+  if (bits.has('expanded')) setPill(true);
+}
+
+$('lp-lab-toggle').addEventListener('click', () => setLab(!labOpen));
+$('lp-act-complete').addEventListener('click', () => { const q = firstOpen(); if (q) { tab = 'quests'; completeQuest(q.id); } });
+$('lp-act-assign').addEventListener('click', () => { tab = 'quests'; assignQuest(); });
+$('lp-act-xp').addEventListener('click', () => gain(10));
+$('lp-act-level').addEventListener('click', levelUp);
+$('lp-act-reduce').addEventListener('click', () => {
+  reduceOverride = !reduced();
+  applyReduce();
+  if (reduced()) { cancelFlies(); S().queue = []; S().shown = snapshot(S()); render(); applyRest(); }
+  announce(reduced() ? 'Reduced motion on.' : 'Reduced motion off.');
+});
+$('lp-act-sound').addEventListener('click', () => {
+  soundOn = !soundOn;
+  paintLab();
+  announce(soundOn ? 'Sound on.' : 'Sound off.');
+  if (soundOn) play('check');
+});
+$('lp-acc-connor').addEventListener('click', () => setWho('connor'));
+$('lp-acc-izzy').addEventListener('click', () => setWho('izzy'));
+$('lp-act-reset').addEventListener('click', resetAccount);
+toggle.addEventListener('click', () => setPill(!pillOpen));
+$('lp-wear').addEventListener('click', () => { if (sheetPiece) wear(sheetPiece.id); });
+$('lp-later').addEventListener('click', closeSheet);
+scrim.addEventListener('click', closeSheet);
+toast.addEventListener('click', hideToast);
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!sheet.hidden) { closeSheet(); return; }
+  if (pillOpen) { setPill(false); return; }
+  if (labOpen) setLab(false);
+});
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => { if (reduceOverride === null) applyReduce(); });
+new ResizeObserver(() => { if (!morph.running) applyRest(); }).observe(phone);
+$('lp-today').style.strokeDasharray = String(C_TODAY);
+$('lp-xp-arc').style.strokeDasharray = String(C_XP);
+mountPane();
+bootHash();
+window.__lp = { tune, accounts, levelFor, burst, sampleLinear, reduced: () => reduced() };
+</script>
+</body>
+</html>
