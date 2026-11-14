@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { companionRedirect } from '../../lib/companionAccess';
+import { EngagementChrome } from '../../components/EngagementChrome';
 import { AppNav } from './AppNav';
 import { CompanionNav } from '../../components/CompanionNav';
 import { RoleRedirect } from '../../components/RoleRedirect';
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={role.mode === 'companion' ? 'shell companion-shell' : 'shell'}>
       {role.mode === 'companion' ? <CompanionNav /> : <AppNav />}
+      <EngagementChrome mode={role.mode} />
       <div className="shell-main">{children}</div>
     </div>
   );

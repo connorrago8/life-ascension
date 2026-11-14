@@ -1,0 +1,123 @@
+/* Engagement chrome. Kept out of style.css so nav work can land beside it. */
+.engage-pill {
+  position: fixed;
+  z-index: 24;
+  right: 16px;
+  left: auto;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(280px, calc(100vw - 24px));
+  min-height: 36px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: rgba(12, 14, 18, 0.94);
+  color: #e8eaed;
+  border: 1px solid #3a3324;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(201, 162, 39, 0.25);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.engage-pill-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.engage-pill-quests { color: #00f0ff; font-weight: 700; letter-spacing: 0.02em; }
+.engage-pill-streak { color: #ff2bd6; font-weight: 650; }
+.engage-pill-xp { color: #c9a227; font-weight: 650; }
+.engage-pill-actions { display: flex; align-items: center; }
+.engage-pill button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #9aa3ae;
+  cursor: pointer;
+}
+.engage-pill.is-collapsed { padding-right: 4px; }
+.engage-pill.is-hidden {
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.engage-restore {
+  width: 36px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #3a3324;
+  background: rgba(12, 14, 18, 0.94);
+  color: #c9a227;
+  cursor: pointer;
+  font-size: 12px;
+}
+.engage-install {
+  position: fixed;
+  z-index: 26;
+  left: 12px;
+  right: 12px;
+  bottom: calc(118px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #12141a;
+  color: #e8eaed;
+  border: 1px solid #2c313a;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+}
+.engage-install p { margin: 0; }
+.engage-install strong { color: #c9a227; }
+.engage-install button {
+  flex: none;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: #00f0ff;
+  font-weight: 650;
+  cursor: pointer;
+}
+.engage-settings .engage-note { color: #c9a227; }
+.engage-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.engage-toggle input { width: 20px; height: 20px; accent-color: #ff2bd6; }
+.engage-token {
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  background: #12141a;
+  border: 1px solid #3a3324;
+  border-radius: 10px;
+  padding: 10px;
+}
+@media (min-width: 720px) {
+  .engage-pill { right: 24px; }
+}
+@media (max-width: 719px) {
+  .engage-pill {
+    right: 8px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  .shell:has(.engage-pill:not(.is-hidden)) .shell-main {
+    padding-bottom: calc(136px + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .engage-pill, .engage-install, .engage-restore { transition: none; animation: none; }
+}
