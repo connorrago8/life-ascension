@@ -24,7 +24,16 @@ export default function TreasuryPreview() {
           <li key={quest.key}>{quest.title} · {quest.points} points · {quest.state}</li>
         ))}
       </ul>
-      <p>Next week: plan one pickup meal in place of delivery.</p>
+      <section aria-labelledby="treasury-plan-heading">
+        <h3 id="treasury-plan-heading">Two-week spending plan</h3>
+        <ul>
+          <li>Stay within the weekly cap after bills · Pending budget review</li>
+          <li>Tuesday: spend $10 or less on nonessentials. Wednesday is the backup.</li>
+          <li>Monday: $0 in sportsbook deposits.</li>
+        </ul>
+        <p>Friday: choose Saturday dinner before the weekend.</p>
+        <p>After a $150 discretionary day, review what else is planned and choose what can wait.</p>
+      </section>
     </details>
   );
 }
