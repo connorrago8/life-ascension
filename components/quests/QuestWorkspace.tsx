@@ -8,11 +8,14 @@ import { callerCoupleAward, shouldVibrate } from '../../lib/questPolish';
 import { useCompanionRole } from '../useCompanionRole';
 import { supabase } from '../../lib/supabase';
 import PersonalQuestBoard from './PersonalQuestBoard';
+import TreasuryPreview from './TreasuryPreview';
 
 export function QuestWorkspace() {
   const params = useSearchParams();
   const chip = parseQuestChip(params.get('chip') ?? params.get('area'));
   const focus = parseQuestView(params.get('view'));
+  const showTreasuryPreview = process.env.NODE_ENV === 'development'
+    && params.get('preview') === '1' && chip === 'all';
   const role = useCompanionRole();
   const companion = role.mode === 'companion';
   const [couple, setCouple] = useState<CoupleQuestView[]>([]);
@@ -81,6 +84,7 @@ export function QuestWorkspace() {
           );
         })}
       </div>
+      {showTreasuryPreview && <TreasuryPreview />}
       <PersonalQuestBoard chip={chip} focus={focus} couple={couple} onMarkCouple={(id) => { void mark(id); }} coupleBusy={busy} onUnseen={setUnseen} />
       {floatXp != null && <p className="xp-float xp-float-board" role="status">+{floatXp} XP</p>}
       {note && <p className="message" role="status">{note}</p>}
