@@ -35,6 +35,7 @@ test('Preview builds reject non-protected branches even with valid QA URL/key/pi
   assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'grok/companion-dark-fix'}), true);
   assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'grok/engagement-pwa-push-20261114'}), true);
   assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'grok/test-combined-20261114'}), true);
+  assert.equal(validateDeploymentEnv({...qa, VERCEL_GIT_COMMIT_REF:'grok/health-finance-20261125'}), true);
   for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {
     assert.throws(() => validateDeploymentEnv({ ...qa, VERCEL_GIT_COMMIT_REF: ref }),
@@ -277,6 +278,8 @@ test('runtime server/Edge accepts both approved QA Preview branches and denies u
   assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'grok/engagement-pwa-push-20261114' }))?.url,
     qa.NEXT_PUBLIC_SUPABASE_URL);
   assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'grok/test-combined-20261114' }))?.url,
+    qa.NEXT_PUBLIC_SUPABASE_URL);
+  assert.equal((await runtimePublicConfig({ ...qa, VERCEL_GIT_COMMIT_REF: 'grok/health-finance-20261125' }))?.url,
     qa.NEXT_PUBLIC_SUPABASE_URL);
   for (const ref of [undefined, '', 'main',
     'audit/qa-isolation-and-reliability-20261027/other']) {

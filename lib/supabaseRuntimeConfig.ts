@@ -8,6 +8,7 @@ const PROTECTED_QA_BRANCHES = new Set([
   'grok/companion-dark-fix', 'chatgpt/test-integration-20261111', 'chatgpt/quest-workspace-20261111',
   'grok/engagement-pwa-push-20261114',
   'grok/test-combined-20261114',
+  'grok/health-finance-20261125',
 ]);
 const PRIVILEGED_NONPRODUCTION_KEYS = [
   'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'DATABASE_URL',
