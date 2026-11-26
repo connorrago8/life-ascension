@@ -14,6 +14,7 @@ const LINKS = [
   { href: '/quests/journal', label: 'Quest notes', note: 'Notes on your completions' },
   { href: '/more/notifications', label: 'Notifications', note: 'Push, quiet hours, and the evening reminder' },
   { href: '/settings/api-keys', label: 'API keys', note: 'Private keys for your account' },
+  { href: '/settings/apple-health', label: 'Apple Health', note: 'Lights Out and private nutrition from your iPhone' },
   { href: '/settings/wellness', label: 'Wellness', note: 'Readings stay on your account' },
 ] as const;
 

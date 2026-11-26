@@ -7,11 +7,20 @@ import {
   LIGHTS_OUT_STREAK_BONUS_XP,
   LIGHTS_OUT_TITLE,
 } from '../../lib/ascension/config';
+import { lightsOutReceipt } from '../../lib/ascension/appleHealth';
 import { healthGameDay, healthRecordWindow, lightsOutWeekLabel, rollingLightsOutCount } from '../../lib/ascension/lightsOut';
 import { BLANK_MEAL, mealIsLogged, type MealFlags } from '../../lib/ascension/meals';
 import { supabase } from '../../lib/supabase';
 
 type FlagKey = keyof MealFlags;
+
+type NutritionRow = {
+  energy_kcal: number | string | null;
+  protein_g: number | string | null;
+  carbs_g: number | string | null;
+  fat_g: number | string | null;
+  read_status: string | null;
+};
 
 const FLAGS: { key: FlagKey; label: string }[] = [
   { key: 'balanced', label: 'Balanced' },
@@ -29,6 +38,8 @@ export function HealthPanel() {
   const [sleep, setSleep] = useState('');
   const [recovery, setRecovery] = useState('');
   const [message, setMessage] = useState('');
+  const [autoReceipt, setAutoReceipt] = useState<string | null>(null);
+  const [nutrition, setNutrition] = useState<NutritionRow | null>(null);
   const [busy, setBusy] = useState(false);
   const requests = useRef(new Map<string, string>());
   const inFlight = useRef(false);
@@ -37,13 +48,18 @@ export function HealthPanel() {
     const client = supabase();
     const { data: auth } = await client.auth.getUser();
     if (!auth.user) { setMessage('Sign in to record health.'); return; }
-    const [nights, meals, notes] = await Promise.all([
+    const [nights, meals, notes, sleepRows, nutritionRows] = await Promise.all([
       client.from('health_lights_out').select('game_day').eq('owner_id', auth.user.id),
       client.from('health_meals').select('game_day,balanced,protein,produce,delivery').eq('owner_id', auth.user.id).eq('game_day', night).maybeSingle(),
       client.from('health_notes').select('sleep_note,recovery_note').eq('owner_id', auth.user.id).eq('game_day', night).maybeSingle(),
+      client.from('health_sleep_ingest').select('credited,source_name').eq('owner_id', auth.user.id).eq('game_day', night).maybeSingle(),
+      client.from('health_nutrition_days').select('energy_kcal,protein_g,carbs_g,fat_g,read_status').eq('owner_id', auth.user.id).eq('game_day', night).maybeSingle(),
     ]);
     if (nights.error) { setMessage('Health could not load. Nothing was changed.'); return; }
     setRecorded((nights.data ?? []).map((row) => String((row as { game_day: string }).game_day)));
+    const sleep = sleepRows.data as { credited?: boolean; source_name?: string | null } | null;
+    setAutoReceipt(sleep?.credited ? lightsOutReceipt(sleep.source_name) : null);
+    setNutrition(nutritionRows.data ? nutritionRows.data as NutritionRow : null);
     const mealRow = meals.data as MealFlags | null;
     setMeal(mealRow ? {
       balanced: mealRow.balanced ?? null,
@@ -132,6 +148,24 @@ export function HealthPanel() {
         </select>
       </label>
       <button type="button" className="btn" disabled={busy || loggedTonight} onClick={() => { void recordNight(); }}>{loggedTonight ? 'Recorded' : 'Record lights out'}</button>
+      {autoReceipt && <p role="status">{autoReceipt}</p>}
+      <p className="muted"><a href="/settings/apple-health">Connect Apple Health</a> to record this from last night's sleep. Manual entry still works. Whichever arrives first is the one that counts.</p>
+      {nutrition && (
+        <section aria-label="Nutrition from Apple Health">
+          <h2>Nutrition</h2>
+          <p className="muted">A private Cronometer import. It does not complete a quest and it awards 0 XP. Only you can see it.</p>
+          {nutrition.energy_kcal == null && nutrition.protein_g == null && nutrition.carbs_g == null && nutrition.fat_g == null
+            ? <p>No log seen.</p>
+            : (
+              <ul>
+                {nutrition.energy_kcal != null && <li>Dietary energy {nutrition.energy_kcal} kcal</li>}
+                {nutrition.protein_g != null && <li>Protein {nutrition.protein_g} g</li>}
+                {nutrition.carbs_g != null && <li>Carbohydrates {nutrition.carbs_g} g</li>}
+                {nutrition.fat_g != null && <li>Total fat {nutrition.fat_g} g</li>}
+              </ul>
+            )}
+        </section>
+      )}
 
       <section aria-label="Meal log">
         <h2>Meal log</h2>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { lightsOutReceipt } from '../../lib/ascension/appleHealth';
 import { supabase } from '../../lib/supabase';
 
 type Recent = { key: string; amount: number; label: string };
@@ -17,10 +18,11 @@ export function RecentQuestStrip() {
       const client = supabase();
       const { data: auth } = await client.auth.getUser();
       if (!auth.user || cancel) return;
-      const [ledger, nights, open] = await Promise.all([
+      const [ledger, nights, open, sleep] = await Promise.all([
         client.from('xp_ledger').select('id,amount,awarded_at').eq('owner_id', auth.user.id).order('awarded_at', { ascending: false }).limit(5),
         client.from('health_lights_out').select('game_day,xp_awarded,created_at').eq('owner_id', auth.user.id).order('created_at', { ascending: false }).limit(5),
         client.from('quest_instances').select('id').eq('owner_id', auth.user.id).eq('status', 'available').limit(1000),
+        client.from('health_sleep_ingest').select('game_day,source_name,credited').eq('owner_id', auth.user.id).eq('credited', true),
       ]);
       if (cancel) return;
       const rows: Recent[] = [];
@@ -28,8 +30,17 @@ export function RecentQuestStrip() {
         if (row.id && typeof row.amount === 'number') rows.push({ key: row.id, amount: row.amount, label: row.awarded_at?.slice(0, 10) ?? 'Quest' });
       }
       if (!nights.error) {
+        const receipts = new Map<string, string>();
+        if (!sleep.error) {
+          for (const row of (sleep.data ?? []) as { game_day?: string; source_name?: string | null; credited?: boolean }[]) {
+            if (row.credited && row.game_day) receipts.set(row.game_day, lightsOutReceipt(row.source_name));
+          }
+        }
         for (const row of (nights.data ?? []) as { game_day?: string; xp_awarded?: number }[]) {
-          if (row.game_day && typeof row.xp_awarded === 'number') rows.push({ key: `night:${row.game_day}`, amount: row.xp_awarded, label: `Lights out ${row.game_day}` });
+          if (row.game_day && typeof row.xp_awarded === 'number') {
+            const receipt = receipts.get(row.game_day);
+            rows.push({ key: `night:${row.game_day}`, amount: row.xp_awarded, label: receipt ? `Lights out ${row.game_day} · ${receipt}` : `Lights out ${row.game_day}` });
+          }
         }
       }
       setRecent(rows.slice(0, 5));

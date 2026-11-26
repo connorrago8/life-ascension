@@ -11,7 +11,17 @@ export const LIGHTS_OUT_BASE_XP = 5;
 export const LIGHTS_OUT_STREAK_BONUS_XP = 1;
 export const LIGHTS_OUT_STREAK_BONUS_MAX_XP = 5;
 export const LIGHTS_OUT_TITLE = 'Lights Out by 11 PM';
+/** Inclusive bedtime, America/Chicago wall clock. A start after this earns no Lights Out XP. */
+export const LIGHTS_OUT_DEADLINE = '23:00';
+/**
+ * The lights-out night opens at this Chicago wall time. Starts before it are
+ * naps. The night closes at the 5:00 AM game-day boundary.
+ */
+export const LIGHTS_OUT_NIGHT_START = '17:00';
 export const LIGHTS_OUT_LOOKBACK_DAYS = 2;
+/** Caps for the Cronometer shadow import. Null means missing. Zero is a real observation. */
+export const NUTRITION_MAX_KCAL = 20000;
+export const NUTRITION_MAX_GRAMS = 2000;
 export const LIGHTS_OUT_WEEK_NIGHTS = 7;
 export const LIGHTS_OUT_WEEK_GOAL = 6;
 
