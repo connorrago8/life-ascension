@@ -4,10 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FINANCE_DECISIONS,
   FINANCE_DECISION_LABEL,
-  FINANCE_FOLLOW_UPS,
   PAYDAY_TITLE,
   type FinanceDecision,
-  type FinanceFollowUpKind,
 } from '../../lib/ascension/config';
 import { paydayDates } from '../../lib/ascension/payday';
 import { gameDayParts } from '../../lib/questStreak';
@@ -22,7 +20,6 @@ export function FinancePanel() {
   const [payday, setPayday] = useState(openDates.at(-1) ?? dates[0]);
   const [decision, setDecision] = useState<FinanceDecision>('minimum_only');
   const [checks, setChecks] = useState<Check[]>([]);
-  const [accepted, setAccepted] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const requests = useRef(new Map<string, string>());
@@ -32,13 +29,9 @@ export function FinancePanel() {
     const client = supabase();
     const { data: auth } = await client.auth.getUser();
     if (!auth.user) { setMessage('Sign in to see finance.'); return; }
-    const [checkResult, followResult] = await Promise.all([
-      client.from('finance_payday_checks').select('payday,decision').eq('owner_id', auth.user.id),
-      client.from('finance_followups').select('kind').eq('owner_id', auth.user.id),
-    ]);
-    if (checkResult.error || followResult.error) { setMessage('Finance could not load. Nothing was changed.'); return; }
+    const checkResult = await client.from('finance_payday_checks').select('payday,decision').eq('owner_id', auth.user.id);
+    if (checkResult.error) { setMessage('Finance could not load. Nothing was changed.'); return; }
     setChecks((checkResult.data ?? []) as Check[]);
-    setAccepted((followResult.data ?? []).map((row) => String((row as { kind: string }).kind)));
   }, []);
 
   useEffect(() => { void load(); }, [load]);
@@ -75,22 +68,6 @@ export function FinancePanel() {
     }
   }
 
-  async function accept(kind: FinanceFollowUpKind) {
-    if (busy || inFlight.current || accepted.includes(kind)) return;
-    inFlight.current = true;
-    setBusy(true);
-    try {
-      const { data, error } = await supabase().rpc('accept_finance_followup', { p_kind: kind });
-      if (error) { setMessage(error.message); return; }
-      const payload = data as { xp_awarded?: number };
-      setMessage(`Follow-up added. +${payload.xp_awarded ?? 0} XP until you complete it.`);
-      await load();
-    } finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="ascension-track">
       <p className="eyebrow">FINANCE</p>
@@ -111,15 +88,6 @@ export function FinancePanel() {
       {saved
         ? <p>Recorded as {FINANCE_DECISION_LABEL[saved.decision]}.</p>
         : <button type="button" className="btn" disabled={busy || payday > today} onClick={() => { void complete(); }}>Complete payday check</button>}
-      <section aria-label="Optional follow-ups">
-        <h2>Optional follow-ups</h2>
-        <p className="muted">Added only if you accept them. They award no XP until completed.</p>
-        {FINANCE_FOLLOW_UPS.map((item) => (
-          <button key={item.kind} type="button" className="btn ghost" disabled={busy || accepted.includes(item.kind)} onClick={() => { void accept(item.kind); }}>
-            {accepted.includes(item.kind) ? `${item.title} added` : `Accept ${item.title}`}
-          </button>
-        ))}
-      </section>
       {message && <p className="message" role="status">{message}</p>}
     </div>
   );

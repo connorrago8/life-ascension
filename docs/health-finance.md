@@ -38,6 +38,14 @@ Payday checks and follow-ups are owner-only under RLS, as are the Health tables.
 
 Prefilled links `/?quest=…` and `/quests?quest=…` show a banner whose button reads `Schedule quest`. Scheduling uses `create_scheduled_quest` and does not complete the quest.
 
+## Optional templates
+
+Twenty seeded titles render on the Health and Finance category boards. They are optional. The meal log still awards 0 XP.
+
+Health follow-ups stay on "Unlocks later" until `HEALTH_FOLLOW_UP_UNLOCK`: 6 of 7 lights-out nights in each of 2 straight finished game weeks (Monday through Sunday, 5 AM). The week that contains today does not count. After that, the player starts one follow-up at a time. Starting and skipping award no XP. Marking it done uses the existing quest completion, once. "Schedule a movement window" pays when the session is marked done, not when it is started.
+
+Finance templates use Due, In progress, Complete, and Skipped. Their note says to do the work in a private finance workflow, then mark it done. The biweekly payday check stays on its own decision form. There is still no money, balance, or account field.
+
 ## TEST migration history repair
 
 The TEST database `njqwwimzrsunheehnnnt` had applied two changes without matching history versions:
@@ -51,6 +59,8 @@ The Health and Finance migration is `supabase/migrations/202611260010_health_fin
 
 Its down file drops only the new tables. Do not run the down file once real lights-out nights or payday checks exist. It does not delete quests, `xp_ledger`, streaks, unlocks, gear, or quest history.
 
-On 2026-11-25 the TEST game day was still before 2026-12-03, so a payday completion correctly refused with "This payday check is not open yet." That award path was not executed against a real account. Lights-out recording, the second create, nullable meal flags, and owner RLS were executed on synthetic users inside a rolled-back transaction, plus one committed double-create on a synthetic user that was deleted afterward.
+Optional templates are `supabase/migrations/202611260020_track_templates.sql`. On TEST that SQL was applied as `20261126012446` / `track_templates`, and the owner-checked unlock function as `20261126012528` / `health_followups_unlocked_owner`. Version `202611260020` records the repo file so it is not applied again.
+
+On 2026-11-25 the TEST game day was still before 2026-12-03, so a payday completion correctly refused with "This payday check is not open yet." That award path was not executed against a real account. Lights-out recording, the second create, nullable meal flags, and owner RLS were executed on synthetic users inside a rolled-back transaction, plus one committed double-create on a synthetic user that was deleted afterward. The template smoke later did the same with a rolled-back user: two weeks of six lights-out nights unlocked a follow-up, a second health follow-up was refused, the first finish paid once, and a second account read no template rows.
 
 Production project `ugcvhmrriazbbymjxvch` is not a target.

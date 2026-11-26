@@ -1,12 +1,24 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { prioritizeQuests, questCategory } from '../lib/ascension/board.ts';
 import { LIGHTS_OUT_BASE_XP, LIGHTS_OUT_STREAK_BONUS_XP, LIGHTS_OUT_TITLE, PAYDAY_TITLE } from '../lib/ascension/config.ts';
 import { claimLightsOut, healthGameDay, healthNightAllowed, healthRecordWindow, lightsOutWeekLabel, lightsOutXp, priorLightsOutStreak, rollingLightsOutCount } from '../lib/ascension/lightsOut.ts';
 import { BLANK_MEAL, mealIsLogged } from '../lib/ascension/meals.ts';
 import { isFinanceDecision, isPayday, paydayCreditVariesByDecision, paydayDates } from '../lib/ascension/payday.ts';
 import { SCHEDULE_QUEST_LABEL, parseQuestPrefill } from '../lib/ascension/prefill.ts';
+import { TemplateBoard, templateRowModels } from '../lib/ascension/templateView.ts';
+import {
+  HEALTH_FOLLOW_UP_UNLOCK,
+  allTrackTemplates,
+  canStartTemplate,
+  finishPaysOnce,
+  healthFollowUpsUnlocked,
+} from '../lib/ascension/templates.ts';
+import { shiftDate } from '../lib/ascension/dates.ts';
+import { weekStart } from '../lib/questStreak.ts';
 import { gameDayParts } from '../lib/questStreak.ts';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -111,9 +123,13 @@ test('finance schema, API, and UI have no money or amount fields', () => {
   const sql = read('supabase/migrations/202611260010_health_finance.sql');
   const financeUi = [
     read('components/ascension/FinancePanel.tsx'),
+    read('components/ascension/TrackTemplates.tsx'),
     read('app/(app)/finance/page.tsx'),
     read('lib/ascension/payday.ts'),
     read('lib/ascension/config.ts'),
+    read('lib/ascension/templates.ts'),
+    read('lib/ascension/templateView.ts'),
+    read('supabase/migrations/202611260020_track_templates.sql'),
   ].join('\n');
   for (const table of ['finance_payday_checks', 'finance_followups']) {
     const block = sql.match(new RegExp(`create table public\\.${table} \\([\\s\\S]*?\\);`));
@@ -123,6 +139,67 @@ test('finance schema, API, and UI have no money or amount fields', () => {
   assert.match(sql, /decision in \('minimum_only', 'review_needed', 'extra_payment'\)/);
   assert.doesNotMatch(financeUi, /\b(amount|amounts|balance|balances|cents|dollar|dollars|usd|currency|account_number|account_name|routing)\b/i);
   assert.doesNotMatch(financeUi, /\$\d/);
+  const templates = read('supabase/migrations/202611260020_track_templates.sql');
+  const stateTable = templates.match(/create table public\.track_template_states \([\s\S]*?\);/);
+  assert.ok(stateTable);
+  assert.doesNotMatch(stateTable[0], /\b(numeric|money|decimal|amount|balance|cents|dollar|currency)\b/i);
   assert.match(sql, /select 5 \+ 1 \* greatest\(p_prior, 0\)/);
   assert.match(read('docs/health-finance.md'), /LIGHTS_OUT_BASE_XP = 5/);
+  assert.doesNotMatch(read('components/ascension/TrackTemplates.tsx'), /<textarea|<input/);
+});
+
+function weekDates(monday, count) {
+  return Array.from({ length: count }, (_, index) => shiftDate(monday, index));
+}
+
+test('all 20 health and finance templates render without free text', () => {
+  assert.equal(allTrackTemplates().length, 20);
+  const rows = [
+    ...templateRowModels('health', [], false),
+    ...templateRowModels('finance', [], true),
+  ];
+  const html = renderToStaticMarkup(createElement(TemplateBoard, { rows }));
+  for (const template of allTrackTemplates()) {
+    const escaped = template.title.replaceAll("'", '&#x27;');
+    assert.ok(html.includes(template.title) || html.includes(escaped), template.title);
+  }
+  assert.match(html, /Unlocks later/);
+  assert.match(html, /Due/);
+  assert.doesNotMatch(html, /<textarea|<input/);
+  assert.match(html, /Credit when the session is done, not when it is scheduled/);
+  assert.match(html, /Do this in your private finance workflow, then mark it done/);
+});
+
+test('health follow-ups unlock after two straight game weeks at the configured goal', () => {
+  assert.equal(HEALTH_FOLLOW_UP_UNLOCK.nightsRequired, 6);
+  assert.equal(HEALTH_FOLLOW_UP_UNLOCK.nightsInWeek, 7);
+  assert.equal(HEALTH_FOLLOW_UP_UNLOCK.straightWeeks, 2);
+  const today = '2026-11-25';
+  const thisWeek = weekStart(today);
+  const previous = shiftDate(thisWeek, -7);
+  const before = shiftDate(thisWeek, -14);
+  const enough = [...weekDates(previous, 6), ...weekDates(before, 6)];
+  assert.equal(healthFollowUpsUnlocked(enough, today), true);
+  assert.equal(healthFollowUpsUnlocked(weekDates(previous, 6), today), false);
+  assert.equal(healthFollowUpsUnlocked([...weekDates(previous, 5), ...weekDates(before, 7)], today), false);
+  assert.equal(canStartTemplate('health', 'easy_walk', [], false), false);
+  assert.equal(canStartTemplate('health', 'easy_walk', [], true), true);
+  assert.equal(canStartTemplate('health', 'protein_meal', [{ id: 'easy_walk', status: 'in_progress' }], true), false);
+  assert.equal(canStartTemplate('finance', 'upcoming_bills', [{ id: 'pay_down_card', status: 'in_progress' }], true), true);
+  assert.equal(canStartTemplate('finance', 'payday_check', [], true), false);
+});
+
+test('a template pays quest XP once', () => {
+  assert.deepEqual(finishPaysOnce('in_progress'), { pay: true, already: false });
+  assert.deepEqual(finishPaysOnce('complete'), { pay: false, already: true });
+  assert.deepEqual(finishPaysOnce('due'), { pay: false, already: false });
+  assert.deepEqual(finishPaysOnce('locked'), { pay: false, already: false });
+  const started = templateRowModels('health', [{ id: 'easy_walk', status: 'in_progress' }], true);
+  const html = renderToStaticMarkup(createElement(TemplateBoard, { rows: started }));
+  assert.match(html, /In progress/);
+  assert.match(html, /Mark done/);
+  const done = templateRowModels('health', [{ id: 'easy_walk', status: 'complete' }], true);
+  assert.match(renderToStaticMarkup(createElement(TemplateBoard, { rows: done })), />Complete</);
+  const skipped = templateRowModels('finance', [{ id: 'upcoming_bills', status: 'skipped' }], true);
+  assert.match(renderToStaticMarkup(createElement(TemplateBoard, { rows: skipped })), />Skipped</);
 });
