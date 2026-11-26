@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LIGHTS_OUT_BASE_XP,
+  LIGHTS_OUT_STREAK_BONUS_MAX_XP,
   LIGHTS_OUT_STREAK_BONUS_XP,
   LIGHTS_OUT_TITLE,
 } from '../../lib/ascension/config';
@@ -124,7 +125,7 @@ export function HealthPanel() {
       <h1>{LIGHTS_OUT_TITLE}</h1>
       <p className="muted">The only required nightly health quest. {lightsOutWeekLabel(rollingLightsOutCount(recorded, today))}.</p>
       <p className="muted">Health only: this game day or the previous 2. The day starts at 5:00 AM Chicago. This is not the 30-day activity window.</p>
-      <p className="muted">{LIGHTS_OUT_BASE_XP} XP plus {LIGHTS_OUT_STREAK_BONUS_XP} XP for each prior night in a row. Separate from quest XP.</p>
+      <p className="muted">{LIGHTS_OUT_BASE_XP} XP plus {LIGHTS_OUT_STREAK_BONUS_XP} XP for each prior night, up to {LIGHTS_OUT_STREAK_BONUS_MAX_XP} extra XP. At most {LIGHTS_OUT_BASE_XP + LIGHTS_OUT_STREAK_BONUS_MAX_XP} XP a night. Separate from quest XP.</p>
       <label>Night
         <select className="field" value={night} onChange={(event) => setNight(event.target.value)}>
           {windowDays.map((day) => <option key={day} value={day}>{day === today ? `${day} · this game day` : `${day} · earlier game day`}</option>)}

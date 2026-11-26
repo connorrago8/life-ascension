@@ -2,6 +2,7 @@ import { gameDayParts, QUEST_TIME_ZONE } from '../questStreak.ts';
 import {
   LIGHTS_OUT_BASE_XP,
   LIGHTS_OUT_LOOKBACK_DAYS,
+  LIGHTS_OUT_STREAK_BONUS_MAX_XP,
   LIGHTS_OUT_STREAK_BONUS_XP,
   LIGHTS_OUT_WEEK_GOAL,
   LIGHTS_OUT_WEEK_NIGHTS,
@@ -10,7 +11,8 @@ import { shiftDate } from './dates.ts';
 
 export function lightsOutXp(priorConsecutiveNights: number): number {
   const prior = Math.max(0, Math.floor(priorConsecutiveNights));
-  return LIGHTS_OUT_BASE_XP + LIGHTS_OUT_STREAK_BONUS_XP * prior;
+  const bonus = Math.min(LIGHTS_OUT_STREAK_BONUS_XP * prior, LIGHTS_OUT_STREAK_BONUS_MAX_XP);
+  return LIGHTS_OUT_BASE_XP + bonus;
 }
 
 /** Consecutive recorded nights immediately before `gameDay`. The night itself is excluded. */

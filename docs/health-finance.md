@@ -15,8 +15,11 @@ The game day still starts at 5:00 AM America/Chicago (`public.quest_game_day`). 
 ```
 LIGHTS_OUT_BASE_XP = 5
 LIGHTS_OUT_STREAK_BONUS_XP = 1
-award = 5 + 1 × prior consecutive lights-out nights
+LIGHTS_OUT_STREAK_BONUS_MAX_XP = 5
+award = 5 + min(1 × prior consecutive lights-out nights, 5)
 ```
+
+A night pays at most 10 XP. The cap is reached after 5 prior nights. 0, 1, 5, 6, and 60 prior nights award 5, 6, 10, 10, and 10. Existing lights-out rows are not rewritten. The cap is `supabase/migrations/202611260030_lights_out_bonus_cap.sql`. On TEST it was applied as `20261126013004` / `lights_out_bonus_cap`, and `202611260030` records that repo file.
 
 The night being recorded is not part of the prior count. This formula lives in `public.lights_out_xp` and `lib/ascension/lightsOut.ts`. It does not call `quest_streak_xp`, and the row is not an `xp_ledger` completion, so it does not take the flat 10 XP first quest of the day. `get_lifetime_xp` adds the lights-out total to the existing ledger sum.
 

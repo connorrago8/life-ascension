@@ -4,7 +4,7 @@ import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { prioritizeQuests, questCategory } from '../lib/ascension/board.ts';
-import { LIGHTS_OUT_BASE_XP, LIGHTS_OUT_STREAK_BONUS_XP, LIGHTS_OUT_TITLE, PAYDAY_TITLE } from '../lib/ascension/config.ts';
+import { LIGHTS_OUT_BASE_XP, LIGHTS_OUT_STREAK_BONUS_MAX_XP, LIGHTS_OUT_STREAK_BONUS_XP, LIGHTS_OUT_TITLE, PAYDAY_TITLE } from '../lib/ascension/config.ts';
 import { claimLightsOut, healthGameDay, healthNightAllowed, healthRecordWindow, lightsOutWeekLabel, lightsOutXp, priorLightsOutStreak, rollingLightsOutCount } from '../lib/ascension/lightsOut.ts';
 import { BLANK_MEAL, mealIsLogged } from '../lib/ascension/meals.ts';
 import { isFinanceDecision, isPayday, paydayCreditVariesByDecision, paydayDates } from '../lib/ascension/payday.ts';
@@ -26,7 +26,8 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 test('lights out uses its own 5 XP config at the 5 AM boundary', () => {
   assert.equal(LIGHTS_OUT_BASE_XP, 5);
   assert.equal(LIGHTS_OUT_STREAK_BONUS_XP, 1);
-  assert.equal(lightsOutXp(0), 5);
+  assert.equal(LIGHTS_OUT_STREAK_BONUS_MAX_XP, 5);
+  assert.deepEqual([0, 1, 5, 6, 60].map(lightsOutXp), [5, 6, 10, 10, 10]);
   assert.equal(lightsOutXp(3), 8);
   const winterMidnight = new Date('2026-11-26T06:00:00Z');
   const winterBefore = new Date('2026-11-26T10:59:00Z');
@@ -144,6 +145,9 @@ test('finance schema, API, and UI have no money or amount fields', () => {
   assert.ok(stateTable);
   assert.doesNotMatch(stateTable[0], /\b(numeric|money|decimal|amount|balance|cents|dollar|currency)\b/i);
   assert.match(sql, /select 5 \+ 1 \* greatest\(p_prior, 0\)/);
+  const cap = read('supabase/migrations/202611260030_lights_out_bonus_cap.sql');
+  assert.match(cap, /least\(1 \* greatest\(p_prior, 0\), 5\)/);
+  assert.match(cap, /LIGHTS_OUT_STREAK_BONUS_MAX_XP = 5/);
   assert.match(read('docs/health-finance.md'), /LIGHTS_OUT_BASE_XP = 5/);
   assert.doesNotMatch(read('components/ascension/TrackTemplates.tsx'), /<textarea|<input/);
 });

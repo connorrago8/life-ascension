@@ -2,13 +2,14 @@
  * Lights-out credit is its own config. It is not quest_streak_xp and it does
  * not use the flat 10 XP first quest of the game day.
  *
- * Award = LIGHTS_OUT_BASE_XP + LIGHTS_OUT_STREAK_BONUS_XP × prior consecutive
- * lights-out nights. The night being recorded is not part of that prior count,
- * so the bonus is stable for the whole game day. The first night of a run is
- * 5 XP. Each immediately previous recorded night adds 1 XP.
+ * Award = LIGHTS_OUT_BASE_XP + min(LIGHTS_OUT_STREAK_BONUS_XP × prior consecutive
+ * nights, LIGHTS_OUT_STREAK_BONUS_MAX_XP). The night being recorded is not
+ * part of that prior count. The first night is 5 XP. The bonus reaches its
+ * cap after 5 prior nights, so a night pays at most 10 XP.
  */
 export const LIGHTS_OUT_BASE_XP = 5;
 export const LIGHTS_OUT_STREAK_BONUS_XP = 1;
+export const LIGHTS_OUT_STREAK_BONUS_MAX_XP = 5;
 export const LIGHTS_OUT_TITLE = 'Lights Out by 11 PM';
 export const LIGHTS_OUT_LOOKBACK_DAYS = 2;
 export const LIGHTS_OUT_WEEK_NIGHTS = 7;
