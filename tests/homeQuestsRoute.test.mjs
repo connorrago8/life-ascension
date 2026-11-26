@@ -45,9 +45,12 @@ test('Home is character-first, read-only, and does not duplicate the nav', () =>
   assert.match(home, /role="progressbar"/);
   assert.match(home, /get_lifetime_xp/);
   assert.match(home, /verifiedLifetimeXp\(/);
-  // Exactly one tappable summary card, and it goes to the board.
-  assert.equal((home.match(/<Link /g) ?? []).length, 1);
+  assert.equal((home.match(/<Link /g) ?? []).length, 2);
   assert.match(home, /<Link href="\/quests" className="hub-card hub-today"/);
+  assert.match(home, /View upgrades & unlocks/);
+  assert.match(home, /XP to the next level/);
+  assert.match(home, /CharacterPlaceholder/);
+  assert.match(home, /QuestScheduleBanner/);
   assert.doesNotMatch(home, /Enter (the )?Crypt|Go to Quest Board|href="\/play/i);
   // Home never writes: no completes, ensures, equips, or inserts.
   assert.doesNotMatch(home, /set_quest_instance_status|ensure_quest_instance|equip_earned_armor|\.insert\(|\.update\(|\.upsert\(|\.delete\(/);

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { NAV_ITEMS } from '../../lib/nav';
 import { useCompanionRole } from '../../components/useCompanionRole';
 
-type IconName = 'home' | 'quests' | 'play' | 'character' | 'more';
+type IconName = 'home' | 'quests' | 'play' | 'character' | 'izzy';
 
 function Icon({ name }: { name: IconName }) {
   return (
@@ -34,11 +34,12 @@ function Icon({ name }: { name: IconName }) {
           <path d="M5.6 19.4c1.1-2.8 3.4-4.2 6.4-4.2s5.3 1.4 6.4 4.2" />
         </>
       )}
-      {name === 'more' && (
+      {name === 'izzy' && (
         <>
-          <circle cx="6" cy="12" r="1.35" fill="currentColor" stroke="none" />
-          <circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none" />
-          <circle cx="18" cy="12" r="1.35" fill="currentColor" stroke="none" />
+          <circle cx="9" cy="8" r="2.4" />
+          <circle cx="16" cy="9.2" r="1.8" />
+          <path d="M4.8 18.6c.8-2.4 2.6-3.6 4.6-3.6s3.6 1.1 4.4 3.2" />
+          <path d="M14.2 18.6c.4-1.4 1.4-2.2 2.6-2.2 1 0 1.8.6 2.2 1.6" />
         </>
       )}
     </svg>

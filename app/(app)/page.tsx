@@ -17,6 +17,8 @@ import { chicagoToday, todayGlance, todayGlanceLabel, type GlanceInstance, type 
 import { supabase } from '../../lib/supabase';
 import { gameDayParts, parseStreak, type StreakState } from '../../lib/questStreak';
 import { starterSlots } from '../../lib/starterLook';
+import { CharacterPlaceholder } from '../../components/ascension/CharacterPlaceholder';
+import { QuestScheduleBanner } from '../../components/ascension/QuestScheduleBanner';
 import { ReturnBanner } from '../../components/home/ReturnBanner';
 import { StreakShieldNote } from '../../components/couple/StreakShieldNote';
 import { useCompanionRole } from '../../components/useCompanionRole';
@@ -118,7 +120,14 @@ function AdventurerHome() {
     };
   }, [load]);
 
-  if (state.status === 'loading') return <main className="wrap home-hub" aria-busy="true"><p className="muted">Loading your adventurer…</p></main>;
+  if (state.status === 'loading') {
+    return (
+      <main className="wrap home-hub" aria-busy="true">
+        <CharacterPlaceholder name="" />
+        <p className="muted">Loading your adventurer…</p>
+      </main>
+    );
+  }
   if (state.status === 'signed-out') {
     return (
       <main className="wrap home-hub">
@@ -180,7 +189,10 @@ function AdventurerHome() {
           <span className="hub-xp-fill" style={{ width: `${fraction * 100}%` }} />
         </div>
         <p className="hub-lifetime muted">{state.xp} lifetime XP</p>
+        <p className="hub-next">{progress.xpForNext - progress.xpIntoLevel} XP to the next level</p>
+        <Link className="btn ghost hub-upgrades" href="/character">View upgrades & unlocks</Link>
       </section>
+      <QuestScheduleBanner />
 
       <section className="hub-card hub-summary" aria-label="Adventurer summary">
         <ul className="hub-stats" aria-label="Stats">

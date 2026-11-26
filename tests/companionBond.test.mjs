@@ -23,7 +23,7 @@ test('companion connection remains available through account settings', () => {
   const nav = read('app/components/AppNav.tsx');
   const css = read('app/style.css');
   assert.match(nav, /\{item\.label\}/);
-  assert.match(read('lib/nav.ts'), /label: 'More'/);
+  assert.match(read('lib/nav.ts'), /label: 'Izzy'/);
   assert.match(read('app/(app)/more/page.tsx'), /Relationship & invitations/);
   assert.match(read('components/AccountSettings.tsx'), /href="\/companion"/);
   assert.match(page, /className="btn ghost companion-back" href="\/"/);

@@ -1,5 +1,6 @@
 'use client';
 import {AccountSettings} from '../../../components/AccountSettings';
+import {RecentQuestStrip} from '../../../components/ascension/RecentQuestStrip';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../preview/preview.css';
@@ -221,6 +222,7 @@ export default function CharacterPage() {
       />
       {cosmeticError && <p className="message" role="status">{cosmeticError}</p>}
 
+      {!state.preview && <RecentQuestStrip />}
       <section className="wellness" id="wellness" aria-labelledby="wellness-heading">
         <h2 id="wellness-heading">Wellness</h2>
         {wellness.connected ? (

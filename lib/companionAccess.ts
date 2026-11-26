@@ -21,7 +21,7 @@ export const COMPANION_NAV = [
   { href: '/', label: 'Home' },
   { href: '/quests', label: 'Quests' },
   { href: '/character', label: 'Character' },
-  { href: '/more', label: 'More' },
+  { href: '/izzy', label: 'Izzy' },
 ] as const;
 
 const LEGACY_EXACT: Record<string, string> = {
@@ -37,12 +37,12 @@ const LEGACY_EXACT: Record<string, string> = {
 export function legacyDestination(pathname: string, search = ''): string | null {
   if (pathname === '/play/crypt' || pathname.startsWith('/play/crypt/')) return null;
   if (pathname === '/together' || pathname.startsWith('/together/')) return '/quests?chip=together';
-  if (pathname === '/companion') {
+  if (pathname === '/companion' || pathname === '/more/relationship') {
     const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
     const invite = params.get('invite')?.trim() ?? '';
     return /^[0-9a-f]{8,64}$/i.test(invite)
-      ? `/more/relationship?invite=${encodeURIComponent(invite.toLowerCase())}`
-      : '/more/relationship';
+      ? `/izzy?invite=${encodeURIComponent(invite.toLowerCase())}`
+      : '/izzy';
   }
   if (LEGACY_EXACT[pathname]) return LEGACY_EXACT[pathname];
   if (pathname.startsWith('/companion/')) return '/more';
@@ -56,7 +56,7 @@ export function isCompanionOnlyPath(pathname: string): boolean {
 /** Adventurer surfaces companions now share, except Play which is softened in the hub. */
 export function isAdventurerPath(pathname: string): boolean {
   if (pathname === '/') return true;
-  return ['/quests', '/play', '/character', '/more', '/health', '/settings', '/log'].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return ['/quests', '/play', '/character', '/more', '/health', '/finance', '/izzy', '/settings', '/log'].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export function companionRedirect(pathname: string, _role: SessionRole, search = ''): string | null {

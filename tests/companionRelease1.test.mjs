@@ -48,13 +48,14 @@ test('old companion and together URLs resolve to the shared homes for every acco
   assert.equal(companionRedirect('/companion/rewards', 'signed-out'), '/more/rewards');
   assert.equal(companionRedirect('/companion/history', 'companion'), '/more/history');
   assert.equal(companionRedirect('/companion/log', 'companion'), '/log');
-  assert.equal(companionRedirect('/companion', 'companion', 'invite=abc12345'), '/more/relationship?invite=abc12345');
+  assert.equal(companionRedirect('/companion', 'companion', 'invite=abc12345'), '/izzy?invite=abc12345');
+  assert.equal(companionRedirect('/more/relationship', 'adventurer'), '/izzy');
   assert.equal(companionRedirect('/together', 'adventurer'), '/quests?chip=together');
   assert.equal(companionRedirect('/together/plans', 'companion'), '/quests?chip=together');
 });
 
-test('both accounts share Home, Quests, Character, and More, and companions omit Play', () => {
-  assert.deepEqual(COMPANION_NAV.map((item) => item.label), ['Home', 'Quests', 'Character', 'More']);
+test('both accounts share Home, Quests, Character, and Izzy, and companions omit Play', () => {
+  assert.deepEqual(COMPANION_NAV.map((item) => item.label), ['Home', 'Quests', 'Character', 'Izzy']);
   assert.equal(COMPANION_NAV.some((item) => item.label === 'Play' || item.href === '/play'), false);
   const adventurer = read('app/components/AppNav.tsx');
   assert.match(adventurer, /NAV_ITEMS/);

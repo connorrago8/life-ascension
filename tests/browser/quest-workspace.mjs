@@ -40,8 +40,8 @@ try{
  await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
  await page.goto(base+'/quests');
  await page.getByRole('button',{name:'Complete Make the bed',exact:true}).waitFor();
- assert.equal(await page.locator('.app-nav .nav-links').getByRole('link').count(),5,'Home, Quests, Play, Character, More');
- await page.getByRole('link',{name:'More',exact:true}).waitFor();
+ assert.equal(await page.locator('.app-nav .nav-links').getByRole('link').count(),5,'Home, Quests, Character, Play, Izzy');
+ await page.getByRole('link',{name:'Izzy',exact:true}).waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'phone has no horizontal overflow');
  await page.screenshot({path:'/tmp/quest-workspace-screens/life-mobile.png',fullPage:true});
  async function openSection(name){const button=page.getByRole('button',{name,exact:false}).first();if(await button.getAttribute('aria-expanded')!=='true')await button.click();}
