@@ -108,7 +108,9 @@ export function AdventureHub() {
               <span className="adv-node-name">{location.name}</span>
               {location.kind === 'preview'
                 ? <span className="soon-pill">{HUB.preview}</span>
-                : <span className="adv-node-note">{HUB.locked}<span className="adv-node-soon">{HUB.soon}</span></span>}
+                : location.id === 'town'
+                  ? <span className="adv-node-note">{HUB.soon}</span>
+                  : <span className="adv-node-note">{HUB.locked}<span className="adv-node-soon">{HUB.soon}</span></span>}
             </button>
           );
         })}

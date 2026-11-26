@@ -28,7 +28,7 @@ export const HUB = {
       icon: 'house' as const,
       x: 74,
       y: 18,
-      blurb: 'Locked. Coming soon.',
+      blurb: 'Coming soon.',
     },
     {
       id: 'whispering-woods',

@@ -1587,3 +1587,26 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
   .companion-shell .cq-xpbar span,
   .companion-shell .btn { transition: none; }
 }
+
+.character-placeholder {
+  width: 96px; height: 128px; margin: 0 auto 12px; display: grid; place-items: center;
+  background: #12151c; color: #c9a227; border: 1px solid #00f0ff; border-radius: 8px;
+  font-size: 2rem; font-weight: 700;
+}
+.hub-upgrades { margin-top: 8px; }
+.hub-next { margin: 6px 0 0; color: #c9a227; }
+.ascension-board, .ascension-track, .ascension-banner, .ascension-strip { color: #f4f6f8; }
+.ascension-section { border: 1px solid #243044; border-radius: 10px; margin: 0 0 10px; background: #10141c; }
+.ascension-section summary { padding: 10px 12px; cursor: pointer; }
+.ascension-section summary a { color: #00f0ff; font-weight: 700; text-decoration: none; }
+.ascension-rows { list-style: none; margin: 0; padding: 0 12px 12px; display: grid; gap: 8px; }
+.ascension-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  padding: 8px 0; border-top: 1px solid #243044;
+}
+.ascension-row strong, .ascension-row span { display: block; }
+.ascension-row .btn, .ascension-track .btn { min-height: 44px; }
+.ascension-decision, .ascension-track label { display: grid; gap: 4px; margin: 8px 0; }
+.ascension-banner, .ascension-track { border: 1px solid #ff2bd6; border-radius: 10px; padding: 12px; margin: 0 0 14px; background: #10141c; }
+.ascension-strip { margin: 12px 0; }
+.ascension-strip a { color: #00f0ff; }

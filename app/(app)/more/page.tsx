@@ -7,7 +7,7 @@ import { useCompanionRole } from '../../../components/useCompanionRole';
 import { StreakShieldNote } from '../../../components/couple/StreakShieldNote';
 
 const LINKS = [
-  { href: '/more/relationship', label: 'Relationship & invitations', note: 'Bond, invites, and partner settings' },
+  { href: '/izzy', label: 'Relationship & invitations', note: 'Bond, invites, and partner settings' },
   { href: '/more/history', label: 'Activity history', note: 'Your logged activities' },
   { href: '/more/rewards', label: 'Reward notes', note: 'A personal note. Nothing here is redeemed.' },
   { href: '/quests/manage', label: 'Manage quests', note: 'Edit and archive your own quests' },
