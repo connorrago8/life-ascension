@@ -47,7 +47,11 @@ Twenty seeded titles render on the Health and Finance category boards. They are 
 
 Health follow-ups stay on "Unlocks later" until `HEALTH_FOLLOW_UP_UNLOCK`: 6 of 7 lights-out nights in each of 2 straight finished game weeks (Monday through Sunday, 5 AM). The week that contains today does not count. After that, the player starts one follow-up at a time. Starting and skipping award no XP. Marking it done uses the existing quest completion, once. "Schedule a movement window" pays when the session is marked done, not when it is started.
 
-Finance templates use Due, In progress, Complete, and Skipped. Their note says to do the work in a private finance workflow, then mark it done. The biweekly payday check stays on its own decision form. There is still no money, balance, or account field.
+Finance templates use Due, In progress, Complete, and Skipped. Their note says to do the work in a private finance workflow, then mark it done. The biweekly payday check stays on its own decision form. Payday checks, follow-ups, and template rows still have no amount column.
+
+The one exception is `public.finance_transactions`, owner-only, on this branch. It stores the date, merchant, category, a masked account label, the amount, and a hash. A second account, including Izzy, reads zero rows. Companion APIs, shared cards, badges, and MCP do not receive amounts. A mismatch is a private Needs review flag on the Finance page. It does not fail a quest. A match uses the existing completion path and pays XP once.
+
+CSV import is the fallback. Monarch's daily pull posts to `/api/finance/transactions/import`. The weekly spend summary stays on the owner's Finance page. There is no public Finance Score card on this branch.
 
 ## TEST migration history repair
 
@@ -67,3 +71,33 @@ Optional templates are `supabase/migrations/202611260020_track_templates.sql`. O
 On 2026-11-25 the TEST game day was still before 2026-12-03, so a payday completion correctly refused with "This payday check is not open yet." That award path was not executed against a real account. Lights-out recording, the second create, nullable meal flags, and owner RLS were executed on synthetic users inside a rolled-back transaction, plus one committed double-create on a synthetic user that was deleted afterward. The template smoke later did the same with a rolled-back user: two weeks of six lights-out nights unlocked a follow-up, a second health follow-up was refused, the first finish paid once, and a second account read no template rows.
 
 Production project `ugcvhmrriazbbymjxvch` is not a target.
+
+## Owner transaction import
+
+`supabase/migrations/202611260040_finance_transactions.sql` adds the owner-only register. On TEST it was applied as `20261126015338` / `finance_transactions`. Version `202611260040` records that same file so a later push does not run it again. The apply did not change quests, the XP ledger, or users. The smoke ran inside one statement that raised `finance_transactions_smoke_ok` and rolled back. Synthetic users left afterward: 0.
+
+`POST /api/finance/transactions/import` takes `Authorization: Bearer la_fin_<64 hex>` and this JSON:
+
+```json
+{
+  "request_id": "00000000-0000-4000-8000-00000000d701",
+  "source": "monarch_mcp",
+  "transactions": [
+    {
+      "id": "txn_synthetic_1",
+      "date": "2026-11-25",
+      "merchant": "Card Pay",
+      "category": "Credit Card Payment",
+      "account_label": "Checking",
+      "amount": -40,
+      "pending": true
+    }
+  ]
+}
+```
+
+`pending` may be omitted. At most 2000 rows and 1.5 MB. More than 30 imports in an hour returns 429. The same `request_id` replays the stored result and does not verify again. A new pull with the same Monarch `id` updates the row, including pending to posted. The response is counts and quest check states. It does not echo amounts.
+
+The signed-in owner creates, rotates, and revokes the token on Finance. The plaintext is shown once. Only its SHA-256 hash is stored. CSV upload remains the fallback: the server previews the row count and date range, then the owner confirms. Account labels that contain a 6-digit-or-longer number are stored as the last 4 only.
+
+`Confirm a Payment Posted` matches a non-pending payment category, or a negative transfer, in the current game week. `Review This Week's Spending` completes when that week has posted rows and the owner opens the summary. `No-Spend Day` completes when the game day has posted rows and no spending outflow. Each uses the existing completion path and pays once. A miss is private Needs review.
