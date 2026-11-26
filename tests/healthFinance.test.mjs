@@ -122,6 +122,7 @@ test('the board keeps overdue and due-today quests first, two per section', () =
 
 test('finance schema, API, and UI have no money or amount fields', () => {
   const sql = read('supabase/migrations/202611260010_health_finance.sql');
+  const transactions = read('supabase/migrations/202611260040_finance_transactions.sql');
   const financeUi = [
     read('components/ascension/FinancePanel.tsx'),
     read('components/ascension/TrackTemplates.tsx'),
@@ -137,6 +138,12 @@ test('finance schema, API, and UI have no money or amount fields', () => {
     assert.ok(block, table);
     assert.doesNotMatch(block[0], /\b(numeric|money|decimal|amount|balance|cents|dollar|currency)\b/i);
   }
+  const moneyTables = [...transactions.matchAll(/create table public\.(\w+) \([\s\S]*?\);/g)]
+    .filter((match) => /\b(numeric|money|amount)\b/i.test(match[0]))
+    .map((match) => match[1]);
+  assert.deepEqual(moneyTables, ['finance_transactions']);
+  assert.match(transactions, /finance_transactions_owner_read/);
+  assert.match(transactions, /\(select auth\.uid\(\)\) = owner_id/);
   assert.match(sql, /decision in \('minimum_only', 'review_needed', 'extra_payment'\)/);
   assert.doesNotMatch(financeUi, /\b(amount|amounts|balance|balances|cents|dollar|dollars|usd|currency|account_number|account_name|routing)\b/i);
   assert.doesNotMatch(financeUi, /\$\d/);
@@ -144,6 +151,19 @@ test('finance schema, API, and UI have no money or amount fields', () => {
   const stateTable = templates.match(/create table public\.track_template_states \([\s\S]*?\);/);
   assert.ok(stateTable);
   assert.doesNotMatch(stateTable[0], /\b(numeric|money|decimal|amount|balance|cents|dollar|currency)\b/i);
+  const sealed = [
+    'app/api/companion/draft/route.ts',
+    'app/api/companion/proof/route.ts',
+    'app/api/mcp/route.ts',
+    'app/api/widget/today/route.ts',
+    'lib/mcpTools.ts',
+    'components/couple/SundayRecapCard.tsx',
+    'lib/status/pill.ts',
+    'lib/questStreak.ts',
+    'components/quests/PersonalQuestBoard.tsx',
+    'components/quests/TogetherQuestPanel.tsx',
+  ].map((path) => read(path)).join('\n');
+  assert.doesNotMatch(sealed, /finance_transactions|monarch_mcp|finance_week_summary|account_label|la_fin_/);
   assert.match(sql, /select 5 \+ 1 \* greatest\(p_prior, 0\)/);
   const cap = read('supabase/migrations/202611260030_lights_out_bonus_cap.sql');
   assert.match(cap, /least\(1 \* greatest\(p_prior, 0\), 5\)/);

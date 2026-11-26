@@ -1610,3 +1610,6 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .ascension-banner, .ascension-track { border: 1px solid #ff2bd6; border-radius: 10px; padding: 12px; margin: 0 0 14px; background: #10141c; }
 .ascension-strip { margin: 12px 0; }
 .ascension-strip a { color: #00f0ff; }
+.ascension-summary { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ascension-summary li { display: flex; justify-content: space-between; gap: 12px; }
+.ascension-token { word-break: break-all; }

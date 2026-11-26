@@ -37,7 +37,13 @@ export function TrackTemplates({ track }: { track: TrackId }) {
     setPaydayDone(!checkResult.error && (checkResult.data ?? []).length > 0);
   }, [track]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    if (track !== 'finance') return;
+    const refresh = () => { void load(); };
+    window.addEventListener('finance-verified', refresh);
+    return () => window.removeEventListener('finance-verified', refresh);
+  }, [load, track]);
 
   function requestId(key: string) {
     const existing = requests.current.get(key);
