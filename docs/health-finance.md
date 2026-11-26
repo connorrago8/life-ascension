@@ -27,6 +27,8 @@ A night can be recorded for the current game day or the previous two game days. 
 
 The screen shows how many of the last 7 game nights were recorded, against a goal of 6.
 
+Apple Health can record the same night. The Shortcut and the one-time ingest token are in `docs/apple-health-sleep.md`. Cronometer nutrition is a separate 0 XP import on that same token. It does not complete a quest.
+
 Meal flags (`balanced`, `protein`, `produce`, `delivery`) are nullable. All null is rejected and stays unlogged. Any explicit yes or no is a log and awards 0 XP. Sleep and recovery notes are owner-only under RLS. There is no pharmacy or patient data.
 
 ## Finance

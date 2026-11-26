@@ -71,6 +71,7 @@ test('QA prebuild accepts only the protected branch with a pinned QA public key'
   assert.equal(validateDeploymentEnv(syntheticQaEnv('grok/engagement-pwa-push-20261114')), true);
   assert.equal(validateDeploymentEnv(syntheticQaEnv('grok/test-combined-20261114')), true);
   assert.equal(validateDeploymentEnv(syntheticQaEnv('grok/health-finance-20261125')), true);
+  assert.equal(validateDeploymentEnv(syntheticQaEnv('grok/apple-health-sleep-20261125')), true);
   assert.throws(() => validateDeploymentEnv(syntheticQaEnv('untrusted/other-preview')),
     /not the protected QA branch/);
 });
