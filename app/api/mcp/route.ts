@@ -122,6 +122,10 @@ export async function POST(req: NextRequest) {
 
   const name = body.params?.name ?? '';
   const args = body.params?.arguments ?? {};
+  // Nutrition reads are not an MCP tool. Grants stay revoked until isolation tests pass.
+  if (name === 'read_nutrition' || name === 'read_nutrition_diary') {
+    return NextResponse.json({ error: 'nutrition:read is disabled' }, { status: 403 });
+  }
   if (name === 'create_quest' || name === 'update_progress' || name === 'submit_completion' || name === 'log_quest_progress') {
     if (!hasScope(auth, 'quests:write')) return NextResponse.json({ error: 'Missing quests:write scope' }, { status: 403 });
   } else if (name === 'list_quests' || name === 'get_character_progress') {

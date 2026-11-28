@@ -1608,5 +1608,11 @@ html[data-delve-run='live'] vercel-live-feedback { display: none !important; }
 .ascension-row .btn, .ascension-track .btn { min-height: 44px; }
 .ascension-decision, .ascension-track label { display: grid; gap: 4px; margin: 8px 0; }
 .ascension-banner, .ascension-track { border: 1px solid #ff2bd6; border-radius: 10px; padding: 12px; margin: 0 0 14px; background: #10141c; }
+.nutrition-diary { margin-top: 16px; }
+.nutrition-diary .field, .nutrition-diary .btn { width: 100%; font-size: 16px; }
+.nutrition-badge { display: inline-block; margin: 0 6px 6px 0; padding: 2px 8px; border: 1px solid #243044; border-radius: 999px; font-size: 0.75rem; color: #9fd7ff; }
+.nutrition-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.nutrition-item { border-top: 1px solid #243044; margin-top: 8px; padding-top: 8px; }
+.nutrition-photo { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .ascension-strip { margin: 12px 0; }
 .ascension-strip a { color: #00f0ff; }

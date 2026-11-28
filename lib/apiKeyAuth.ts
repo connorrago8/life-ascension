@@ -14,6 +14,8 @@ const REALM = 'Bearer realm="life-ascension"';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const ALLOWED_SCOPES = new Set(['quests:read', 'quests:write']);
+/** Not issuable on personal API keys. Nutrition grants are a separate revoked table. */
+export const DISABLED_NUTRITION_SCOPES = ['nutrition:summary', 'nutrition:history', 'nutrition:trends', 'nutrition:saved'] as const;
 const ZERO_HASH = '0'.repeat(64);
 
 export type AuthSuccess = {
