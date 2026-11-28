@@ -10,6 +10,7 @@ import {
 import { healthGameDay, healthRecordWindow, lightsOutWeekLabel, rollingLightsOutCount } from '../../lib/ascension/lightsOut';
 import { BLANK_MEAL, mealIsLogged, type MealFlags } from '../../lib/ascension/meals';
 import { supabase } from '../../lib/supabase';
+import { NutritionDiary } from './NutritionDiary';
 
 type FlagKey = keyof MealFlags;
 
@@ -132,6 +133,8 @@ export function HealthPanel() {
         </select>
       </label>
       <button type="button" className="btn" disabled={busy || loggedTonight} onClick={() => { void recordNight(); }}>{loggedTonight ? 'Recorded' : 'Record lights out'}</button>
+
+      <NutritionDiary />
 
       <section aria-label="Meal log">
         <h2>Meal log</h2>
